@@ -1,0 +1,11 @@
+date,operator,city,country,source,note
+# Public driverless (no safety driver) ride-hailing open to the general public: date it opened to all.
+2020-10-08,Waymo,Phoenix,US,https://waymo.com/blog/2020/10/waymo-is-opening-its-fully-driverless,
+2024-06-25,Waymo,San Francisco,US,https://waymo.com/blog/2024/06/waymo-one-is-now-open-to-everyone-in-san-francisco,
+2024-11-12,Waymo,Los Angeles,US,https://waymo.com/blog/2024/11/waymo-one-open-to-all-in-los-angeles,
+2025-03-04,Waymo,Austin,US,https://waymo.com/blog/,via Uber
+2025-06-24,Waymo,Atlanta,US,https://waymo.com/blog/,via Uber
+2022-08-08,Baidu Apollo Go,Wuhan,CN,https://www.prnewswire.com/,fully driverless commercial permits
+2022-08-08,Baidu Apollo Go,Chongqing,CN,https://www.prnewswire.com/,fully driverless commercial permits
+2025-06-22,Tesla,Austin,US,https://www.tesla.com/,invite-only pilot with safety monitor - verify status
+2025-09-10,Zoox,Las Vegas,US,https://zoox.com/journal,

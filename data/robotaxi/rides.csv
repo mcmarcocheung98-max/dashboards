@@ -1,0 +1,9 @@
+date,series,value,source,note
+# Paid fully driverless rides per week, as announced by the operator. One row per announcement.
+2024-05-14,Waymo,50000,https://x.com/Waymo,Waymo announcement - verify date
+2024-08-20,Waymo,100000,https://x.com/Waymo/status/1825974480066592790,Waymo announcement
+2024-10-29,Waymo,150000,https://techcrunch.com/2024/10/29/waymo-is-now-giving-150000-paid-robotaxi-rides-per-week/,
+2024-12-30,Waymo,175000,https://waymo.com/blog/,year-end figure - verify
+2025-02-25,Waymo,200000,https://techcrunch.com/2025/02/25/waymo-is-now-giving-200000-paid-robotaxi-rides-every-week/,
+2025-04-24,Waymo,250000,https://techcrunch.com/2025/04/24/waymo-is-now-giving-250000-paid-robotaxi-rides-every-week/,
+2025-10-16,Waymo,450000,https://waymo.com/blog/,seed value - verify

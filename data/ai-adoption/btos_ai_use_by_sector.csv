@@ -1,0 +1,2 @@
+date,series,value,source,note
+# Same BTOS question by sector (NAICS 2-digit), %. Add rows from the Sector workbook at https://www.census.gov/hfp/btos/ . Empty on purpose until filled from the source.

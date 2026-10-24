@@ -1,0 +1,12 @@
+date,event,company,kind,source,note
+2023-03-23,ChatGPT plugins,OpenAI,tools,https://openai.com/index/chatgpt-plugins/,first mainstream tool use
+2023-06-13,Function calling in the API,OpenAI,tools,https://openai.com/index/function-calling-and-other-api-updates/,
+2023-11-06,GPTs and the Assistants API,OpenAI,agents,https://openai.com/index/introducing-gpts/,
+2024-10-22,Computer use (Claude),Anthropic,agents,https://www.anthropic.com/news/3-5-models-and-computer-use,model operating a desktop
+2024-11-25,Model Context Protocol,Anthropic,protocol,https://www.anthropic.com/news/model-context-protocol,open standard for tools
+2025-01-23,Operator,OpenAI,agents,https://openai.com/index/introducing-operator/,browser agent
+2025-02-02,Deep research,OpenAI,agents,https://openai.com/index/introducing-deep-research/,
+2025-02-24,Claude Code,Anthropic,coding agents,https://www.anthropic.com/news/claude-3-7-sonnet,terminal coding agent (research preview)
+2025-04-09,Agent2Agent protocol,Google,protocol,https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/,
+2025-05-16,Codex,OpenAI,coding agents,https://openai.com/index/introducing-codex/,cloud coding agent
+2025-07-17,ChatGPT agent,OpenAI,agents,https://openai.com/index/introducing-chatgpt-agent/,

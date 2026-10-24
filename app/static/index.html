@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboards</title>
+<meta name="description" content="Public, read-only data dashboards: London housing, AI adoption, autonomous cars, AI jobs.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232a78d6'/><path d='M7 22l6-7 5 4 7-9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<style>
+  :root {
+    --bg: #f6f6f4; --surface: #ffffff; --ink: #141413; --ink2: #52514e; --muted: #8a8984; --line: #e6e5e1; --chip: #efeeea;
+    --up: #1f9d63; --down: #d6453d; --s1: #2a78d6; --s2: #eb6834; --s3: #1f9d63; --s4: #8a5cd1; --s5: #c7408f; --s6: #1a9aa0; --z1: #c7372f; --z2: #ee9a8f; --sellt: #e0702a; --z4: #86c9a6; --z5: #1b8a57; --hold: #8f8e88; --accent: #2a78d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121211; --surface: #1c1c1a; --ink: #f2f1ed; --ink2: #b9b8b3; --muted: #8a8984; --line: #2e2d2a; --chip: #292826;
+      --up: #3cc184; --down: #f0675f; --s1: #5a9cf0; --s2: #f4884f; --s3: #3cc184; --s4: #a888ea; --s5: #e06aaa; --s6: #3cc0c6; --z1: #f0675f; --z2: #a95b55; --sellt: #f4884f; --z4: #4f8f6e; --z5: #3cc184; --hold: #8f8e88; --accent: #5a9cf0;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121211; --surface: #1c1c1a; --ink: #f2f1ed; --ink2: #b9b8b3; --muted: #8a8984; --line: #2e2d2a; --chip: #292826;
+    --up: #3cc184; --down: #f0675f; --s1: #5a9cf0; --s2: #f4884f; --s3: #3cc184; --s4: #a888ea; --s5: #e06aaa; --s6: #3cc0c6; --z1: #f0675f; --z2: #a95b55; --sellt: #f4884f; --z4: #4f8f6e; --z5: #3cc184; --hold: #8f8e88; --accent: #5a9cf0;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  header { max-width: 1100px; margin: 0 auto; padding: 20px 16px 8px; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; }
+  h1 { font-size: 20px; margin: 0; font-weight: 650; }
+  .sub { color: var(--muted); font-size: 12.5px; }
+  nav { max-width: 1100px; margin: 0 auto; padding: 4px 16px 0; display: flex; gap: 6px; overflow-x: auto; }
+  nav button { border: 1px solid var(--line); background: var(--surface); color: var(--ink2); border-radius: 999px; padding: 6px 14px; font: inherit; cursor: pointer; white-space: nowrap; }
+  nav button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  main { max-width: 1100px; margin: 0 auto; padding: 12px 16px 40px; display: grid; gap: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+  .card h2 { font-size: 14.5px; margin: 0 0 10px; font-weight: 650; }
+  .grid2 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+  .kpi .v { font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .kpi .l { color: var(--muted); font-size: 12px; }
+  .up { color: var(--up); } .down { color: var(--down); } .muted { color: var(--muted); font-size: 12.5px; }
+  .chart { height: 300px; width: 100%; }
+  .chart.small { height: 200px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 8px; font-size: 12.5px; }
+  .legend button { border: 0; background: none; color: var(--ink2); font: inherit; padding: 2px 0; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+  .legend button.off { opacity: .4; }
+  .sw { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  .sw.dash { background: repeating-linear-gradient(90deg, var(--hold) 0 4px, transparent 4px 7px) !important; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  th:first-child, td:first-child { text-align: left; }
+  td.wrap { white-space: normal; min-width: 220px; text-align: left; color: var(--ink2); }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; background: var(--chip); color: var(--ink2); font-size: 12px; }
+  .pill.ok { color: var(--up); } .pill.bad { color: var(--down); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 8px; }
+  .seg button { border: 0; background: var(--surface); color: var(--ink2); padding: 4px 10px; font: inherit; font-size: 12.5px; cursor: pointer; }
+  .seg button.on { background: var(--chip); color: var(--ink); font-weight: 600; }
+  .bar { position: relative; height: 6px; background: var(--chip); border-radius: 3px; min-width: 80px; }
+  .bar i { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+  .err { color: var(--down); }
+  .nfa { font-size: 12.5px; color: var(--ink2); border-style: dashed; }
+  footer { max-width: 1100px; margin: 0 auto; padding: 0 16px 30px; color: var(--muted); font-size: 12px; }
+</style>
+<style>
+  .tiles { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  a.tile { display: block; text-decoration: none; color: inherit; }
+  a.tile .card { height: 100%; transition: border-color .15s; }
+  a.tile:hover .card { border-color: var(--accent); }
+  .tile h2 { font-size: 16px; }
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Dashboards</h1><div class="sub">Public, read-only. Each one pulls free data on a schedule and keeps the last good copy if a source is down.</div></div>
+</header>
+<main id="view"><div class="card muted">Loading…</div></main>
+<footer>Read-only. Nothing here is investment advice.</footer>
+<script>
+const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === "class") e.className = v; else e.setAttribute(k, v); }
+  for (const k of kids.flat()) if (k != null && k !== false) e.append(k instanceof Node ? k : document.createTextNode(String(k))); return e; };
+fetch("/api/index").then(r => r.json()).then(d => {
+  document.getElementById("view").replaceChildren(el("div", { class: "tiles" }, ...d.dashboards.map(t => el("a", { class: "tile", href: "/" + t.slug },
+    el("div", { class: "card" }, el("h2", {}, t.title), el("div", { class: "muted" }, t.blurb))))));
+}).catch(e => document.getElementById("view").replaceChildren(el("div", { class: "card err" }, "Could not load: " + e.message)));
+</script>
+</body>
+</html>

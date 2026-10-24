@@ -1,0 +1,9 @@
+date,series,value,source,note
+# Reported reach milestones (users). One row per announcement; value in users.
+2023-11-06,ChatGPT weekly active users,100000000,https://openai.com/index/new-models-and-developer-products-announced-at-devday/,OpenAI DevDay
+2024-08-29,ChatGPT weekly active users,200000000,https://www.theverge.com/2024/8/29/24231685/openai-chatgpt-200-million-weekly-users,reported by OpenAI
+2024-12-04,ChatGPT weekly active users,300000000,https://www.theverge.com/2024/12/4/24313097/chatgpt-300-million-weekly-users,Sam Altman at DealBook
+2025-02-20,ChatGPT weekly active users,400000000,https://www.cnbc.com/2025/02/20/openai-tops-400-million-users-despite-deepseeks-emergence.html,OpenAI COO
+2025-08-04,ChatGPT weekly active users,700000000,https://www.cnbc.com/2025/08/04/openai-chatgpt-700-million-users.html,OpenAI
+2025-10-06,ChatGPT weekly active users,800000000,https://openai.com/devday/,OpenAI DevDay 2025
+2023-03-16,Microsoft 365 Copilot paid seats,0,https://blogs.microsoft.com/blog/2023/03/16/introducing-microsoft-365-copilot/,announced (0 = launch marker)

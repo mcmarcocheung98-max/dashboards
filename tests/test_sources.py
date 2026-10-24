@@ -1,0 +1,65 @@
+"""Live sources of the thematic dashboards: run by hand (pytest -m network tests/test_sources.py) to see which source changed or went away.
+Each test fetches one source with no cache and checks it still parses to a sensible series."""
+import pandas as pd
+import pytest
+
+from app.topics import _base as B
+
+pytestmark = pytest.mark.network
+
+
+@pytest.fixture(autouse=True)
+def fresh(tmp_path, monkeypatch):
+    monkeypatch.setattr(B, "SNAP_DIR", tmp_path)      # no snapshot to fall back on: a failure here is the live source failing
+    from app import cache
+    cache._cache.clear()
+
+
+def test_uk_hpi_london_and_uk():
+    from app.topics import housing as H
+    for which in ("london", "uk"):
+        d = H.hpi(which)
+        assert len(d) > 200 and d["avg"].dropna().iloc[-1] > 100000 and d.index[-1] > pd.Timestamp.now() - pd.DateOffset(months=6), which
+        assert d["vol"].notna().sum() > 100 and d["avg_flat"].notna().sum() > 100
+
+
+def test_ons_cpih_and_earnings():
+    from app.topics import housing as H
+    c, w = H.cpih(), H.earnings()
+    assert len(c) > 200 and c.index[-1] > pd.Timestamp.now() - pd.DateOffset(months=4)
+    assert len(w) > 200 and 300 < w.iloc[-1] < 2000
+
+
+def test_bank_rate():
+    from app.topics import housing as H
+    s = H.bank_rate()
+    assert len(s) > 20 and 0 <= s.iloc[-1] < 15
+
+
+def test_indeed_postings_and_ai_share():
+    from app.topics import ai_jobs as J
+    for cc in ("US", "GB"):
+        s = J.sectors(cc)
+        assert set(s) == set(J.SECTORS["ai"] + J.SECTORS["professions"]) and all(x.index[-1] > pd.Timestamp.now() - pd.DateOffset(months=2) for x in s.values()), cc
+        assert len(J.aggregate(cc)) > 1000
+    sh = J.ai_share()
+    assert {"US", "GB"} <= set(sh) and sh["US"].index[-1] > pd.Timestamp.now() - pd.DateOffset(months=3)
+
+
+def test_fred_employment():
+    from app.topics import ai_jobs as J
+    for sid in J.US_SERIES.values():
+        s = J.fred(sid)
+        assert len(s) > 100 and s.index[-1] > pd.Timestamp.now() - pd.DateOffset(months=3), sid
+
+
+def test_census_btos_workbook():
+    from app.topics import ai_adoption as A
+    s = A.parse_btos(B.fetch(A.BTOS_XLSX, 0, binary=True, min_bytes=1000).encode("latin-1"))
+    assert len(s) > 10 and 0 < s.iloc[-1] < 100
+
+
+def test_nhtsa_sgo():
+    from app.topics import robotaxi as R
+    d = R.sgo()
+    assert len(d) > 1000 and d["month"].max() > pd.Timestamp.now() - pd.DateOffset(months=4)
