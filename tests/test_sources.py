@@ -84,3 +84,17 @@ def test_coingecko_global_and_volume():
     g = C.coingecko_global()
     assert 30 < g["dominance"] < 90
     assert C.btc_volume().iloc[-30:].mean() > 1e9
+
+
+def test_coingecko_candidate_coins_resolve():
+    import time
+    from app.topics import btc_cycles as C
+    bad = []
+    for c in C.coins_list():
+        try:
+            px, mc = C.coin_chart(c["coingecko_id"])
+            assert len(px) > 300 and mc.iloc[-1] > 0
+        except Exception as e:
+            bad.append((c["ticker"], c["coingecko_id"], type(e).__name__))
+        time.sleep(2.2)
+    assert not bad, bad

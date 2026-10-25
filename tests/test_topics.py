@@ -2,6 +2,7 @@
 import json
 import time
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -276,3 +277,58 @@ def test_btc_cycles_helpers():
     px = pd.Series(1.0, index=pd.date_range("2024-01-01", "2024-12-31"))
     ov = halving_overlay(px)
     assert list(ov) == ["Cycle 4 (2024)"] and all(p[1] == 1.0 for p in ov["Cycle 4 (2024)"])
+
+
+def _chart(mult=1.0, start=60000.0, n=365, seed=1):
+    import math
+    rng = np.random.default_rng(seed)
+    days = pd.date_range("2025-10-25", periods=n)
+    btc = [start]
+    for _ in range(n - 1):
+        btc.append(btc[-1] * math.exp(rng.normal(0, 0.03)))
+    px = [(b / btc[0]) ** mult * 10 for b in btc]
+    ms = [int(d.timestamp() * 1000) for d in days]
+    return {"btc": {"prices": [[t, v] for t, v in zip(ms, btc)], "market_caps": [[t, v * 2e7] for t, v in zip(ms, btc)], "total_volumes": [[t, 1e10] for t in ms]},
+            "coin": {"prices": [[t, v] for t, v in zip(ms, px)], "market_caps": [[t, v * 1e8] for t, v in zip(ms, px)], "total_volumes": [[t, 1e8] for t in ms]}}
+
+
+def test_btc_cycles_coins(snapdir, monkeypatch):
+    from app.topics import btc_cycles as C
+    charts = _chart(mult=2.0)
+    monkeypatch.setattr(C, "fetch_json", lambda url, ttl, **k: charts["btc"] if "coins/bitcoin/" in url else charts["coin"])
+    monkeypatch.setattr(C, "PACE", 0)
+    k = C._coins_now()
+    B.json_safe(k)
+    assert len(k["coins"]) == len(C.coins_list()) == 28 and all("kpi" in c for c in k["coins"]) and k["btc_now"] > 0
+    hype = next(c for c in k["coins"] if c["ticker"] == "HYPE")
+    assert hype["links"]["coinmarketcap"].endswith("/hyperliquid/") and hype["links"]["defillama"].endswith("/hyperliquid") and len(hype["spark"]) == 90
+    assert abs(hype["kpi"]["beta"] - 2.0) < 0.05 and 0 <= hype["kpi"]["rsi"] <= 100 and 0 <= hype["kpi"]["rsi_vs_btc"] <= 100
+    f = C._coin_now("HYPE")
+    B.json_safe(f)
+    assert len(f["projection"]) == 2 and all(p["bear"] < p["base"] < p["bull"] for p in f["projection"])
+    sc = C.scenarios()["scenarios"][0]["base"]["btc"]
+    assert abs(f["projection"][0]["base"] - f["kpi"]["price"] * (sc / k["btc_now"]) ** f["kpi"]["beta"]) < 1e-3 * f["kpi"]["price"]
+    assert f["implied_mcap_base"][0]["mcap"] > 0 and set(f["series"]) == {"price", "btc_indexed", "ratio", "rsi", "rsi_vs_btc", "market_cap"}
+    assert all(0 <= v <= 100 for _, v in f["series"]["rsi_vs_btc"] if v is not None)
+    with pytest.raises(ValueError):
+        C._coin_now("NOPE")
+    # a coin whose fetch fails is listed with its error, the rest still come through
+    def flaky(url, ttl, **kw):
+        if "coins/bitcoin/" in url:
+            return charts["btc"]
+        if "zcash" in url:
+            raise ConnectionError("down")
+        return charts["coin"]
+    monkeypatch.setattr(C, "fetch_json", flaky)
+    k2 = C._coins_now()
+    zec = next(c for c in k2["coins"] if c["ticker"] == "ZEC")
+    assert zec["error"] == "ConnectionError" and sum("kpi" in c for c in k2["coins"]) == 27
+
+
+def test_btc_cycles_rsi_and_beta_edges():
+    from app.topics.btc_cycles import beta_to_btc, rsi
+    up = pd.Series(np.linspace(1, 2, 90), index=pd.date_range("2026-01-01", periods=90))
+    assert rsi(up).dropna().iloc[-1] > 95
+    flat = pd.Series(1.0, index=up.index)
+    assert beta_to_btc(up, flat) is None                          # BTC never moves: no beta
+    assert beta_to_btc(up ** 5, up) == 3.0 and beta_to_btc(up ** 0.1, up) == 0.5     # clipped to [0.5, 3]

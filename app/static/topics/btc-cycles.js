@@ -66,18 +66,35 @@ const VIEWS = {
     return [head, grid, top, tbl];
   },
   async candidates() {
-    const d = await api("candidates"), R = d.research, ev = d.evidence || {};
-    const tbl = card("Probable candidates for 2026–27", para(R.intro), table(R.columns, R.rows), para(R.after), docLink({ as_of: d.as_of, doc_url: "https://claude.ai/artifact/5Z9ca6X7eka9R3XdxZKcb3" }));
-    const series = [
-      ["1 · Perp-DEX volume, rolling 30 days (live)", d.perp_volume_30d, usdBig], ["1 · Hyperliquid revenue, rolling 30 days (live)", d.hl_revenue_30d, usdBig],
-      ["2 · Stablecoin supply (live)", d.stablecoins, usdBig], ["3 · RWA on-chain value ex-stablecoins", ev["RWA on-chain value ex-stablecoins (USD)"], usdBig],
-      ["4 · Prediction-market monthly volume", (ev["Prediction-market monthly volume (USD)"] || []).filter(p => p[1] > 0), usdBig],
-      ["5 · x402 cumulative payment volume", ev["x402 cumulative payment volume (USD)"], usdBig],
-      ["1 · Perp-DEX share of global futures", ev["Perp-DEX share of global futures (%)"], v => v == null ? "–" : v.toFixed(1) + "%"]];
-    const cards = series.map(([t, pts, f]) => pts && pts.length ? card(t, ...linesChart([{ name: t.slice(4), points: pts }], f, { small: true })) : null).filter(Boolean);
-    const ev_table = d.rows_cited && d.rows_cited.length ? card("Hand-entered evidence", table(["Date", "Series", "Value", "Source"], d.rows_cited.map(r => [r.date, r.series, big(+r.value), "[" + host(r.source) + "](" + r.source + ")" + (r.note ? " · " + r.note : "")])),
-      note("Add a row to data/btc-cycles/evidence.csv when a new figure is published; the charts above read these series by name.")) : null;
-    return [tbl, el("div", { class: "grid2" }, ...cards), stale(d) ? card(null, stale(d)) : null, ev_table];
+    const [d, k] = await Promise.all([api("candidates"), api("coins")]);
+    const R = d.research, sc = k.scenarios || { scenarios: [] };
+    const px = (v) => v == null ? "–" : v >= 1000 ? "$" + num(v, 0) : v >= 1 ? "$" + v.toFixed(2) : "$" + v.toPrecision(3);
+    const r1 = v => v == null ? "–" : v.toFixed(0);
+    const rsiCls = v => v == null ? "" : v >= 70 ? "down" : v <= 30 ? "up" : "";
+    // the doc's table, folded by default
+    let open = false;
+    const docCard = card(null, el("button", { class: "pill", style: "cursor:pointer;border:0;font:inherit", onclick: e => { open = !open; body.style.display = open ? "" : "none"; e.currentTarget.textContent = (open ? "Hide" : "Show") + " the doc's ranked table"; } }, "Show the doc's ranked table"));
+    const body = el("div", { style: "display:none;margin-top:10px" }, para(R.intro), table(R.columns, R.rows), para(R.after), docLink({ as_of: d.as_of, doc_url: "https://claude.ai/artifact/5Z9ca6X7eka9R3XdxZKcb3" }));
+    docCard.append(body);
+    // method card
+    const method = card("Projection method (mechanical, not a forecast)", el("div", { class: "muted" }, sc.method || ""),
+      el("div", { class: "scroll", style: "margin-top:8px" }, el("table", {}, el("tr", {}, ...["Scenario", "Bear BTC", "Base BTC", "Bull BTC"].map(h => el("th", {}, h))),
+        ...(sc.scenarios || []).map(s => el("tr", {}, el("td", {}, s.label), ...["bear", "base", "bull"].map(x => el("td", { title: s[x].why }, usd(s[x].btc))))))),
+      note("Hover a BTC level for the reasoning. BTC now: " + usd(k.btc_now) + ". Edit data/btc-cycles/scenarios.json to change the levels."), stale(k));
+    // one row per coin, grouped by the doc's rank
+    const byRank = {};
+    for (const c of k.coins || []) (byRank[c.rank] = byRank[c.rank] || []).push(c);
+    const sections = Object.keys(byRank).sort((a, b) => a - b).map(rank => {
+      const rows = byRank[rank].map(c => coinRow(c, px, r1, rsiCls));
+      return card(rank + " · " + byRank[rank][0].sector, ...rows);
+    });
+    if (!k.coins || !k.coins.length) sections.push(card("Candidate coins", el("div", { class: "err" }, "Not available right now (" + (k.btc_error || "no data") + ").")));
+    const ev = d.evidence || {};
+    const evCards = [["3 · RWA on-chain value ex-stablecoins", ev["RWA on-chain value ex-stablecoins (USD)"], usdBig], ["4 · Prediction-market monthly volume", (ev["Prediction-market monthly volume (USD)"] || []).filter(p => p[1] > 0), usdBig],
+      ["5 · x402 cumulative payment volume", ev["x402 cumulative payment volume (USD)"], usdBig], ["1 · Perp-DEX share of global futures", ev["Perp-DEX share of global futures (%)"], v => v == null ? "–" : v.toFixed(1) + "%"]]
+      .map(([t, pts, f]) => pts && pts.length ? card(t, ...linesChart([{ name: t.slice(4), points: pts }], f, { small: true })) : null).filter(Boolean);
+    const evidence = card("Sector evidence without a liquid token (hand-entered; sources in data/btc-cycles/evidence.csv)", el("div", { class: "grid2" }, ...evCards));
+    return [docCard, method, ...sections, evidence];
   },
   async signals() {
     const d = await api("signals"), R = d.research;
@@ -93,6 +110,51 @@ const VIEWS = {
     return [status, ...charts, doc, timing, breakers];
   },
 };
+
+// one candidate coin: links, KPI strip, 90-day sparkline, and on demand its four charts
+function coinRow(c, px, r1, rsiCls) {
+  const head = el("div", { style: "display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline" },
+    el("b", {}, c.name, " ", el("span", { class: "muted" }, c.ticker)),
+    c.links && c.links.coinmarketcap ? link("CoinMarketCap", c.links.coinmarketcap) : null, c.links && c.links.defillama ? link("DefiLlama", c.links.defillama) : null,
+    c.links && c.links.coingecko ? link("CoinGecko", c.links.coingecko) : null, c.note ? el("span", { class: "pill" }, c.note) : null);
+  if (c.error) return el("div", { class: "card", style: "margin-top:8px;opacity:.7" }, head, el("div", { class: "muted" }, "Not available right now (" + c.error + ")."));
+  const K = c.kpi;
+  const strip = el("div", { class: "kpis", style: "margin-top:8px" }, kpi("Price", px(K.price)), kpi("24h", pct(K.change_24h, 1), cls(K.change_24h)), kpi("1 year", pct(K.change_1y, 0), cls(K.change_1y)),
+    kpi("Market cap", usdBig(K.market_cap)), kpi("RSI 14", r1(K.rsi), rsiCls(K.rsi)), kpi("RSI vs BTC", r1(K.rsi_vs_btc), rsiCls(K.rsi_vs_btc)),
+    kpi("Beta to BTC", K.beta == null ? "–" : K.beta.toFixed(2)), kpi("90d vs BTC", pct(K.vs_btc_90d, 0), cls(K.vs_btc_90d)),
+    kpi("Base end-2027", px(K.base_2027)), kpi("Base end-2028", px(K.base_2028)));
+  const spark = el("div", { style: "margin-top:6px" }, ...linesChart([{ name: "90 days", points: c.spark || [] }], px, { small: true }));
+  spark.querySelector(".chart").style.height = "120px";
+  const more = el("div", {});
+  let loaded = false;
+  const btn = el("button", { class: "pill", style: "cursor:pointer;border:0;font:inherit;margin-top:6px", onclick: async () => {
+    if (loaded) { more.style.display = more.style.display === "none" ? "" : "none"; btn.textContent = more.style.display === "none" ? "Show charts" : "Hide charts"; return; }
+    btn.textContent = "Loading…";
+    try { const f = await api("coin-" + c.ticker.toLowerCase()); more.replaceChildren(...coinCharts(f, px, r1)); loaded = true; btn.textContent = "Hide charts"; }
+    catch (err) { more.replaceChildren(el("div", { class: "err" }, "Could not load: " + err.message)); btn.textContent = "Retry"; }
+  } }, "Show charts");
+  return el("div", { class: "card", style: "margin-top:8px" }, head, strip, spark, btn, more);
+}
+
+function coinCharts(f, px, r1) {
+  const S = f.series, end = S.price[S.price.length - 1][0];
+  const price = card("Price, 365 days (log), with BTC rebased to the same start", ...linesChart([{ name: f.ticker, points: S.price }, { name: "BTC, rebased", points: S.btc_indexed, dashed: true, color: css("--hold") }], px, { log: true, small: true }));
+  const rsi = card("RSI 14: the coin, and the coin ÷ BTC ratio", ...svgLines([{ name: "RSI vs BTC", points: S.rsi_vs_btc }, { name: "RSI (USD)", points: S.rsi, dashed: true }],
+    { xFmt: v => new Date(v * 1000).toLocaleDateString([], { month: "short", year: "2-digit", timeZone: "UTC" }), xTicks: (() => { const out = []; const d = new Date(S.price[0][0] * 1000); d.setUTCDate(1); d.setUTCMonth(Math.ceil(d.getUTCMonth() / 3) * 3); for (; d.getTime() / 1000 <= end; d.setUTCMonth(d.getUTCMonth() + 3)) out.push(d.getTime() / 1000); return out; })(),
+      yFmt: r1, h: 200, hline: 50, note: "Above 70: has run hard (against BTC for the solid line). Below 30: washed out." }));
+  const mcap = card("Market cap, 365 days", ...linesChart([{ name: "Market cap", points: S.market_cap }], v => usdBig(v), { small: true }));
+  const pts = f.projection || [];
+  const projSeries = [{ name: "Price", points: S.price.filter((p, i) => i % 3 === 0) }];
+  const now = [end, S.price[S.price.length - 1][1]];
+  const band = pts.length ? [{ name: "Bear to bull", points: [[now[0], now[1], now[1]], ...pts.map(p => [new Date(p.date).getTime() / 1000, p.bear, p.bull])], color: css("--s1"), opacity: 0.18 }] : [];
+  const base = pts.length ? [{ name: "Base", points: [now, ...pts.map(p => [new Date(p.date).getTime() / 1000, p.base])], color: css("--s1"), width: 2.5 }] : [];
+  const proj = card("Projection: bear / base / bull at end-2027 and end-2028 (beta " + (f.kpi.beta == null ? "–" : f.kpi.beta.toFixed(2)) + ")",
+    ...svgLines([...projSeries, ...base], { log: true, bands: band, xFmt: v => String(new Date(v * 1000).getUTCFullYear()), xTicks: [S.price[0][0], ...pts.map(p => new Date(p.date).getTime() / 1000)], yFmt: px, h: 240, note: "Shaded = bear to bull range; the line continues the base case." }),
+    el("div", { class: "scroll", style: "margin-top:8px" }, el("table", {}, el("tr", {}, ...["Scenario", "Bear", "Base", "Bull", "Implied market cap (base)"].map(h => el("th", {}, h))),
+      ...pts.map((p, i) => el("tr", {}, el("td", {}, p.label), el("td", {}, px(p.bear)), el("td", {}, px(p.base)), el("td", {}, px(p.bull)), el("td", {}, usdBig((f.implied_mcap_base[i] || {}).mcap)))))),
+    note("Price now × (BTC scenario ÷ BTC now) ^ beta. Mechanical; it says nothing about the coin's own fundamentals, unlocks or survival."));
+  return [el("div", { class: "grid2", style: "margin-top:8px" }, price, rsi, mcap, proj), stale(f)];
+}
 
 // horizontal-ish bars on a log scale for multiples: one row per sector/coin, label left, bar + value right
 function svgBarsLog(items) {

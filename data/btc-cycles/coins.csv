@@ -1,0 +1,30 @@
+rank,sector,ticker,name,coingecko_id,cmc_slug,defillama_slug,note
+# One row per candidate coin from the doc's 2026-27 table. coingecko_id drives the data; cmc_slug and defillama_slug build the links (blank = no page). 'verify' = id copied from memory, confirm with pytest -m network.
+1,On-chain finance with revenue,HYPE,Hyperliquid,hyperliquid,hyperliquid,hyperliquid,
+1,On-chain finance with revenue,ASTER,Aster,aster-2,aster,aster,verify id
+1,On-chain finance with revenue,LIT,Lighter,lighter,lighter,lighter,verify id
+1,On-chain finance with revenue,JUP,Jupiter,jupiter-exchange-solana,jupiter-ag,jupiter,
+1,On-chain finance with revenue,AAVE,Aave,aave,aave,aave,
+1,On-chain finance with revenue,PENDLE,Pendle,pendle,pendle,pendle,
+2,Stablecoin & payments infrastructure,ENA,Ethena,ethena,ethena,ethena,
+2,Stablecoin & payments infrastructure,XPL,Plasma,plasma,plasma,,verify id
+2,Stablecoin & payments infrastructure,TRX,Tron,tron,tron,,
+2,Stablecoin & payments infrastructure,SKY,Sky,sky,sky,sky-lending,verify id
+3,RWA / tokenized stocks & Treasuries,ONDO,Ondo,ondo-finance,ondo-finance,ondo-finance,
+3,RWA / tokenized stocks & Treasuries,LINK,Chainlink,chainlink,chainlink,chainlink,
+3,RWA / tokenized stocks & Treasuries,SYRUP,Maple Finance,syrup,maple-finance,maple,verify id
+3,RWA / tokenized stocks & Treasuries,PLUME,Plume,plume,plume,,verify id
+3,RWA / tokenized stocks & Treasuries,CFG,Centrifuge,centrifuge,centrifuge,centrifuge,
+5,AI x crypto second wave,TAO,Bittensor,bittensor,bittensor,,
+5,AI x crypto second wave,VIRTUAL,Virtuals Protocol,virtual-protocol,virtual-protocol,virtuals-protocol,
+5,AI x crypto second wave,RENDER,Render,render-token,render,,
+5,AI x crypto second wave,AKT,Akash Network,akash-network,akash-network,,
+5,AI x crypto second wave,GRASS,Grass,grass,grass,,
+5,AI x crypto second wave,IO,io.net,io,io-net,,
+6,High-throughput L1s / app-chains,SOL,Solana,solana,solana,,
+6,High-throughput L1s / app-chains,SUI,Sui,sui,sui,,
+6,High-throughput L1s / app-chains,TON,Toncoin,the-open-network,toncoin,,
+7,Privacy / ZK,ZEC,Zcash,zcash,zcash,,
+7,Privacy / ZK,XMR,Monero,monero,monero,,
+8,BTC-fi / Bitcoin L2s,CORE,Core,coredaoorg,core-dao,,
+8,BTC-fi / Bitcoin L2s,STX,Stacks,blockstack,stacks,,

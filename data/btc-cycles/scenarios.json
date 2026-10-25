@@ -1,0 +1,14 @@
+{
+ "method": "Mechanical, not a forecast. BTC scenario levels come from the research doc's cycle history; each coin is scaled by its beta to BTC (slope of daily log returns over the last 365 days, clipped to 0.5-3.0): projected price = price now x (BTC scenario / BTC now) ^ beta.",
+ "btc_reference_low": 59300,
+ "scenarios": [
+  {"date": "2027-12-31", "label": "End-2027 (the '2019 / 2023' year)",
+   "bear": {"btc": 38500, "why": "NYDIG's 2022-style retest depth quoted in the doc ($38,000-39,000)"},
+   "base": {"btc": 115600, "why": "June 2026 low x 1.95: BTC rose 95% in 2019, the first year after that bottom"},
+   "bull": {"btc": 151200, "why": "June 2026 low x 2.55: BTC rose 155% in 2023, the first year after that bottom"}},
+  {"date": "2028-12-31", "label": "End-2028 (halving year)",
+   "bear": {"btc": 118600, "why": "June 2026 low x 2: the halving year held above the prior year in every cycle so far"},
+   "base": {"btc": 237200, "why": "June 2026 low x 4: the doc's +300% from the low for 2019-20"},
+   "bull": {"btc": 385000, "why": "June 2026 low x 6.5: 2015-16 and 2018-20 ran 6-9x, and the doc says multiples shrink each cycle"}}
+ ]
+}

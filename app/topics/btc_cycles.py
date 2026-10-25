@@ -36,6 +36,10 @@ LLAMA_HL_REV = "https://api.llama.fi/summary/fees/hyperliquid?dataType=dailyReve
 LLAMA_PERPS = "https://api.llama.fi/overview/derivatives?excludeTotalDataChart=false&excludeTotalDataChartBreakdown=true"
 CG_GLOBAL = "https://api.coingecko.com/api/v3/global"
 CG_VOLUME = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily"
+CG_CHART = "https://api.coingecko.com/api/v3/coins/{id}/market_chart?vs_currency=usd&days=365&interval=daily"
+COINS = DATA_DIR / SLUG / "coins.csv"
+SCENARIOS = DATA_DIR / SLUG / "scenarios.json"
+PACE = 2.2                                 # seconds between real CoinGecko downloads (public limit ~30/min)
 SOURCES = [{"name": "The research doc (BTC Cycles & Sector Rotation)", "url": "https://claude.ai/artifact/5Z9ca6X7eka9R3XdxZKcb3", "cadence": "as revised"},
            {"name": "BTC price (Coin Metrics community data)", "url": "https://coinmetrics.io/community-network-data/", "cadence": "daily"},
            {"name": "DeFi TVL, stablecoin supply, Hyperliquid, perp DEX volume (DefiLlama)", "url": "https://defillama.com", "cadence": "daily"},
@@ -168,6 +172,135 @@ def rising_weeks(s: pd.Series) -> int:
     return n
 
 
+# ------------------------------------------------------------------ candidate coins (price, RSI vs BTC, market cap, scenario projection)
+_last_download = [0.0]
+
+
+def coins_list() -> list[dict]:
+    with COINS.open(newline="", encoding="utf-8") as f:
+        rows = [{k.strip(): (v or "").strip() for k, v in r.items() if k} for r in csv.DictReader(f)]
+    return [r for r in rows if r.get("ticker") and not r["rank"].startswith("#")]
+
+
+def scenarios() -> dict:
+    return _cached(f"topic:{SLUG}:scenarios", 600, lambda: json.loads(SCENARIOS.read_text(encoding="utf-8")))
+
+
+def parse_chart(j: dict) -> tuple[pd.Series, pd.Series]:
+    px = pd.Series({pd.to_datetime(int(t), unit="ms").normalize(): float(v) for t, v in j.get("prices", [])}).sort_index()
+    mc = pd.Series({pd.to_datetime(int(t), unit="ms").normalize(): float(v) for t, v in j.get("market_caps", [])}).sort_index()
+    return px[~px.index.duplicated(keep="last")], mc[~mc.index.duplicated(keep="last")]
+
+
+def coin_chart(cg_id: str) -> tuple[pd.Series, pd.Series]:
+    """A coin's daily price and market cap for the last 365 days; real downloads are paced so a burst of 28 coins stays under CoinGecko's limit."""
+    from ..cache import _cache
+    url = CG_CHART.format(id=cg_id)
+    if f"topic:{url}" not in _cache:
+        wait = PACE - (time.time() - _last_download[0])
+        if wait > 0:
+            time.sleep(wait)
+        _last_download[0] = time.time()
+    return parse_chart(fetch_json(url, TTL, min_bytes=1000))
+
+
+def rsi(s: pd.Series, n: int = 14) -> pd.Series:
+    d = s.diff()
+    up, dn = d.clip(lower=0), -d.clip(upper=0)
+    au = up.ewm(alpha=1 / n, min_periods=n, adjust=False).mean()
+    ad = dn.ewm(alpha=1 / n, min_periods=n, adjust=False).mean()
+    return (100 - 100 / (1 + au / ad.replace(0, np.nan))).fillna(100).where(au.notna())
+
+
+def beta_to_btc(coin: pd.Series, btc: pd.Series) -> float | None:
+    r = pd.concat([np.log(coin).diff(), np.log(btc).diff()], axis=1, join="inner").dropna()
+    if len(r) < 60 or r.iloc[:, 1].var() == 0:
+        return None
+    b = float(np.polyfit(r.iloc[:, 1], r.iloc[:, 0], 1)[0])
+    return float(min(3.0, max(0.5, b)))
+
+
+def project(price_now: float, btc_now: float, beta: float, sc: dict) -> list[dict]:
+    """Bear / base / bull price at each scenario date: price_now x (btc_scenario / btc_now) ^ beta."""
+    out = []
+    for s in sc["scenarios"]:
+        row = {"date": s["date"], "label": s["label"]}
+        for k in ("bear", "base", "bull"):
+            row[k] = _r(price_now * (s[k]["btc"] / btc_now) ** beta, 4)
+            row[k + "_btc"] = s[k]["btc"]
+        out.append(row)
+    return out
+
+
+def _coin_full(c: dict, btc: pd.Series) -> dict:
+    px, mc = coin_chart(c["coingecko_id"])
+    both = pd.concat([px, btc], axis=1, join="inner").dropna()
+    coin_px, btc_px = both.iloc[:, 0], both.iloc[:, 1]
+    ratio = coin_px / btc_px
+    beta = beta_to_btc(coin_px, btc_px)
+    now, btc_now = float(coin_px.iloc[-1]), float(btc_px.iloc[-1])
+    supply = float(mc.iloc[-1] / px.iloc[-1]) if len(mc) and px.iloc[-1] else None
+    d90 = coin_px.index[-1] - pd.Timedelta(days=90)
+    vs_btc_90 = _r(ratio.iloc[-1] / ratio.asof(d90) - 1, 4) if ratio.asof(d90) else None
+    r_coin, r_ratio = rsi(coin_px), rsi(ratio)
+    proj = project(now, btc_now, beta, scenarios()) if beta is not None else []
+    return {"ticker": c["ticker"], "name": c["name"], "rank": int(c["rank"]), "sector": c["sector"], "note": c.get("note", ""),
+            "links": {"coinmarketcap": f"https://coinmarketcap.com/currencies/{c['cmc_slug']}/" if c.get("cmc_slug") else None,
+                      "defillama": f"https://defillama.com/protocol/{c['defillama_slug']}" if c.get("defillama_slug") else None,
+                      "coingecko": f"https://www.coingecko.com/en/coins/{c['coingecko_id']}"},
+            "kpi": {"price": _r(now, 6), "date": str(coin_px.index[-1].date()), "change_24h": _r(now / float(coin_px.iloc[-2]) - 1, 4) if len(coin_px) > 1 else None,
+                    "change_1y": _r(now / float(coin_px.iloc[0]) - 1, 4), "market_cap": _r(float(mc.iloc[-1]), 0) if len(mc) else None,
+                    "rsi": _r(float(r_coin.dropna().iloc[-1]), 1) if r_coin.notna().any() else None,
+                    "rsi_vs_btc": _r(float(r_ratio.dropna().iloc[-1]), 1) if r_ratio.notna().any() else None,
+                    "beta": _r(beta, 2) if beta is not None else None, "vs_btc_90d": vs_btc_90,
+                    "base_2027": proj[0]["base"] if proj else None, "base_2028": proj[1]["base"] if len(proj) > 1 else None},
+            "spark": _pts(coin_px.iloc[-90:], 6),
+            "series": {"price": _pts(coin_px, 6), "btc_indexed": _pts(btc_px / btc_px.iloc[0] * coin_px.iloc[0], 6), "ratio": _pts(ratio, 10),
+                       "rsi": _pts(r_coin, 1), "rsi_vs_btc": _pts(r_ratio, 1), "market_cap": _pts(mc, 0)},
+            "projection": proj, "implied_mcap_base": [{"date": p["date"], "mcap": _r(p["base"] * supply, 0)} for p in proj] if supply else []}
+
+
+def btc_chart() -> pd.Series:
+    return parse_chart(fetch_json(CG_VOLUME, TTL, min_bytes=1000))[0]
+
+
+def _coins_now() -> dict:
+    """Every candidate coin's KPI strip and sparkline (the full charts load per coin). A coin whose fetch fails is listed with its error."""
+    sc = scenarios()
+    out = {"coins": [], "scenarios": sc, "as_of": None, "stale": {}, "updated": int(time.time())}
+    try:
+        btc = btc_chart()
+    except Exception as e:
+        out["btc_error"] = type(e).__name__
+        out["coins"] = [{"ticker": c["ticker"], "name": c["name"], "rank": int(c["rank"]), "sector": c["sector"], "error": type(e).__name__,
+                         "links": {"coinmarketcap": f"https://coinmarketcap.com/currencies/{c['cmc_slug']}/" if c.get("cmc_slug") else None}} for c in coins_list()]
+        return out
+    for c in coins_list():
+        try:
+            full = _coin_full(c, btc)
+            out["coins"].append({k: full[k] for k in ("ticker", "name", "rank", "sector", "note", "links", "kpi", "spark")})
+        except Exception as e:
+            out["coins"].append({"ticker": c["ticker"], "name": c["name"], "rank": int(c["rank"]), "sector": c["sector"], "note": c.get("note", ""), "error": type(e).__name__,
+                                 "links": {"coinmarketcap": f"https://coinmarketcap.com/currencies/{c['cmc_slug']}/" if c.get("cmc_slug") else None,
+                                           "defillama": f"https://defillama.com/protocol/{c['defillama_slug']}" if c.get("defillama_slug") else None}})
+    out["btc_now"] = _r(float(btc.iloc[-1]), 0)
+    out["as_of"] = max((c["kpi"]["date"] for c in out["coins"] if "kpi" in c), default=None)
+    from ._base import stale_info
+    out["stale"] = stale_info([CG_CHART.format(id=c["coingecko_id"]) for c in coins_list()] + [CG_VOLUME])
+    return out
+
+
+def _coin_now(ticker: str) -> dict:
+    c = next((x for x in coins_list() if x["ticker"] == ticker), None)
+    if c is None:
+        raise ValueError("unknown coin")
+    out = _coin_full(c, btc_chart())
+    from ._base import stale_info
+    out["stale"] = stale_info([CG_CHART.format(id=c["coingecko_id"]), CG_VOLUME])
+    out["as_of"] = out["kpi"]["date"]
+    return out
+
+
 # ------------------------------------------------------------------ endpoints
 def _cycles_now() -> dict:
     R = research()
@@ -291,4 +424,6 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 
 
 ENDPOINTS = {"cycles": _cached_ep("cycles", _cycles_now), "sectors": _cached_ep("sectors", _sectors_now, 600), "metrics": _cached_ep("metrics", _metrics_now),
-             "candidates": _cached_ep("candidates", _candidates_now), "signals": _cached_ep("signals", _signals_now, 3600)}
+             "candidates": _cached_ep("candidates", _candidates_now), "signals": _cached_ep("signals", _signals_now, 3600),
+             "coins": _cached_ep("coins", _coins_now)}
+ENDPOINTS.update({f"coin-{c['ticker'].lower()}": _cached_ep(f"coin-{c['ticker'].lower()}", (lambda t: lambda: _coin_now(t))(c["ticker"])) for c in coins_list()})
