@@ -97,6 +97,55 @@ const VIEWS = {
     const evidence = card("Sector evidence without a liquid token (hand-entered; sources in data/btc-cycles/evidence.csv)", el("div", { class: "grid2" }, ...evCards));
     return [docCard, method, ...sections, evidence];
   },
+  async etf() {
+    const d = await api("etf"), K = d.kpi || {};
+    const m = v => v == null ? "–" : (v < 0 ? "−" : "") + "$" + big(Math.abs(v) * 1e6);
+    const head = card(null, el("div", { class: "kpis" }, kpi("Net flows since launch", m(K.since_launch_usd_m), cls(K.since_launch_usd_m)),
+      kpi("BTC taken in since launch", K.since_launch_btc == null ? "–" : num(K.since_launch_btc) + " BTC"), kpi("Last 30 days", m(K.last_30d_usd_m), cls(K.last_30d_usd_m)),
+      kpi("Last day (" + (K.last_day || "–") + ")", m(K.last_day_usd_m), cls(K.last_day_usd_m)), kpi("Streak", K.streak == null ? "–" : Math.abs(K.streak) + (K.streak >= 0 ? " days in" : " days out"), cls(K.streak)),
+      kpi("BlackRock IBIT share of net flows", pct(K.ibit_share, 0))),
+      el("div", { class: "muted", style: "margin-top:6px" }, "US spot bitcoin ETFs since they began trading on 11 Jan 2024. Best day " + m(K.best_day_usd_m) + " (" + (K.best_day || "–") + "), worst " + m(K.worst_day_usd_m) + " (" + (K.worst_day || "–") + ")."),
+      missing(d, "farside", "Per-issuer flows (Farside)"), missing(d, "bitbo", "Flows in BTC (bitbo)"), asOf(d), stale(d));
+    const daily = d.daily_usd_m ? card("Daily net flows, all US spot ETFs (US$)", ...linesChart([{ name: "Net flow", points: d.daily_usd_m.map(p => [p[0], p[1] * 1e6]), bar: true }], v => usdBig(v), { small: true })) : null;
+    const cum = d.cum_usd_m ? card("Cumulative net flows (US$, right) against the BTC price (left)",
+      ...linesChart([{ name: "Cumulative flows", points: d.cum_usd_m.map(p => [p[0], p[1] * 1e6]), fmt: v => usdBig(v) },
+        ...(d.btc_price ? [{ name: "BTC price", points: d.btc_price, axis: "left", color: css("--hold"), dashed: true, fmt: v => usd(v) }] : [])], v => usdBig(v)),
+      note("Flows lead price less than they seem: both respond to the same news. Watch the 30-day sum turning, the doc's signal 4.")) : null;
+    const cumBtc = d.cum_btc ? card("Cumulative BTC taken in by US spot ETFs", ...linesChart([{ name: "BTC", points: d.cum_btc }], v => num(v) + " BTC", { small: true }), note("bitbo, in BTC rather than dollars, so price moves do not inflate it.")) : null;
+    const roll = d.roll30_usd_m ? card("Rolling 30-trading-day net flows (US$)", ...linesChart([{ name: "30-day flows", points: d.roll30_usd_m.map(p => [p[0], p[1] * 1e6]), bar: true }], v => usdBig(v), { small: true })) : null;
+    const issuers = d.cum_by_issuer ? card("Cumulative net flows by issuer (US$)", ...linesChart(Object.entries(d.cum_by_issuer).map(([k, pts]) => ({ name: k + (d.issuers[k] ? " · " + d.issuers[k] : ""), points: pts.map(p => [p[0], p[1] * 1e6]) })), v => usdBig(v)),
+      note("GBTC's line falls because it converted from a trust with a high fee; most of its outflow moved to the other funds.")) : null;
+    const tbl = d.table ? card("By issuer", table(["Ticker", "Issuer", "Since launch", "Last 30 trading days", "Last day", "Best day", "Worst day"],
+      d.table.map(r => [r.ticker, r.issuer, m(r.since_launch), m(r.last_30d), m(r.last_day), m(r.best_day), m(r.worst_day)])), note("US$; Farside's daily table, net of creations and redemptions.")) : null;
+    const intl = Object.keys(d.intl || {}).length ? card("Hong Kong ETFs and UK ETNs: BTC held (hand-entered)", ...linesChart(Object.entries(d.intl).map(([k, pts]) => ({ name: k, points: pts })), v => num(v) + " BTC", { small: true }),
+      table(["Date", "Market", "BTC", "Source"], d.intl_rows.map(r => [r.date, r.series, num(+r.value), "[" + host(r.source) + "](" + r.source + ")" + (r.note ? " · " + r.note : "")])),
+      note("No free daily feed for these: add a row to data/btc-cycles/etf_holdings.csv from the issuers' holdings pages.")) : null;
+    const ms = card("Milestones", table(["Date", "Market", "What happened", "Source"], (d.milestones || []).map(r => [r.date, r.market, r.event, "[" + host(r.source) + "](" + r.source + ")"])));
+    return [head, daily, cum, cumBtc, roll, issuers, tbl, intl, ms];
+  },
+  async mstr() {
+    const d = await api("mstr"), K = d.kpi || {};
+    const head = card(null, el("div", { class: "kpis" }, kpi("BTC held", num(K.held)), kpi("Share of 21m supply", K.share_of_supply == null ? "–" : (K.share_of_supply * 100).toFixed(2) + "%"), kpi("Value of the BTC", usdBig(K.value_usd)),
+      kpi("Approx. average cost", usd(K.approx_avg_cost)), kpi("mNAV", K.mnav == null ? "–" : K.mnav.toFixed(2) + "×"), kpi("MSTR", usd(K.mstr, 2)),
+      kpi("90-day correlation with BTC", K.corr90 == null ? "–" : K.corr90.toFixed(2)), kpi("90-day beta to BTC", K.beta90 == null ? "–" : K.beta90.toFixed(2)),
+      kpi("Purchases recorded", num(K.purchases)), kpi("Last purchase", K.last_purchase || "–")),
+      note(d.note || ""), note("Prices: " + (d.price_source || "–") + "."), asOf(d), stale(d));
+    const held = card("BTC held", ...linesChart([{ name: "BTC held", points: d.held }], v => num(v), { small: true }));
+    const px = card("MSTR vs BTC, both rebased to Aug 2020 (log)", ...linesChart([{ name: "MSTR", points: d.mstr_rebased }, { name: "BTC", points: d.btc_rebased, color: css("--hold"), dashed: true }], v => xf(v), { log: true }));
+    const mn = card("mNAV: share market value ÷ value of its bitcoin", ...linesChart([{ name: "mNAV", points: d.mnav }], v => v == null ? "–" : v.toFixed(2) + "×", { small: true, hlines: [1] }),
+      note("Above 1 the market pays a premium for each bitcoin it holds, which lets it issue shares to buy more; below 1 that engine stalls (the doc: the treasury trade is over once the premium compresses)."));
+    const cb = card("Correlation and beta of daily returns with BTC (rolling 90 trading days)", ...linesChart([{ name: "Correlation", points: d.corr90 }, { name: "Beta", points: d.beta90, axis: "left", dashed: true }], v => v == null ? "–" : v.toFixed(2), { small: true }));
+    const bps = card("BTC per 1,000 MSTR shares", ...linesChart([{ name: "BTC per 1,000 shares", points: d.btc_per_1000_shares }], v => v == null ? "–" : v.toFixed(3), { small: true }),
+      note("Rising = purchases added more bitcoin than new shares diluted; falling = dilution outran buying."));
+    const buys = card("Every recorded purchase (newest first)", table(["Date", "BTC added", "Held after", "BTC price that day", "Approx. US$"],
+      (d.purchases || []).map(b => [b.date, num(b.btc), num(b.held_after), usd(b.btc_price), usdBig(b.approx_usd)])));
+    const tre = (d.treasuries || []).map(t => card(t.company + " (" + t.country + ", " + t.yahoo + ")",
+      t.price ? linesChart([{ name: t.yahoo, points: t.price }], v => v == null ? "–" : v.toFixed(2), { small: true }) : el("div", { class: "muted" }, "Price not available right now (" + (t.price_error || "no data") + ")."),
+      t.corr90 != null ? note("90-day correlation with BTC: " + t.corr90.toFixed(2)) : null,
+      table(["Date", "BTC held", "Source"], t.rows.map(r => [r.date, num(+r.btc_held), "[" + host(r.source) + "](" + r.source + ")" + (r.note ? " · " + r.note : "")]))));
+    return [head, el("div", { class: "grid2" }, held, mn), px, el("div", { class: "grid2" }, cb, bps), buys,
+      tre.length ? card("UK and Hong Kong bitcoin treasury companies", el("div", { class: "muted" }, "Holdings hand-entered in data/btc-cycles/treasuries.csv; prices from Yahoo.")) : null, ...tre];
+  },
   async signals() {
     const d = await api("signals"), R = d.research;
     const rows = d.status.map((s, i) => el("tr", {}, el("td", {}, i + 1), el("td", { class: "wrap" }, s.signal), el("td", {}, pill(s.state)), el("td", { class: "wrap" }, s.reading), el("td", { class: "wrap" }, s.note)));

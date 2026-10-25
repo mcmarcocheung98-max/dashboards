@@ -40,6 +40,9 @@ def mock_sources() -> None:
             return charts["coin"]
         return T._llama(url)
     btc_cycles.fetch_json = cyc
+    from app.topics import btc_flows
+    btc_flows.fetch = lambda url, ttl, **k: T._farside_html() if "farside" in url else T._bitbo_page()
+    btc_flows.fetch_json = lambda url, ttl, **k: T._mstr_json() if "mstr-nav" in url else T._yahoo(150 if "MSTR" in url else 60000 if "BTC-USD" in url else 1.0)
     btc_cycles.PACE = 0
     import tempfile
     btc_cycles.DOM_LOG = Path(tempfile.mkdtemp()) / "dom.csv"

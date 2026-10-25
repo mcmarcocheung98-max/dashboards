@@ -348,3 +348,62 @@ def test_btc_cycles_coin_notes(snapdir, monkeypatch):
     assert C._coin_now("SOL")["notes"]["narrative"].startswith("Solana")
     assert C.stands_out({"rsi_vs_btc": 75, "beta": 0.6, "from_high": -0.8}, []) == [
         "Running hot against BTC (RSI vs BTC 75).", "80% below its 1-year high.", "Low beta (0.6): has moved less than BTC, so its projection band is narrow."]
+
+
+# ------------------------------------------------------------------ ETF and MSTR tabs
+def _farside_html(n=720):
+    days = pd.bdate_range("2024-01-11", periods=n)
+    cols = ["IBIT", "FBTC", "BITB", "ARKB", "BTCO", "EZBC", "BRRR", "HODL", "BTCW", "GBTC", "BTC"]
+    rows = "".join("<tr><td>" + d.strftime("%d %b %Y") + "</td>" + "".join(f"<td>{'(12.5)' if c == 'GBTC' else '-' if c == 'BTCW' else f'{10 + i % 7:.1f}'}</td>" for c in cols) + "<td>0</td></tr>"
+                   for i, d in enumerate(days))
+    return ("<html><body><table class='nav'><tr><td>menu</td></tr></table><table class='etf'><thead><tr><th></th>" + "".join(f"<th>{c}</th>" for c in cols)
+            + "<th>Total</th></tr></thead><tbody>" + rows + "<tr><td>Total</td>" + "<td>1</td>" * 12 + "</tr></tbody></table></body></html>")
+
+
+def _bitbo_page(n=720):
+    ms = [int(d.timestamp() * 1000) for d in pd.bdate_range("2024-01-11", periods=n)]
+    return "var historyBtc = [" + ",".join(f"[getPreviousBusinessDay({t}), truncate({100 + i % 9 - 4}, 2)]" for i, t in enumerate(ms)) + "]; var mergedHistoryBtc = [];"
+
+
+def _mstr_json():
+    days = pd.date_range("2020-08-11", "2026-10-20", freq="W")
+    pts, hold = [], 21454
+    for i, d in enumerate(days):
+        if i % 5 == 0:
+            hold += 1000
+        pts.append({"d": str(d.date()), "mstr": 13 + i * 0.4, "btc": 11000 + i * 250, "hold": hold, "basic": 95_000_000 + i * 200_000, "dil": 1})
+    return {"note": "fixture", "points": pts}
+
+
+def _yahoo(start=10.0, n=400, seed=2):
+    rng = np.random.default_rng(seed)
+    days = pd.bdate_range(end=pd.Timestamp("2026-10-20"), periods=n)
+    px = start * np.exp(np.cumsum(rng.normal(0, 0.03, n)))
+    return {"chart": {"result": [{"timestamp": [int(d.timestamp()) for d in days], "indicators": {"quote": [{"close": list(px)}]}}]}}
+
+
+def test_btc_etf_and_mstr(snapdir, monkeypatch):
+    from app.topics import btc_cycles as C, btc_flows as F
+    monkeypatch.setattr(C, "fetch_json", lambda url, ttl, **k: _cm())
+    monkeypatch.setattr(F, "fetch", lambda url, ttl, **k: _farside_html() if "farside" in url else _bitbo_page())
+    monkeypatch.setattr(F, "fetch_json", lambda url, ttl, **k: _mstr_json() if "mstr-nav" in url else _yahoo(150 if "MSTR" in url else 60000 if "BTC-USD" in url else 1.0))
+    e = F._etf_now()
+    B.json_safe(e)
+    assert not [k for k in e if k.endswith("_error")], [k for k in e if k.endswith("_error")]
+    assert e["kpi"]["since_launch_usd_m"] > 0 and e["table"][0]["ticker"] != "GBTC" and next(r for r in e["table"] if r["ticker"] == "GBTC")["since_launch"] < 0
+    assert e["kpi"]["streak"] > 0 and "Others" in e["cum_by_issuer"] and e["cum_btc"][-1][1] > 0 and e["milestones"][0]["date"] == "2024-01-10"
+    assert "Hong Kong spot ETFs (BTC)" in e["intl"]
+    m = F._mstr_now()
+    B.json_safe(m)
+    assert m["kpi"]["purchases"] > 50 and m["purchases"][0]["date"] > m["purchases"][-1]["date"] and m["kpi"]["approx_avg_cost"] > 0
+    assert m["price_source"] == "Yahoo daily closes" and -1 <= m["kpi"]["corr90"] <= 1 and m["mnav"][-1][1] > 0
+    assert {t["country"] for t in m["treasuries"]} == {"UK", "HK"} and all("price" in t for t in m["treasuries"])
+
+
+def test_farside_parser_rejects_a_changed_page():
+    from app.topics.btc_flows import parse_farside, _num
+    assert _num("(12.5)") == -12.5 and _num("-") == 0 and _num("1,234.5") == 1234.5
+    with pytest.raises(ValueError):
+        parse_farside("<table><tr><td>nothing</td></tr></table>")
+    df = parse_farside(_farside_html(80))
+    assert len(df) == 80 and df["GBTC"].iloc[0] == -12.5 and df["BTCW"].iloc[0] == 0

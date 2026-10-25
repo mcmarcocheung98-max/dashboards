@@ -20,6 +20,15 @@ A dashboard built on the research doc "BTC Cycles & Sector Rotation: 2013–2026
 | | One row per candidate coin, grouped by the doc's rank | Links to CoinMarketCap, DefiLlama and CoinGecko; price, 24h and 1-year change, market cap, RSI 14, RSI of the coin ÷ BTC ratio, beta to BTC, 90-day performance vs BTC, base-case price for end-2027 and end-2028; a 90-day sparkline; and on "Show charts": price with BTC rebased (log), RSI vs BTC, market cap, and the projection band with a bear / base / bull table and implied market cap |
 | | The doc's ranked table | Folded under a button |
 | | Sector evidence | Hand-entered series for sectors without a liquid token (RWA value, prediction-market volume, x402, perp share) |
+| ETFs | Headline figures | Net flows since launch, BTC taken in, last 30 days, last day, in/out streak, IBIT's share |
+| | Daily and rolling 30-day flows | Bars, green in and red out |
+| | Cumulative flows | In US$ against the BTC price, and in BTC |
+| | By issuer | Cumulative flows per fund and a table: since launch, last 30 trading days, last day, best and worst day |
+| | Hong Kong and UK | BTC held by Hong Kong spot ETFs and UK ETNs (hand-entered) and a milestones table |
+| Strategy (MSTR) | Headline figures | BTC held, share of supply, value, approximate average cost, mNAV, 90-day correlation and beta with BTC, purchases |
+| | Charts | BTC held, mNAV, MSTR vs BTC rebased, correlation and beta, BTC per 1,000 shares |
+| | Every purchase | Date, BTC added, holdings after, BTC price that day, approximate dollars |
+| | UK and HK treasury companies | The Smarter Web Company and Boyaa Interactive: price, correlation with BTC, holdings (hand-entered) |
 | Signals | Status table | The doc's six signals, each with a mechanical status on today's data, or "hand-entered" |
 | | Volume and dominance | BTC spot volume vs the $10bn line; dominance logged daily since deploy |
 | | The doc's text | Signals in order, timing on the halving clock, what could break the pattern |
@@ -35,6 +44,11 @@ A dashboard built on the research doc "BTC Cycles & Sector Rotation: 2013–2026
 | Hyperliquid TVL and daily revenue | DefiLlama `protocol/hyperliquid`, `summary/fees/hyperliquid` | Daily | Automated |
 | Perp-DEX volume, total and by protocol | DefiLlama `overview/derivatives` | Daily | Automated |
 | BTC dominance and total market volume | [CoinGecko](https://www.coingecko.com/en/global-charts) `global` | Logged once a day | Automated; no free history, so the log starts at first deploy |
+| US spot ETF flows per issuer, US$ | [Farside](https://farside.co.uk/bitcoin-etf-flow-all-data/) daily table | Daily | Automated (HTML parse) |
+| US spot ETF flows in BTC | [bitbo](https://bitbo.io/treasuries/etf-flows/) | Daily | Automated |
+| Strategy holdings and share counts | [mstr-nav-tracker dataset](https://github.com/jefferych1/mstr-nav-tracker), built from SEC filings | As Strategy reports | Automated |
+| MSTR, BTC-USD, UK and HK treasury share prices | Yahoo Finance chart API | Daily | Automated |
+| HK ETF and UK ETN holdings; UK and HK treasury holdings; ETF milestones | Issuer and company pages | As published | Hand-entered: `etf_holdings.csv`, `treasuries.csv`, `etf_milestones.csv` |
 | BTC spot volume, last 365 days | CoinGecko `coins/bitcoin/market_chart` | Daily | Automated |
 | Each candidate coin's price and market cap, 365 days | CoinGecko `coins/{id}/market_chart`, ids in `coins.csv` | Daily, one request per coin, paced 2.2 s apart | Automated |
 | RWA value, prediction-market volume, x402 volume, launches per day, perp-DEX share, Google Trends | The pages the doc cites | As published | Hand-entered: `evidence.csv` |
@@ -66,6 +80,12 @@ Coin Metrics community data is free for non-commercial use with attribution. Def
 **`evidence.csv`** (`date,series,value,source,note`): one row per published reading. Series names the page looks for, exactly: `RWA on-chain value ex-stablecoins (USD)`, `Prediction-market monthly volume (USD)`, `x402 cumulative payment volume (USD)`, `Launchpad launches per day`, `Perp-DEX share of global futures (%)`, `Hyperliquid TVL (USD)`, `Google Trends: sector search index`. The seed rows are the doc's own figures with the doc's sources; one prediction-market row is a zero placeholder to be filled, and the 2023 perp-share row is dated approximately (`verify`).
 
 **Dates**: every time chart on a tab shares one date axis. The range bar (3M to All) sets them all; dragging or zooming any chart moves the rest. Projections keep their 2027-28 end.
+
+**`etf_holdings.csv`** (`date,series,value,source,note`): BTC held by non-US funds; series `Hong Kong spot ETFs (BTC)` or `UK ETNs (BTC)`. The two seed rows are from memory and marked `verify`.
+
+**`treasuries.csv`** (`date,company,country,yahoo,btc_held,source,note`): one row per disclosed holding of a UK or HK company; `yahoo` is the price ticker. Seeds marked `verify`, including The Smarter Web Company's ticker.
+
+**`etf_milestones.csv`**: dated events shown on the ETFs tab.
 
 ## Checking it
 

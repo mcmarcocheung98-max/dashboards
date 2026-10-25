@@ -202,9 +202,11 @@ function linesChart(series, fmt, opts = {}) {
       leftPriceScale: { visible: left, borderVisible: false, mode: opts.leftLog ? 1 : 0 } });
     const made = series.filter(s => s.points && s.points.length).map((s, i) => {
       const color = s.color || css(SERIES[i % SERIES.length]), f = s.fmt || fmt;
-      const line = c.addLineSeries({ color, lineWidth: s.dashed ? 1 : (s.width || 2), lineStyle: s.dashed ? 2 : 0, priceLineVisible: false, lastValueVisible: false,
-        priceScaleId: s.axis === "left" ? "left" : "right", priceFormat: { type: "custom", formatter: f, minMove: 0.0001 } });
-      line.setData(dedupe(s.points.filter(p => p[1] != null)));           // a blank day is a gap, not empty space at the start
+      const common = { priceLineVisible: false, lastValueVisible: false, priceScaleId: s.axis === "left" ? "left" : "right", priceFormat: { type: "custom", formatter: f, minMove: 0.0001 } };
+      // s.bar: a histogram (green up, red down, unless the series has its own colour)
+      const line = s.bar ? c.addHistogramSeries({ ...common, color }) : c.addLineSeries({ ...common, color, lineWidth: s.dashed ? 1 : (s.width || 2), lineStyle: s.dashed ? 2 : 0 });
+      const data = dedupe(s.points.filter(p => p[1] != null));            // a blank day is a gap, not empty space at the start
+      line.setData(s.bar && !s.color ? data.map(d => ({ ...d, color: d.value >= 0 ? css("--up") : css("--down") })) : data);
       const val = el("b", {}, f(s.points[s.points.length - 1][1]));
       const btn = el("button", { onclick: () => { const on = btn.classList.toggle("off"); line.applyOptions({ visible: !on }); } },
         el("span", { class: "sw" + (s.dashed ? " dash" : ""), style: "background:" + color }), s.name, " ", val);

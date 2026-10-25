@@ -1,0 +1,4 @@
+date,company,country,yahoo,btc_held,source,note
+# Listed companies holding bitcoin in the UK and Hong Kong. One row per disclosed holding; yahoo = Yahoo Finance ticker for the price. Seed rows are from memory: verify against the company's announcements and replace.
+2025-12-31,The Smarter Web Company,UK,TSWCF,2600,https://www.smarterwebcompany.co.uk/,seed from memory - verify holding and ticker
+2025-12-31,Boyaa Interactive,HK,0434.HK,3350,https://www.boyaa.com.hk/,seed from memory - verify

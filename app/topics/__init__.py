@@ -33,8 +33,9 @@ REGISTRY: dict[str, Topic] = {t.slug: t for t in (
     Topic("ai-jobs", "AI Jobs vs Law & Finance", "AI job openings against hiring and headcount in law and finance, US and UK.",
           "ai_jobs", (("openings", "Openings"), ("headcount", "Headcount"), ("ratio", "AI vs the professions")), ("openings", "headcount", "ratio")),
     Topic("btc-cycles", "BTC Cycles & Sector Rotation", "Four Bitcoin cycles, which altcoin sectors won each one, what the winners had in common, and the 2026-27 candidates, checked daily against live data.",
-          "btc_cycles", (("cycles", "Cycles"), ("sectors", "Sectors"), ("metrics", "Winner metrics"), ("candidates", "Candidates 2026-27"), ("signals", "Signals")),
-          ("cycles", "metrics", "candidates", "signals", "coins")),
+          "btc_cycles", (("cycles", "Cycles"), ("sectors", "Sectors"), ("metrics", "Winner metrics"), ("candidates", "Candidates 2026-27"), ("etf", "ETFs"),
+                         ("mstr", "Strategy (MSTR)"), ("signals", "Signals")),
+          ("cycles", "metrics", "candidates", "signals", "coins", "etf", "mstr")),
 )}
 
 

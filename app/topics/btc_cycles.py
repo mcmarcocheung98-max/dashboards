@@ -472,4 +472,6 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 ENDPOINTS = {"cycles": _cached_ep("cycles", _cycles_now), "sectors": _cached_ep("sectors", _sectors_now, 600), "metrics": _cached_ep("metrics", _metrics_now),
              "candidates": _cached_ep("candidates", _candidates_now), "signals": _cached_ep("signals", _signals_now, 3600),
              "coins": _cached_ep("coins", _coins_now)}
+from . import btc_flows as _flows                                    # ETF and MSTR tabs
+ENDPOINTS.update(_flows.ENDPOINTS)
 ENDPOINTS.update({f"coin-{c['ticker'].lower()}": _cached_ep(f"coin-{c['ticker'].lower()}", (lambda t: lambda: _coin_now(t))(c["ticker"])) for c in coins_list()})
