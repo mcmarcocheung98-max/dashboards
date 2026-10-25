@@ -1,5 +1,5 @@
 {
- "about": "Editorial notes written from the research doc (as of 2026-10-21) and general knowledge of each project; figures are the doc's. Not advice.",
+ "about": "Editorial notes written from the research doc (as of 2026-10-21); every figure is the doc's, and project descriptions are general knowledge. Checked against the doc on 2026-10-25. Not advice.",
  "as_of": "2026-10-25",
  "coins": {
   "HYPE": {
@@ -8,23 +8,23 @@
    "thesis": "Base case assumes the DeFi-2020 analogue holds: revenue keeps compounding while BTC recovers, so HYPE tracks BTC at its measured beta. Breaks if volume share keeps fragmenting (the doc notes 70% to 31%) or a bridge exploit hits."
   },
   "ASTER": {
-   "narrative": "A newer perp DEX in the same rank-1 sector, competing for the share Hyperliquid is losing as the market fragments.",
-   "standout": "Part of the doc's evidence that perp DEXs reached 12.3% of global futures volume; one of the venues taking share from Hyperliquid.",
+   "narrative": "A newer perp DEX in the doc's rank-1 sector, launched while the market was fragmenting (Hyperliquid's volume share fell from 70% to 31%, per the doc).",
+   "standout": "Listed by the doc as a rank-1 candidate and among cycle 4's perp-DEX winners; the evidence is the sector's: perp DEXs at 12.3% of global futures and $633bn of 30-day volume.",
    "thesis": "The projection treats ASTER as high-beta exposure to perp-DEX growth. It fails if incentive-driven volume fades once emissions slow, the usual fate of points-led launches."
   },
   "LIT": {
    "narrative": "Lighter is a zero-knowledge perp DEX in the rank-1 sector, aiming at retail with low or zero trading fees.",
-   "standout": "Named by the doc among the perp venues fragmenting Hyperliquid's share.",
+   "standout": "Listed by the doc as a rank-1 candidate and among cycle 4's perp-DEX winners; the evidence is the sector's: perp DEXs at 12.3% of global futures and $633bn of 30-day volume.",
    "thesis": "Beta-scaled bet on perp DEXs continuing to take futures volume from exchanges. Risk: a zero-fee model leaves little revenue to accrue to the token."
   },
   "JUP": {
    "narrative": "Jupiter is Solana's main trade router and also runs perps, so it sits in the doc's on-chain-finance sector and benefits from Solana activity.",
-   "standout": "Fee-earning venue on the chain the doc says hosted the 2024 retail cycle; part of the revenue-to-token group the doc prefers.",
+   "standout": "Fee-earning venue on Solana, which the doc names (with Base) as cycle 4's retail-speculation chain; part of the revenue-to-token group the doc prefers.",
    "thesis": "Projection assumes Solana activity recovers with BTC. Breaks if Solana DEX volume stays depressed or token unlocks outpace buybacks."
   },
   "AAVE": {
    "narrative": "Aave is the largest lending protocol and a survivor from the 2020 DeFi cycle, the doc's model of a fundamentals sector that came through a bear intact.",
-   "standout": "The doc's survival rule: every sector with real fee share survived the next bear. Aave has done so twice.",
+   "standout": "The doc's cycle 3 table: AAVE ran about 200x (2020-21), and DeFi blue chips fell 80-90% in 2022 but survived and recovered. Its rule: every sector with real fee share survived the next bear.",
    "thesis": "Treated as lower-beta DeFi blue chip. Upside depends on credit demand returning with prices; risk is rate competition from tokenized Treasuries."
   },
   "PENDLE": {
@@ -44,7 +44,7 @@
   },
   "TRX": {
    "narrative": "Tron carries a large share of USDT transfers, so it is the incumbent payments chain in the doc's stablecoin sector.",
-   "standout": "Grows with stablecoin usage rather than speculation; historically lower beta than most of the list.",
+   "standout": "Grows with stablecoin usage rather than speculation; the beta in the row above shows how closely it tracks BTC.",
    "thesis": "Low-beta projection. Risk: regulation of offshore stablecoin flows, and new payment chains taking share."
   },
   "SKY": {
@@ -55,11 +55,11 @@
   "ONDO": {
    "narrative": "Ondo tokenizes Treasuries and stocks, the most direct token play on the doc's rank-3 RWA sector.",
    "standout": "The doc: on-chain RWA ex-stablecoins went from $5bn (Jan 2025) to $38.6bn (Sep 2026); ONDO ran about 26x low to peak in cycle 4.",
-   "thesis": "Projection assumes the RWA grind continues, the only narrative positive in both 2024 and 2025 per the doc. Breaks if value stays captured off-chain or the token keeps trading at a large multiple of fees."
+   "thesis": "Projection assumes the RWA grind continues: per the doc, RWA (with L1s) was positive in both 2024 and 2025 and had TradFi backers. Breaks if value stays captured off-chain or the token keeps trading at a large multiple of fees."
   },
   "LINK": {
    "narrative": "Chainlink supplies oracles and cross-chain messaging that tokenized assets depend on, so it spans the RWA sector and DeFi in general.",
-   "standout": "Survivor of two cycles (the doc lists it among the 2017 survivors) with TradFi integrations.",
+   "standout": "In the doc's tables for two cycles: middleware in cycle 3 ($1.50 to $52) and RWA in cycle 4 ($5 to $30).",
    "thesis": "Lower-beta infrastructure bet on RWA growth. Risk: usage growth not translating into token demand."
   },
   "SYRUP": {
@@ -110,7 +110,7 @@
   "SOL": {
    "narrative": "Solana is the doc's rank-6 high-throughput L1 and the chain that hosted the 2024 retail cycle; L1s led every mid-cycle recovery.",
    "standout": "The doc: L1 narrative +80% in 2025, one of three positive; Solana ETF live; SOL ran about 37x low to peak in cycle 4.",
-   "thesis": "Projection is the cleanest beta-to-BTC case in the list. Breaks if retail issuance moves to another chain, which the doc says happens each cycle."
+   "thesis": "Projection is the cleanest beta-to-BTC case in the list. Breaks if retail issuance moves to another chain: the doc says the memecoin primitive returns each cycle, but on a new launchpad or chain."
   },
   "SUI": {
    "narrative": "Sui is a newer high-throughput L1, in the doc's rank-6 group.",
