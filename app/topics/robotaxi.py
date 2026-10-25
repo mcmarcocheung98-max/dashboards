@@ -146,10 +146,52 @@ def _tesla_now() -> dict:
     return out
 
 
+CPUC_PAGE = ("https://www.cpuc.ca.gov/regulatory-services/licensing/transportation-licensing-and-analysis-branch/autonomous-vehicle-programs/"
+             "quarterly-reporting")
+UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"}
+
+
+def cpuc_links(html: str) -> list[dict]:
+    """Data files linked from the CPUC quarterly-reporting page, in page order: [{"text", "url"}]."""
+    import re
+    out = []
+    for href, text in re.findall(r'<a[^>]+href="([^"]+\.(?:xlsx|xls|csv|zip)[^"]*)"[^>]*>(.*?)</a>', html, flags=re.I | re.S):
+        url = href if href.startswith("http") else "https://www.cpuc.ca.gov" + ("" if href.startswith("/") else "/") + href
+        out.append({"text": re.sub(r"<[^>]+>|\s+", " ", text).strip()[:120], "url": url.replace("&amp;", "&")})
+    return out
+
+
+def _cpuc_probe() -> dict:
+    """Not a tab: what the server sees at the CPUC quarterly-reporting page and in its first data file, to write the trips parser
+    against the real layout (/api/robotaxi/cpuc)."""
+    import requests
+    r = requests.get(CPUC_PAGE, headers=UA, timeout=30)
+    links = cpuc_links(r.text)
+    out = {"status": r.status_code, "bytes": len(r.content), "n_links": len(links), "links": links[:40], "files": {}}
+    for ln in links[:2]:
+        try:
+            f = requests.get(ln["url"], headers=UA, timeout=60)
+            info = {"status": f.status_code, "type": f.headers.get("content-type", ""), "bytes": len(f.content)}
+            if ln["url"].lower().split("?")[0].endswith(".csv"):
+                d = pd.read_csv(StringIO(f.text), dtype=str, header=None, nrows=12)
+                info["head"] = [" | ".join(str(c)[:40] for c in rw) for rw in d.fillna("").values.tolist()]
+            elif ln["url"].lower().split("?")[0].endswith((".xlsx", ".xls")):
+                from io import BytesIO
+                xl = pd.ExcelFile(BytesIO(f.content))
+                info["sheets"] = {sh: [" | ".join(str(c)[:40] for c in rw) for rw in xl.parse(sh, header=None, nrows=12).fillna("").values.tolist()]
+                                  for sh in xl.sheet_names[:6]}
+            out["files"][ln["url"]] = info
+        except Exception as e:
+            out["files"][ln["url"]] = {"error": f"{type(e).__name__}: {str(e)[:160]}"}
+    if not links:
+        out["start"] = r.text[:1500]
+    return out
+
+
 def _cached_ep(name, fn, ttl=6 * 3600):
     from ..cache import _cached
     return lambda: _cached(f"topic:{SLUG}:{name}", ttl, fn)
 
 
 ENDPOINTS = {"rides": _cached_ep("rides", _rides_now, 600), "footprint": _cached_ep("footprint", _footprint_now, 600), "safety": _cached_ep("safety", _safety_now),
-             "tesla": _cached_ep("tesla", _tesla_now)}
+             "tesla": _cached_ep("tesla", _tesla_now), "cpuc": _cached_ep("cpuc", _cpuc_probe, 3600)}

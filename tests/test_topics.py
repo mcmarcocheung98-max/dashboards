@@ -720,3 +720,11 @@ def test_source_health(snapdir, monkeypatch):
             assert "robotaxi" in j["dashboards"] and j["thresholds"]["stale_days"] == 3
     asyncio.run(go())
     B.HEALTH.clear()
+
+
+def test_robotaxi_cpuc_links():
+    from app.topics import robotaxi as R
+    html = ('<a class="x" href="/-/media/cpuc-website/q1-2026-waymo.xlsx?rev=ab&amp;hash=1"><span>Waymo\n Q1 2026</span></a>'
+            '<a href="https://www.cpuc.ca.gov/report.pdf">PDF</a><a href="https://example.org/t.csv">CSV</a>')
+    assert R.cpuc_links(html) == [{"text": "Waymo Q1 2026", "url": "https://www.cpuc.ca.gov/-/media/cpuc-website/q1-2026-waymo.xlsx?rev=ab&hash=1"},
+                                  {"text": "CSV", "url": "https://example.org/t.csv"}]
