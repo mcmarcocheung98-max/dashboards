@@ -143,11 +143,11 @@ const VIEWS = {
     const tre = (d.treasuries || []).map(t => card(t.company + " (" + t.country + ", " + t.yahoo + ")",
       t.held && t.held.length ? note("Latest disclosed holding: " + num(t.held[t.held.length - 1][1]) + " BTC" + (t.held_value_usd ? ", worth " + usdBig(t.held_value_usd) + " at today's BTC price" : "") + ".") : null,
       t.price ? linesChart([{ name: t.yahoo, points: t.price }], v => v == null ? "–" : v.toFixed(2), { small: true })
-        : el("div", { class: "muted", title: (t.price_tried || []).join("\n") }, "Holdings only: no share-price feed answers from the server (Yahoo refuses it; Stooq and CNBC tried). The holdings below are from the company's own announcements."),
+        : el("div", { class: "muted", title: (t.price_tried || []).join("\n") }, "Holdings only: no share-price feed answers from the server (Yahoo refuses it; CNBC tried). The holdings below are from the company's own announcements."),
       t.price ? note("Daily closes in local currency from " + (t.price_source || "Yahoo") + (t.corr90 != null ? "; 90-day correlation with BTC: " + t.corr90.toFixed(2) : "") + ".") : null,
       table(["Date", "BTC held", "Source"], t.rows.map(r => [r.date, num(+r.btc_held), "[" + host(r.source) + "](" + r.source + ")" + (r.note ? " · " + r.note : "")]))));
     return [head, el("div", { class: "grid2" }, held, mn), px, el("div", { class: "grid2" }, cb, bps), buys,
-      tre.length ? card("UK and Hong Kong bitcoin treasury companies", el("div", { class: "muted" }, "Holdings hand-entered in data/btc-cycles/treasuries.csv from each company's announcements; share prices from Yahoo, else Stooq or CNBC, else holdings only.")) : null, ...tre];
+      tre.length ? card("UK and Hong Kong bitcoin treasury companies", el("div", { class: "muted" }, "Holdings hand-entered in data/btc-cycles/treasuries.csv from each company's announcements; share prices from Yahoo, else CNBC, else holdings only.")) : null, ...tre];
   },
   async signals() {
     const d = await api("signals"), R = d.research;

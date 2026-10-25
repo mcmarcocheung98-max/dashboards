@@ -1,5 +1,5 @@
 date,company,country,yahoo,btc_held,source,note
-# Listed companies holding bitcoin in the UK and Hong Kong. One row per disclosed holding, cited to the company's own announcement; yahoo = Yahoo Finance ticker (LSE: .L, HKEX: .HK); Stooq and CNBC symbols are derived from it when Yahoo refuses the server.
+# Listed companies holding bitcoin in the UK and Hong Kong. One row per disclosed holding, cited to the company's own announcement; yahoo = Yahoo Finance ticker (LSE: .L, HKEX: .HK); the CNBC symbol is derived from it when Yahoo refuses the server.
 2026-08-03,The Smarter Web Company,UK,SWC.L,2712,https://data.fca.org.uk/artefacts/NSM/RNS/d0a01ef8-5305-44fd-a50b-f9166beefd00.html,"RNS 9509O: bought 11.89 BTC, total holdings 2,712; LSE Main Market ticker SWC since 3 Feb 2026"
 2026-10-15,The Smarter Web Company,UK,SWC.L,2830,https://www.investegate.co.uk/announcement/rns/the-smarter-web-company-plc--swc/bitcoin-purchase/9823646,"RNS Bitcoin Purchase: bought 83 BTC for GBP 5,202,111, total 2,830, net average cost GBP 81,979; press reports a further 20 BTC (2,850) on 23 Oct, add when the RNS is found"
 2026-09-04,Boyaa Interactive,HK,0434.HK,4316,https://www.boyaa.com.hk/attachment/2026090402217.pdf,"HKEX discloseable transaction: about 205 BTC bought 24 Jun-4 Sep 2026 for about HK$110m; holds approximately 4,316 BTC at US$68,280 average cost"

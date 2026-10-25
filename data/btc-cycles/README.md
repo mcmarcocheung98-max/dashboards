@@ -48,7 +48,7 @@ A dashboard built on the research doc "BTC Cycles & Sector Rotation: 2013–2026
 | US spot ETF flows in BTC | [bitbo](https://bitbo.io/treasuries/etf-flows/) | Daily | Automated |
 | Strategy holdings and share counts | [mstr-nav-tracker dataset](https://github.com/jefferych1/mstr-nav-tracker), built from SEC filings | As Strategy reports | Automated |
 | MSTR share price | Yahoo Finance chart API, else [Nasdaq's quote API](https://www.nasdaq.com/market-activity/stocks/mstr/historical) | Daily | Automated |
-| UK and HK treasury share prices (SWC.L, 0434.HK) | Yahoo, else [Stooq](https://stooq.com) CSV, else CNBC chart bars; if none answers the card shows holdings only and says so | Daily | Automated |
+| UK and HK treasury share prices (SWC.L, 0434.HK) | Yahoo, else CNBC chart bars (`ts-api.cnbc.com`; Stooq answers Railway with an HTML page, so it is not used); if neither answers the card shows holdings only and says so | Daily | Automated |
 | HK ETF and UK ETN holdings; UK and HK treasury holdings; ETF milestones | Issuer and company pages | As published | Hand-entered: `etf_holdings.csv`, `treasuries.csv`, `etf_milestones.csv` |
 | BTC spot volume, last 365 days | CoinGecko `coins/bitcoin/market_chart` | Daily | Automated |
 | Each candidate coin's price and market cap, 365 days | CoinGecko `coins/{id}/market_chart`, ids in `coins.csv` | Daily, one request per coin, paced 2.2 s apart | Automated |
@@ -84,11 +84,11 @@ Coin Metrics community data is free for non-commercial use with attribution. Def
 
 **`etf_holdings.csv`** (`date,series,value,source,note`): BTC held by non-US funds; series `Hong Kong spot ETFs (BTC)` or `UK ETNs (BTC)`. One cited reading so far (HK, 3 May 2024, from the first three days' inflows); the memory seed for mid-2025 had no source and was removed. Trackers (bitcointreasuries.net, bold.report, bitbo) disagree fund by fund, so add later points from the funds' HKEX filings or a dated report. No UK ETN holdings figure is published in one place yet; UK issuers' factsheets give per-product BTC.
 
-**`treasuries.csv`** (`date,company,country,yahoo,btc_held,source,note`): one row per disclosed holding of a UK or HK company; `yahoo` is the Yahoo ticker (`.L` London, `.HK` Hong Kong), from which the Stooq (`swc.uk`, `0434.hk`) and CNBC (`SWC-GB`, `0434-HK`) symbols are derived. Hover the "Holdings only" line on a card to see what each price source answered. Rows cite the company's own RNS (FCA National Storage Mechanism or Investegate) or HKEX announcement.
+**`treasuries.csv`** (`date,company,country,yahoo,btc_held,source,note`): one row per disclosed holding of a UK or HK company; `yahoo` is the Yahoo ticker (`.L` London, `.HK` Hong Kong), from which the CNBC symbol is derived (`SWC-GB`; `434-HK`, CNBC drops the leading zero). Hover the "Holdings only" line on a card to see what each price source answered. Rows cite the company's own RNS (FCA National Storage Mechanism or Investegate) or HKEX announcement.
 
 **`etf_milestones.csv`** (`date,event,market,source,note`): dated events shown on the ETFs tab, each cited to the regulator's or exchange's own release, or to the report that dates it.
 
-**Source notes (Oct 2026).** DefiLlama's perp-volume endpoints became paid (HTTP 402), so the page shows Hyperliquid's fees and all-chain spot DEX volume instead, both free. CoinGecko limits free calls to a few a minute, so coin data is filled by a background job 13 seconds apart every six hours; a coin not reached yet says "loading in the background". Yahoo refuses cloud servers, so stock prices fall back to Nasdaq's quote API (US tickers), Stooq and CNBC (London and Hong Kong), and MSTR uses BTC prices from Coin Metrics.
+**Source notes (Oct 2026).** DefiLlama's perp-volume endpoints became paid (HTTP 402), so the page shows Hyperliquid's fees and all-chain spot DEX volume instead, both free. CoinGecko limits free calls to a few a minute, so coin data is filled by a background job 13 seconds apart every six hours; a coin not reached yet says "loading in the background". Yahoo refuses cloud servers, so stock prices fall back to Nasdaq's quote API (US tickers) and CNBC (London and Hong Kong), and MSTR uses BTC prices from Coin Metrics.
 
 ## Checking it
 

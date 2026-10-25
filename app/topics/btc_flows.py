@@ -7,12 +7,11 @@ etf   US spot BTC ETFs since 11 Jan 2024: daily net flows by issuer (Farside, US
 mstr  Strategy Inc.: BTC held and share counts from a public dataset built from its SEC filings (the same one the trading bot uses),
       MSTR and BTC daily closes from Yahoo; every purchase (change in holdings), approximate cost basis, BTC per 1,000 shares, mNAV,
       90-day correlation and beta of daily returns. UK and HK treasury companies: data/btc-cycles/treasuries.csv + prices
-      from Yahoo, else Stooq, else CNBC (Yahoo answers 429 to cloud servers), else holdings only.
+      from Yahoo, else CNBC (Yahoo answers 429 to cloud servers), else holdings only.
 """
 from __future__ import annotations
 
 import csv
-import io
 import json
 import re
 import time
@@ -40,28 +39,20 @@ def yahoo_daily(sym: str, start: str = "2020-01-01") -> pd.Series:
     return yd(sym, start, lambda *a, **k: fetch_json(*a, **k))      # looked up at call time, so a test can replace fetch_json here
 
 
-# London and Hong Kong closes when Yahoo refuses the server (429): Stooq's CSV, then CNBC's chart bars. Symbols are derived from the
-# Yahoo ticker (SWC.L, 0434.HK); exchanges write HK codes with and without the leading zero, so both are tried.
-STOOQ = "https://stooq.com/q/d/l/?s={sym}&i=d&d1={a}&d2={b}"
+# London and Hong Kong closes when Yahoo refuses the server (429): CNBC's chart bars, symbol derived from the Yahoo ticker
+# (SWC.L -> SWC-GB, 0434.HK -> 434-HK). CNBC writes HK codes without the leading zero (0434-HK answers with no bars), so that form
+# goes first. Stooq was tried and dropped: it answers Railway with an HTML page, not its CSV (Oct 2026).
 CNBC_BARS = "https://ts-api.cnbc.com/harmony/app/bars/{sym}/1D/{a}000000/{b}000000/adjusted/EST5EDT.json"
-_SUFFIX = {"L": ("uk", "GB"), "HK": ("hk", "HK")}
+_SUFFIX = {"L": "GB", "HK": "HK"}
 
 
-def alt_symbols(yahoo: str) -> list[tuple[str, str]]:
-    """[(source, symbol)] to try after Yahoo, e.g. SWC.L -> [("stooq", "swc.uk"), ("cnbc", "SWC-GB")]."""
+def alt_symbols(yahoo: str) -> list[str]:
+    """CNBC symbols to try after Yahoo, e.g. SWC.L -> ["SWC-GB"], 0434.HK -> ["434-HK", "0434-HK"]."""
     code, _, exch = yahoo.upper().rpartition(".")
     if exch not in _SUFFIX:
         return []
-    st, cn = _SUFFIX[exch]
-    codes = list(dict.fromkeys([code, code.lstrip("0") or code])) if exch == "HK" else [code]
-    return [("stooq", f"{c.lower()}.{st}") for c in codes] + [("cnbc", f"{c}-{cn}") for c in codes]
-
-
-def parse_stooq(text: str) -> pd.Series:
-    df = pd.read_csv(io.StringIO(text))
-    if not {"Date", "Close"} <= set(df.columns):
-        raise ValueError(f"Stooq: not a price CSV: {text[:80]!r}")
-    return pd.Series(df["Close"].astype(float).values, index=pd.to_datetime(df["Date"])).sort_index()
+    codes = list(dict.fromkeys([code.lstrip("0") or code, code])) if exch == "HK" else [code]
+    return [f"{c}-{_SUFFIX[exch]}" for c in codes]
 
 
 def parse_cnbc(j: dict) -> pd.Series:
@@ -71,24 +62,21 @@ def parse_cnbc(j: dict) -> pd.Series:
 
 
 def stock_daily(yahoo: str, start: str = "2024-01-01") -> tuple[pd.Series, str, list[str]]:
-    """(closes, source name, what failed) for a listed stock: Yahoo (with Nasdaq for US tickers), then the alternatives above."""
+    """(closes, source name, what failed) for a listed stock: Yahoo (with Nasdaq for US tickers), then CNBC."""
     tried = []
     try:
         return yahoo_daily(yahoo, start), "Yahoo" if "." in yahoo else "Yahoo / Nasdaq", tried
     except Exception as e:
         tried.append(f"Yahoo {yahoo}: {type(e).__name__}: {str(e)[:100]}")
     a, b = pd.Timestamp(start), pd.Timestamp.now()
-    for src, sym in alt_symbols(yahoo):
+    for sym in alt_symbols(yahoo):
         try:
-            if src == "stooq":
-                s = parse_stooq(fetch(STOOQ.format(sym=sym, a=a.strftime("%Y%m%d"), b=b.strftime("%Y%m%d")), TTL, min_bytes=20))
-            else:
-                s = parse_cnbc(fetch_json(CNBC_BARS.format(sym=sym, a=a.strftime("%Y%m%d"), b=b.strftime("%Y%m%d")), TTL, min_bytes=20))
+            s = parse_cnbc(fetch_json(CNBC_BARS.format(sym=sym, a=a.strftime("%Y%m%d"), b=b.strftime("%Y%m%d")), TTL, min_bytes=20))
             if len(s) < 20:
                 raise ValueError(f"{len(s)} rows")
-            return s, {"stooq": "Stooq", "cnbc": "CNBC"}[src], tried
+            return s, "CNBC", tried
         except Exception as e:
-            tried.append(f"{src} {sym}: {type(e).__name__}: {str(e)[:100]}")
+            tried.append(f"CNBC {sym}: {type(e).__name__}: {str(e)[:100]}")
     raise LookupError("; ".join(tried))
 
 
@@ -300,7 +288,7 @@ def _mstr_now() -> dict:
         "note": j_note(),
         "as_of": str(h.index[-1].date()),
     })
-    # UK and HK treasury companies (hand-entered holdings; prices from Yahoo, Stooq or CNBC, or holdings only)
+    # UK and HK treasury companies (hand-entered holdings; prices from Yahoo or CNBC, or holdings only)
     comps = {}
     for r in _rows("treasuries"):
         comps.setdefault(r["company"], {"company": r["company"], "country": r["country"], "yahoo": r["yahoo"], "rows": []})["rows"].append(r)
