@@ -1,4 +1,4 @@
-"""London Housing Index (/housing). Free data only, monthly.
+"""Housing: London, US & Hong Kong (/housing). Free data only, monthly.
 
 prices   UK House Price Index for London and for the UK (HM Land Registry, monthly, ~6 weeks behind): average price, index, yearly change;
          London average price in today's money (deflated with CPIH, ONS series L522 in dataset MM23)
@@ -14,9 +14,12 @@ from __future__ import annotations
 from io import StringIO
 from urllib.parse import quote
 
+import time
+
+import numpy as np
 import pandas as pd
 
-from ._base import DAY, _pts, _r, fetch, fetch_json, latest_date, payload, yoy
+from ._base import DAY, _pts, _r, fetch, fetch_json, latest_date, manual, manual_rows, payload, yoy
 
 HPI_URL = ("https://landregistry.data.gov.uk/app/ukhpi/download/new.csv?from=1995-01-01&to=2035-01-01&location={loc}"
            "&thm%5B%5D=property_type%2Fall&thm%5B%5D=property_type%2Fdetached&thm%5B%5D=property_type%2Fsemi-detached"
@@ -27,15 +30,33 @@ UK = HPI_URL.format(loc=quote("http://landregistry.data.gov.uk/id/region/united-
 ONS = "https://api.ons.gov.uk/timeseries/{sid}/dataset/{ds}/data"
 CPIH = ONS.format(sid="L522", ds="MM23")                       # CPIH all items index, 2015 = 100, monthly
 AWE = ONS.format(sid="KAB9", ds="LMS")                         # average weekly earnings, regular pay, whole economy, £ (seasonally adjusted)
+BOE_FIXED = ("https://www.bankofengland.co.uk/boeapps/database/_iadb-fromshowcolumns.asp?csv.x=yes&Datefrom=01/Jan/1995&Dateto=now"
+             "&SeriesCodes=IUMBV34&CSVF=TN&UsingCodes=Y&Filter=N&title=2y%20fixed&VPD=Y")      # quoted 2-year fixed mortgage rate, 75% LTV, monthly
+HPI_ONE = ("https://landregistry.data.gov.uk/app/ukhpi/download/new.csv?from=2005-01-01&to=2035-01-01&location={loc}"
+           "&thm%5B%5D=property_type%2Fall&in%5B%5D=avg&in%5B%5D=pc_ann&lang=en")
+BOROUGHS = ["barking-and-dagenham", "barnet", "bexley", "brent", "bromley", "camden", "city-of-london", "croydon", "ealing", "enfield", "greenwich",
+            "hackney", "hammersmith-and-fulham", "haringey", "harrow", "havering", "hillingdon", "hounslow", "islington", "kensington-and-chelsea",
+            "kingston-upon-thames", "lambeth", "lewisham", "merton", "newham", "redbridge", "richmond-upon-thames", "southwark", "sutton",
+            "tower-hamlets", "waltham-forest", "wandsworth", "city-of-westminster"]
+FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}"
+US_HPI = {"US national (Case-Shiller)": "CSUSHPISA", "New York (Case-Shiller)": "NYXRSA", "San Francisco (Case-Shiller)": "SFXRSA"}
+US_MORTGAGE = "MORTGAGE30US"                                    # Freddie Mac 30-year fixed, weekly
+HK_RVD = "https://www.rvd.gov.hk/doc/en/statistics/his_data_4.xls"   # private domestic price index, territory-wide, monthly (URL: verify)
+HK_HIBOR = "https://api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/er-ir/hk-interbank-ir-endperiod?pagesize=1000"
 BOE = ("https://www.bankofengland.co.uk/boeapps/database/_iadb-fromshowcolumns.asp?csv.x=yes&Datefrom=01/Jan/1995&Dateto=now"
        "&SeriesCodes=IUDBEDR&CSVF=TN&UsingCodes=Y&Filter=N&title=Bank%20Rate&VPD=Y")
 
 SOURCES = [{"name": "UK House Price Index (HM Land Registry / ONS)", "url": "https://landregistry.data.gov.uk/app/ukhpi", "cadence": "monthly"},
            {"name": "CPIH inflation (ONS, series L522)", "url": "https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/l522/mm23", "cadence": "monthly"},
            {"name": "Average weekly earnings (ONS, series KAB9)", "url": "https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/earningsandworkinghours/timeseries/kab9/lms", "cadence": "monthly"},
-           {"name": "Bank Rate (Bank of England)", "url": "https://www.bankofengland.co.uk/boeapps/database/Bank-Rate.asp", "cadence": "on change"}]
+           {"name": "Bank Rate and quoted 2-year fixed mortgage rate (Bank of England)", "url": "https://www.bankofengland.co.uk/boeapps/database/", "cadence": "monthly"},
+           {"name": "S&P CoreLogic Case-Shiller indices and 30-year mortgage rate (FRED)", "url": "https://fred.stlouisfed.org/series/CSUSHPISA", "cadence": "monthly / weekly"},
+           {"name": "Hong Kong private domestic price index (Rating and Valuation Department)", "url": "https://www.rvd.gov.hk/en/publications/property_market_statistics.html", "cadence": "monthly"},
+           {"name": "HIBOR (Hong Kong Monetary Authority open API)", "url": "https://apidocs.hkma.gov.hk/", "cadence": "monthly"},
+           {"name": "London private rents (ONS, hand-entered)", "url": "https://www.ons.gov.uk/economy/inflationandpriceindices/bulletins/privaterentandhousepricesuk/latest", "cadence": "monthly"}]
 NOTES = "Prices are HM Land Registry averages (completed sales, so about two months behind the market). Real terms uses CPIH. Contains public sector information licensed under the Open Government Licence v3.0."
 TTL = DAY
+PACE = 0.4
 
 
 # ------------------------------------------------------------------ parsers (each takes text, so tests can feed fixtures)
@@ -101,6 +122,83 @@ def bank_rate() -> pd.Series:
     return parse_boe(fetch(BOE, TTL))
 
 
+def boe_fixed() -> pd.Series:
+    return parse_boe(fetch(BOE_FIXED, TTL))
+
+
+def borough(slug: str) -> pd.DataFrame:
+    from urllib.parse import quote as q
+    return parse_hpi(fetch(HPI_ONE.format(loc=q(f"http://landregistry.data.gov.uk/id/region/{slug}", safe="")), TTL, curl=True))
+
+
+def parse_fred(text: str) -> pd.Series:
+    d = pd.read_csv(StringIO(text))
+    s = pd.Series(pd.to_numeric(d.iloc[:, 1], errors="coerce").to_numpy(), index=pd.to_datetime(d.iloc[:, 0], errors="coerce"))
+    return s[s.index.notna()].dropna().sort_index()
+
+
+def fred(sid: str) -> pd.Series:
+    return parse_fred(fetch(FRED.format(sid=sid), TTL, curl=True))
+
+
+def parse_rvd(content: bytes) -> pd.Series:
+    """RVD price-index workbook -> monthly territory-wide private domestic index. Finds rows that start with a year and month and takes
+    the first numeric column after them (the all-classes index). Best effort: the layout is checked by the network test."""
+    from io import BytesIO
+    xl = pd.ExcelFile(BytesIO(content))
+    out = {}
+    for sheet in xl.sheet_names:
+        d = xl.parse(sheet, header=None)
+        year = None
+        for _, row in d.iterrows():
+            cells = [c for c in row.tolist() if not (isinstance(c, float) and np.isnan(c))]
+            if not cells:
+                continue
+            first = str(cells[0]).strip()
+            if first.isdigit() and 1979 <= int(first) <= 2100:
+                year, cells = int(first), cells[1:]
+            if year is None or not cells:
+                continue
+            m = pd.to_datetime(str(cells[0]).strip()[:3], format="%b", errors="coerce")
+            nums = [c for c in cells[1:] if isinstance(c, (int, float)) and not isinstance(c, bool)]
+            if pd.notna(m) and nums:
+                out[pd.Timestamp(year=year, month=m.month, day=1)] = float(nums[0])
+        if len(out) > 100:
+            break
+    if len(out) < 100:
+        raise ValueError(f"RVD layout changed ({len(out)} months parsed)")
+    return pd.Series(out).sort_index()
+
+
+def hk_index() -> pd.Series:
+    auto = pd.Series(dtype=float)
+    try:
+        auto = parse_rvd(fetch(HK_RVD, TTL, binary=True, min_bytes=1000).encode("latin-1"))
+    except Exception:
+        pass
+    hand = manual("housing", "hk_price_index")
+    s = pd.concat([hand if isinstance(hand, pd.Series) else pd.Series(dtype=float), auto])
+    if s.empty:
+        raise ValueError("no Hong Kong price index: RVD workbook not readable and data/housing/hk_price_index.csv empty")
+    return s[~s.index.duplicated(keep="last")].sort_index()
+
+
+def hk_hibor() -> pd.Series:
+    j = fetch_json(HK_HIBOR, TTL)
+    rows = (j.get("result") or {}).get("records") or []
+    s = pd.Series({pd.to_datetime(r.get("end_of_month"), errors="coerce"): pd.to_numeric(r.get("ir_1m"), errors="coerce") for r in rows})
+    s = s[s.index.notna()].dropna().sort_index()
+    if s.empty:
+        raise ValueError("HKMA HIBOR: no records")
+    return s
+
+
+def _rebase(s: pd.Series, at: str = "2015-01-01") -> pd.Series:
+    s = s.dropna()
+    base = s[s.index >= at]
+    return s / base.iloc[0] * 100 if len(base) else s
+
+
 def _real(avg: pd.Series, cpi: pd.Series) -> pd.Series:
     """avg in the money of the latest CPIH month."""
     cpi = cpi.reindex(avg.index, method="ffill")
@@ -122,6 +220,8 @@ def _prices_now() -> dict:
                    "london_real": lambda: _pts(_real(lon["avg"].dropna(), cpih()), 0)},
                   sources=[LONDON, UK, CPIH], as_of=latest_date(lon["avg"]))
     a = lon["avg"].dropna()
+    rents = manual("housing", "rents")
+    out["rents"] = {k: _pts(v, 0) for k, v in rents.items()} if isinstance(rents, dict) else {}
     out["now"] = {"avg": _r(a.iloc[-1], 0) if len(a) else None, "yoy": _r(lon["pc_ann"].dropna().iloc[-1], 2) if lon["pc_ann"].notna().any() else None,
                   "peak": _r(a.max(), 0) if len(a) else None, "peak_month": str(a.idxmax().date()) if len(a) else None,
                   "from_peak": _r(a.iloc[-1] / a.max() - 1, 4) if len(a) else None,
@@ -154,21 +254,80 @@ def _afford_now() -> dict:
         annual = (w * 52).reindex(avg.index, method="ffill")
         return _pts((avg / annual).dropna(), 2)
 
+    basis = {"rate": "the Bank of England's quoted 2-year fixed rate at 75% loan-to-value"}
+
     def mortgage():
-        """Illustrative monthly payment on 75% of the London average price, 25 years, at Bank Rate + 1.5 points (a typical margin, not a quote)."""
-        rate = _month_steps(bank_rate()).reindex(avg.index, method="ffill") / 100 + 0.015
+        """Illustrative monthly payment on 75% of the London average price over 25 years at the quoted 2-year fixed rate (75% LTV); Bank Rate
+        + 1.5 points before that series starts or when it is unavailable."""
+        fallback = _month_steps(bank_rate()).reindex(avg.index, method="ffill") / 100 + 0.015
+        try:
+            fixed = boe_fixed().resample("MS").last().reindex(avg.index, method="ffill") / 100
+            rate = fixed.fillna(fallback)
+        except Exception:
+            rate = fallback
+            basis["rate"] = "Bank Rate + 1.5 points (the quoted fixed rate was unavailable)"
         r = rate / 12
         n = 25 * 12
         pay = avg * 0.75 * r / (1 - (1 + r) ** -n)
         return _pts(pay.dropna(), 0)
-    out = payload({"bank_rate": lambda: _pts(_month_steps(bank_rate()), 2), "price_to_earnings": ratio, "mortgage": mortgage,
+    out = payload({"bank_rate": lambda: _pts(_month_steps(bank_rate()), 2), "fixed_2y": lambda: _pts(boe_fixed(), 2), "price_to_earnings": ratio, "mortgage": mortgage,
                    "earnings_annual": lambda: _pts((earnings() * 52).dropna(), 0)},
                   sources=[LONDON, AWE, BOE], as_of=latest_date(avg))
     br = out.get("bank_rate") or []
     pe = out.get("price_to_earnings") or []
     out["now"] = {"bank_rate": br[-1][1] if br else None, "price_to_earnings": pe[-1][1] if pe else None,
                   "mortgage": out["mortgage"][-1][1] if out.get("mortgage") else None,
-                  "pe_peak": max((p[1] for p in pe if p[1] is not None), default=None)}
+                  "pe_peak": max((p[1] for p in pe if p[1] is not None), default=None),
+                  "fixed_2y": out["fixed_2y"][-1][1] if out.get("fixed_2y") else None}
+    out["mortgage_basis"] = basis["rate"]
+    return out
+
+
+def _boroughs_now() -> dict:
+    """Every London borough's average price and yearly change from the UK HPI (one paced download each, cached a day)."""
+    rows, series, errors = [], {}, {}
+    for i, b in enumerate(BOROUGHS):
+        try:
+            d = borough(b)
+            a = d["avg"].dropna()
+            five = a[a.index <= a.index[-1] - pd.DateOffset(years=5)]
+            name = b.replace("-", " ").title().replace(" And ", " and ").replace(" Upon ", " upon ").replace(" Of ", " of ")
+            rows.append({"borough": name, "avg": _r(a.iloc[-1], 0), "yoy": _r(d["pc_ann"].dropna().iloc[-1], 2) if d["pc_ann"].notna().any() else None,
+                         "change_5y": _r(a.iloc[-1] / five.iloc[-1] - 1, 4) if len(five) else None, "month": str(a.index[-1].date())})
+            series[name] = _pts(_rebase(a, "2015-01-01"), 1)
+        except Exception as e:
+            errors[b] = type(e).__name__
+        if i < len(BOROUGHS) - 1 and PACE:                               # gentle on the Land Registry between downloads
+            time.sleep(PACE)
+    if not rows:
+        raise ValueError(f"no borough could be read ({len(errors)} failed)")
+    rows.sort(key=lambda r: -(r["avg"] or 0))
+    return {"rows": rows, "indexed": series, "errors": errors, "as_of": max(r["month"] for r in rows), "stale": {}, "updated": int(time.time())}
+
+
+def _global_now() -> dict:
+    lon = hpi("london")
+    out = payload({"london": lambda: _pts(_rebase(lon["index"].dropna()), 1),
+                   "us": lambda: {k: _pts(_rebase(fred(sid)), 1) for k, sid in US_HPI.items()},
+                   "hk": lambda: _pts(_rebase(hk_index()), 1),
+                   "rates": lambda: {"UK 2-year fixed (75% LTV)": _pts(boe_fixed(), 2), "US 30-year fixed": _pts(fred(US_MORTGAGE).resample("MS").last(), 2),
+                                     "HK 1-month HIBOR": _pts(hk_hibor(), 2)}},
+                  sources=[LONDON, HK_RVD, HK_HIBOR, BOE_FIXED] + [FRED.format(sid=s) for s in list(US_HPI.values()) + [US_MORTGAGE]],
+                  as_of=latest_date(lon["index"]))
+
+    def yy(pts):
+        if not pts or len(pts) < 13:
+            return None
+        return _r(pts[-1][1] / pts[-13][1] - 1, 4)
+    table = []
+    if out.get("london"):
+        table.append({"market": "London", "index": out["london"][-1][1], "yoy": yy(out["london"]), "month": pd.Timestamp(out["london"][-1][0], unit="s").strftime("%Y-%m")})
+    for k, pts in (out.get("us") or {}).items():
+        if pts:
+            table.append({"market": k, "index": pts[-1][1], "yoy": yy(pts), "month": pd.Timestamp(pts[-1][0], unit="s").strftime("%Y-%m")})
+    if out.get("hk"):
+        table.append({"market": "Hong Kong (RVD)", "index": out["hk"][-1][1], "yoy": yy(out["hk"]), "month": pd.Timestamp(out["hk"][-1][0], unit="s").strftime("%Y-%m")})
+    out["table"] = table
     return out
 
 
@@ -177,4 +336,5 @@ def _cached_ep(name, fn):
     return lambda: _cached(f"topic:housing:{name}", 6 * 3600, fn)
 
 
-ENDPOINTS = {"prices": _cached_ep("prices", _prices_now), "market": _cached_ep("market", _market_now), "afford": _cached_ep("afford", _afford_now)}
+ENDPOINTS = {"prices": _cached_ep("prices", _prices_now), "market": _cached_ep("market", _market_now), "afford": _cached_ep("afford", _afford_now),
+             "boroughs": _cached_ep("boroughs", _boroughs_now), "global": _cached_ep("global", _global_now)}

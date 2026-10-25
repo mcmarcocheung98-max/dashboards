@@ -24,8 +24,9 @@ class Topic:
 
 
 REGISTRY: dict[str, Topic] = {t.slug: t for t in (
-    Topic("housing", "London Housing Index", "House prices, sales, rents and what buyers can afford in London, against the UK and inflation.",
-          "housing", (("prices", "Prices"), ("market", "Types & volume"), ("afford", "Rates & affordability")), ("prices", "market", "afford")),
+    Topic("housing", "Housing: London, US & Hong Kong", "London house prices, boroughs, sales, rents and affordability, against the UK, the US and Hong Kong.",
+          "housing", (("prices", "Prices"), ("market", "Types & volume"), ("boroughs", "Boroughs"), ("afford", "Rates & affordability"), ("global", "London vs US vs HK")),
+          ("prices", "market", "afford", "boroughs", "global")),
     Topic("robotaxi", "Autonomous Car Adoption", "Driverless ride-hailing: paid rides, where it operates, and safety reports.",
           "robotaxi", (("rides", "Rides"), ("footprint", "Footprint"), ("safety", "Safety")), ("safety",)),
     Topic("ai", "AI: Jobs & Adoption", "AI job openings against hiring, headcount and pay in law and finance, and how fast firms and people take up AI tools and agents, in the US, UK and Hong Kong.",

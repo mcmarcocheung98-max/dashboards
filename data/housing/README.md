@@ -1,6 +1,6 @@
-# London Housing Index (`/housing`)
+# Housing: London, US & Hong Kong (`/housing`)
 
-What London homes cost, how that compares with the rest of the UK and with inflation, how many change hands, and what buyers can afford at today's rates. Everything is automated from UK public data; there are no hand-entered files for this dashboard.
+What London homes cost, how that compares with the rest of the UK and with inflation, how many change hands, and what buyers can afford at today's rates. London is automated from UK public data; the US comes from FRED; Hong Kong from the Rating and Valuation Department and the HKMA. Rents and, if its workbook cannot be read, the Hong Kong index are hand-entered.
 
 ## What it shows
 
@@ -51,9 +51,19 @@ pytest -m network tests/test_sources.py -k "hpi or ons or bank"
 
 Local preview: `python -m app.server`, then open `/housing`.
 
+## Added in round 3
+
+| Tab or card | What | Source | How |
+|---|---|---|---|
+| Prices · Rents | London average monthly private rent | ONS Price Index of Private Rents | Hand-entered: `rents.csv` (no stable series id on the ONS API) |
+| Boroughs | All 33 London boroughs: average price, change on a year, 5-year change, sortable; yearly change as bars; the three most and least expensive indexed to 2015 | UK HPI per local authority (one download per borough, paced 0.4 s, cached a day) | Automated |
+| Rates & affordability | Bank of England quoted 2-year fixed mortgage rate at 75% LTV (series IUMBV34) next to Bank Rate; the mortgage illustration now uses it, falling back to Bank Rate + 1.5 points before the series starts | Bank of England database | Automated |
+| London vs US vs HK | House prices rebased to Jan 2015 = 100: London (UK HPI), US national, New York and San Francisco (S&P CoreLogic Case-Shiller via FRED: CSUSHPISA, NYXRSA, SFXRSA), Hong Kong (RVD private domestic index); latest table; borrowing costs: UK 2-year fixed, US 30-year fixed (MORTGAGE30US), HK 1-month HIBOR | FRED, RVD workbook, HKMA open API | Automated; `hk_price_index.csv` is the hand-entered fallback for Hong Kong |
+
+The RVD workbook URL (`his_data_4.xls`) and its layout are the least certain part: the network test checks it, and the card says "not available" if neither the workbook nor the CSV has data.
+
 ## Known gaps
 
-- Rents (ONS Price Index of Private Rents) and borough-level prices are not yet on the page; both are on the UK HPI / ONS sites and would be two more automated series.
 - The UK HPI is about two months behind the market and its latest months are provisional.
 - Pay is UK-wide, not London (see above). London earnings exist in ONS's ASHE tables but only yearly.
 - The Land Registry, ONS and Bank of England sites may refuse requests from Railway's US servers; the page would then show the stale note until a snapshot exists. If that happens on first deploy, the fix is to fetch once from elsewhere and copy the snapshot files to the volume, or to route those downloads through a UK proxy.

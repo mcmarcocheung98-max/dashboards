@@ -195,7 +195,7 @@ def test_routes(snapdir, monkeypatch):
             assert (await c.get("/nope")).status == 404 and (await c.get("/nope.js")).status == 404
             assert (await c.get("/..%2Fserver.py")).status == 404
             meta = await (await c.get("/api/housing/meta")).json()
-            assert meta["title"] == "London Housing Index" and meta["tabs"][0] == ["prices", "Prices"] and meta["sources"]
+            assert meta["title"] == "Housing: London, US & Hong Kong" and meta["tabs"][0] == ["prices", "Prices"] and meta["sources"]
             assert (await c.get("/api/housing/nope")).status == 404 and (await c.get("/api/nope/meta")).status == 404
             red = await c.get("/ai-jobs", allow_redirects=False)
             assert red.status == 301 and red.headers["Location"] == "/ai#openings"
@@ -425,3 +425,46 @@ def test_ai_merged_endpoints(snapdir, monkeypatch):
     assert "HK" in h and h["HK"] == {}
     r = J._ratio_now()
     assert r["US"]["ai_wide_index"] and r["US"]["ai_wide_over_professions"]
+
+
+# ------------------------------------------------------------------ housing: boroughs, fixed rate, US and HK
+def _rvd_xls():
+    import io
+    rows = [["Private Domestic - Price Indices (1999 = 100)", None, None]]
+    for y in range(2010, 2027):
+        for i, m in enumerate(["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]):
+            rows.append([y if i == 0 else None, m, 200 + (y - 2010) * 10 + i])
+    buf = io.BytesIO(); pd.DataFrame(rows).to_excel(buf, index=False, header=False)
+    return buf.getvalue().decode("latin-1")
+
+
+HIBOR = {"result": {"records": [{"end_of_month": f"{y}-{m:02d}", "ir_1m": 1 + (y - 2015) * 0.2} for y in range(2015, 2027) for m in range(1, 13)]}}
+
+
+def housing_mocks(monkeypatch):
+    from app.topics import housing as H
+    def fetch(url, ttl, **k):
+        if "ukhpi" in url:
+            return HPI
+        if "rvd.gov.hk" in url:
+            return _rvd_xls()
+        if "fred" in url:
+            return FRED
+        return BOE
+    monkeypatch.setattr(H, "fetch", fetch)
+    monkeypatch.setattr(H, "fetch_json", lambda url, ttl, **k: HIBOR if "hkma" in url else ONS(100) if "L522" in url else ONS(500))
+    monkeypatch.setattr(H, "PACE", 0)
+    return H
+
+
+def test_housing_boroughs_global_and_fixed_rate(snapdir, monkeypatch):
+    H = housing_mocks(monkeypatch)
+    b, g, a = H._boroughs_now(), H._global_now(), H._afford_now()
+    for d in (b, g, a):
+        B.json_safe(d)
+    assert len(b["rows"]) == 33 and not b["errors"] and {"Kensington and Chelsea", "City of Westminster", "Richmond upon Thames"} <= {r["borough"] for r in b["rows"]}
+    assert not [k for k in g if k.endswith("_error")], [k for k in g if k.endswith("_error")]
+    assert set(g["us"]) == set(H.US_HPI) and g["hk"] and set(g["rates"]) == {"UK 2-year fixed (75% LTV)", "US 30-year fixed", "HK 1-month HIBOR"}
+    assert {r["market"] for r in g["table"]} >= {"London", "Hong Kong (RVD)"}
+    assert a["mortgage_basis"].startswith("the Bank of England's quoted 2-year fixed") and a["fixed_2y"]
+    assert len(H.parse_rvd(_rvd_xls().encode("latin-1"))) == 17 * 12

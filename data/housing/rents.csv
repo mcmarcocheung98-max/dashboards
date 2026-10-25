@@ -1,0 +1,2 @@
+date,series,value,source,note
+# Average monthly private rent, £. series: "London average rent" (and optionally "England average rent"). From ONS Price Index of Private Rents (PIPR), London: https://www.ons.gov.uk/economy/inflationandpriceindices/bulletins/privaterentandhousepricesuk/latest . One row per month. Empty until filled from the source.

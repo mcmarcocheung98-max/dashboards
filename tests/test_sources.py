@@ -119,3 +119,13 @@ def test_fred_pay_series():
     for sid in J.US_WAGES.values():
         s = J.fred(sid)
         assert len(s) > 100 and 10 < s.iloc[-1] < 200, sid
+
+
+def test_housing_new_sources():
+    from app.topics import housing as H
+    assert len(H.boe_fixed()) > 100
+    assert len(H.borough("camden")) > 100
+    for sid in list(H.US_HPI.values()) + [H.US_MORTGAGE]:
+        assert len(H.fred(sid)) > 100, sid
+    assert len(H.hk_hibor()) > 50
+    assert len(H.hk_index()) > 100            # RVD workbook URL and layout: verify

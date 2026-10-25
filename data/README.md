@@ -4,7 +4,7 @@ One folder per dashboard: its CSVs (points with no free API, one cited row each)
 
 | Page | URL | Guide |
 |---|---|---|
-| London Housing Index | `/housing` | [housing/README.md](housing/README.md) |
+| Housing: London, US & Hong Kong | `/housing` | [housing/README.md](housing/README.md) |
 | Autonomous Car Adoption | `/robotaxi` | [robotaxi/README.md](robotaxi/README.md) |
 | AI: Jobs & Adoption | `/ai` | [ai/README.md](ai/README.md) |
 | BTC Cycles & Sector Rotation | `/btc-cycles` | [btc-cycles/README.md](btc-cycles/README.md) |

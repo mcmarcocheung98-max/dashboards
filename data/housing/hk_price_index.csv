@@ -1,0 +1,2 @@
+date,value,source,note
+# Hong Kong private domestic price index (all classes, 1999 = 100), monthly, from the Rating and Valuation Department. Read automatically from the RVD workbook when its layout is recognised; add rows here if not.
