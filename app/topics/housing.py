@@ -551,8 +551,8 @@ def _layout_now() -> dict:
             row["sheets"] = xl.sheet_names
             for sh in [x for x in xl.sheet_names if "lond" in x.lower() or x in xl.sheet_names[:4]][:8]:
                 d = xl.parse(sh, header=None).dropna(how="all")
-                rows = [[str(c)[:40] for c in rw if not (isinstance(c, float) and np.isnan(c))] for rw in d.values.tolist()]
-                row[sh] = {"shape": list(d.shape), "head": rows[:14], "tail": rows[-4:], "london": [r for r in rows if any("London" in c for c in r)][:4]}
+                rows = [" | ".join(str(c)[:40] for c in rw if not (isinstance(c, float) and np.isnan(c))) for rw in d.values.tolist()]
+                row[sh] = {"shape": list(d.shape), "head": rows[:10], "tail": rows[-2:], "london": [r for r in rows if "London" in r][-2:]}
         return row
 
     def probe(url, headers):
