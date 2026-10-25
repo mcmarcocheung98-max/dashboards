@@ -95,23 +95,27 @@ PROBE_URLS = {   # fixed list: what each dashboard downloads, to see from the se
 
 
 def probe() -> dict:
-    """Try each PROBE_URLS entry from this server with requests and with curl; report status, size and the start of the body."""
+    """Try each PROBE_URLS entry from this server with requests and with curl, all at once (12 s each), and report status, size and the
+    start of the body."""
     import subprocess
+    from concurrent.futures import ThreadPoolExecutor
     import requests
     from ._base import UA
-    out = {}
-    for name, url in PROBE_URLS.items():
+
+    def one(item):
+        name, url = item
         row = {"url": url}
         try:
-            r = requests.get(url, headers=UA, timeout=25)
+            r = requests.get(url, headers=UA, timeout=12)
             row["requests"] = {"status": r.status_code, "bytes": len(r.content), "type": r.headers.get("content-type", ""), "start": r.text[:120]}
         except Exception as e:
             row["requests"] = {"error": f"{type(e).__name__}: {str(e)[:120]}"}
         try:
-            c = subprocess.run(["curl", "-s", "-L", "--max-time", "25", "-A", UA["User-Agent"], "-o", "/dev/null", "-w", "%{http_code} %{size_download}", url],
-                               capture_output=True, text=True, timeout=40)
+            c = subprocess.run(["curl", "-s", "-L", "--max-time", "12", "-A", UA["User-Agent"], "-o", "/dev/null", "-w", "%{http_code} %{size_download}", url],
+                               capture_output=True, text=True, timeout=20)
             row["curl"] = c.stdout.strip() or f"exit {c.returncode}"
         except Exception as e:
-            row["curl"] = f"{type(e).__name__}"
-        out[name] = row
-    return out
+            row["curl"] = type(e).__name__
+        return name, row
+    with ThreadPoolExecutor(max_workers=len(PROBE_URLS)) as ex:
+        return dict(ex.map(one, PROBE_URLS.items()))
