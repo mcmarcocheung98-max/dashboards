@@ -104,5 +104,5 @@ Local preview: `python -m app.server`, then open `/btc-cycles`.
 - Google Trends has no stable free API; the sixth signal is hand-entered.
 - Spot + ETF volume (the doc's signal 4) is approximated by CoinGecko's all-exchange spot volume.
 - Pre-2024 sector figures are the doc's approximations and are labelled so.
-- The first visit after a deploy can take up to a minute on the Candidates tab while 28 coins are fetched 2.2 s apart; the warmer does this in the background from the second minute, so later visits are instant.
+- After a deploy the background fill takes about 7 minutes (28 coins, 13 s apart, longer after a 429); until a coin is reached its row says "loading in the background". Live check 25 Oct 2026 23:21 UTC (Actions > live-check, then show-json on `/api/health` and `/api/btc-cycles/coins`): all 28 coins filled, every CoinGecko source fresh, every tab OK; the only "not available" cards were the two UK/HK treasury prices on the MSTR tab.
 - Prediction markets (rank 4) have no liquid token and no row; ASTER, LIT, XPL, SKY, SYRUP and PLUME ids are marked `verify`.
