@@ -1,9 +1,24 @@
 date,market,event,source,note
-# Laws, licences and pilots for driverless vehicles in the US, UK, Hong Kong and China. One row per event; 'verify' = written from memory.
+# Laws, licences and pilots for driverless vehicles in the US, UK, Hong Kong and China. One row per event, citing the government or company release; 'verify' = a part not confirmed (named in the note). HK licence holders are named in the Transport Department's table (https://www.td.gov.hk/en/public_services/taoav/index.html) when the release does not.
 2021-06-29,US,NHTSA Standing General Order requires crash reports from automated driving systems,https://www.nhtsa.gov/laws-regulations/standing-general-order-crash-reporting,
 2023-08-10,US,California CPUC approves 24/7 paid driverless service for Waymo and Cruise in San Francisco,https://www.cpuc.ca.gov/,
 2023-10-24,US,California DMV suspends Cruise's driverless permit,https://www.dmv.ca.gov/,
-2024-05-20,UK,Automated Vehicles Act receives Royal Assent,https://www.legislation.gov.uk/ukpga/2024/10,
-2025-06-10,UK,Wayve and Uber announce a London robotaxi pilot (planned for 2026) under the accelerated pilot scheme,https://www.gov.uk/,verify
-2024-12-01,HK,Baidu Apollo granted a Transport Department pilot licence for driverless tests around the airport area (Lantau),https://www.td.gov.hk/,verify date
 2022-08-08,China,Baidu Apollo Go receives fully driverless commercial permits in Wuhan and Chongqing,https://www.prnewswire.com/,
+2024-05-20,UK,Automated Vehicles Act 2024 receives Royal Assent; most of it is not yet in force (full implementation planned for the second half of 2027),https://www.legislation.gov.uk/ukpga/2024/10,Royal Assent date also on https://bills.parliament.uk/bills/3506/stages
+2025-06-10,UK,"Government fast-tracks pilots of self-driving taxi- and bus-like services without a safety driver to spring 2026, ahead of the full Act in the second half of 2027",https://www.gov.uk/government/news/driving-innovation-38000-jobs-on-the-horizon-as-pilots-of-self-driving-vehicles-fast-tracked,
+2025-06-10,UK,Wayve and Uber announce Level 4 robotaxi trials in London,https://wayve.ai/press/wayve-uber-l4-autonomy-trials/,
+2025-07-21,UK,Consultation opens on the automated passenger services (APS) permitting scheme (closed 28 Sep 2025),https://www.gov.uk/government/consultations/automated-passenger-services-permitting-scheme,
+2025-10-01,UK,"Waymo announces London, aiming for rides with no human driver in 2026 (Moove as fleet partner)",https://waymo.com/blog/2025/10/hello-london-your-waymo-ride-is-arriving/,month from the post; verify day
+2026-04-14,UK,Waymo starts autonomous driving in London with specialists behind the wheel,https://waymo.com/blog/shorts/autonomous-driving-in-london/,
+2026-04-23,UK,Government response on the APS permitting scheme; Automated Vehicles (Permits for Automated Passenger Services) Regulations 2026 laid,https://assets.publishing.service.gov.uk/media/69f0bd4eb0c3a4023e5d6d82/automated-passenger_services-aps-permitting-scheme-govt-response.pdf,date the regulations came into force not confirmed
+2026-05-22,UK,APS pilot permits open for applications: issued by the DVSA and needing local consent (Transport for London in London),https://www.gov.uk/government/news/passengers-one-step-closer-to-booking-taxi-and-bus-style-self-driving-vehicles,no permit reported issued by 25 Oct 2026
+2026-06-17,UK,Consultation on the draft statement of safety principles for automated vehicles (closed 9 Sep 2026; final statement to Parliament in 2027),https://www.gov.uk/government/speeches/new-consultation-on-draft-statutory-statement-of-safety-principles-for-automated-vehicles,
+2026-09-03,UK,"Wayve and Uber start autonomous rides in London with a TfL-licensed driver on board, under the trialling code and Uber's private hire licence (not an APS permit)",https://wayve.ai/press/wayve-uber-launch-autonomous-rides/,
+2024-03-01,HK,Road Traffic (Amendment) (Autonomous Vehicles) Ordinance and the AV Regulation (Cap. 374AA) take effect,https://www.info.gov.hk/gia/general/202403/01/P2024022900252.htm,
+2024-11-29,HK,"First AV pilot licence: 10 vehicles in North Lantau (Baidu Apollo, valid 9 Dec 2024 to 8 Dec 2029)",https://www.info.gov.hk/gia/general/202411/29/P2024112900386.htm,holder named in the TD licence table
+2025-04-30,HK,"North Lantau trial expanded: more routes, and up to 10 vehicles running at once",https://www.info.gov.hk/gia/general/202504/30/P2025043000417.htm,
+2025-08-14,HK,Pilot licence for 10 AVs at Cyberport (Southern District),https://www.info.gov.hk/gia/general/202508/14/P2025081400789.htm,holder (Baidu Apollo) named in the TD licence table
+2025-10-30,HK,"Pilot licence for Kowloon East (Kai Tak, Kowloon Bay): 10 AVs, up to 6 at once, backup operator on board",https://www.info.gov.hk/gia/general/202510/30/P2025102900367.htm,holder (Baidu Apollo) named in the TD licence table; release ID dated 29 Oct - verify day
+2026-02-23,HK,"Passenger-carrying trial on Airport Island raised to 20 AVs at once, and a cross-district route to Tung Chung and Sunny Bay",https://www.info.gov.hk/gia/general/202602/23/P2026022300418.htm,
+2026-07-23,HK,"Fully driverless trial approved on Airport Island: no backup operator in the vehicle, remote backup at a control centre",https://www.info.gov.hk/gia/general/202607/23/P2026072300217.htm,
+2026-08-11,HK,"MTR Corporation licence: 4 autonomous cars between West Kowloon and Kowloon stations, backup operator on board",https://www.info.gov.hk/gia/general/202608/11/P2026081100475.htm,

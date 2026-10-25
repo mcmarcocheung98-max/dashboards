@@ -53,6 +53,8 @@ Checked on 25 Oct 2026: Waymo's 50,000 is dated to its 9 May 2024 post. The 175,
 
 **`miles.csv`** (`date,series,value,source,note`): cumulative rider-only miles; `date` is the data cut-off the operator states (Waymo: "through June 2026"), not the publish date. `series` is the operator name, matched to every NHTSA reporting entity that starts with it, case-insensitive (`Waymo` matches `Waymo LLC`). Waymo updates its safety hub (waymo.com/safety/impact) about three months after each quarter. Only operators whose ADS crash reports and published miles cover the same vehicles belong here: Tesla (reports include rides with a safety monitor; FSD miles are driver assistance) and Zoox (reports include its safety-driver test fleet) are left out, with the reason in the file's header.
 
+**`regulation.csv`** (`date,market,event,source,note`): one row per law, licence or pilot. UK rows cite gov.uk, legislation.gov.uk or the operator's release; Hong Kong rows cite the government press release (info.gov.hk). Those releases often leave out the licence holder, which the Transport Department's AV pilot licence table names (td.gov.hk/en/public_services/taoav). Checked on 25 Oct 2026: no UK APS permit had been reported issued, and the Wayve/Uber London rides run with a licensed driver on board.
+
 ## Checking it
 
 ```
