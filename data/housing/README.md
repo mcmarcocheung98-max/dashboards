@@ -14,8 +14,8 @@ What London homes cost, how that compares with the rest of the UK and with infla
 | | Average price by property type | Detached, semi-detached, terraced, flat / maisonette |
 | | Change on a year earlier, by type | Yearly % change per type |
 | | Sales volume | Completed sales per month and the rolling 12-month total |
-| Rates & affordability | Headline figures | Bank Rate, price-to-earnings ratio, highest ratio seen, illustrative monthly mortgage |
-| | Price ÷ pay | London average price divided by UK average annual regular pay |
+| Rates & affordability | Headline figures | Bank Rate, price to London pay, highest ratio seen, London median full-time pay, illustrative monthly mortgage |
+| | Price ÷ pay | London average price ÷ median full-time pay of people working in London (yearly survey); dashed, the same price ÷ UK average regular pay (monthly trend) |
 | | Bank Rate | Bank of England base rate, by month |
 | | Illustrative mortgage | Monthly repayment on 75% of the average London price over 25 years at Bank Rate + 1.5 points, against pay ÷ 12 |
 
@@ -26,6 +26,7 @@ What London homes cost, how that compares with the rest of the UK and with infla
 | Average price, index, yearly change, sales volume, by property type (London and UK) | [UK House Price Index](https://landregistry.data.gov.uk/app/ukhpi), HM Land Registry with ONS, Registers of Scotland and Land & Property Services NI; CSV download for the London and United Kingdom regions | Monthly, published about six weeks after the month, revised later | Automated |
 | CPIH, all items, 2015 = 100 | [ONS series L522, dataset MM23](https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/l522/mm23) | Monthly | Automated (ONS API) |
 | Average weekly earnings, regular pay, whole economy, seasonally adjusted | [ONS series KAB9, dataset LMS](https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/earningsandworkinghours/timeseries/kab9/lms) | Monthly | Automated (ONS API) |
+| London median gross annual pay, full-time employees, workplace analysis | [ONS Annual Survey of Hours and Earnings](https://www.nomisweb.co.uk/datasets/ashe) via the Nomis API (dataset NM_99_1, London region) | Yearly (April), published each autumn | Automated |
 | Bank Rate | [Bank of England database, series IUDBEDR](https://www.bankofengland.co.uk/boeapps/database/Bank-Rate.asp) | On each change | Automated |
 
 All four are public sector information licensed under the Open Government Licence v3.0; the page footer says so.
@@ -34,7 +35,7 @@ All four are public sector information licensed under the Open Government Licenc
 
 - **Today's money**: each month's average price × (latest CPIH ÷ that month's CPIH).
 - **Yearly change** is the UK HPI's own figure where the download has it; otherwise the price against the same month a year earlier.
-- **Price to earnings**: London average price ÷ (UK weekly regular pay × 52). The pay figure is UK-wide, so London's true ratio is higher (roughly a fifth); the trend, not the level, is the point.
+- **Price to earnings**: London average price ÷ median gross annual pay of full-time employees working in London (ASHE, workplace analysis: the basis of ONS's own house price to earnings ratios). The survey is each April; a month uses the latest survey published for it, carried forward until the next. The dashed line divides by UK weekly regular pay × 52 instead: monthly, so it moves sooner, but UK-wide, so its level is higher than London's true ratio.
 - **Illustrative mortgage**: 75% loan-to-value, 25-year repayment, interest at Bank Rate + 1.5 points in that month. A gauge of how prices and rates combine, not a quote: real mortgage rates follow swap rates, not only Bank Rate.
 - **Bank Rate by month** is the rate in force on the first of each month.
 - **Sales, last 12 months** compares the latest 12 months with the 12 before. The latest two or three months are always revised upward as late registrations arrive.
@@ -79,7 +80,7 @@ The RVD workbook URL (`his_data_4.xls`) and its layout are the least certain par
 ## Known gaps
 
 - The UK HPI is about two months behind the market and its latest months are provisional.
-- Pay is UK-wide, not London (see above). London earnings exist in ONS's ASHE tables but only yearly.
+- London pay is yearly (ASHE, April) and the latest year is provisional; between surveys the ratio moves with prices only.
 - The Land Registry, ONS and Bank of England sites may refuse requests from Railway's US servers; the page would then show the stale note until a snapshot exists. If that happens on first deploy, the fix is to fetch once from elsewhere and copy the snapshot files to the volume, or to route those downloads through a UK proxy.
 
 ## Requests for shared code

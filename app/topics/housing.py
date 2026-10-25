@@ -3,8 +3,9 @@
 prices   UK House Price Index for London and for the UK (HM Land Registry, monthly, ~6 weeks behind): average price, index, yearly change;
          London average price in today's money (deflated with CPIH, ONS series L522 in dataset MM23)
 market   London average price by property type (detached / semi / terraced / flat) and monthly sales volume (same UK HPI download)
-afford   Bank Rate (Bank of England IADB series IUDBEDR), UK average weekly earnings (ONS KAB9 / LMS, regular pay) and the London
-         price-to-earnings ratio (London average price / UK annual regular pay: a UK-wide wage, so a conservative London ratio)
+afford   Bank Rate (Bank of England IADB series IUDBEDR), the London price-to-earnings ratio (London average price / median full-time
+         pay of people working in London, ONS ASHE via Nomis, yearly) and, as a monthly trend, the same price / UK average weekly regular pay
+         (ONS KAB9 / LMS)
 
 Hand-entered (data/housing/): none required. Everything is cached a day and kept on disk; a source that is down leaves its last
 snapshot on the page with a 'stale since' note.
@@ -42,6 +43,10 @@ BOROUGHS = ["barking-and-dagenham", "barnet", "bexley", "brent", "bromley", "cam
             "hackney", "hammersmith-and-fulham", "haringey", "harrow", "havering", "hillingdon", "hounslow", "islington", "kensington-and-chelsea",
             "kingston-upon-thames", "lambeth", "lewisham", "merton", "newham", "redbridge", "richmond-upon-thames", "southwark", "sutton",
             "tower-hamlets", "waltham-forest", "wandsworth", "city-of-westminster"]
+# ASHE median gross annual pay, full-time workers, people working in London (workplace analysis, as in ONS's own affordability ratios);
+# yearly, April reference date, published each autumn. Nomis API, reachable from Railway.
+ASHE_LONDON = ("https://www.nomisweb.co.uk/api/v01/dataset/NM_99_1.data.csv?geography=2013265927&sex=8&item=2&pay=7&measures=20100"
+               "&select=date_name,geography_name,sex_name,item_name,pay_name,obs_value")
 FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}"
 US_HPI = {"US national (Case-Shiller)": "CSUSHPISA", "New York (Case-Shiller)": "NYXRSA", "San Francisco (Case-Shiller)": "SFXRSA"}   # FRED: unreachable from Railway
 FHFA = "https://www.fhfa.gov/hpi/download/monthly/hpi_master.csv"   # FHFA house price indexes (US, states, metros); reachable, ~17 MB
@@ -55,6 +60,7 @@ BOE = ("https://www.bankofengland.co.uk/boeapps/database/_iadb-fromshowcolumns.a
 SOURCES = [{"name": "UK House Price Index (HM Land Registry / ONS)", "url": "https://landregistry.data.gov.uk/app/ukhpi", "cadence": "monthly"},
            {"name": "CPIH inflation (ONS, series L522)", "url": "https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/l522/mm23", "cadence": "monthly"},
            {"name": "Average weekly earnings (ONS, series KAB9)", "url": "https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/earningsandworkinghours/timeseries/kab9/lms", "cadence": "monthly"},
+           {"name": "London median full-time pay (ONS Annual Survey of Hours and Earnings, workplace analysis, via Nomis)", "url": "https://www.nomisweb.co.uk/datasets/ashe", "cadence": "yearly"},
            {"name": "Bank Rate and quoted 2-year fixed mortgage rate (Bank of England)", "url": "https://www.bankofengland.co.uk/boeapps/database/", "cadence": "monthly"},
            {"name": "FHFA House Price Indexes (US purchase-only; New York and San Francisco metros)", "url": "https://www.fhfa.gov/data/hpi", "cadence": "monthly / quarterly"},
            {"name": "30-year fixed mortgage rate (Freddie Mac PMMS)", "url": "https://www.freddiemac.com/pmms", "cadence": "weekly"},
@@ -173,6 +179,18 @@ def parse_ons(j: dict) -> pd.Series:
     return s[s.index.notna()].sort_index().dropna()
 
 
+def parse_nomis(text: str) -> pd.Series:
+    """Nomis CSV (DATE_NAME year, ..., OBS_VALUE) -> yearly Series dated April of each year (the ASHE reference month); empty years dropped."""
+    d = pd.read_csv(StringIO(text))
+    d.columns = [c.upper() for c in d.columns]
+    yr = pd.to_numeric(d["DATE_NAME"].astype(str).str[:4], errors="coerce")
+    s = pd.Series(pd.to_numeric(d["OBS_VALUE"], errors="coerce").to_numpy(), index=pd.to_datetime(yr.astype("Int64").astype(str) + "-04-01", errors="coerce"))
+    s = s[s.index.notna()].dropna().sort_index()
+    if s.empty:
+        raise ValueError("Nomis ASHE: no values")
+    return s
+
+
 def parse_boe(text: str) -> pd.Series:
     """Bank of England IADB CSV ('DATE,IUDBEDR' with dates like 02 Jan 1995) -> Series of Bank Rate (%), one point per change."""
     d = pd.read_csv(StringIO(text))
@@ -205,6 +223,10 @@ def cpih() -> pd.Series:
 
 def earnings() -> pd.Series:
     return parse_ons_csv(fetch(AWE, TTL))
+
+
+def london_pay() -> pd.Series:
+    return parse_nomis(fetch(ASHE_LONDON, TTL))
 
 
 def bank_rate() -> pd.Series:
@@ -392,9 +414,16 @@ def _afford_now() -> dict:
     avg = lon["avg"].dropna()
 
     def ratio():
+        """London average price / UK annual regular pay: monthly, UK-wide, so a trend line rather than a London level."""
         w = earnings()
         annual = (w * 52).reindex(avg.index, method="ffill")
         return _pts((avg / annual).dropna(), 2)
+
+    def ratio_london():
+        """London average price / median full-time pay of people working in London (ASHE, yearly, carried forward to the next survey)."""
+        p = london_pay()
+        annual = p.reindex(p.index.union(avg.index)).ffill().reindex(avg.index)
+        return _pts((avg / annual)[avg.index >= p.index[0]].dropna(), 2)
 
     basis = {"rate": "the Bank of England's quoted 2-year fixed rate at 75% loan-to-value"}
 
@@ -413,11 +442,15 @@ def _afford_now() -> dict:
         pay = avg * 0.75 * r / (1 - (1 + r) ** -n)
         return _pts(pay.dropna(), 0)
     out = payload({"bank_rate": lambda: _pts(_month_steps(bank_rate()), 2), "fixed_2y": lambda: _pts(boe_fixed(), 2), "price_to_earnings": ratio, "mortgage": mortgage,
+                   "price_to_london_pay": ratio_london, "london_pay": lambda: _pts(london_pay(), 0),
                    "earnings_annual": lambda: _pts((earnings() * 52).dropna(), 0)},
-                  sources=[AWE, BOE], as_of=latest_date(avg))
+                  sources=[AWE, BOE, ASHE_LONDON], as_of=latest_date(avg))
     br = out.get("bank_rate") or []
-    pe = out.get("price_to_earnings") or []
+    pe = out.get("price_to_london_pay") or out.get("price_to_earnings") or []
+    lp = out.get("london_pay") or []
     out["now"] = {"bank_rate": br[-1][1] if br else None, "price_to_earnings": pe[-1][1] if pe else None,
+                  "pe_basis": "london" if out.get("price_to_london_pay") else "uk",
+                  "london_pay": lp[-1][1] if lp else None, "london_pay_year": pd.Timestamp(lp[-1][0], unit="s").year if lp else None,
                   "mortgage": out["mortgage"][-1][1] if out.get("mortgage") else None,
                   "pe_peak": max((p[1] for p in pe if p[1] is not None), default=None),
                   "fixed_2y": out["fixed_2y"][-1][1] if out.get("fixed_2y") else None}

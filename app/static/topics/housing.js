@@ -35,14 +35,17 @@ const VIEWS = {
   async afford() {
     const d = await api("afford"), n = d.now || {};
     const head = card(null, el("div", { class: "kpis" }, kpi("Bank Rate", n.bank_rate == null ? "–" : n.bank_rate.toFixed(2) + "%"),
-      kpi("Price to earnings", n.price_to_earnings == null ? "–" : n.price_to_earnings.toFixed(1) + "×"), kpi("Highest ratio seen", n.pe_peak == null ? "–" : n.pe_peak.toFixed(1) + "×"),
+      kpi(n.pe_basis === "london" ? "Price to London pay" : "Price to UK pay", n.price_to_earnings == null ? "–" : n.price_to_earnings.toFixed(1) + "×"), kpi("Highest ratio seen", n.pe_peak == null ? "–" : n.pe_peak.toFixed(1) + "×"),
+      kpi("London median full-time pay" + (n.london_pay_year ? " (" + n.london_pay_year + ")" : ""), gbp(n.london_pay)),
       kpi("Illustrative mortgage a month", gbp(n.mortgage))), asOf(d), stale(d));
-    const pe = card("London average price ÷ UK average annual pay", ...linesChart([{ name: "Price to earnings", points: d.price_to_earnings || [] }], v => v == null ? "–" : v.toFixed(1) + "×"),
-      missing(d, "price_to_earnings", "The ratio"), note("Pay is UK-wide regular weekly earnings × 52 (ONS KAB9), which is lower than London pay, so the ratio overstates London's by roughly a fifth; the trend is what matters."));
+    const pe = card("London average price ÷ annual pay", ...linesChart([{ name: "÷ London median full-time pay", points: d.price_to_london_pay || [], width: 3 },
+      { name: "÷ UK average regular pay (monthly trend)", points: d.price_to_earnings || [], dashed: true, color: css("--hold") }], v => v == null ? "–" : v.toFixed(1) + "×"),
+      missing(d, "price_to_london_pay", "The London-pay ratio (ONS ASHE via Nomis)"), missing(d, "price_to_earnings", "The UK-pay trend"),
+      note("Solid: median gross annual pay of full-time employees working in London (ONS Annual Survey of Hours and Earnings, each April, carried forward until the next survey), the basis ONS uses for its own affordability ratios. Dashed: UK average weekly regular pay × 52 (ONS KAB9), monthly but UK-wide, so higher; read it for the trend."));
     const br = card("Bank Rate and the quoted 2-year fixed mortgage rate (75% LTV)", ...linesChart([{ name: "Bank Rate", points: d.bank_rate || [] }, { name: "2-year fixed, 75% LTV", points: d.fixed_2y || [], color: css("--s2") }],
       v => v == null ? "–" : v.toFixed(2) + "%", { small: true }), missing(d, "bank_rate", "Bank Rate"), missing(d, "fixed_2y", "The quoted fixed rate (BoE IUMBV34)"));
     const mg = card("What a mortgage on the average London home would cost a month (illustration)",
-      ...linesChart([{ name: "Monthly payment", points: d.mortgage || [] }, { name: "Annual pay ÷ 12", points: (d.earnings_annual || []).map(p => [p[0], p[1] / 12]), dashed: true, color: css("--hold") }], v => gbp(v)),
+      ...linesChart([{ name: "Monthly payment", points: d.mortgage || [] }, { name: d.london_pay ? "London median full-time pay ÷ 12" : "UK annual pay ÷ 12", points: (d.london_pay || d.earnings_annual || []).map(p => [p[0], p[1] / 12]), dashed: true, color: css("--hold") }], v => gbp(v)),
       missing(d, "mortgage", "The illustration"), note("75% of the average London price over 25 years, repayment, at " + (d.mortgage_basis || "the quoted fixed rate") + ". An illustration of how rates and prices combine, not a quote."));
     return [head, pe, br, mg];
   },
