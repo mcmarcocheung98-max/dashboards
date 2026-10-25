@@ -162,29 +162,33 @@ def cpuc_links(html: str) -> list[dict]:
 
 
 def _cpuc_probe() -> dict:
-    """Not a tab: what the server sees at the CPUC quarterly-reporting page and in its first data file, to write the trips parser
+    """Not a tab: what the server sees at the CPUC quarterly-reporting page and inside its deployment zips, to write the trips parser
     against the real layout (/api/robotaxi/cpuc)."""
     import requests
+    import zipfile
+    from io import BytesIO
     r = requests.get(CPUC_PAGE, headers=UA, timeout=30)
     links = cpuc_links(r.text)
-    out = {"status": r.status_code, "bytes": len(r.content), "n_links": len(links), "links": links[:40], "files": {}}
-    for ln in links[:2]:
+    dep = [ln["url"] for ln in links if "deploy" in ln["url"].lower() and ln["url"].lower().endswith(".zip")]
+    out = {"status": r.status_code, "n_links": len(links), "deployment_zips": dep, "zips": {}}
+
+    def head(name, raw):
+        if name.lower().endswith(".csv"):
+            return [ln[:300] for ln in raw.decode("utf-8", "replace").splitlines()[:6]]
+        if name.lower().endswith((".xlsx", ".xls")):
+            xl = pd.ExcelFile(BytesIO(raw))
+            return {sh: [" | ".join(str(c)[:30] for c in rw) for rw in xl.parse(sh, header=None, nrows=6).fillna("").values.tolist()] for sh in xl.sheet_names[:4]}
+        return None
+    for url in [u for u in dep if "2026q2" in u or "2025-q1" in u or "dec-2024" in u][:3]:
         try:
-            f = requests.get(ln["url"], headers=UA, timeout=60)
-            info = {"status": f.status_code, "type": f.headers.get("content-type", ""), "bytes": len(f.content)}
-            if ln["url"].lower().split("?")[0].endswith(".csv"):
-                d = pd.read_csv(StringIO(f.text), dtype=str, header=None, nrows=12)
-                info["head"] = [" | ".join(str(c)[:40] for c in rw) for rw in d.fillna("").values.tolist()]
-            elif ln["url"].lower().split("?")[0].endswith((".xlsx", ".xls")):
-                from io import BytesIO
-                xl = pd.ExcelFile(BytesIO(f.content))
-                info["sheets"] = {sh: [" | ".join(str(c)[:40] for c in rw) for rw in xl.parse(sh, header=None, nrows=12).fillna("").values.tolist()]
-                                  for sh in xl.sheet_names[:6]}
-            out["files"][ln["url"]] = info
+            z = zipfile.ZipFile(BytesIO(requests.get(url, headers=UA, timeout=120).content))
+            info = {"members": [[m.filename, m.file_size] for m in z.infolist()][:40], "heads": {}}
+            for m in z.infolist():
+                if "month" in m.filename.lower() and not "tract" in m.filename.lower() and m.file_size < 5_000_000:
+                    info["heads"][m.filename] = head(m.filename, z.read(m))
+            out["zips"][url] = info
         except Exception as e:
-            out["files"][ln["url"]] = {"error": f"{type(e).__name__}: {str(e)[:160]}"}
-    if not links:
-        out["start"] = r.text[:1500]
+            out["zips"][url] = {"error": f"{type(e).__name__}: {str(e)[:160]}"}
     return out
 
 
