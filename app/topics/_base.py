@@ -124,6 +124,21 @@ def fetch(url: str, ttl: float = DAY, *, curl: bool = False, headers: dict | Non
     return _cached(f"topic:{url}", ttl, go)
 
 
+def cached_only(url: str) -> str:
+    """The text last fetched for `url` (memory, else the disk snapshot) without downloading; LookupError when it was never fetched.
+    Used by pages that must answer at once while a background job does the slow, rate-limited downloads."""
+    from ..cache import _cache
+    hit = _cache.get(f"topic:{url}")
+    if hit:
+        return hit[1]
+    snap = _snap(url)
+    if snap.exists():
+        if time.time() - snap.stat().st_mtime > 2 * DAY:
+            STALE[url] = snap.stat().st_mtime
+        return snap.read_text(encoding="utf-8")
+    raise LookupError("not fetched yet")
+
+
 def fetch_csv(url: str, ttl: float = DAY, **kw) -> pd.DataFrame:
     from io import StringIO
     read = {k: kw.pop(k) for k in list(kw) if k in ("sep", "skiprows", "header", "names", "usecols", "dtype", "engine")}

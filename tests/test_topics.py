@@ -299,8 +299,11 @@ def _chart(mult=1.0, start=60000.0, n=365, seed=1):
 def test_btc_cycles_coins(snapdir, monkeypatch):
     from app.topics import btc_cycles as C
     charts = _chart(mult=2.0)
-    monkeypatch.setattr(C, "fetch_json", lambda url, ttl, **k: charts["btc"] if "coins/bitcoin/" in url else charts["coin"])
+    import json as _json
+    monkeypatch.setattr(B, "_download", lambda url, *a, **k: _json.dumps(charts["btc"] if "coins/bitcoin/" in url else charts["coin"]))
     monkeypatch.setattr(C, "PACE", 0)
+    assert C._coins_now()["coins"][0]["error"].startswith("loading")          # before the background fill: pending, not an error
+    assert set(C.fill_coins().values()) == {"ok"}
     k = C._coins_now()
     B.json_safe(k)
     assert len(k["coins"]) == len(C.coins_list()) == 28 and all("kpi" in c for c in k["coins"]) and k["btc_now"] > 0
@@ -317,16 +320,21 @@ def test_btc_cycles_coins(snapdir, monkeypatch):
     with pytest.raises(ValueError):
         C._coin_now("NOPE")
     # a coin whose fetch fails is listed with its error, the rest still come through
-    def flaky(url, ttl, **kw):
-        if "coins/bitcoin/" in url:
-            return charts["btc"]
+    from app import cache
+    cache._cache.clear()
+    import shutil
+    shutil.rmtree(snapdir, ignore_errors=True)
+
+    def flaky(url, *a, **kw):
         if "zcash" in url:
-            raise ConnectionError("down")
-        return charts["coin"]
-    monkeypatch.setattr(C, "fetch_json", flaky)
+            raise RuntimeError("curl exit 0, HTTP 429: 'rate limited'")
+        return _json.dumps(charts["btc"] if "coins/bitcoin/" in url else charts["coin"])
+    monkeypatch.setattr(B, "_download", flaky)
+    res = C.fill_coins(pause_on_limit=0)
+    assert res["ZEC"].startswith("RuntimeError") and res["SOL"] == "ok"
     k2 = C._coins_now()
     zec = next(c for c in k2["coins"] if c["ticker"] == "ZEC")
-    assert zec["error"] == "ConnectionError" and sum("kpi" in c for c in k2["coins"]) == 27
+    assert zec["error"].startswith("loading") and sum("kpi" in c for c in k2["coins"]) == 27
 
 
 def test_btc_cycles_rsi_and_beta_edges():
@@ -344,8 +352,10 @@ def test_btc_cycles_coin_notes(snapdir, monkeypatch):
     assert {c["ticker"] for c in C.coins_list()} == set(notes)
     assert all(n["narrative"] and n["standout"] and n["thesis"] for n in notes.values())
     charts = _chart(mult=2.5)
-    monkeypatch.setattr(C, "fetch_json", lambda url, ttl, **k: charts["btc"] if "coins/bitcoin/" in url else charts["coin"])
+    import json as _json
+    monkeypatch.setattr(B, "_download", lambda url, *a, **k: _json.dumps(charts["btc"] if "coins/bitcoin/" in url else charts["coin"]))
     monkeypatch.setattr(C, "PACE", 0)
+    C.fill_coins()
     k = C._coins_now()
     hype = next(c for c in k["coins"] if c["ticker"] == "HYPE")
     assert hype["notes"]["thesis"] and any("High beta" in t for t in hype["now"]) and any("Market cap rank" in t for t in hype["now"])

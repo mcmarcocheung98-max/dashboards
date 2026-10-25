@@ -40,7 +40,7 @@ CG_CHART = "https://api.coingecko.com/api/v3/coins/{id}/market_chart?vs_currency
 COINS = DATA_DIR / SLUG / "coins.csv"
 SCENARIOS = DATA_DIR / SLUG / "scenarios.json"
 NOTES_FILE = DATA_DIR / SLUG / "coin_notes.json"
-PACE = 2.2                                 # seconds between real CoinGecko downloads (public limit ~30/min)
+PACE = 13.0                                # seconds between CoinGecko downloads in the background fill (public limit is a few calls a minute)
 SOURCES = [{"name": "The research doc (BTC Cycles & Sector Rotation)", "url": "https://claude.ai/artifact/5Z9ca6X7eka9R3XdxZKcb3", "cadence": "as revised"},
            {"name": "BTC price (Coin Metrics community data)", "url": "https://coinmetrics.io/community-network-data/", "cadence": "daily"},
            {"name": "DeFi TVL, stablecoin supply, Hyperliquid, perp DEX volume (DefiLlama)", "url": "https://defillama.com", "cadence": "daily"},
@@ -230,16 +230,45 @@ def parse_chart(j: dict) -> tuple[pd.Series, pd.Series]:
     return px[~px.index.duplicated(keep="last")], mc[~mc.index.duplicated(keep="last")]
 
 
-def coin_chart(cg_id: str) -> tuple[pd.Series, pd.Series]:
-    """A coin's daily price and market cap for the last 365 days; real downloads are paced so a burst of 28 coins stays under CoinGecko's limit."""
+def coin_chart(cg_id: str, live: bool = False) -> tuple[pd.Series, pd.Series]:
+    """A coin's daily price and market cap for the last 365 days. Pages read what the background fill already has (live=False:
+    memory or snapshot, LookupError if never fetched); the fill downloads (live=True), paced and backing off on 429."""
     from ..cache import _cache
+    from ._base import cached_only
     url = CG_CHART.format(id=cg_id)
+    if not live:
+        return parse_chart(json.loads(cached_only(url)))
     if f"topic:{url}" not in _cache:
         wait = PACE - (time.time() - _last_download[0])
         if wait > 0:
             time.sleep(wait)
         _last_download[0] = time.time()
     return parse_chart(fetch_json(url, TTL, min_bytes=1000))
+
+
+def fill_coins(pause_on_limit: float = 75.0) -> dict:
+    """Background job: download BTC and every candidate coin from CoinGecko one at a time (PACE apart), waiting longer after a 429.
+    Coins already fetched within a day come from memory and cost nothing. Returns {ticker: 'ok' | error}."""
+    done = {}
+    for cid, tick in [("bitcoin", "BTC")] + [(c["coingecko_id"], c["ticker"]) for c in coins_list()]:
+        for attempt in range(2):
+            try:
+                if cid == "bitcoin":
+                    fetch_json(CG_VOLUME, TTL, min_bytes=1000)
+                else:
+                    coin_chart(cid, live=True)
+                done[tick] = "ok"
+                break
+            except Exception as e:
+                done[tick] = f"{type(e).__name__}: {str(e)[:80]}"
+                if "429" in str(e) and attempt == 0:
+                    time.sleep(pause_on_limit)
+                else:
+                    break
+    from ..cache import _cache
+    for k in [k for k in _cache if k.startswith(f"topic:{SLUG}:coin")]:      # the next page view rebuilds from the fresh data
+        _cache.pop(k, None)
+    return done
 
 
 def rsi(s: pd.Series, n: int = 14) -> pd.Series:
@@ -300,7 +329,11 @@ def _coin_full(c: dict, btc: pd.Series) -> dict:
 
 
 def btc_chart() -> pd.Series:
-    return parse_chart(fetch_json(CG_VOLUME, TTL, min_bytes=1000))[0]
+    from ._base import cached_only
+    try:
+        return parse_chart(json.loads(cached_only(CG_VOLUME)))[0]
+    except LookupError:
+        return parse_chart(fetch_json(CG_VOLUME, TTL, min_bytes=1000))[0]
 
 
 def _coins_now() -> dict:
@@ -319,7 +352,8 @@ def _coins_now() -> dict:
             full = _coin_full(c, btc)
             out["coins"].append({k: full[k] for k in ("ticker", "name", "rank", "sector", "note", "links", "kpi", "spark", "notes")})
         except Exception as e:
-            out["coins"].append({"ticker": c["ticker"], "name": c["name"], "rank": int(c["rank"]), "sector": c["sector"], "note": c.get("note", ""), "error": type(e).__name__,
+            out["coins"].append({"ticker": c["ticker"], "name": c["name"], "rank": int(c["rank"]), "sector": c["sector"], "note": c.get("note", ""),
+                                 "error": "loading in the background, back in a few minutes" if isinstance(e, LookupError) else type(e).__name__,
                                  "links": {"coinmarketcap": f"https://coinmarketcap.com/currencies/{c['cmc_slug']}/" if c.get("cmc_slug") else None,
                                            "defillama": f"https://defillama.com/protocol/{c['defillama_slug']}" if c.get("defillama_slug") else None}})
     peers = [c["kpi"] for c in out["coins"] if "kpi" in c]
@@ -340,7 +374,11 @@ def _coin_now(ticker: str) -> dict:
     c = next((x for x in coins_list() if x["ticker"] == ticker), None)
     if c is None:
         raise ValueError("unknown coin")
-    out = _coin_full(c, btc_chart())
+    try:
+        out = _coin_full(c, btc_chart())
+    except LookupError:                                  # not reached by the background fill yet: fetch this one coin now
+        coin_chart(c["coingecko_id"], live=True)
+        out = _coin_full(c, btc_chart())
     from ._base import stale_info
     out["stale"] = stale_info([CG_CHART.format(id=c["coingecko_id"]), CG_VOLUME])
     out["as_of"] = out["kpi"]["date"]
@@ -474,4 +512,5 @@ ENDPOINTS = {"cycles": _cached_ep("cycles", _cycles_now), "sectors": _cached_ep(
              "coins": _cached_ep("coins", _coins_now)}
 from . import btc_flows as _flows                                    # ETF and MSTR tabs
 ENDPOINTS.update(_flows.ENDPOINTS)
+BACKGROUND = [fill_coins]                    # slow, rate-limited downloads the server runs outside page requests
 ENDPOINTS.update({f"coin-{c['ticker'].lower()}": _cached_ep(f"coin-{c['ticker'].lower()}", (lambda t: lambda: _coin_now(t))(c["ticker"])) for c in coins_list()})

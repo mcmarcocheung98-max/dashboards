@@ -92,11 +92,11 @@ def test_coingecko_candidate_coins_resolve():
     bad = []
     for c in C.coins_list():
         try:
-            px, mc = C.coin_chart(c["coingecko_id"])
+            px, mc = C.coin_chart(c["coingecko_id"], live=True)
             assert len(px) > 300 and mc.iloc[-1] > 0
         except Exception as e:
             bad.append((c["ticker"], c["coingecko_id"], type(e).__name__))
-        time.sleep(2.2)
+        time.sleep(13)
     assert not bad, bad
 
 

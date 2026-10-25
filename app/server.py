@@ -96,6 +96,20 @@ def make_app() -> web.Application:
 
 
 async def _warm(app) -> None:
+    async def background():
+        """Each dashboard module's BACKGROUND jobs (slow, rate-limited downloads), once at start and then every 6 hours."""
+        await asyncio.sleep(20)
+        while True:
+            for t in topics.REGISTRY.values():
+                for job in getattr(topics.module(t.slug), "BACKGROUND", []):
+                    try:
+                        res = await asyncio.to_thread(job)
+                        log.info("background %s.%s: %s", t.slug, job.__name__, {k: v for k, v in (res or {}).items() if v != "ok"} or "all ok")
+                    except Exception as e:
+                        log.warning("background %s.%s failed (%s)", t.slug, job.__name__, type(e).__name__)
+            await asyncio.sleep(6 * 3600)
+    app["background"] = asyncio.create_task(background())
+
     async def loop():
         await asyncio.sleep(30)
         while True:

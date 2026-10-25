@@ -33,19 +33,26 @@ def mock_sources() -> None:
     robotaxi.fetch_json = lambda url, ttl, **k: T._yahoo(250)
     charts = T._chart(mult=1.6)
 
+    import json as _json
+    from app.topics import _base
+    real_fetch_json = _base.fetch_json
+
     def cyc(url, ttl, **k):
         if "coinmetrics" in url:
             return T._cm()
-        if "coins/bitcoin/" in url:
-            return charts["btc"]
-        if "market_chart" in url:
-            return charts["coin"]
+        if "coingecko" in url:                     # through the real fetch (cache + snapshot), over the fake download below
+            return real_fetch_json(url, ttl, **k)
         return T._llama(url)
     btc_cycles.fetch_json = cyc
+    real = _base._download
+    _base._download = lambda url, *a, **k: _json.dumps(charts["btc"] if "coins/bitcoin/" in url else charts["coin"]) if "coingecko" in url else real(url, *a, **k)
+    import tempfile as _tf
+    _base.SNAP_DIR = Path(_tf.mkdtemp())
     from app.topics import btc_flows
     btc_flows.fetch = lambda url, ttl, **k: T._farside_html() if "farside" in url else T._bitbo_page()
     btc_flows.fetch_json = lambda url, ttl, **k: T._mstr_json() if "mstr-nav" in url else T._yahoo(150 if "MSTR" in url else 60000 if "BTC-USD" in url else 1.0)
     btc_cycles.PACE = 0
+    btc_cycles.fill_coins()
     import tempfile
     btc_cycles.DOM_LOG = Path(tempfile.mkdtemp()) / "dom.csv"
 
