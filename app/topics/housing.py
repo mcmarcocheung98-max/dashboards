@@ -183,6 +183,17 @@ def parse_boe(text: str) -> pd.Series:
     return s[s.index.notna()].sort_index().dropna()
 
 
+def pipr_url(html: str) -> str:
+    """ONS PIPR dataset page -> link to the newest monthly workbook (each release sits in a folder named by its date, e.g. 21october2026)."""
+    import re
+    links = re.findall(r'href="(/file\?uri=[^"]*/priceindexofprivaterentsukmonthlypricestatistics/(\d{1,2}[a-z]+\d{4})/[^"]+\.xlsx)"', html)
+    dated = [(pd.to_datetime(d, format="%d%B%Y", errors="coerce"), u) for u, d in links]
+    dated = [x for x in dated if pd.notna(x[0])]
+    if not dated:
+        raise ValueError("ONS PIPR page layout changed: no dated workbook links")
+    return "https://www.ons.gov.uk" + max(dated)[1]
+
+
 # ------------------------------------------------------------------ data
 def hpi(which: str) -> pd.DataFrame:
     return regions()["London" if which == "london" else "United Kingdom"]
@@ -485,7 +496,8 @@ LAYOUT_PROBES = {
     "nomis ashe london workplace": ("https://www.nomisweb.co.uk/api/v01/dataset/NM_99_1.data.csv?geography=2013265927&sex=8&item=2&pay=7&measures=20100"
                                     "&select=date_name,geography_name,sex_name,item_name,pay_name,obs_value", None),
 }
-LAYOUT_PAGES = ["https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics",
+PIPR_PAGE = "https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics"
+LAYOUT_PAGES = [PIPR_PAGE,
                 "https://www.ons.gov.uk/economy/inflationandpriceindices/bulletins/privaterentandhousepricesuk/latest"]
 
 
@@ -503,10 +515,11 @@ def _layout_now() -> dict:
         row = {"status": r.status_code, "bytes": len(r.content)}
         if r.ok:
             xl = pd.ExcelFile(BytesIO(r.content))
-            for sh in xl.sheet_names[:4]:
+            row["sheets"] = xl.sheet_names
+            for sh in [x for x in xl.sheet_names if "lond" in x.lower() or x in xl.sheet_names[:4]][:8]:
                 d = xl.parse(sh, header=None).dropna(how="all")
                 rows = [[str(c)[:40] for c in rw if not (isinstance(c, float) and np.isnan(c))] for rw in d.values.tolist()]
-                row[sh] = {"shape": list(d.shape), "head": rows[:14], "tail": rows[-4:]}
+                row[sh] = {"shape": list(d.shape), "head": rows[:14], "tail": rows[-4:], "london": [r for r in rows if any("London" in c for c in r)][:4]}
         return row
 
     def probe(url, headers):
@@ -520,6 +533,11 @@ def _layout_now() -> dict:
     jobs = {("rvd", f"{k}.{e}"): (rvd, f"https://www.rvd.gov.hk/doc/en/statistics/his_data_{k}.{e}") for k in range(1, 7) for e in ("xls", "xlsx")}
     jobs.update({("probes", name): (probe, url, headers) for name, (url, headers) in LAYOUT_PROBES.items()})
     jobs.update({("pages", url): (page, url) for url in LAYOUT_PAGES})
+
+    def pipr():
+        url = pipr_url(requests.get(PIPR_PAGE, headers=UA, timeout=20).text)
+        return {"url": url, **rvd(url)}
+    jobs[("pages", "pipr newest workbook")] = (pipr,)
 
     def run(job):
         try:
