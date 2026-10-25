@@ -113,7 +113,9 @@ def test_mstr_sources():
     from app.topics import btc_flows as F
     h = F.mstr_history()
     assert h["hold"].iloc[-1] > 500_000 and h.index[-1] > pd.Timestamp.now() - pd.DateOffset(days=30)
-    assert len(F.yahoo_daily("MSTR", "2024-01-01")) > 300 and len(F.yahoo_daily("0434.HK", "2024-01-01")) > 100
+    assert len(F.yahoo_daily("MSTR", "2024-01-01")) > 300
+    for t in ("SWC.L", "0434.HK"):                 # Yahoo, else Stooq, else CNBC
+        assert len(F.stock_daily(t, "2025-01-01")[0]) > 100, t
 
 
 def test_bls_series():

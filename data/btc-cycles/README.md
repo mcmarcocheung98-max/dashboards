@@ -47,7 +47,8 @@ A dashboard built on the research doc "BTC Cycles & Sector Rotation: 2013–2026
 | US spot ETF flows per issuer, US$ | [Farside](https://farside.co.uk/bitcoin-etf-flow-all-data/) daily table | Daily | Automated (HTML parse) |
 | US spot ETF flows in BTC | [bitbo](https://bitbo.io/treasuries/etf-flows/) | Daily | Automated |
 | Strategy holdings and share counts | [mstr-nav-tracker dataset](https://github.com/jefferych1/mstr-nav-tracker), built from SEC filings | As Strategy reports | Automated |
-| MSTR, BTC-USD, UK and HK treasury share prices | Yahoo Finance chart API | Daily | Automated |
+| MSTR share price | Yahoo Finance chart API, else [Nasdaq's quote API](https://www.nasdaq.com/market-activity/stocks/mstr/historical) | Daily | Automated |
+| UK and HK treasury share prices (SWC.L, 0434.HK) | Yahoo, else [Stooq](https://stooq.com) CSV, else CNBC chart bars; if none answers the card shows holdings only and says so | Daily | Automated |
 | HK ETF and UK ETN holdings; UK and HK treasury holdings; ETF milestones | Issuer and company pages | As published | Hand-entered: `etf_holdings.csv`, `treasuries.csv`, `etf_milestones.csv` |
 | BTC spot volume, last 365 days | CoinGecko `coins/bitcoin/market_chart` | Daily | Automated |
 | Each candidate coin's price and market cap, 365 days | CoinGecko `coins/{id}/market_chart`, ids in `coins.csv` | Daily, one request per coin, paced 2.2 s apart | Automated |
@@ -83,11 +84,11 @@ Coin Metrics community data is free for non-commercial use with attribution. Def
 
 **`etf_holdings.csv`** (`date,series,value,source,note`): BTC held by non-US funds; series `Hong Kong spot ETFs (BTC)` or `UK ETNs (BTC)`. The two seed rows are from memory and marked `verify`.
 
-**`treasuries.csv`** (`date,company,country,yahoo,btc_held,source,note`): one row per disclosed holding of a UK or HK company; `yahoo` is the price ticker. Seeds marked `verify`, including The Smarter Web Company's ticker.
+**`treasuries.csv`** (`date,company,country,yahoo,btc_held,source,note`): one row per disclosed holding of a UK or HK company; `yahoo` is the Yahoo ticker (`.L` London, `.HK` Hong Kong), from which the Stooq (`swc.uk`, `0434.hk`) and CNBC (`SWC-GB`, `0434-HK`) symbols are derived. Hover the "Holdings only" line on a card to see what each price source answered.
 
 **`etf_milestones.csv`**: dated events shown on the ETFs tab.
 
-**Source notes (Oct 2026).** DefiLlama's perp-volume endpoints became paid (HTTP 402), so the page shows Hyperliquid's fees and all-chain spot DEX volume instead, both free. CoinGecko limits free calls to a few a minute, so coin data is filled by a background job 13 seconds apart every six hours; a coin not reached yet says "loading in the background". Yahoo refuses cloud servers, so stock prices fall back to Nasdaq's quote API (US tickers) and MSTR uses BTC prices from Coin Metrics.
+**Source notes (Oct 2026).** DefiLlama's perp-volume endpoints became paid (HTTP 402), so the page shows Hyperliquid's fees and all-chain spot DEX volume instead, both free. CoinGecko limits free calls to a few a minute, so coin data is filled by a background job 13 seconds apart every six hours; a coin not reached yet says "loading in the background". Yahoo refuses cloud servers, so stock prices fall back to Nasdaq's quote API (US tickers), Stooq and CNBC (London and Hong Kong), and MSTR uses BTC prices from Coin Metrics.
 
 ## Checking it
 

@@ -6,11 +6,13 @@ etf   US spot BTC ETFs since 11 Jan 2024: daily net flows by issuer (Farside, US
       (data/btc-cycles/etf_holdings.csv). Milestones: data/btc-cycles/etf_milestones.csv.
 mstr  Strategy Inc.: BTC held and share counts from a public dataset built from its SEC filings (the same one the trading bot uses),
       MSTR and BTC daily closes from Yahoo; every purchase (change in holdings), approximate cost basis, BTC per 1,000 shares, mNAV,
-      90-day correlation and beta of daily returns. UK and HK treasury companies: data/btc-cycles/treasuries.csv + Yahoo prices.
+      90-day correlation and beta of daily returns. UK and HK treasury companies: data/btc-cycles/treasuries.csv + prices
+      from Yahoo, else Stooq, else CNBC (Yahoo answers 429 to cloud servers), else holdings only.
 """
 from __future__ import annotations
 
 import csv
+import io
 import json
 import re
 import time
@@ -36,6 +38,58 @@ TTL = DAY
 def yahoo_daily(sym: str, start: str = "2020-01-01") -> pd.Series:
     from ._base import yahoo_daily as yd
     return yd(sym, start, lambda *a, **k: fetch_json(*a, **k))      # looked up at call time, so a test can replace fetch_json here
+
+
+# London and Hong Kong closes when Yahoo refuses the server (429): Stooq's CSV, then CNBC's chart bars. Symbols are derived from the
+# Yahoo ticker (SWC.L, 0434.HK); exchanges write HK codes with and without the leading zero, so both are tried.
+STOOQ = "https://stooq.com/q/d/l/?s={sym}&i=d&d1={a}&d2={b}"
+CNBC_BARS = "https://ts-api.cnbc.com/harmony/app/bars/{sym}/1D/{a}000000/{b}000000/adjusted/EST5EDT.json"
+_SUFFIX = {"L": ("uk", "GB"), "HK": ("hk", "HK")}
+
+
+def alt_symbols(yahoo: str) -> list[tuple[str, str]]:
+    """[(source, symbol)] to try after Yahoo, e.g. SWC.L -> [("stooq", "swc.uk"), ("cnbc", "SWC-GB")]."""
+    code, _, exch = yahoo.upper().rpartition(".")
+    if exch not in _SUFFIX:
+        return []
+    st, cn = _SUFFIX[exch]
+    codes = list(dict.fromkeys([code, code.lstrip("0") or code])) if exch == "HK" else [code]
+    return [("stooq", f"{c.lower()}.{st}") for c in codes] + [("cnbc", f"{c}-{cn}") for c in codes]
+
+
+def parse_stooq(text: str) -> pd.Series:
+    df = pd.read_csv(io.StringIO(text))
+    if not {"Date", "Close"} <= set(df.columns):
+        raise ValueError(f"Stooq: not a price CSV: {text[:80]!r}")
+    return pd.Series(df["Close"].astype(float).values, index=pd.to_datetime(df["Date"])).sort_index()
+
+
+def parse_cnbc(j: dict) -> pd.Series:
+    bars = ((j or {}).get("barData") or {}).get("priceBars") or []
+    s = pd.Series({pd.to_datetime(int(b["tradeTimeinMills"]), unit="ms").normalize(): float(b["close"]) for b in bars if b.get("close") not in (None, "")})
+    return s[~s.index.duplicated(keep="last")].sort_index()
+
+
+def stock_daily(yahoo: str, start: str = "2024-01-01") -> tuple[pd.Series, str, list[str]]:
+    """(closes, source name, what failed) for a listed stock: Yahoo (with Nasdaq for US tickers), then the alternatives above."""
+    tried = []
+    try:
+        return yahoo_daily(yahoo, start), "Yahoo" if "." in yahoo else "Yahoo / Nasdaq", tried
+    except Exception as e:
+        tried.append(f"Yahoo {yahoo}: {type(e).__name__}: {str(e)[:100]}")
+    a, b = pd.Timestamp(start), pd.Timestamp.now()
+    for src, sym in alt_symbols(yahoo):
+        try:
+            if src == "stooq":
+                s = parse_stooq(fetch(STOOQ.format(sym=sym, a=a.strftime("%Y%m%d"), b=b.strftime("%Y%m%d")), TTL, min_bytes=20))
+            else:
+                s = parse_cnbc(fetch_json(CNBC_BARS.format(sym=sym, a=a.strftime("%Y%m%d"), b=b.strftime("%Y%m%d")), TTL, min_bytes=20))
+            if len(s) < 20:
+                raise ValueError(f"{len(s)} rows")
+            return s, {"stooq": "Stooq", "cnbc": "CNBC"}[src], tried
+        except Exception as e:
+            tried.append(f"{src} {sym}: {type(e).__name__}: {str(e)[:100]}")
+    raise LookupError("; ".join(tried))
 
 
 # ------------------------------------------------------------------ ETF flows
@@ -246,25 +300,25 @@ def _mstr_now() -> dict:
         "note": j_note(),
         "as_of": str(h.index[-1].date()),
     })
-    # UK and HK treasury companies (hand-entered holdings + Yahoo prices)
-    tre = []
-    for r in _rows("treasuries"):
-        tre.append(r)
+    # UK and HK treasury companies (hand-entered holdings; prices from Yahoo, Stooq or CNBC, or holdings only)
     comps = {}
-    for r in tre:
+    for r in _rows("treasuries"):
         comps.setdefault(r["company"], {"company": r["company"], "country": r["country"], "yahoo": r["yahoo"], "rows": []})["rows"].append(r)
     cards = []
     for c in comps.values():
         rows = sorted(c["rows"], key=lambda r: r["date"])
         item = {"company": c["company"], "country": c["country"], "yahoo": c["yahoo"], "held": [[int(pd.Timestamp(r["date"]).timestamp()), float(r["btc_held"])] for r in rows if r.get("btc_held")],
                 "rows": rows[::-1]}
+        if item["held"]:
+            item["held_value_usd"] = _r(item["held"][-1][1] * float(btc.iloc[-1]), 0)
         try:
-            px = yahoo_daily(c["yahoo"], "2024-01-01")
+            px, item["price_source"], item["price_tried"] = stock_daily(c["yahoo"], "2024-01-01")
             item["price"] = _pts(px, 4)
             co, be = corr_beta(px, btc.dropna())
             item["corr90"] = _r(float(co.iloc[-1]), 3) if len(co) else None
         except Exception as e:
-            item["price_error"] = type(e).__name__
+            item["price_error"] = "no price source reachable from the server"
+            item["price_tried"] = str(e).split("; ")
         cards.append(item)
     out["treasuries"] = cards
     out["stale"] = stale_info([MSTR_HISTORY])

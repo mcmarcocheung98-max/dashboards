@@ -509,6 +509,41 @@ def test_btc_etf_and_mstr(snapdir, monkeypatch):
     assert {t["country"] for t in m["treasuries"]} == {"UK", "HK"} and all("price" in t for t in m["treasuries"])
 
 
+def test_btc_treasury_prices_fall_back_from_yahoo(snapdir, monkeypatch):
+    from app.topics import btc_cycles as C, btc_flows as F
+    assert F.alt_symbols("SWC.L") == [("stooq", "swc.uk"), ("cnbc", "SWC-GB")] and F.alt_symbols("MSTR") == []
+    assert F.alt_symbols("0434.HK") == [("stooq", "0434.hk"), ("stooq", "434.hk"), ("cnbc", "0434-HK"), ("cnbc", "434-HK")]
+    days = pd.bdate_range(end="2026-10-20", periods=300)
+    stooq = "Date,Open,High,Low,Close,Volume\n" + "\n".join(f"{d.date()},1,1,1,{1 + i / 1000:.4f},100" for i, d in enumerate(days))
+    cnbc = {"barData": {"priceBars": [{"tradeTimeinMills": str(int(d.timestamp() * 1000)), "close": str(2 + i / 1000)} for i, d in enumerate(days)]}}
+    assert len(F.parse_stooq(stooq)) == 300 and F.parse_cnbc(cnbc).iloc[-1] == pytest.approx(2.299)
+    with pytest.raises(ValueError):
+        F.parse_stooq("No data")
+
+    def yahoo_429(url, ttl, **k):
+        if "mstr-nav" in url:
+            return _mstr_json()
+        if "cnbc" in url and "434-HK" in url and "0434" not in url:
+            return cnbc
+        raise RuntimeError("429 Too Many Requests")
+    monkeypatch.setattr(C, "fetch_json", lambda url, ttl, **k: _cm())
+    monkeypatch.setattr(F, "fetch_json", yahoo_429)
+    monkeypatch.setattr(F, "fetch", lambda url, ttl, **k: stooq if "swc.uk" in url else (_ for _ in ()).throw(RuntimeError("404")))
+    monkeypatch.setattr(F.time, "sleep", lambda s: None)
+    m = F._mstr_now()
+    B.json_safe(m)
+    t = {x["country"]: x for x in m["treasuries"]}
+    assert t["UK"]["price_source"] == "Stooq" and t["HK"]["price_source"] == "CNBC" and t["HK"]["price"][-1][1] == pytest.approx(2.299)
+    assert len(t["HK"]["price_tried"]) == 4 and t["UK"]["held_value_usd"] > 0
+    # nothing answers: holdings only, with what was tried
+    monkeypatch.setattr(F, "fetch", lambda url, ttl, **k: (_ for _ in ()).throw(RuntimeError("404")))
+    monkeypatch.setattr(F, "fetch_json", lambda url, ttl, **k: _mstr_json() if "mstr-nav" in url else (_ for _ in ()).throw(RuntimeError("429")))
+    from app.cache import _cache
+    _cache.clear()
+    hk = next(x for x in F._mstr_now()["treasuries"] if x["country"] == "HK")
+    assert "price" not in hk and hk["price_error"].startswith("no price source") and len(hk["price_tried"]) == 5 and hk["rows"]
+
+
 def test_farside_parser_rejects_a_changed_page():
     from app.topics.btc_flows import parse_farside, _num
     assert _num("(12.5)") == -12.5 and _num("-") == 0 and _num("1,234.5") == 1234.5
