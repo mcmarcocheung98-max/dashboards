@@ -52,7 +52,7 @@ const VIEWS = {
   async metrics() {
     const d = await api("metrics"), R = d.research, L = d.latest || {};
     const head = card(null, el("div", { class: "kpis" }, kpi("DeFi TVL", usdBig(L.defi_tvl)), kpi("Stablecoin supply", usdBig(L.stablecoins)), kpi("Hyperliquid TVL", usdBig(L.hl_tvl)),
-      kpi("Hyperliquid revenue, 30 days", usdBig(L.hl_revenue_30d)), kpi("Perp-DEX volume, 30 days", usdBig(L.perp_volume_30d))), asOf(d), stale(d));
+      kpi("Hyperliquid revenue, 30 days", usdBig(L.hl_revenue_30d)), kpi("Hyperliquid fees, 30 days", usdBig(L.hl_fees_30d)), kpi("DEX volume (spot), 30 days", usdBig(L.dex_volume_30d))), asOf(d), stale(d));
     const live = (key, title, noteText) => d[key] && d[key].length ? card(title, ...linesChart([{ name: title, points: d[key] }], v => usdBig(v), { small: true }), note(noteText))
       : card(title, el("div", { class: "muted" }, "Not available right now (" + (d[key + "_error"] || "no data") + ")."));
     const grid = el("div", { class: "grid2" },
@@ -60,8 +60,9 @@ const VIEWS = {
       live("stablecoins", "Stablecoin supply", "The doc: $130bn → ~$300bn through cycle 4; the rail every other sector settles on."),
       live("hl_tvl", "Hyperliquid TVL", "The doc: grew every month of the 2026 bear, $4.1bn (Dec 2025) → $7.4bn (Sep 2026)."),
       live("hl_revenue_30d", "Hyperliquid revenue, rolling 30 days", "The doc: fees and revenue are the single best survival predictor; 99% of Hyperliquid's goes to buybacks."),
-      live("perp_volume_30d", "Perp-DEX volume, rolling 30 days", "The doc: perp DEXs went from 0.1% of global futures (2023) to 12.3% (Oct 2026)."));
-    const top = d.perp_top && d.perp_top.length ? card("Perp DEXs by 30-day volume (DefiLlama)", table(["Protocol", "Volume, 30 days", "Share of top 8"], d.perp_top.map(p => [p.name, usdBig(p.volume_30d), pct(p.share_30d, 0)]))) : null;
+      live("hl_fees_30d", "Hyperliquid fees, rolling 30 days", "Perp activity on the largest perp DEX; DefiLlama's all-perp volume became a paid endpoint in 2026. The doc: perp DEXs went from 0.1% of global futures (2023) to 12.3% (Oct 2026)."),
+      live("dex_volume_30d", "DEX volume (spot), rolling 30 days", "All chains, spot DEXs only (DefiLlama)."));
+    const top = d.dex_top && d.dex_top.length ? card("Spot DEXs by 30-day volume (DefiLlama)", table(["Protocol", "Volume, 30 days", "Share of top 8"], d.dex_top.map(p => [p.name, usdBig(p.volume_30d), pct(p.share_30d, 0)]))) : null;
     const tbl = card("Common metrics of cycle winners", para(R.intro), table(R.columns, R.rows), para(R.after));
     return [head, grid, top, tbl];
   },

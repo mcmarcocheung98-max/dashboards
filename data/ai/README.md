@@ -4,6 +4,10 @@ One dashboard for two questions: is AI hiring growing at the expense of law and 
 
 Tabs: Openings · Headcount · Pay · AI vs the professions · Firms adopting · Users · Agents · Skills demand.
 
+## Source note (Oct 2026)
+
+FRED times out from cloud servers (Railway and GitHub alike), so US employment and pay now come from the BLS public API v1 (no key; two queries a day cover all ten series, 2010 to now). Same BLS series ids as before.
+
 ## Added in the merge
 
 | What | Where | Source | How |

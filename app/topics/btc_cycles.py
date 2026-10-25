@@ -33,7 +33,9 @@ LLAMA_TVL = "https://api.llama.fi/v2/historicalChainTvl"
 LLAMA_STABLES = "https://stablecoins.llama.fi/stablecoincharts/all"
 LLAMA_HL = "https://api.llama.fi/protocol/hyperliquid"
 LLAMA_HL_REV = "https://api.llama.fi/summary/fees/hyperliquid?dataType=dailyRevenue"
-LLAMA_PERPS = "https://api.llama.fi/overview/derivatives?excludeTotalDataChart=false&excludeTotalDataChartBreakdown=true"
+# DefiLlama made its derivatives (perp volume) endpoints paid in 2026 (402 from the free API); spot-DEX volume and per-protocol fees are free
+LLAMA_DEXS = "https://api.llama.fi/overview/dexs?excludeTotalDataChart=false&excludeTotalDataChartBreakdown=true"
+LLAMA_HL_FEES = "https://api.llama.fi/summary/fees/hyperliquid?dataType=dailyFees"
 CG_GLOBAL = "https://api.coingecko.com/api/v3/global"
 CG_VOLUME = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily"
 CG_CHART = "https://api.coingecko.com/api/v3/coins/{id}/market_chart?vs_currency=usd&days=365&interval=daily"
@@ -43,7 +45,7 @@ NOTES_FILE = DATA_DIR / SLUG / "coin_notes.json"
 PACE = 13.0                                # seconds between CoinGecko downloads in the background fill (public limit is a few calls a minute)
 SOURCES = [{"name": "The research doc (BTC Cycles & Sector Rotation)", "url": "https://claude.ai/artifact/5Z9ca6X7eka9R3XdxZKcb3", "cadence": "as revised"},
            {"name": "BTC price (Coin Metrics community data)", "url": "https://coinmetrics.io/community-network-data/", "cadence": "daily"},
-           {"name": "DeFi TVL, stablecoin supply, Hyperliquid, perp DEX volume (DefiLlama)", "url": "https://defillama.com", "cadence": "daily"},
+           {"name": "DeFi TVL, stablecoin supply, Hyperliquid TVL, fees and revenue, DEX volume (DefiLlama free API)", "url": "https://defillama.com", "cadence": "daily"},
            {"name": "BTC dominance and spot volume (CoinGecko)", "url": "https://www.coingecko.com/en/global-charts", "cadence": "daily"}]
 NOTES = ("Research, not investment advice. Pre-2024 cycle figures in the tables are approximate, as the doc says. Live series are free public data; "
          "the signal statuses are mechanical readings of the doc's rules, not a view.")
@@ -94,8 +96,14 @@ def hl_revenue() -> pd.Series:
     return pd.Series({pd.to_datetime(int(t), unit="s"): float(v) for t, v in j.get("totalDataChart", [])}).sort_index()
 
 
-def perps() -> tuple[pd.Series, list[dict]]:
-    j = fetch_json(LLAMA_PERPS, TTL, min_bytes=1000)
+def hl_fees() -> pd.Series:
+    j = fetch_json(LLAMA_HL_FEES, TTL)
+    return pd.Series({pd.to_datetime(int(t), unit="s"): float(v) for t, v in j.get("totalDataChart", [])}).sort_index()
+
+
+def dexs() -> tuple[pd.Series, list[dict]]:
+    """Spot DEX volume, all chains (DefiLlama, free), and the top protocols by 30-day volume."""
+    j = fetch_json(LLAMA_DEXS, TTL, min_bytes=1000)
     total = pd.Series({pd.to_datetime(int(t), unit="s"): float(v) for t, v in j.get("totalDataChart", [])}).sort_index()
     top = sorted((p for p in j.get("protocols", []) if p.get("total30d")), key=lambda p: -p["total30d"])[:8]
     return total, [{"name": p["name"], "volume_30d": _r(p["total30d"], 0), "share_30d": _r(p["total30d"] / sum(x["total30d"] for x in top), 4)} for p in top]
@@ -419,9 +427,10 @@ def _metrics_now() -> dict:
     R = research()
     out = payload({"defi_tvl": lambda: _pts(_weekly(defi_tvl()), 0), "stablecoins": lambda: _pts(_weekly(stablecoins()), 0),
                    "hl_tvl": lambda: _pts(_weekly(hl_tvl()), 0), "hl_revenue_30d": lambda: _pts(hl_revenue().rolling(30).sum().dropna().iloc[::7], 0),
-                   "perp_volume_30d": lambda: _pts(perps()[0].rolling(30).sum().dropna().iloc[::7], 0), "perp_top": lambda: perps()[1]},
-                  sources=[LLAMA_TVL, LLAMA_STABLES, LLAMA_HL, LLAMA_HL_REV, LLAMA_PERPS])
-    out["latest"] = {k: (out[k][-1][1] if out.get(k) else None) for k in ("defi_tvl", "stablecoins", "hl_tvl", "hl_revenue_30d", "perp_volume_30d")}
+                   "hl_fees_30d": lambda: _pts(hl_fees().rolling(30).sum().dropna().iloc[::7], 0),
+                   "dex_volume_30d": lambda: _pts(dexs()[0].rolling(30).sum().dropna().iloc[::7], 0), "dex_top": lambda: dexs()[1]},
+                  sources=[LLAMA_TVL, LLAMA_STABLES, LLAMA_HL, LLAMA_HL_REV, LLAMA_HL_FEES, LLAMA_DEXS])
+    out["latest"] = {k: (out[k][-1][1] if out.get(k) else None) for k in ("defi_tvl", "stablecoins", "hl_tvl", "hl_revenue_30d", "hl_fees_30d", "dex_volume_30d")}
     out["research"] = R["metrics"]
     out["as_of"] = max((pd.Timestamp(out[k][-1][0], unit="s").strftime("%Y-%m-%d") for k in out["latest"] if out.get(k)), default=None)
     return out
@@ -432,10 +441,10 @@ def _candidates_now() -> dict:
     ev = manual(SLUG, "evidence")
     ev = ev if isinstance(ev, dict) else {}
     out = payload({"evidence": lambda: {k: _pts(v, 2) for k, v in ev.items()},
-                   "perp_volume_30d": lambda: _pts(perps()[0].rolling(30).sum().dropna().iloc[::7], 0),
+                   "hl_fees_30d": lambda: _pts(hl_fees().rolling(30).sum().dropna().iloc[::7], 0),
                    "hl_revenue_30d": lambda: _pts(hl_revenue().rolling(30).sum().dropna().iloc[::7], 0),
                    "stablecoins": lambda: _pts(_weekly(stablecoins()), 0)},
-                  sources=[LLAMA_PERPS, LLAMA_HL_REV, LLAMA_STABLES])
+                  sources=[LLAMA_HL_FEES, LLAMA_HL_REV, LLAMA_STABLES])
     out["research"] = R["candidates"]
     out["rows_cited"] = sorted(manual_rows(SLUG, "evidence"), key=lambda r: r["date"], reverse=True)[:30]
     out["as_of"] = R["as_of"]

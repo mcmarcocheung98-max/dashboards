@@ -75,7 +75,8 @@ def test_defillama_endpoints():
     from app.topics import btc_cycles as C
     assert len(C.defi_tvl()) > 1000 and C.stablecoins().iloc[-1] > 1e11 and C.hl_tvl().iloc[-1] > 1e9
     assert C.hl_revenue().iloc[-30:].sum() > 1e6
-    total, top = C.perps()
+    total, top = C.dexs()
+    assert C.hl_fees().iloc[-30:].sum() > 1e6
     assert total.iloc[-30:].sum() > 1e10 and top and top[0]["volume_30d"] > 0
 
 

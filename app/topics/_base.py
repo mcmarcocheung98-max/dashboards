@@ -84,7 +84,7 @@ def _snap(url: str) -> Path:
     return SNAP_DIR / (hashlib.sha1(url.encode()).hexdigest()[:16] + ".txt")
 
 
-def _download(url: str, timeout: int = 60, curl: bool = False, headers: dict | None = None, binary: bool = False) -> str:
+def _download(url: str, timeout: int = 60, curl: bool = False, headers: dict | None = None, binary: bool = False, post: dict | None = None) -> str:
     """The body as text. binary=True returns the bytes decoded as latin-1 (lossless: .encode("latin-1") gives the bytes back), so a
     workbook or zip goes through the same snapshot path as a CSV."""
     if curl:    # FRED (and some UK sites) reset python-requests connections (TLS fingerprinting); plain curl is unaffected (see events._curl)
@@ -95,33 +95,41 @@ def _download(url: str, timeout: int = 60, curl: bool = False, headers: dict | N
         if r.returncode != 0 or not code.isdigit() or int(code) >= 400:
             raise RuntimeError(f"curl exit {r.returncode}, HTTP {code or '?'}: {body[:120]!r}")
         return body
-    r = requests.get(url, headers={**UA, **(headers or {})}, timeout=timeout)
+    if post is not None:
+        r = requests.post(url, json=post, headers={**UA, "Content-Type": "application/json", **(headers or {})}, timeout=timeout)
+    else:
+        r = requests.get(url, headers={**UA, **(headers or {})}, timeout=timeout)
     r.raise_for_status()
     return r.content.decode("latin-1") if binary else r.text
 
 
-def fetch(url: str, ttl: float = DAY, *, curl: bool = False, headers: dict | None = None, timeout: int = 60, min_bytes: int = 50, binary: bool = False) -> str:
+def fetch(url: str, ttl: float = DAY, *, curl: bool = False, headers: dict | None = None, timeout: int = 60, min_bytes: int = 50, binary: bool = False,
+          post: dict | None = None) -> str:
     """The text at `url`, cached in memory for `ttl` seconds and kept on disk; the disk copy is served (and STALE[url] set) when the
     download fails. Raises only when there is neither."""
+    key = url if post is None else url + "#" + json.dumps(post, sort_keys=True)     # a POST is cached and snapshotted per body
+
     def go():
-        snap = _snap(url)
+        snap = _snap(key)
         h = HEALTH.setdefault(url, {"module": _caller_module(), "ok": None, "fail": None, "error": None})
         try:
-            text = _download(url, timeout, curl, headers, binary)
+            text = _download(url, timeout, curl, headers, binary, post)
             if len(text) < min_bytes:
                 raise ValueError(f"short response ({len(text)} bytes)")
             SNAP_DIR.mkdir(parents=True, exist_ok=True)
             snap.write_text(text, encoding="utf-8")
-            STALE.pop(url, None)
+            STALE.pop(key, None)
             h.update(ok=time.time(), error=None)
             return text
         except Exception as e:
             h.update(fail=time.time(), error=f"{type(e).__name__}: {str(e)[:160]}")
             if snap.exists():
-                STALE[url] = snap.stat().st_mtime
+                STALE[key] = snap.stat().st_mtime
+                if key != url:
+                    STALE[url] = snap.stat().st_mtime
                 return snap.read_text(encoding="utf-8")
             raise
-    return _cached(f"topic:{url}", ttl, go)
+    return _cached(f"topic:{key}", ttl, go)
 
 
 def cached_only(url: str) -> str:
@@ -259,7 +267,7 @@ def yahoo_daily(sym: str, start: str = "2020-01-01", fetcher=None) -> pd.Series:
 
     def go():
         last = None
-        for k in range(4):
+        for k in range(2):
             url = YAHOO.format(n=1 + k % 2, sym=sym, p1=int(pd.Timestamp(start).timestamp()), p2=int(time.time()))
             try:
                 res = fetcher(url, DAY, min_bytes=200)["chart"]["result"][0]
@@ -268,8 +276,28 @@ def yahoo_daily(sym: str, start: str = "2020-01-01", fetcher=None) -> pd.Series:
             except Exception as e:
                 last = e
                 time.sleep(1 + 2 * k)
+        if "." not in sym and "-" not in sym:                # Yahoo refuses cloud servers (429): US tickers from Nasdaq's quote API instead
+            try:
+                return nasdaq_daily(sym, start, fetcher)
+            except Exception as e:
+                last = e
         raise last
     return _cached(f"yahoo:{sym}:{start}", 6 * 3600, go)
+
+
+NASDAQ = "https://api.nasdaq.com/api/quote/{sym}/historical?assetclass=stocks&fromdate={a}&todate={b}&limit=9999"
+
+
+def nasdaq_daily(sym: str, start: str = "2020-01-01", fetcher=None) -> pd.Series:
+    """Daily closes of a US-listed stock from Nasdaq's public quote API (needs browser-like headers)."""
+    fetcher = fetcher or fetch_json
+    url = NASDAQ.format(sym=sym, a=pd.Timestamp(start).strftime("%Y-%m-%d"), b=pd.Timestamp.now().strftime("%Y-%m-%d"))
+    j = fetcher(url, DAY, headers={"Accept": "application/json, text/plain, */*", "Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"})
+    rows = (((j or {}).get("data") or {}).get("tradesTable") or {}).get("rows") or []
+    s = pd.Series({pd.to_datetime(r["date"], format="%m/%d/%Y"): float(str(r["close"]).replace("$", "").replace(",", "")) for r in rows if r.get("close")})
+    if len(s) < 20:
+        raise ValueError(f"Nasdaq: {len(s)} rows for {sym}")
+    return s.sort_index()
 
 
 def json_safe(obj):

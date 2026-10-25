@@ -51,6 +51,18 @@ pytest -m network tests/test_sources.py -k "hpi or ons or bank"
 
 Local preview: `python -m app.server`, then open `/housing`.
 
+## Where the data actually comes from (checked from the Railway server, Oct 2026)
+
+The first live check showed three sources refusing the server, so the dashboard now uses their reachable equivalents:
+
+| Wanted | Refused | Used instead |
+|---|---|---|
+| UK HPI per region and borough | landregistry.data.gov.uk per-region download (HTTP 403 to cloud servers) | The monthly UK HPI full file from publicdata.landregistry.gov.uk (~33 MB, every region and borough in one file; the newest month is found automatically) |
+| CPIH and average weekly earnings | ONS timeseries API (retired: HTTP 404) | The same series as CSV from the ONS website (`/generator?format=csv`) |
+| US 30-year mortgage rate | FRED (times out from cloud servers) | Freddie Mac's PMMS workbook |
+
+Case-Shiller still comes from FRED and shows "not available" until an alternative is confirmed (FHFA's index is being checked).
+
 ## Added in round 3
 
 | Tab or card | What | Source | How |

@@ -99,6 +99,9 @@ PROBE_URLS = {   # fixed list: what each dashboard downloads, to see from the se
     "llama dexs overview": "https://api.llama.fi/overview/dexs?excludeTotalDataChart=false&excludeTotalDataChartBreakdown=true",
     "llama hl derivatives": "https://api.llama.fi/summary/derivatives/hyperliquid",
     "llama hl fees": "https://api.llama.fi/summary/fees/hyperliquid?dataType=dailyFees",
+    "nasdaq": "https://api.nasdaq.com/api/quote/TSLA/historical?assetclass=stocks&fromdate=2026-09-01&limit=50",
+    "fhfa master csv": "https://www.fhfa.gov/hpi/download/monthly/hpi_master.csv",
+    "fhfa master csv (old path)": "https://www.fhfa.gov/DataTools/Downloads/Documents/HPI/HPI_master.csv",
 }
 
 

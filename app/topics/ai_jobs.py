@@ -12,6 +12,7 @@ free API, so a few points copied by hand with their source). Indeed data: CC BY 
 """
 from __future__ import annotations
 
+import json
 from io import StringIO
 
 import pandas as pd
@@ -21,7 +22,8 @@ from ._base import DAY, _pts, _r, fetch, fetch_csv, latest_date, manual, manual_
 IND = "https://raw.githubusercontent.com/hiring-lab/job_postings_tracker/master/{cc}/job_postings_by_sector_{cc}.csv"
 IND_ALL = "https://raw.githubusercontent.com/hiring-lab/job_postings_tracker/master/{cc}/aggregate_job_postings_{cc}.csv"
 AI_SHARE = "https://raw.githubusercontent.com/hiring-lab/ai-tracker/main/AI_posting.csv"
-FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}"
+FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}"     # kept for the network test; FRED times out from Railway
+BLS = "https://api.bls.gov/publicAPI/v1/timeseries/data/"            # BLS public API v1: no key, 25 queries a day, 10 years per query
 SECTORS = {"ai": ["Software Development", "Data & Analytics"], "ai_wide": ["IT Systems & Solutions"], "professions": ["Legal", "Banking & Finance", "Accounting", "Insurance"]}
 US_SERIES = {"Legal services": "CES6054110001", "Finance & insurance": "CES5552000001", "Securities & investments": "CES5552300001",
              "Computer systems design": "CES6054150001", "All private": "CES0500000001"}
@@ -29,7 +31,7 @@ US_SERIES = {"Legal services": "CES6054110001", "Finance & insurance": "CES55520
 US_WAGES = {n: sid[:-2] + "03" for n, sid in US_SERIES.items()}
 SOURCES = [{"name": "Indeed Hiring Lab job postings index", "url": "https://github.com/hiring-lab/job_postings_tracker", "cadence": "weekly"},
            {"name": "Indeed Hiring Lab AI tracker", "url": "https://github.com/hiring-lab/ai-tracker", "cadence": "monthly"},
-           {"name": "US employment by industry (BLS CES via FRED)", "url": "https://fred.stlouisfed.org/series/CES6054110001", "cadence": "monthly"},
+           {"name": "US employment and pay by industry (BLS Current Employment Statistics, public API)", "url": "https://www.bls.gov/ces/", "cadence": "monthly"},
            {"name": "UK workforce jobs (ONS JOBS03, hand-entered)", "url": "https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/workforcejobsbyindustryjobs03", "cadence": "quarterly"}]
 NOTES = "Postings indexes are Indeed's seasonally adjusted counts relative to 1 February 2020 (= 100), 7-day average. 'AI share' counts postings whose text mentions AI terms (machine learning, data science, generative AI...), not only AI engineering jobs. Headcount is payroll employment, thousands."
 TTL = DAY
@@ -74,8 +76,33 @@ def ai_share() -> dict[str, pd.Series]:
     return parse_ai_share(fetch(AI_SHARE, TTL), ("US", "GB", "CA", "DE", "FR", "AU", "IE", "NL", "IT"))
 
 
+def parse_bls(j: dict) -> dict[str, pd.Series]:
+    """BLS API JSON -> {series id: monthly Series} (periods M01..M12; M13 annual averages dropped)."""
+    if j.get("status") != "REQUEST_SUCCEEDED":
+        raise ValueError(f"BLS: {j.get('status')} {'; '.join(j.get('message') or [])[:120]}")
+    out = {}
+    for ser in (j.get("Results") or {}).get("series", []):
+        pts = {pd.Timestamp(year=int(d["year"]), month=int(d["period"][1:]), day=1): float(d["value"]) for d in ser.get("data", [])
+               if d.get("period", "").startswith("M") and d["period"] != "M13" and d.get("value") not in ("-", "")}
+        out[ser["seriesID"]] = pd.Series(pts, dtype=float).sort_index()
+    return out
+
+
+def bls_all() -> dict[str, pd.Series]:
+    """Every employment and pay series in two queries (2010-19 and 2020-now), cached a day: well inside the 25-a-day limit."""
+    ids = sorted(set(US_SERIES.values()) | set(US_WAGES.values()))
+    now = pd.Timestamp.now().year
+    parts = [parse_bls(json.loads(fetch(BLS, TTL, post={"seriesid": ids, "startyear": str(a), "endyear": str(b)})))
+             for a, b in ((2010, 2019), (2020, now))]
+    return {i: pd.concat([p[i] for p in parts if i in p]).sort_index() for i in ids if any(i in p for p in parts)}
+
+
 def fred(sid: str) -> pd.Series:
-    return parse_fred(fetch(FRED.format(sid=sid), TTL, curl=True))
+    """A BLS series by id (name kept from when these came from FRED)."""
+    s = bls_all().get(sid)
+    if s is None or s.empty:
+        raise ValueError(f"BLS returned no data for {sid}")
+    return s
 
 
 # ------------------------------------------------------------------ endpoints
@@ -114,7 +141,7 @@ def _headcount_now() -> dict:
     def hk():
         m = manual("ai", "hk_headcount")
         return {n: _pts(s, 0) for n, s in m.items()} if isinstance(m, dict) else {}
-    out = payload({"US": us, "UK": uk, "HK": hk}, sources=[FRED.format(sid=s) for s in US_SERIES.values()])
+    out = payload({"US": us, "UK": uk, "HK": hk}, sources=[BLS])
     try:
         out["as_of"] = (out.get("US") or {}).get("latest", {}).get("Legal services", {}).get("date")
     except Exception:
@@ -150,7 +177,7 @@ def _wages_now() -> dict:
                    "premium": lambda: {n: _pts((s / allp - 1).dropna()[lambda x: x.index >= since] * 100, 1) for n, s in series.items() if n != "All private"},
                    "latest": lambda: {n: {"level": _r(s.iloc[-1], 2), "yoy": _r(yoy(s).iloc[-1] * 100, 2), "premium": _r((s.iloc[-1] / allp.iloc[-1] - 1) * 100, 1),
                                           "date": str(s.index[-1].date())} for n, s in series.items()}},
-                  sources=[FRED.format(sid=s) for s in US_WAGES.values()])
+                  sources=[BLS])
     out["uk_hk"] = sorted(manual_rows("ai", "pay_uk_hk"), key=lambda r: r["date"], reverse=True)
     out["as_of"] = (out.get("latest") or {}).get("All private", {}).get("date")
     return out

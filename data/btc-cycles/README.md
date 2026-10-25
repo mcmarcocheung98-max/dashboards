@@ -87,6 +87,8 @@ Coin Metrics community data is free for non-commercial use with attribution. Def
 
 **`etf_milestones.csv`**: dated events shown on the ETFs tab.
 
+**Source notes (Oct 2026).** DefiLlama's perp-volume endpoints became paid (HTTP 402), so the page shows Hyperliquid's fees and all-chain spot DEX volume instead, both free. CoinGecko limits free calls to a few a minute, so coin data is filled by a background job 13 seconds apart every six hours; a coin not reached yet says "loading in the background". Yahoo refuses cloud servers, so stock prices fall back to Nasdaq's quote API (US tickers) and MSTR uses BTC prices from Coin Metrics.
+
 ## Checking it
 
 ```

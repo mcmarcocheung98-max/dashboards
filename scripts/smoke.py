@@ -24,10 +24,10 @@ def mock_sources() -> None:
     """Point every dashboard's fetchers at the fixtures in tests/test_topics.py."""
     import tests.test_topics as T
     from app.topics import ai_adoption, ai_jobs, btc_cycles, housing, robotaxi   # /ai joins ai_jobs and ai_adoption
-    housing.fetch = lambda url, ttl, **k: T.HPI if "ukhpi" in url else T._rvd_xls() if "rvd.gov.hk" in url else T.FRED if "fred" in url else T.BOE
-    housing.fetch_json = lambda url, ttl, **k: T.HIBOR if "hkma" in url else T.ONS(100) if "L522" in url else T.ONS(500)
-    housing.PACE = 0
-    ai_jobs.fetch = lambda url, ttl, **k: T.AIS if "ai-tracker" in url else T.FRED if "fred" in url else T.AGG if "aggregate" in url else T.IND
+    housing.fetch = T.housing_fetch
+    housing.fetch_json = lambda url, ttl, **k: T.HIBOR
+    housing.full_file_url = lambda: "http://publicdata.landregistry.gov.uk/x.csv"
+    ai_jobs.fetch = T.jobs_fetch
     ai_adoption.fetch = lambda url, ttl, **k: (_ for _ in ()).throw(ConnectionError("fixture: no workbook"))
     robotaxi.fetch = lambda url, ttl, **k: T.SGO
     robotaxi.fetch_json = lambda url, ttl, **k: T._yahoo(250)

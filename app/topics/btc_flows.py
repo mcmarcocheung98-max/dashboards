@@ -211,8 +211,13 @@ def _mstr_now() -> dict:
     hold = h["hold"].astype(float).reindex(days).ffill()
     shares = h["basic"].astype(float).reindex(days).ffill()
     try:
-        m_raw, b_raw = yahoo_daily("MSTR", "2020-08-01"), yahoo_daily("BTC-USD", "2020-08-01")
-        out["price_source"] = "Yahoo daily closes"
+        from .btc_cycles import price as cm_price
+        m_raw = yahoo_daily("MSTR", "2020-08-01")
+        try:
+            b_raw = cm_price()
+        except Exception:
+            b_raw = yahoo_daily("BTC-USD", "2020-08-01")
+        out["price_source"] = "daily closes (MSTR: Yahoo or Nasdaq; BTC: Coin Metrics)"
     except Exception as e:
         m_raw, b_raw = h["mstr"].astype(float).dropna(), h["btc"].astype(float).dropna()
         out["yahoo_error"] = type(e).__name__
@@ -227,7 +232,7 @@ def _mstr_now() -> dict:
     cost = held_first * float(btc.asof(h.index[0])) + sum(b["approx_usd"] or 0 for b in buys)
     mnav = (mstr * shares / (btc * hold)).dropna()
     # returns on MSTR's own trading days only: a weekend forward-filled into zero returns would understate the link to BTC
-    corr, beta = corr_beta(m_raw, btc.reindex(m_raw.index).dropna(), n=90 if out.get("price_source", "").startswith("Yahoo") else 26)
+    corr, beta = corr_beta(m_raw, btc.reindex(m_raw.index).dropna(), n=90 if out.get("price_source", "").startswith("daily") else 26)
     w = lambda s: s.resample("W").last().dropna()
     out.update({
         "held": _pts(w(hold), 0), "btc_per_1000_shares": _pts(w(hold / shares * 1000), 4), "mnav": _pts(w(mnav), 3),

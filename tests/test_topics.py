@@ -79,16 +79,47 @@ def test_seed_files_parse_and_cite():
 
 
 # ------------------------------------------------------------------ each module on fixtures (no network)
-HPI = "Period,Average price All property types,Index All property types,Percentage change (yearly) All property types,Sales volume,Average price Detached houses,Average price Semi-detached houses,Average price Terraced houses,Average price Flats and maisonettes\n" + \
-      "\n".join(f"{2010 + i // 12}-{i % 12 + 1:02d},{300000 + i * 1000},{100 + i},{2.0},{8000 - i},{600000},{400000},{350000},{250000}" for i in range(180))
-ONS = lambda v0: {"months": [{"date": f"{2010 + i // 12} {m}", "value": str(v0 + i)} for i, m in enumerate(["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"] * 15)]}
+def _full_file():
+    """UK HPI full-file layout: one row per region per month (dd/mm/yyyy dates), for London, the UK and every borough."""
+    from app.topics.housing import REGIONS
+    head = "Date,RegionName,AreaCode,AveragePrice,Index,IndexSA,1m%Change,12m%Change,AveragePriceSA,SalesVolume,DetachedPrice,SemiDetachedPrice,TerracedPrice,FlatPrice"
+    rows = [head]
+    for k, r in enumerate(REGIONS + ["Wales", "Leeds"]):
+        for i in range(180):
+            rows.append(f"01/{i % 12 + 1:02d}/{2010 + i // 12},{r},E{k:08d},{300000 + i * 1000 + k * 5000},{100 + i},,,2.0,,{8000 - i},600000,400000,350000,250000")
+    return "\n".join(rows)
+
+
+HPI = _full_file()
+ONS = lambda v0: "\n".join(['"Title","fixture"', '"CDID","X"', '"Unit","Index"'] + [f'"{2010 + i // 12} {m}","{v0 + i}"' for i, m in enumerate(["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"] * 15)])
+
+
+def _pmms_xlsx():
+    import io
+    rows = [["Freddie Mac PMMS", None, None], ["Week", "30-yr FRM", "15-yr FRM"]] + [[d, 3 + i * 0.01, 2.5] for i, d in enumerate(pd.date_range("2015-01-01", periods=500, freq="W"))]
+    buf = io.BytesIO(); pd.DataFrame(rows).to_excel(buf, index=False, header=False)
+    return buf.getvalue().decode("latin-1")
+
+
+def housing_fetch(url, ttl, **k):
+    if "publicdata.landregistry" in url:
+        return HPI
+    if "generator" in url:
+        return ONS(100) if "l522" in url else ONS(500)
+    if "rvd.gov.hk" in url:
+        return _rvd_xls()
+    if "freddiemac" in url:
+        return _pmms_xlsx()
+    if "fred" in url:
+        return FRED
+    return BOE
 BOE = "DATE,IUDBEDR\n05 Mar 2009,0.5\n02 Nov 2017,0.75\n16 Dec 2021,0.25\n03 Aug 2023,5.25\n01 Aug 2024,5.0\n"
 
 
 def test_housing_payloads(snapdir, monkeypatch):
     from app.topics import housing as H
-    monkeypatch.setattr(H, "fetch", lambda url, ttl, **k: HPI if "ukhpi" in url else BOE)
-    monkeypatch.setattr(H, "fetch_json", lambda url, ttl, **k: ONS(100) if "L522" in url else ONS(500))
+    monkeypatch.setattr(H, "fetch", housing_fetch)
+    monkeypatch.setattr(H, "full_file_url", lambda: "http://publicdata.landregistry.gov.uk/x.csv")
     p, m, a = H._prices_now(), H._market_now(), H._afford_now()
     for d in (p, m, a):
         B.json_safe(d)
@@ -100,11 +131,14 @@ def test_housing_payloads(snapdir, monkeypatch):
 
 
 def test_housing_parsers_cope_with_layout_drift():
-    from app.topics.housing import parse_boe, parse_hpi, parse_ons
-    d = parse_hpi("Period,Average price All property types,Sales volume\n2020-01,500000,100\n2020-02,510000,110\n2021-02,520000,90\n")
-    assert d["pc_ann"].notna().sum() == 1 and d["avg_detached"].isna().all()             # yearly change computed when the column is missing
-    assert parse_ons({"months": [{"date": "2024 JAN", "value": "1.5"}, {"date": "bad", "value": "2"}]}).tolist() == [1.5]
+    from app.topics.housing import parse_boe, parse_full_file, parse_ons_csv, parse_pmms
+    d = parse_full_file("Date,RegionName,AveragePrice,SalesVolume\n01/01/2020,London,500000,100\n01/02/2020,London,510000,110\n01/02/2021,London,520000,90\n01/02/2021,Leeds,1,1\n", ["London"])
+    assert list(d) == ["London"] and len(d["London"]) == 14 and d["London"]["avg_detached"].isna().all()       # gaps kept, missing columns blank
+    assert parse_ons_csv('"Title","x"\n"2024 JAN","1.5"\n"2024 FEB","1.6"\n"2024 Q1","9"').tolist() == [1.5, 1.6]
+    with pytest.raises(ValueError):
+        parse_ons_csv("This API has been decommissioned")
     assert parse_boe(" DATE , IUDBEDR \n01 Feb 2024,5.25\n").iloc[0] == 5.25
+    assert len(parse_pmms(_pmms_xlsx().encode("latin-1"))) == 500
 
 
 IND = "date,jobcountry,indeed_job_postings_index,variable,display_name\n" + "\n".join(
@@ -115,9 +149,28 @@ AIS = "date,jobcountry,AI_share_postings\n" + "\n".join(f"{d.date()},{cc},{2 + i
 FRED = "observation_date,CES6054110001\n" + "\n".join(f"{d.date()},{1100 + i * .5:.1f}" for i, d in enumerate(pd.date_range("2010-01-01", periods=190, freq="MS")))
 
 
+def _bls(body):
+    """BLS API v1 response for the ids and years in the request body."""
+    import json as _j
+    a, b = int(body["startyear"]), min(int(body["endyear"]), 2026)
+    series = []
+    for sid in body["seriesid"]:
+        base = 30.0 if sid.endswith("03") else 1100.0
+        data = [{"year": str(y), "period": f"M{m:02d}", "value": f"{base + (y - 2010) * (0.6 if base < 100 else 6) + m * 0.05:.2f}"}
+                for y in range(a, b + 1) for m in range(1, 13) if not (y == 2026 and m > 9)]
+        series.append({"seriesID": sid, "data": data[::-1]})
+    return _j.dumps({"status": "REQUEST_SUCCEEDED", "Results": {"series": series}})
+
+
+def jobs_fetch(url, ttl, **k):
+    if "api.bls.gov" in url:
+        return _bls(k["post"])
+    return AIS if "ai-tracker" in url else AGG if "aggregate" in url else IND
+
+
 def test_ai_jobs_payloads(snapdir, monkeypatch):
     from app.topics import ai_jobs as J
-    monkeypatch.setattr(J, "fetch", lambda url, ttl, **k: AIS if "ai-tracker" in url else FRED if "fred" in url else AGG if "aggregate" in url else IND)
+    monkeypatch.setattr(J, "fetch", jobs_fetch)
     o, h, r = J._openings_now(), J._headcount_now(), J._ratio_now()
     for d in (o, h, r):
         B.json_safe(d)
@@ -221,9 +274,9 @@ def _llama(url):
         return [{"date": t, "tvl": 1e11 + i * 1e7} for i, t in enumerate(ts)]
     if "stablecoincharts" in url:
         return [{"date": t, "totalCirculatingUSD": {"peggedUSD": 2e11 + i * 1e8}} for i, t in enumerate(ts)]
-    if "summary/fees" in url:
+    if "summary/fees" in url:                    # revenue and fees share the fixture
         return {"totalDataChart": [[t, 1e6 + i * 1e3] for i, t in enumerate(ts)]}
-    if "overview/derivatives" in url:
+    if "overview/dexs" in url:
         return {"totalDataChart": [[t, 1e10] for t in ts], "protocols": [{"name": "Hyperliquid", "total30d": 3e11}, {"name": "Aster", "total30d": 1e11}]}
     if "protocol/hyperliquid" in url:
         return {"tvl": [{"date": t, "totalLiquidityUSD": 4e9 + i * 1e6} for i, t in enumerate(ts)]}
@@ -254,7 +307,7 @@ def test_btc_cycles_payloads(snapdir, monkeypatch):
         assert any(p[0] == 0 and abs(p[1] - 1) < 1e-6 for p in pts) and pts[0][0] >= -550 and pts[-1][0] <= 730
     assert all(p[1] <= 0 for p in cy["drawdown"]) and cy["now"]["days_since_halving"] == (pd.Timestamp("2026-10-20") - pd.Timestamp("2024-04-19")).days
     assert len(cy["halvings"]) == 4 and len(cy["markers"]) == 8
-    assert me["latest"]["stablecoins"] > 2e11 and me["perp_top"][0]["name"] == "Hyperliquid" and abs(me["perp_top"][0]["share_30d"] - 0.75) < 1e-6
+    assert me["latest"]["stablecoins"] > 2e11 and me["dex_top"][0]["name"] == "Hyperliquid" and abs(me["dex_top"][0]["share_30d"] - 0.75) < 1e-6
     assert ca["evidence"]["RWA on-chain value ex-stablecoins (USD)"][-1][1] == 38.6e9
     states = {s["signal"][:20]: s["state"] for s in si["status"]}
     assert states["Stablecoin supply up"] == "firing" and states["BTC spot volume sust"] == "firing" and states["New issuance primiti"] == "firing"
@@ -410,7 +463,7 @@ def test_btc_etf_and_mstr(snapdir, monkeypatch):
     m = F._mstr_now()
     B.json_safe(m)
     assert m["kpi"]["purchases"] > 50 and m["purchases"][0]["date"] > m["purchases"][-1]["date"] and m["kpi"]["approx_avg_cost"] > 0
-    assert m["price_source"] == "Yahoo daily closes" and -1 <= m["kpi"]["corr90"] <= 1 and m["mnav"][-1][1] > 0
+    assert m["price_source"].startswith("daily closes") and -1 <= m["kpi"]["corr90"] <= 1 and m["mnav"][-1][1] > 0
     assert {t["country"] for t in m["treasuries"]} == {"UK", "HK"} and all("price" in t for t in m["treasuries"])
 
 
@@ -425,7 +478,7 @@ def test_farside_parser_rejects_a_changed_page():
 
 def test_ai_merged_endpoints(snapdir, monkeypatch):
     from app.topics import ai, ai_jobs as J
-    monkeypatch.setattr(J, "fetch", lambda url, ttl, **k: AIS if "ai-tracker" in url else FRED if "fred" in url else AGG if "aggregate" in url else IND)
+    monkeypatch.setattr(J, "fetch", jobs_fetch)
     assert {"openings", "headcount", "wages", "ratio", "firms", "users", "agents", "skills"} <= set(ai.ENDPOINTS)
     w = J._wages_now()
     B.json_safe(w)
@@ -453,17 +506,9 @@ HIBOR = {"result": {"records": [{"end_of_month": f"{y}-{m:02d}", "ir_1m": 1 + (y
 
 def housing_mocks(monkeypatch):
     from app.topics import housing as H
-    def fetch(url, ttl, **k):
-        if "ukhpi" in url:
-            return HPI
-        if "rvd.gov.hk" in url:
-            return _rvd_xls()
-        if "fred" in url:
-            return FRED
-        return BOE
-    monkeypatch.setattr(H, "fetch", fetch)
-    monkeypatch.setattr(H, "fetch_json", lambda url, ttl, **k: HIBOR if "hkma" in url else ONS(100) if "L522" in url else ONS(500))
-    monkeypatch.setattr(H, "PACE", 0)
+    monkeypatch.setattr(H, "fetch", housing_fetch)
+    monkeypatch.setattr(H, "fetch_json", lambda url, ttl, **k: HIBOR)
+    monkeypatch.setattr(H, "full_file_url", lambda: "http://publicdata.landregistry.gov.uk/x.csv")
     return H
 
 
@@ -478,6 +523,7 @@ def test_housing_boroughs_global_and_fixed_rate(snapdir, monkeypatch):
     assert {r["market"] for r in g["table"]} >= {"London", "Hong Kong (RVD)"}
     assert a["mortgage_basis"].startswith("the Bank of England's quoted 2-year fixed") and a["fixed_2y"]
     assert len(H.parse_rvd(_rvd_xls().encode("latin-1"))) == 17 * 12
+    assert {"London", "United Kingdom", "Camden", "City of Westminster"} <= set(H.regions()) and "Leeds" not in H.regions()
 
 
 def test_robotaxi_tesla_rate_and_rules(snapdir, monkeypatch):
