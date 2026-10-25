@@ -575,7 +575,7 @@ def test_ai_layout_probe_reports_errors_instead_of_failing(monkeypatch):
     monkeypatch.setattr(requests, "get", down)
     out = ai._layout_now()
     B.json_safe(out)
-    assert set(out) == {"pages", "csd", "files"} and len(out["csd"]) == len(ai.CSD_TABLES)
+    assert set(out) == {"pages", "csd", "files"} and len(out["csd"]) == len(ai.CSD_TABLES) and len(out["files"]) == 4
     assert all("error" in v for g in out.values() for v in g.values())
 
 
