@@ -21,7 +21,7 @@ def snapdir(tmp_path, monkeypatch):
 
 
 def test_registry_is_complete():
-    assert set(topics.REGISTRY) == {"housing", "ai-adoption", "robotaxi", "ai-jobs"}
+    assert set(topics.REGISTRY) == {"housing", "ai-adoption", "robotaxi", "ai-jobs", "btc-cycles"}
     for slug, t in topics.REGISTRY.items():
         m = topics.meta(slug)
         eps = topics.endpoints(slug)
@@ -199,3 +199,80 @@ def test_routes(snapdir, monkeypatch):
             r = await c.get("/api/robotaxi/safety")
             assert r.status == 200 and (await r.json())["reports"]["n"] == 120
     asyncio.run(go())
+
+
+# ------------------------------------------------------------------ BTC cycles: the doc as data + the live layer on fixtures
+def _cm():
+    days = pd.date_range("2010-07-18", "2026-10-20")
+    import math
+    px = [10 ** (0.5 + 3.2 * (1 - math.exp(-i / 1500))) * (1 + 0.6 * math.sin(i / 230)) for i in range(len(days))]
+    return {"data": [{"asset": "btc", "time": d.strftime("%Y-%m-%dT00:00:00.000000000Z"), "PriceUSD": f"{v:.2f}"} for d, v in zip(days, px)]}
+
+
+def _llama(url):
+    days = pd.date_range("2024-01-01", "2026-10-20")
+    ts = [int(d.timestamp()) for d in days]
+    if "historicalChainTvl" in url:
+        return [{"date": t, "tvl": 1e11 + i * 1e7} for i, t in enumerate(ts)]
+    if "stablecoincharts" in url:
+        return [{"date": t, "totalCirculatingUSD": {"peggedUSD": 2e11 + i * 1e8}} for i, t in enumerate(ts)]
+    if "summary/fees" in url:
+        return {"totalDataChart": [[t, 1e6 + i * 1e3] for i, t in enumerate(ts)]}
+    if "overview/derivatives" in url:
+        return {"totalDataChart": [[t, 1e10] for t in ts], "protocols": [{"name": "Hyperliquid", "total30d": 3e11}, {"name": "Aster", "total30d": 1e11}]}
+    if "protocol/hyperliquid" in url:
+        return {"tvl": [{"date": t, "totalLiquidityUSD": 4e9 + i * 1e6} for i, t in enumerate(ts)]}
+    if "api/v3/global" in url:
+        return {"data": {"market_cap_percentage": {"btc": 59.4}, "total_volume": {"usd": 9.1e10}}}
+    if "market_chart" in url:
+        return {"total_volumes": [[t * 1000, 1.2e10] for t in ts[-365:]]}
+    raise AssertionError(url)
+
+
+def test_btc_cycles_payloads(snapdir, monkeypatch):
+    from app.topics import btc_cycles as C
+    monkeypatch.setattr(C, "fetch_json", lambda url, ttl, **k: _cm() if "coinmetrics" in url else _llama(url))
+    monkeypatch.setattr(C, "DOM_LOG", snapdir / "dom.csv")
+    cy, se, me, ca, si = C._cycles_now(), C._sectors_now(), C._metrics_now(), C._candidates_now(), C._signals_now()
+    for d in (cy, se, me, ca, si):
+        B.json_safe(d)
+        assert not [k for k in d if k.endswith("_error")], [k for k in d if k.endswith("_error")]
+    # the doc's content is all there
+    R = C.research()
+    assert R["title"].startswith("BTC Cycles") and len(R["cycles"]) == 4 and len(R["candidates"]["rows"]) == 8 and len(R["signals"]["items"]) == 6
+    assert len(R["cross_cycle"]["rows"]) == 15 and len(R["metrics"]["rows"]) == 9 and len(R["sources"]["items"]) == 21
+    assert all(set(r) >= set(c["columns"]) | {"_multiples"} for c in R["cycles"] for r in c["rows"])
+    assert se["cycles"][1]["rows"][0]["_multiples"] == [{"label": "ETH", "x": 180.0}, {"label": "NEO", "x": 1900.0}]
+    # live layer
+    assert set(cy["overlay"]) == {"Cycle 1 (2012)", "Cycle 2 (2016)", "Cycle 3 (2020)", "Cycle 4 (2024)"}
+    for pts in cy["overlay"].values():
+        assert any(p[0] == 0 and abs(p[1] - 1) < 1e-6 for p in pts) and pts[0][0] >= -550 and pts[-1][0] <= 730
+    assert all(p[1] <= 0 for p in cy["drawdown"]) and cy["now"]["days_since_halving"] == (pd.Timestamp("2026-10-20") - pd.Timestamp("2024-04-19")).days
+    assert len(cy["halvings"]) == 4 and len(cy["markers"]) == 8
+    assert me["latest"]["stablecoins"] > 2e11 and me["perp_top"][0]["name"] == "Hyperliquid" and abs(me["perp_top"][0]["share_30d"] - 0.75) < 1e-6
+    assert ca["evidence"]["RWA on-chain value ex-stablecoins (USD)"][-1][1] == 38.6e9
+    states = {s["signal"][:20]: s["state"] for s in si["status"]}
+    assert states["Stablecoin supply up"] == "firing" and states["BTC spot volume sust"] == "firing" and states["New issuance primiti"] == "firing"
+    assert states["BTC dominance rollin"] == "not yet" and (snapdir / "dom.csv").exists()
+    assert len(C.dominance_log()) == 1 and C.coingecko_global()["dominance"] == 59.4 and len(C.dominance_log()) == 1   # one row per day
+
+
+def test_btc_cycles_without_price_feed_still_serves_the_research(snapdir, monkeypatch):
+    from app.topics import btc_cycles as C
+    monkeypatch.setattr(C, "fetch_json", lambda url, ttl, **k: (_ for _ in ()).throw(ConnectionError("down")))
+    monkeypatch.setattr(C, "DOM_LOG", snapdir / "dom.csv")
+    cy, si = C._cycles_now(), C._signals_now()
+    B.json_safe(cy); B.json_safe(si)
+    assert cy["price_error"] == "ConnectionError" and cy["research"]["anatomy"]["rows"] and cy["now"] is None
+    assert len(si["status"]) == 6 and all(s["state"] in ("firing", "not yet", "watch", "no data") for s in si["status"])
+
+
+def test_btc_cycles_helpers():
+    from app.topics.btc_cycles import halving_overlay, rising_weeks
+    s = pd.Series(range(1, 200), index=pd.date_range("2026-01-01", periods=199))
+    assert rising_weeks(s) >= 8
+    s2 = pd.concat([s, pd.Series([1.0], index=[s.index[-1] + pd.Timedelta(days=1)])])
+    assert rising_weeks(s2) == 0
+    px = pd.Series(1.0, index=pd.date_range("2024-01-01", "2024-12-31"))
+    ov = halving_overlay(px)
+    assert list(ov) == ["Cycle 4 (2024)"] and all(p[1] == 1.0 for p in ov["Cycle 4 (2024)"])

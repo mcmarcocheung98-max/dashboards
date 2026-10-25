@@ -1,0 +1,924 @@
+{
+ "title": "BTC Cycles & Sector Rotation: 2013–2026 and the 2026–27 Setup",
+ "as_of": "2026-10-21",
+ "doc_url": "https://claude.ai/artifact/5Z9ca6X7eka9R3XdxZKcb3",
+ "bottom_line": [
+  "BTC is 12 months past its $126,080 peak (6 Oct 2025), bottomed near $59,300 in June 2026 (-53%), and trades around $81,000–85,000 in late October 2026 — a milder bear than the -77% to -87% of prior cycles. Four cycles of data say the same thing each time: BTC leads the recovery for 12–18 months, and the alt sector that wins is the one with a new product category + real on-chain usage + a launch-platform that lets retail mint thousands of tokens (ICOs 2017, DeFi/NFT/alt-L1s 2021, memecoins/AI agents 2024). The sectors that won on fundamentals rather than pure speculation (DeFi 2020, perp DEXs 2025, RWA 2024–26) are the ones still standing a cycle later.",
+  "For 2026–27 the strongest candidates, ranked by metric evidence rather than hype, are: (1) on-chain finance with real revenue — perp DEXs and fee-sharing tokens (Hyperliquid alone passed $1.4bn cumulative revenue in Oct 2026); (2) stablecoin / payments infrastructure (~$300bn supply, now a regulated rail); (3) RWA and tokenized stocks ($38.6bn on-chain ex-stablecoins, up ~4x in 18 months); (4) prediction markets ($50bn+ monthly volume in July 2026, but no liquid token yet); (5) a second AI x crypto wave (agent payments, x402, Bittensor); with privacy/ZK and consumer/TON as the speculative sleeve. Historically, year two after a peak (2015, 2019, 2023) is a BTC-dominant, narrow-breadth recovery — alts broadly lagged until the halving year. Treat 2026–27 as the accumulation window for the sectors above, not as the parabolic phase."
+ ],
+ "anatomy": {
+  "intro": "Each cycle has followed the same shape — bottom roughly 12–18 months before the halving, peak 12–18 months after it, then a 1-year bear — but the multiples shrink and the drawdowns soften every time. Pre-2024 figures are approximate (exchange prices varied); 2025–26 figures are from the sources below.",
+  "columns": [
+   "Cycle",
+   "Halving",
+   "Bear-market low",
+   "Peak",
+   "Low→peak multiple",
+   "Peak→next low",
+   "Bottom-to-peak",
+   "Peak-to-bottom"
+  ],
+  "rows": [
+   [
+    "1",
+    "28 Nov 2012",
+    "~$2 (Nov 2011)",
+    "~$1,150 (Nov–Dec 2013)",
+    "~575x",
+    "-87% to ~$150 (Jan 2015)",
+    "~25 months",
+    "~14 months"
+   ],
+   [
+    "2",
+    "9 Jul 2016",
+    "~$150 (Jan 2015)",
+    "$19,783 (17 Dec 2017)",
+    "~130x",
+    "-84% to $3,122 (Dec 2018)",
+    "~35 months",
+    "~12 months"
+   ],
+   [
+    "3",
+    "11 May 2020",
+    "$3,122 (Dec 2018); COVID retest $3,850 (Mar 2020)",
+    "$69,000 (10 Nov 2021)",
+    "~22x",
+    "-77% to $15,476 (Nov 2022)",
+    "~35 months",
+    "~12 months"
+   ],
+   [
+    "4",
+    "19 Apr 2024",
+    "$15,476 (Nov 2022)",
+    "[$126,080 (6 Oct 2025)](https://coindcx.com/blog/crypto-deep-dives/crypto-bear-market)",
+    "~8x",
+    "[-53% to ~$59,300 (Jun 2026)](https://coindcx.com/blog/crypto-deep-dives/crypto-bear-market)",
+    "~35 months",
+    "~8 months (if June low holds)"
+   ],
+   [
+    "5 (ahead)",
+    "~Apr 2028",
+    "June 2026 low, or a retest in Q4 2026",
+    "—",
+    "—",
+    "—",
+    "—",
+    "—"
+   ]
+  ],
+  "after": "What changed in cycle 4: spot ETFs (about $26bn of net inflows in 2025), corporate treasuries and a $4tn total market cap at the Q3 2025 peak meant the top was a [grind rather than a blow-off](https://www.tradingview.com/news/99Bitcoins:37c5f55d3094b:0-crypto-market-2025-year-end-review-expert-insights/), and the bear was shallow. As of [19 October 2026](https://www.openpr.com/news/4667045/bitcoin-price-prediction-october-2026-btc-holds-near-81k-as) BTC sits at about $81,000–82,000, roughly 35% below the high and 40% above the June low, back above its 200-day average (about $70,000–72,000). The open question analysts are split on is whether June 2026 was the low or whether Q4 2026 (the 900-days-post-halving window that marked the 2018 and 2022 lows) delivers one more retest — [NYDIG's](https://www.coingecko.com/learn/bitcoin-price-predictions-expert-forecasts) scenario puts a 2022-style depth at $38,000–39,000, while most desks' bear cases sit at $53,000–60,000."
+ },
+ "cycles": [
+  {
+   "n": 1,
+   "heading": "Cycle 1 (2012–14): forks, payment coins and the first \"altcoin season\"",
+   "intro": "There were only a few hundred coins and no sector taxonomy; the winners were Bitcoin forks with one tweak (faster blocks, a new hash algorithm, proof-of-stake) plus the first non-fork ledgers. Figures are approximate, taken from the exchanges of the time.",
+   "columns": [
+    "Sector",
+    "Top coins",
+    "Approx. low → peak (2013)",
+    "Peak multiple",
+    "What drove it"
+   ],
+   "rows": [
+    {
+     "Sector": "\"Silver to Bitcoin's gold\" / payment forks",
+     "Top coins": "Litecoin (LTC), Peercoin (PPC), Namecoin (NMC), Feathercoin",
+     "Approx. low → peak (2013)": "LTC $2 → $48 (Nov 2013)",
+     "Peak multiple": "~25x",
+     "What drove it": "Scrypt mining (GPU-friendly), first listings on Mt. Gox/BTC-e",
+     "_multiples": [
+      {
+       "label": "",
+       "x": 25.0
+      }
+     ]
+    },
+    {
+     "Sector": "Bank-rail / non-fork ledgers",
+     "Top coins": "Ripple (XRP), Stellar (2014), Nxt (NXT), Mastercoin",
+     "Approx. low → peak (2013)": "XRP $0.005 → $0.06; NXT ICO 21 BTC → ~$100m cap",
+     "Peak multiple": "~10–50x",
+     "What drove it": "First proof-of-stake and asset-issuance chains; Mastercoin ran the first ICO (Jul 2013)",
+     "_multiples": [
+      {
+       "label": "",
+       "x": 50.0,
+       "lo": 10.0
+      }
+     ]
+    },
+    {
+     "Sector": "Memecoins v1",
+     "Top coins": "Dogecoin (DOGE)",
+     "Approx. low → peak (2013)": "launched Dec 2013; $0.0002 → $0.002 (Feb 2014)",
+     "Peak multiple": "~10x",
+     "What drove it": "Reddit tipping culture — the template every later meme cycle reused",
+     "_multiples": [
+      {
+       "label": "",
+       "x": 10.0
+      }
+     ]
+    },
+    {
+     "Sector": "Anonymity v1",
+     "Top coins": "Darkcoin (now Dash), Bytecoin, Monero (2014)",
+     "Approx. low → peak (2013)": "Darkcoin $0.3 → $15 (May 2014)",
+     "Peak multiple": "~50x",
+     "What drove it": "Post-Silk Road demand for private payments; the privacy sector peaked after BTC",
+     "_multiples": [
+      {
+       "label": "",
+       "x": 50.0
+      }
+     ]
+    }
+   ],
+   "after": "Burst duration: the altcoin phase ran about 3 months (Nov 2013–Feb 2014) — far shorter than later cycles — and nearly every coin lost 90%+ by 2015. Only LTC, XRP, DOGE and the privacy coins survived into the next cycle. Common metrics barely existed: no TVL or fees to measure, so the signals were exchange listings, hash-rate and Bitcointalk thread activity."
+  },
+  {
+   "n": 2,
+   "heading": "Cycle 2 (2015–18): the ICO / smart-contract cycle",
+   "intro": "Ethereum turned token issuance into a product. The 2017 run was the first time the alt market cap exceeded Bitcoin's — BTC dominance fell from 87% to 33% (Jan 2018) — and most sector tops came 3–5 weeks after BTC's December 2017 high. Figures are approximate.",
+   "columns": [
+    "Sector",
+    "Top 5 coins",
+    "Approx. low → peak (Jan 2018)",
+    "Peak multiple (from 2016–17 lows)",
+    "What drove it"
+   ],
+   "rows": [
+    {
+     "Sector": "Smart-contract platforms (\"Ethereum killers\")",
+     "Top 5 coins": "ETH, NEO (Antshares), EOS, ADA, QTUM (also LSK, ETC, XLM)",
+     "Approx. low → peak (Jan 2018)": "ETH $8 → $1,430; NEO $0.10 → $190; ADA $0.02 → $1.30",
+     "Peak multiple (from 2016–17 lows)": "ETH ~180x; NEO ~1,900x",
+     "What drove it": "ICO demand — ~$6bn raised in 2017; each new platform promised cheaper/faster ICOs",
+     "_multiples": [
+      {
+       "label": "ETH",
+       "x": 180.0
+      },
+      {
+       "label": "NEO",
+       "x": 1900.0
+      }
+     ]
+    },
+    {
+     "Sector": "Payment / bank-settlement coins",
+     "Top 5 coins": "XRP, XLM, NANO (RaiBlocks), XVG (Verge), TRX",
+     "Approx. low → peak (Jan 2018)": "XRP $0.006 → $3.84; XLM $0.002 → $0.94; NANO $0.01 → $37; XVG $0.00003 → $0.30",
+     "Peak multiple (from 2016–17 lows)": "XRP ~640x; XVG ~10,000x",
+     "What drove it": "\"Banks will use it\" narrative; Korean/Japanese retail exchanges (Bithumb, Coincheck)",
+     "_multiples": [
+      {
+       "label": "XRP",
+       "x": 640.0
+      },
+      {
+       "label": "XVG",
+       "x": 10000.0
+      }
+     ]
+    },
+    {
+     "Sector": "Privacy coins",
+     "Top 5 coins": "XMR, DASH, ZEC, XVG, PIVX",
+     "Approx. low → peak (Jan 2018)": "DASH $10 → $1,550; XMR $0.5 → $495",
+     "Peak multiple (from 2016–17 lows)": "DASH ~150x",
+     "What drove it": "Exchange delistings had not started; darknet + \"digital cash\" narrative",
+     "_multiples": [
+      {
+       "label": "DASH",
+       "x": 150.0
+      }
+     ]
+    },
+    {
+     "Sector": "Exchange & platform tokens",
+     "Top 5 coins": "BNB, KCS, HT (2018), ZRX, KNC",
+     "Approx. low → peak (Jan 2018)": "BNB $0.10 (ICO, Jul 2017) → $24",
+     "Peak multiple (from 2016–17 lows)": "~240x",
+     "What drove it": "Fee discounts + burn — the first real token cash-flow mechanism",
+     "_multiples": [
+      {
+       "label": "",
+       "x": 240.0
+      }
+     ]
+    },
+    {
+     "Sector": "Enterprise / supply-chain / IoT",
+     "Top 5 coins": "VET (VeChain), IOTA, WTC (Walton), ICX, VEN",
+     "Approx. low → peak (Jan 2018)": "IOTA $0.5 → $5.6; ICX $0.3 → $13",
+     "Peak multiple (from 2016–17 lows)": "~10–40x",
+     "What drove it": "Corporate partnership announcements (BMW, Bosch, Samsung) — mostly never shipped",
+     "_multiples": [
+      {
+       "label": "",
+       "x": 40.0,
+       "lo": 10.0
+      }
+     ]
+    },
+    {
+     "Sector": "Scaling / \"BTC alternatives\"",
+     "Top 5 coins": "LTC, BCH, DGB, XEM (NEM), ARDR",
+     "Approx. low → peak (Jan 2018)": "LTC $4 → $375; XEM $0.004 → $2.00; BCH launched Aug 2017, $500 → $4,300",
+     "Peak multiple (from 2016–17 lows)": "XEM ~500x",
+     "What drove it": "Bitcoin block-size war; LitePay/Lightning hype",
+     "_multiples": [
+      {
+       "label": "XEM",
+       "x": 500.0
+      }
+     ]
+    }
+   ],
+   "after": "Burst duration: the alt phase ran about 12 months (Mar 2017–Jan 2018) with two spikes — May–Jun 2017 (ICO platforms) and Dec 2017–Jan 2018 (payment coins and small-caps, when BTC was already topping). The top-10 gainers of 2017 by % (approximate, from period market data) were Verge, XRP, NEM, Ardor, Stellar, Dash, Ethereum, Golem, BNB and Litecoin — 7 of the 10 were payment or platform coins, and 8 of the 10 made new lows in 2018 (-90% to -99%). Metrics that worked: ICO raise size, exchange listings (Binance/Bithumb), Google search volume (the \"bitcoin\" search peak coincided with the December 2017 top to the week), GitHub commits. Backers: ICO treasuries and early VC (Polychain, Pantera, DCG); chain: almost everything was an ERC-20 or its own L1."
+  },
+  {
+   "n": 3,
+   "heading": "Cycle 3 (2019–22): DeFi, alt-L1s, NFTs/GameFi and memecoins",
+   "intro": "This was the first cycle with measurable on-chain fundamentals (TVL, fees, users), and the first with a double top (Apr and Nov 2021). Sector leadership rotated four times in 18 months. Figures are approximate (CoinGecko/DefiLlama period data).",
+   "columns": [
+    "Sector",
+    "Top 5 coins",
+    "Approx. low (2020) → peak",
+    "Peak multiple",
+    "Burst window",
+    "Key metric at the time"
+   ],
+   "rows": [
+    {
+     "Sector": "DeFi (\"DeFi Summer\")",
+     "Top 5 coins": "AAVE (LEND), UNI, YFI, SNX, COMP (also SUSHI, MKR, CRV, LUNA)",
+     "Approx. low (2020) → peak": "AAVE $0.03 (LEND) → $660; YFI $30 → $90,000; UNI $1 → $45",
+     "Peak multiple": "AAVE ~200x; YFI ~3,000x",
+     "Burst window": "Jun–Sep 2020, second leg Jan–May 2021",
+     "Key metric at the time": "TVL $1bn → $180bn (Nov 2021); protocol fees — Uniswap >$1bn/yr",
+     "_multiples": [
+      {
+       "label": "AAVE",
+       "x": 200.0
+      },
+      {
+       "label": "YFI",
+       "x": 3000.0
+      }
+     ]
+    },
+    {
+     "Sector": "Alt Layer-1s (\"Solana season\")",
+     "Top 5 coins": "SOL, AVAX, MATIC, LUNA, FTM (also ADA, DOT, NEAR, ATOM, ONE)",
+     "Approx. low (2020) → peak": "SOL $0.50 → $260; AVAX $3 → $146; MATIC $0.017 → $2.92; FTM $0.004 → $3.46; LUNA $0.20 → $119",
+     "Peak multiple": "SOL ~520x; FTM ~860x; MATIC ~170x",
+     "Burst window": "Aug–Nov 2021 (AVAX/SOL), Jan–Mar 2022 (LUNA)",
+     "Key metric at the time": "TVL per chain, Ethereum gas fees ($50–200 per swap pushed users out), ecosystem incentive funds ($100m–$300m each)",
+     "_multiples": [
+      {
+       "label": "SOL",
+       "x": 520.0
+      },
+      {
+       "label": "FTM",
+       "x": 860.0
+      },
+      {
+       "label": "MATIC",
+       "x": 170.0
+      }
+     ]
+    },
+    {
+     "Sector": "NFTs / GameFi / Metaverse",
+     "Top 5 coins": "AXS, SAND, MANA, GALA, ENJ (also ENS, FLOW, ILV, APE)",
+     "Approx. low (2020) → peak": "AXS $0.10 → $165; SAND $0.03 → $8.40; MANA $0.03 → $5.90; GALA $0.0002 → $0.83",
+     "Peak multiple": "AXS ~1,600x; GALA ~4,000x",
+     "Burst window": "Jul–Nov 2021 (Axie play-to-earn → Facebook \"Meta\" rename, Oct 2021)",
+     "Key metric at the time": "OpenSea volume ($3.4bn Aug 2021), Axie DAU 2.7m, land-sale prices",
+     "_multiples": [
+      {
+       "label": "AXS",
+       "x": 1600.0
+      },
+      {
+       "label": "GALA",
+       "x": 4000.0
+      }
+     ]
+    },
+    {
+     "Sector": "Memecoins v2",
+     "Top 5 coins": "DOGE, SHIB, ELON, FLOKI, SAMO",
+     "Approx. low (2020) → peak": "DOGE $0.002 → $0.74 (May 2021); SHIB launched Aug 2020 → ~$41bn cap (Oct 2021)",
+     "Peak multiple": "DOGE ~370x; SHIB ~millions-of-%",
+     "Burst window": "Apr–May 2021 (DOGE), Oct 2021 (SHIB)",
+     "Key metric at the time": "Elon Musk tweets, Robinhood/Coinbase listings, Google search volume",
+     "_multiples": [
+      {
+       "label": "DOGE",
+       "x": 370.0
+      }
+     ]
+    },
+    {
+     "Sector": "Exchange & middleware tokens",
+     "Top 5 coins": "BNB, FTT, CRO, LINK, GRT",
+     "Approx. low (2020) → peak": "BNB $10 → $690; FTT $2 → $85; LINK $1.50 → $52",
+     "Peak multiple": "BNB ~70x; FTT ~40x",
+     "Burst window": "Feb–May 2021",
+     "Key metric at the time": "Exchange volume, Binance Smart Chain TVL ($20bn), oracle integrations",
+     "_multiples": [
+      {
+       "label": "BNB",
+       "x": 70.0
+      },
+      {
+       "label": "FTT",
+       "x": 40.0
+      }
+     ]
+    },
+    {
+     "Sector": "Layer-2 / scaling (early)",
+     "Top 5 coins": "MATIC, LRC, OMG, IMX, METIS",
+     "Approx. low (2020) → peak": "LRC $0.02 → $3.80 (Nov 2021, GameStop rumour)",
+     "Peak multiple": "~190x",
+     "Burst window": "Oct–Nov 2021",
+     "Key metric at the time": "Rollup TVL (still under $7bn); airdrop speculation (Arbitrum/Optimism tokens came in 2022–23)",
+     "_multiples": [
+      {
+       "label": "",
+       "x": 190.0
+      }
+     ]
+    }
+   ],
+   "after": "Burst durations were 3–5 months per sector, and the whole alt window lasted about 16 months (Aug 2020–Nov 2021). The sectors with real cash flow (DeFi blue chips, exchange tokens) fell 80–90% in 2022 but survived and recovered; those with none (GameFi, metaverse land, LUNA, FTT) lost 95–100%. Top-10 coins by market cap at the Nov 2021 peak: BTC, ETH, BNB, USDT, SOL, ADA, XRP, DOT, DOGE, AVAX — five of them did not exist or were sub-$1bn two years earlier. Backers: a16z, Paradigm, Multicoin, Jump, FTX/Alameda (SOL ecosystem), Binance Labs; chain: Ethereum for DeFi/NFTs, then BSC, Solana, Avalanche and Polygon for the \"cheap alternative\" trade."
+  },
+  {
+   "n": 4,
+   "heading": "Cycle 4 (2023–25): memecoins, AI agents, RWA, perp DEXs and treasuries",
+   "intro": "The first ETF-era cycle. Retail rotated through launchpads (pump.fun, Virtuals) while institutions bought BTC/ETH and tokenized Treasuries, so the sector leaderboard split: speculative narratives won 2024, fundamentals-led narratives won 2025. CoinGecko's average return across each narrative's 10 largest tokens: [2024](https://forklog.com/en/ai-leads-crypto-market-gains-in-2024-reports-coingecko/) — AI +2,940%, memecoins +2,185%, RWA +820%, L1 +142%, DePIN +135%, DeFi +101%, GameFi +14%, L2 -21% (BTC +125%); [2025](https://www.coingecko.com/research/publications/most-profitable-crypto-narratives) — RWA +186%, L1 +80%, \"Made in USA\" +31%, memecoins -32%, AI -50%, with only RWA and L1 positive in both years. Coin prices below are approximate (CoinGecko).",
+   "columns": [
+    "Sector",
+    "Top 5 coins",
+    "Approx. 2023 low → peak",
+    "Peak multiple",
+    "Burst window",
+    "Key metric at the time"
+   ],
+   "rows": [
+    {
+     "Sector": "Memecoins v3 (launchpad era)",
+     "Top 5 coins": "WIF, PEPE, BONK, TRUMP, FARTCOIN (also POPCAT, PNUT, SPX, BRETT)",
+     "Approx. 2023 low → peak": "WIF $0.002 → $4.80 (Mar 2024); PEPE $0.000001 → $0.000028; BONK $0.0000001 → $0.00006; TRUMP $7 → $75 (Jan 2025, 2 days)",
+     "Peak multiple": "WIF ~2,400x; BRETT +7,700% from launch",
+     "Burst window": "Feb–Mar 2024 (Solana), Nov 2024–Jan 2025 (pump.fun), Jan 2025 top (TRUMP)",
+     "Key metric at the time": "pump.fun daily launches (20k+/day), Solana DEX volume, X/TikTok virality; launchpad share of meme cap 1.5% → 20.5%",
+     "_multiples": [
+      {
+       "label": "WIF",
+       "x": 2400.0
+      }
+     ]
+    },
+    {
+     "Sector": "AI agents / AI infra",
+     "Top 5 coins": "TAO, VIRTUAL, AI16Z (ElizaOS), RENDER, FET (also AIXBT, ARC, GRASS, IO)",
+     "Approx. 2023 low → peak": "TAO $30 → $750 (Mar 2024); VIRTUAL $0.01 → $5.07 (2 Jan 2025); AI16Z $0.01 → $2.50",
+     "Peak multiple": "VIRTUAL ~500x; AI16Z ~250x",
+     "Burst window": "Feb–Mar 2024 (infra), Oct 2024–Jan 2025 (agents)",
+     "Key metric at the time": "Virtuals daily revenue peaked at [$1.02m (Jan 2025) then fell 96% to $35k by late Feb](https://decrypt.co/309495/virtuals-protocol-revenue-crashes-as-ai-agent-demand-sinks?amp=1); 1,300 agent launches/day at peak; active wallets 181k → 7.6k",
+     "_multiples": [
+      {
+       "label": "VIRTUAL",
+       "x": 500.0
+      },
+      {
+       "label": "AI16Z",
+       "x": 250.0
+      }
+     ]
+    },
+    {
+     "Sector": "RWA / tokenized Treasuries",
+     "Top 5 coins": "ONDO, LINK, OM (MANTRA), SYRUP (Maple), PLUME (also KTA, CFG, PENDLE as yield rail)",
+     "Approx. 2023 low → peak": "ONDO $0.08 → $2.10 (Dec 2024); OM $0.02 → $9.00 (Feb 2025, then -90% in one day, Apr 2025); LINK $5 → $30",
+     "Peak multiple": "ONDO ~26x; OM ~450x",
+     "Burst window": "Dec 2024–Feb 2025, and a steady 2025 grind",
+     "Key metric at the time": "rwa.xyz on-chain value $5bn (Jan 2025) → [$19.3bn (Mar 2026)](https://www.coingecko.com/research/publications/rwa-report-2026) → $38.6bn (Sep 2026); BUIDL/BENJI AUM; tokenized-stock volume",
+     "_multiples": [
+      {
+       "label": "ONDO",
+       "x": 26.0
+      },
+      {
+       "label": "OM",
+       "x": 450.0
+      }
+     ]
+    },
+    {
+     "Sector": "Perp DEXs / on-chain finance with revenue",
+     "Top 5 coins": "HYPE, ASTER, LIT (Lighter), JUP, DRIFT (also GMX, dYdX, EDGE)",
+     "Approx. 2023 low → peak": "HYPE $2 (airdrop, Nov 2024) → $59 (Sep 2025)",
+     "Peak multiple": "~30x in 10 months",
+     "Burst window": "Nov 2024–Sep 2025",
+     "Key metric at the time": "[Hyperliquid 2025: $2.95tn volume, $844m revenue, 73% peak share](https://bex.co/blog/2026/01/10/hyperliquid-844m-revenue-perpetual-dex-dominance); perp-DEX share of global futures 0.1% (2023) → [12.3% (Oct 2026)](https://github.com/Ricosworks1/blockchain-payment-flow-analysis/releases/tag/comparative-analysis-perp-dex-market-share-hyperliquid-dominance-oct-2026)",
+     "_multiples": [
+      {
+       "label": "",
+       "x": 30.0
+      }
+     ]
+    },
+    {
+     "Sector": "Alt Layer-1s / high-throughput",
+     "Top 5 coins": "SOL, SUI, TON, HYPE (as L1), APT (also SEI, TIA, BERA)",
+     "Approx. 2023 low → peak": "SOL $8 → $295 (Jan 2025); SUI $0.40 → $5.30; TON $1 → $8",
+     "Peak multiple": "SOL ~37x; SUI ~13x",
+     "Burst window": "Mar 2024, Nov 2024–Jan 2025",
+     "Key metric at the time": "Solana DEX volume and fees (surpassed Ethereum in Q4 2024), ETF filings (SOL/XRP ETFs launched late 2025)",
+     "_multiples": [
+      {
+       "label": "SOL",
+       "x": 37.0
+      },
+      {
+       "label": "SUI",
+       "x": 13.0
+      }
+     ]
+    },
+    {
+     "Sector": "Stablecoins / yield",
+     "Top 5 coins": "ENA (Ethena), PENDLE, USDe supply, Circle (CRCL IPO Jun 2025), XPL (Plasma)",
+     "Approx. 2023 low → peak": "ENA $0.20 → $1.50; PENDLE $1 → $7.50; USDe $0 → $14bn",
+     "Peak multiple": "~7x",
+     "Burst window": "Mar–Apr 2024, Jul–Sep 2025",
+     "Key metric at the time": "Stablecoin supply $130bn → ~$300bn; GENIUS Act (Jul 2025); Circle IPO +170% day one",
+     "_multiples": [
+      {
+       "label": "",
+       "x": 7.0
+      }
+     ]
+    },
+    {
+     "Sector": "Digital-asset treasuries (equities)",
+     "Top 5 coins": "MSTR, MTPLF (Metaplanet), BMNR (ETH), SBET, HUT",
+     "Approx. 2023 low → peak": "[BMNR +318% (2025), ~+4,000% in a week on ETH-treasury pivot](https://decrypt.co/352824/best-performing-bitcoin-crypto-stocks-2025); MSTR mNAV >2x at peak",
+     "Peak multiple": "—",
+     "Burst window": "Jun–Aug 2025",
+     "Key metric at the time": "mNAV premium, ETF net inflows ($26bn in 2025)",
+     "_multiples": []
+    },
+    {
+     "Sector": "Privacy (late-cycle outlier)",
+     "Top 5 coins": "ZEC, XMR, DASH, ZEN",
+     "Approx. 2023 low → peak": "ZEC $30 → ~$700 (Nov 2025, after BTC's top)",
+     "Peak multiple": "~23x",
+     "Burst window": "Oct–Nov 2025",
+     "Key metric at the time": "Shielded-pool supply, exchange relistings; [privacy and quantum-resistant sectors led H1 2025 sector gains](https://cryptorank.io/news/feed/daf5f-rising-falling-crypto-sectors-2025-3)",
+     "_multiples": [
+      {
+       "label": "",
+       "x": 23.0
+      }
+     ]
+    }
+   ],
+   "after": "Burst durations compressed to 6–12 weeks per narrative, and leadership rotated faster than in 2021 — the market was liquid enough to run a memecoin, an AI-agent and an RWA cycle inside four months (Nov 2024–Feb 2025). Most 2024 winners (memes, AI agents) peaked in January 2025, nine months before BTC's top in October 2025, and are down 60–90% from peak; the 2025 winners (HYPE, RWA, L1s, DATs) peaked with or after BTC. Backers: the fair-launch/no-VC model (HYPE, pump.fun) beat VC-backed launches on performance; a16z, Paradigm, Pantera, Binance Labs/YZi, and TradFi (BlackRock, Franklin Templeton, Apollo) backed the RWA side. Chains: Solana and Base for retail speculation; Ethereum for RWA (47% of value); own-chain for perps (Hyperliquid L1)."
+  }
+ ],
+ "cross_cycle": {
+  "intro": "Every cycle's biggest winner was a new way to issue or trade tokens (fork → ICO → yield farm/NFT mint → launchpad), and every cycle also had one \"serious\" sector that survived into the next. The alt window has shortened from 12–16 months to a series of 6–12-week bursts, and peak multiples have fallen roughly 10x per cycle as the market cap grew.",
+  "columns": [
+   "",
+   "Cycle 1 (2013)",
+   "Cycle 2 (2017)",
+   "Cycle 3 (2021)",
+   "Cycle 4 (2024–25)"
+  ],
+  "rows": [
+   [
+    "BTC low → peak",
+    "~575x",
+    "~130x",
+    "~22x",
+    "~8x"
+   ],
+   [
+    "Total crypto cap at peak",
+    "~$15bn",
+    "~$830bn (Jan 2018)",
+    "~$3.0tn (Nov 2021)",
+    "~$4.2tn (Oct 2025)"
+   ],
+   [
+    "BTC dominance at peak",
+    "~90%",
+    "~33% (Jan 2018)",
+    "~40%",
+    "~58–60%"
+   ],
+   [
+    "#1 sector (speculative)",
+    "Payment forks",
+    "ICO platforms / payment coins",
+    "NFT/GameFi, memecoins",
+    "Memecoins, AI agents"
+   ],
+   [
+    "#1 sector (fundamental)",
+    "—",
+    "Exchange tokens (BNB)",
+    "DeFi, alt-L1s",
+    "Perp DEXs (HYPE), RWA, stablecoins"
+   ],
+   [
+    "Issuance primitive",
+    "Code fork",
+    "ERC-20 ICO",
+    "Liquidity mining, NFT mint",
+    "pump.fun / Virtuals launchpad, points → airdrop"
+   ],
+   [
+    "Best sector avg. return",
+    "~10–50x",
+    "~100x+ (platforms)",
+    "~100–1,000x (GameFi, L1s)",
+    "+2,940% AI, +2,185% memes (2024)"
+   ],
+   [
+    "Top single coin",
+    "Darkcoin ~50x",
+    "Verge ~10,000x",
+    "SHIB (millions %), AXS ~1,600x",
+    "WIF ~2,400x, VIRTUAL ~500x"
+   ],
+   [
+    "Alt-season length",
+    "~3 months",
+    "~12 months",
+    "~16 months (4 rotations)",
+    "~15 months, 6–12-week bursts"
+   ],
+   [
+    "Sector peak vs BTC peak",
+    "1–2 months after",
+    "3–5 weeks after",
+    "DeFi 7 months before; GameFi/L1 with BTC",
+    "Memes/AI 9 months before; HYPE/RWA with/after"
+   ],
+   [
+    "Dominant chain",
+    "Bitcoin forks",
+    "Ethereum",
+    "Ethereum → BSC/Solana/Avalanche",
+    "Solana/Base (retail), Ethereum (RWA), app-chains (HYPE)"
+   ],
+   [
+    "Typical backer",
+    "None / miners",
+    "ICO treasury, Polychain, Pantera",
+    "a16z, Paradigm, FTX/Alameda, Binance Labs",
+    "Fair-launch/no-VC; TradFi (BlackRock, Franklin) for RWA"
+   ],
+   [
+    "Measurable fundamentals",
+    "None",
+    "GitHub, listings",
+    "TVL, fees, DAU, NFT volume",
+    "Revenue/buybacks, stablecoin supply, RWA AUM, perp OI"
+   ],
+   [
+    "Survived next bear (sector)",
+    "LTC, XRP, DOGE, privacy",
+    "ETH, BNB, LINK, XRP",
+    "DeFi blue chips, SOL, DOGE",
+    "HYPE, RWA, stablecoins, SOL (so far)"
+   ],
+   [
+    "Lost 95%+ (sector)",
+    "Most forks",
+    "Payment/IoT coins (XVG, IOTA, WTC)",
+    "GameFi, metaverse, LUNA/FTT",
+    "AI agents, most memes, OM"
+   ]
+  ]
+ },
+ "metrics": {
+  "intro": "Across the four cycles the winning sectors shared the same signature: a step-change in a usage metric before price, a launch primitive that let retail participate, concentrated liquidity on one chain, and a search-volume peak that marked the top rather than the start. The table shows which metric mattered, what the winners looked like on it, and the threshold that has historically marked the blow-off.",
+  "columns": [
+   "Metric",
+   "What it measures",
+   "How winners looked at the start",
+   "What the top looked like",
+   "Best use"
+  ],
+  "rows": [
+   [
+    "TVL (total value locked)",
+    "Capital committed to a protocol/chain",
+    "DeFi 2020: $1bn → $10bn in 4 months; Solana 2021: $0.5bn → $10bn",
+    "TVL/market-cap ratio collapses as price outruns deposits (Nov 2021: DeFi TVL $180bn, then -75%)",
+    "Leading for DeFi/L1s; lagging for memes/NFTs (not applicable)"
+   ],
+   [
+    "Fees & revenue",
+    "Cash actually paid by users",
+    "Uniswap >$1bn/yr fees by 2021; Hyperliquid $844m revenue in 2025 with 99% to buybacks; pump.fun >$700m fees",
+    "Virtuals revenue -96% within 8 weeks of its Jan 2025 top; Axie revenue -90% by mid-2022",
+    "The single best survival predictor: every sector with real fee share survived the next bear"
+   ],
+   [
+    "Usage (DAU / active wallets / txns)",
+    "Real demand",
+    "Axie 2.7m DAU (2021); Virtuals 181k active wallets (Jan 2025); pump.fun 20k+ launches/day",
+    "Active-wallet count falls 80–95% from peak within 2 months (Virtuals: 181k → 7.6k)",
+    "Divergence of price up / users down = sell signal"
+   ],
+   [
+    "Utility / value accrual",
+    "Does the token capture the activity?",
+    "BNB burn (2017), fee switch / buybacks (HYPE, 2025), yield-bearing stables (ENA, PENDLE)",
+    "Tokens with no accrual (governance-only, agent memes) rarely recover",
+    "Filter: prefer tokens where revenue → token"
+   ],
+   [
+    "Search volume (Google Trends)",
+    "Retail attention",
+    "Rising from a low base 2–4 months before the sector top",
+    "\"Bitcoin\" search peaked the week of the Dec 2017 top; \"NFT\" peaked Jan 2022; [prediction-market search fell 83% from its Jul 2026 World Cup peak](https://thedefiant.io/news/defi/prediction-market-search-interest-falls-83-from-world-cup-peak-as-kalshi-pulls-away)",
+    "Contrarian: peak search = peak price; useful for timing exits, not entries"
+   ],
+   [
+    "Burst duration",
+    "Length of the parabolic phase",
+    "3 months (2013) → 12 (2017) → 3–5 per sector (2021) → 6–12 weeks (2024–25)",
+    "Sector tops arrive 1–9 months before BTC's top in the last two cycles",
+    "Plan on 2–3 months per narrative, and rotate; don't expect a 12-month run"
+   ],
+   [
+    "Backers",
+    "Who funds and distributes",
+    "VC-backed in 2017–21 (a16z, Paradigm); fair-launch / community in 2024–25 (HYPE, pump.fun, memes)",
+    "VC unlock cliffs (2022, 2024) killed many \"low float, high FDV\" tokens",
+    "Prefer low-unlock, revenue-funded tokens; VC pedigree stopped predicting returns after 2021"
+   ],
+   [
+    "Chain",
+    "Where the liquidity sits",
+    "One chain hosts each cycle's retail activity (ETH 2017; BSC/SOL 2021; SOL/Base 2024)",
+    "Chain fees spike and users migrate (ETH gas 2021 → alt-L1s)",
+    "Follow DEX volume and stablecoin supply per chain, not announcements"
+   ],
+   [
+    "Issuance primitive",
+    "How new tokens reach retail",
+    "ICO contracts, yield farms, NFT mints, launchpads, points-for-airdrop",
+    "Launch count peaks (Virtuals 1,300/day, Nov 2024) then collapses >90%",
+    "The arrival of a new, cheaper primitive is the earliest sector signal"
+   ]
+  ],
+  "after": "The metrics divide cleanly into two groups: fundamentals (TVL, fees, usage, utility) decide which sector survives, while attention metrics (search volume, launch counts, new wallets) decide when it tops. The 2024–25 cycle added a new one — protocol revenue returned to holders — which did not exist at scale in any prior cycle and is the main reason HYPE held up while every agent token did not."
+ },
+ "candidates": {
+  "intro": "Ranked by how well each sector already scores on the fundamentals that predicted survival (fees, usage, utility, chain concentration), not on how loud the narrative is. The history says the speculative winner of the next parabolic phase (2028–29 on the halving clock) is usually not visible yet; what is visible in 2026 is which sectors are compounding through the bear, which is where the mid-cycle (2019-, 2023-style) returns came from.",
+  "columns": [
+   "Rank",
+   "Sector",
+   "Candidate coins / plays",
+   "Metric evidence (Oct 2026)",
+   "Why it fits the pattern",
+   "Main risk"
+  ],
+  "rows": [
+   [
+    "1",
+    "On-chain finance with revenue (perp DEXs, fee-sharing DeFi)",
+    "HYPE, ASTER, Lighter (LIT), Variational, EdgeX, JUP, AAVE, PENDLE",
+    "[Perp DEXs = 12.3% of global futures, $633bn 30-day volume; Hyperliquid $1.4bn cumulative revenue, $1.26bn of buybacks, 57% of on-chain OI](https://github.com/Ricosworks1/blockchain-payment-flow-analysis/releases/tag/comparative-analysis-perp-dex-market-share-hyperliquid-dominance-oct-2026); [HL TVL grew every month of the bear, $4.1bn (Dec 2025) → $7.4bn (Sep 2026)](https://defillama.com/protocol/hyperliquid)",
+    "Only sector whose TVL and revenue rose through the 2026 bear — the DeFi-2020 analogue",
+    "Share fragmentation (HL volume share 70% → 31%); a bridge/exploit event; CEX fee wars"
+   ],
+   [
+    "2",
+    "Stablecoin & payments infrastructure",
+    "ENA/USDe, Plasma (XPL), Tether/Circle (CRCL) ecosystems, Tron (TRX), SKY/USDS, x402 agent-payment rails",
+    "Supply [~$290–320bn](https://www.stobox.io/reports/state-of-rwa-2026) and rising; GENIUS Act (2025) made it a regulated rail; [nine European banks launching a MiCA euro-stablecoin chain in H2 2026](https://www.coingecko.com/learn/crypto-narratives)",
+    "The \"boring rail\" that every other sector settles on; grows with usage, not with BTC",
+    "Yield compression as rates fall; most value accrues to private issuers, not tokens"
+   ],
+   [
+    "3",
+    "RWA / tokenized stocks & Treasuries",
+    "ONDO, LINK, SYRUP (Maple), PLUME, CFG (Centrifuge), tokenized-stock venues (Robinhood Chain, Backed/xStocks), Securitize",
+    "[$38.6bn on-chain ex-stablecoins (27 Sep 2026), up from $5bn Jan 2025; tokenized Treasuries $14.7bn, private credit $7.9bn, tokenized stocks $3.2bn](https://4irelabs.com/articles/real-world-asset-tokenization/); [RWA perps $525bn volume in Q1 2026 vs $313bn in all of 2025](https://www.coingecko.com/research/publications/rwa-report-2026)",
+    "Only narrative positive in both 2024 and 2025; TradFi backers (BlackRock, Franklin, Apollo, JPMorgan)",
+    "Value captured off-chain; many tokens trade at 50–100x fees; [56% of tokenized assets show zero weekly activity](https://blog.thirdweb.com/rwa-tokenization-2026-the-60b-market-where-56-of-assets-sit-idle/)"
+   ],
+   [
+    "4",
+    "Prediction markets / InfoFi",
+    "Polymarket (token if/when issued), Kalshi (private), POLY-adjacent infra, Rothera, on-chain venues (Azuro, Limitless), SOL/ETH/Base as settlement",
+    "[Record $50.6bn combined monthly volume in Jul 2026 (Kalshi $37.7bn, Polymarket $12.9bn)](https://tangem.com/en/news/markets/35504-prediction-markets-hit-50-6b-record-in-july-2026/); institutional desks (DRW) now market-making",
+    "Classic \"new product category\" with real usage — but the leading venues have no liquid token, so the trade is indirect",
+    "Volume fell sharply after the World Cup; US state lawsuits/CFTC; Kalshi (non-crypto) is winning share"
+   ],
+   [
+    "5",
+    "AI x crypto, second wave (agent payments, decentralised compute)",
+    "TAO (Bittensor + subnets), VIRTUAL (ACP, x402), RENDER, AKT, GRASS, IO",
+    "First wave is -75% to -90% from peak; what's left is usage-based: [x402 processed $600m by Nov 2025 with Google Cloud/AWS integrations](https://www.mexc.com/news/399244); Bittensor subnet revenue; [AI x DePIN flagged as a top-2026 narrative by CoinGecko](https://www.coingecko.com/learn/crypto-narratives)",
+    "Follows the 2017→2020 pattern: the sector that blew off (ICOs → DeFi; agents → agent infra) returns with fundamentals",
+    "AI compute demand may never need a token; agent tokens are still mostly wrappers"
+   ],
+   [
+    "6",
+    "High-throughput L1s / app-chains",
+    "SOL, SUI, HYPE (as chain), TON (Telegram mini-apps), MegaETH/Monad-class new launches",
+    "L1 narrative +80% in 2025 (one of only three positive); Solana ETF live; TON = consumer on-ramp via Telegram mini-apps",
+    "L1s led every mid-cycle recovery (ETH 2019–20, SOL 2023) because they are the beta on all sectors",
+    "Crowded; new-launch tokens carry 2024-style low-float/high-FDV unlock risk"
+   ],
+   [
+    "7",
+    "Privacy / ZK (speculative sleeve)",
+    "ZEC, XMR, ZK rollup tokens, quantum-resistance plays",
+    "ZEC's 20x+ run in Q4 2025 happened after BTC's top — the classic late-cycle/early-bear outperformer; [privacy and quantum-resistant sectors led H1 2025 sector gains](https://cryptorank.io/news/feed/daf5f-rising-falling-crypto-sectors-2025-3)",
+    "Mirrors Darkcoin 2014 and Monero 2017 — privacy pumps when BTC consolidates",
+    "Delisting/regulatory risk; narrow retail base"
+   ],
+   [
+    "8",
+    "BTC-fi / Bitcoin L2s & staking",
+    "CORE, STX, Babylon, bitcoin-collateral lending",
+    "Makes the largest asset productive; ETF-era holders want yield",
+    "Logical, but 2024's BTC-L2 tokens (STX, Runes, BRC-20) all failed to hold",
+    "Low usage so far; value accrues to BTC, not the layer"
+   ]
+  ],
+  "after": "What is deliberately not on the list: digital-asset-treasury equities (the 2025 trade is over — the mNAV premium that made it work has compressed), first-wave AI-agent tokens, and 2024-vintage memecoins. The memecoin primitive itself will return — it has in every cycle — but historically on a new launchpad or chain, not the last cycle's survivors; watch TON mini-apps and whichever chain next hosts pump.fun-style issuance. Probability-weighted, the 2026–27 leaderboard most likely looks like 2019–20's: BTC and the L1 beta first, then the fundamentals sectors (1–3) compounding quietly, with one speculative burst (4, 5 or 7) of 2–3 months somewhere in 2027."
+ },
+ "signals": {
+  "timing": "On the halving clock, 2027 is the \"2019/2023\" year: BTC rose 95% (2019) and 155% (2023) off its lows but alts broadly lagged, and the true alt season came in the halving year and after. If June 2026 was the low, a 2027 exit window sits mid-cycle on that clock — so a target like a BTC reclaim of its old high in 2027 is consistent with 2019 (which reached +300% from the low) and 2023 (+200%), but a broad, 2021-style alt blow-off by mid-2027 would be ahead of every prior cycle. The sectors above are the ones that produced mid-cycle returns anyway (IEOs/BNB in 2019; AI, L2 airdrops and SOL in 2023).",
+  "intro": "Watch these, in order of how early they fire:",
+  "items": [
+   "A new issuance primitive gaining >1,000 launches/day on any chain (pump.fun in 2024 was visible 6 months before the meme top).",
+   "Per-chain stablecoin supply and DEX volume turning up for 8+ weeks — that identified Solana in late 2023.",
+   "Perp-DEX revenue and RWA AUM continuing to rise while prices fall (currently true for both) — the DeFi-2020 setup.",
+   "Spot + ETF volume sustainably above about $10bn/day (recently about $6.8bn); ETF net inflows returning.",
+   "BTC dominance rolling over from ~60% after a new high — in both 2017 and 2021 that was the alt-season trigger, and it has not happened yet.",
+   "Google Trends for a sector name rising from a low base — entry signal; at a multi-year high — exit signal."
+  ],
+  "breakers": "What could break the four-year pattern: ETF and treasury flows have already made this cycle's top lower and its bear shallower, so the next peak may be earlier and smaller than the halving clock implies; a Q4 2026 retest below $59,000 would push the whole timeline right by 6–12 months; and regulation (stablecoin, prediction-market and tokenized-stock rules) is now the main catalyst rather than the halving itself. This is research, not investment advice — position sizes and exits are yours to set."
+ },
+ "sources": {
+  "intro": "Pre-2024 cycle figures are approximate recollections of CoinGecko / CoinMarketCap period data and are labelled as such above. Pages opened for the 2024–26 figures:",
+  "items": [
+   {
+    "text": "CoinDCX — Crypto bear market: why cryptos fell and whether the decline is ending (Oct 2026)",
+    "url": "https://coindcx.com/blog/crypto-deep-dives/crypto-bear-market"
+   },
+   {
+    "text": "OpenPR / KuCoin market report — BTC near $81k, 19 Oct 2026",
+    "url": "https://www.openpr.com/news/4667045/bitcoin-price-prediction-october-2026-btc-holds-near-81k-as"
+   },
+   {
+    "text": "CoinGecko — Bitcoin price predictions 2026, incl. NYDIG scenario",
+    "url": "https://www.coingecko.com/learn/bitcoin-price-predictions-expert-forecasts"
+   },
+   {
+    "text": "99Bitcoins via TradingView — Crypto market 2025 year-end review",
+    "url": "https://www.tradingview.com/news/99Bitcoins:37c5f55d3094b:0-crypto-market-2025-year-end-review-expert-insights/"
+   },
+   {
+    "text": "Forklog — CoinGecko: AI leads crypto narratives in 2024",
+    "url": "https://forklog.com/en/ai-leads-crypto-market-gains-in-2024-reports-coingecko/"
+   },
+   {
+    "text": "CoinGecko — Most profitable crypto narratives 2025",
+    "url": "https://www.coingecko.com/research/publications/most-profitable-crypto-narratives"
+   },
+   {
+    "text": "CoinGecko — Top 10 crypto narratives for 2026",
+    "url": "https://www.coingecko.com/learn/crypto-narratives"
+   },
+   {
+    "text": "CoinGecko — RWA Report 2026",
+    "url": "https://www.coingecko.com/research/publications/rwa-report-2026"
+   },
+   {
+    "text": "Stobox — State of RWA tokenization 2026",
+    "url": "https://www.stobox.io/reports/state-of-rwa-2026"
+   },
+   {
+    "text": "4irelabs — RWA tokenization 2026 (rwa.xyz figures, 28 Sep 2026)",
+    "url": "https://4irelabs.com/articles/real-world-asset-tokenization/"
+   },
+   {
+    "text": "thirdweb — RWA tokenization 2026: $60bn market, 56% idle",
+    "url": "https://blog.thirdweb.com/rwa-tokenization-2026-the-60b-market-where-56-of-assets-sit-idle/"
+   },
+   {
+    "text": "DefiLlama — Hyperliquid protocol TVL, fees and revenue",
+    "url": "https://defillama.com/protocol/hyperliquid"
+   },
+   {
+    "text": "Perp DEX market share analysis, Oct 2026 (Hyperliquid 57% of OI, 12.3% of global futures)",
+    "url": "https://github.com/Ricosworks1/blockchain-payment-flow-analysis/releases/tag/comparative-analysis-perp-dex-market-share-hyperliquid-dominance-oct-2026"
+   },
+   {
+    "text": "bex.co — Hyperliquid's $844m year (2025)",
+    "url": "https://bex.co/blog/2026/01/10/hyperliquid-844m-revenue-perpetual-dex-dominance"
+   },
+   {
+    "text": "Castle Labs — Perp DEX rankings, 14 Oct 2026",
+    "url": "https://castlelabs.io/research/perp-dex-rankings"
+   },
+   {
+    "text": "Tangem — Prediction markets hit $50.6bn record in July 2026",
+    "url": "https://tangem.com/en/news/markets/35504-prediction-markets-hit-50-6b-record-in-july-2026/"
+   },
+   {
+    "text": "The Defiant — Prediction-market search interest falls 83% from World Cup peak",
+    "url": "https://thedefiant.io/news/defi/prediction-market-search-interest-falls-83-from-world-cup-peak-as-kalshi-pulls-away"
+   },
+   {
+    "text": "Decrypt — Virtuals Protocol revenue crashes as AI-agent demand sinks (Feb 2025)",
+    "url": "https://decrypt.co/309495/virtuals-protocol-revenue-crashes-as-ai-agent-demand-sinks?amp=1"
+   },
+   {
+    "text": "MEXC / Coinedition — Virtuals 2026 outlook, x402 payment volume",
+    "url": "https://www.mexc.com/news/399244"
+   },
+   {
+    "text": "Decrypt — Best performing Bitcoin and crypto stocks of 2025",
+    "url": "https://decrypt.co/352824/best-performing-bitcoin-crypto-stocks-2025"
+   },
+   {
+    "text": "Cryptorank — Rising and falling crypto sectors 2025 (privacy, quantum-resistant)",
+    "url": "https://cryptorank.io/news/feed/daf5f-rising-falling-crypto-sectors-2025-3"
+   }
+  ]
+ },
+ "halvings": [
+  "2012-11-28",
+  "2016-07-09",
+  "2020-05-11",
+  "2024-04-19"
+ ],
+ "next_halving": "2028-04-15",
+ "markers": [
+  {
+   "date": "2013-12-04",
+   "label": "Peak ~$1,150"
+  },
+  {
+   "date": "2015-01-14",
+   "label": "Low ~$150"
+  },
+  {
+   "date": "2017-12-17",
+   "label": "Peak $19,783"
+  },
+  {
+   "date": "2018-12-15",
+   "label": "Low $3,122"
+  },
+  {
+   "date": "2021-11-10",
+   "label": "Peak $69,000"
+  },
+  {
+   "date": "2022-11-21",
+   "label": "Low $15,476"
+  },
+  {
+   "date": "2025-10-06",
+   "label": "Peak $126,080"
+  },
+  {
+   "date": "2026-06-22",
+   "label": "Low ~$59,300"
+  }
+ ],
+ "cycle_peak": {
+  "date": "2025-10-06",
+  "price": 126080
+ },
+ "cycle_low": {
+  "date": "2026-06-22",
+  "price": 59300
+ }
+}

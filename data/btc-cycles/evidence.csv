@@ -1,0 +1,13 @@
+date,series,value,source,note
+# Figures the doc cites that have no free API. One row per reading; series names are used by the page as written. Values in USD unless the series says otherwise.
+2025-01-15,RWA on-chain value ex-stablecoins (USD),5000000000,https://www.coingecko.com/research/publications/rwa-report-2026,rwa.xyz figure quoted in the doc
+2026-03-15,RWA on-chain value ex-stablecoins (USD),19300000000,https://www.coingecko.com/research/publications/rwa-report-2026,
+2026-09-27,RWA on-chain value ex-stablecoins (USD),38600000000,https://4irelabs.com/articles/rwa-tokenization/,rwa.xyz figure 28 Sep 2026
+2025-07-01,Prediction-market monthly volume (USD),0,https://tangem.com/en/blog/post/prediction-markets-record/,placeholder - fill from the source
+2026-07-01,Prediction-market monthly volume (USD),50600000000,https://tangem.com/en/blog/post/prediction-markets-record/,Kalshi $37.7bn + Polymarket $12.9bn
+2025-11-01,x402 cumulative payment volume (USD),600000000,https://www.mexc.com/,per the doc (MEXC / Coinedition)
+2024-11-15,Launchpad launches per day,1300,https://decrypt.co/,Virtuals peak per the doc
+2024-11-15,Perp-DEX share of global futures (%),0.1,https://defillama.com,2023 level per the doc - verify date
+2026-10-01,Perp-DEX share of global futures (%),12.3,https://castlelabs.xyz/,Castle Labs 14 Oct 2026 per the doc
+2025-12-01,Hyperliquid TVL (USD),4100000000,https://defillama.com/protocol/hyperliquid,per the doc
+2026-09-01,Hyperliquid TVL (USD),7400000000,https://defillama.com/protocol/hyperliquid,per the doc

@@ -63,3 +63,24 @@ def test_nhtsa_sgo():
     from app.topics import robotaxi as R
     d = R.sgo()
     assert len(d) > 1000 and d["month"].max() > pd.Timestamp.now() - pd.DateOffset(months=4)
+
+
+def test_coinmetrics_btc_price():
+    from app.topics import btc_cycles as C
+    px = C.price()
+    assert len(px) > 5000 and px.index[-1] > pd.Timestamp.now() - pd.DateOffset(days=5) and px.iloc[-1] > 1000
+
+
+def test_defillama_endpoints():
+    from app.topics import btc_cycles as C
+    assert len(C.defi_tvl()) > 1000 and C.stablecoins().iloc[-1] > 1e11 and C.hl_tvl().iloc[-1] > 1e9
+    assert C.hl_revenue().iloc[-30:].sum() > 1e6
+    total, top = C.perps()
+    assert total.iloc[-30:].sum() > 1e10 and top and top[0]["volume_30d"] > 0
+
+
+def test_coingecko_global_and_volume():
+    from app.topics import btc_cycles as C
+    g = C.coingecko_global()
+    assert 30 < g["dominance"] < 90
+    assert C.btc_volume().iloc[-30:].mean() > 1e9

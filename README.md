@@ -8,12 +8,13 @@ Public, read-only data dashboards, each on its own page:
 | AI Tool & Agent Adoption | `/ai-adoption` | Share of US firms using AI, paid AI tools, reported users, agent launches, AI share of job postings |
 | Autonomous Car Adoption | `/robotaxi` | Paid driverless rides by operator, cities with public service, NHTSA crash reports |
 | AI Jobs vs Law & Finance | `/ai-jobs` | Indeed postings by sector (US and UK), AI share of postings, payroll headcount, the AI-to-professions ratio |
+| BTC Cycles & Sector Rotation | `/btc-cycles` | Four Bitcoin cycles, the altcoin sectors that won each, winner metrics, 2026–27 candidates and signals, checked daily against live data |
 
 `/` lists them. Data is at `/api/<slug>/<name>` (JSON). Every dashboard has a guide in `data/<slug>/README.md`: what each card shows, where every number comes from, and how to keep it current.
 
 ## How it works
 
-- **Free sources only**, fetched at most once a day and cached. UK House Price Index, ONS, Bank of England, Indeed Hiring Lab, BLS via FRED, US Census, NHTSA.
+- **Free sources only**, fetched at most once a day and cached. UK House Price Index, ONS, Bank of England, Indeed Hiring Lab, BLS via FRED, US Census, NHTSA, Coin Metrics, DefiLlama, CoinGecko.
 - **Snapshots.** Every download is written to a persistent folder. If a source is down, the last copy is served and the card says "showing the last copy from <date>". Nothing blanks because a government site had a bad night.
 - **Hand-entered data** (announcements, surveys without an API) lives in `data/<slug>/*.csv`, one row per point with the source it came from. Adding a point is one committed line; the next deploy shows it.
 - **One module per dashboard** in `app/topics/`, one script per dashboard in `app/static/topics/`, a shared page shell in `app/static/topic.html`, and a 150-line server in `app/server.py`. No build step, no database.
