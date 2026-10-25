@@ -39,6 +39,7 @@ CG_VOLUME = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_curr
 CG_CHART = "https://api.coingecko.com/api/v3/coins/{id}/market_chart?vs_currency=usd&days=365&interval=daily"
 COINS = DATA_DIR / SLUG / "coins.csv"
 SCENARIOS = DATA_DIR / SLUG / "scenarios.json"
+NOTES_FILE = DATA_DIR / SLUG / "coin_notes.json"
 PACE = 2.2                                 # seconds between real CoinGecko downloads (public limit ~30/min)
 SOURCES = [{"name": "The research doc (BTC Cycles & Sector Rotation)", "url": "https://claude.ai/artifact/5Z9ca6X7eka9R3XdxZKcb3", "cadence": "as revised"},
            {"name": "BTC price (Coin Metrics community data)", "url": "https://coinmetrics.io/community-network-data/", "cadence": "daily"},
@@ -186,6 +187,43 @@ def scenarios() -> dict:
     return _cached(f"topic:{SLUG}:scenarios", 600, lambda: json.loads(SCENARIOS.read_text(encoding="utf-8")))
 
 
+def coin_notes() -> dict:
+    return _cached(f"topic:{SLUG}:notes", 600, lambda: json.loads(NOTES_FILE.read_text(encoding="utf-8")) if NOTES_FILE.exists() else {"coins": {}})
+
+
+def stands_out(k: dict, peers: list[dict]) -> list[str]:
+    """Plain sentences on what is unusual about a coin today, from its live numbers and how they rank among the other candidates."""
+    out = []
+    if k.get("rsi_vs_btc") is not None:
+        if k["rsi_vs_btc"] >= 70:
+            out.append(f"Running hot against BTC (RSI vs BTC {k['rsi_vs_btc']:.0f}).")
+        elif k["rsi_vs_btc"] <= 30:
+            out.append(f"Washed out against BTC (RSI vs BTC {k['rsi_vs_btc']:.0f}).")
+    v = k.get("vs_btc_90d")
+    vals = sorted(x["vs_btc_90d"] for x in peers if x.get("vs_btc_90d") is not None)
+    if v is not None and len(vals) >= 8:
+        q = sum(x <= v for x in vals) / len(vals)
+        if q >= 0.85:
+            out.append(f"Among the strongest candidates over 90 days: {v * 100:+.0f}% against BTC.")
+        elif q <= 0.15:
+            out.append(f"Among the weakest candidates over 90 days: {v * 100:+.0f}% against BTC.")
+    if k.get("from_high") is not None:
+        if k["from_high"] > -0.1:
+            out.append("Within 10% of its 1-year high.")
+        elif k["from_high"] < -0.7:
+            out.append(f"{-k['from_high'] * 100:.0f}% below its 1-year high.")
+    b = k.get("beta")
+    if b is not None:
+        if b >= 2:
+            out.append(f"High beta ({b:.1f}): moves about {b:.1f}x BTC's daily moves, so its projection band is wide.")
+        elif b <= 0.8:
+            out.append(f"Low beta ({b:.1f}): has moved less than BTC, so its projection band is narrow.")
+    mcs = sorted((x["market_cap"] for x in peers if x.get("market_cap")), reverse=True)
+    if k.get("market_cap") and mcs:
+        out.append(f"Market cap rank {mcs.index(k['market_cap']) + 1} of {len(mcs)} candidates.")
+    return out
+
+
 def parse_chart(j: dict) -> tuple[pd.Series, pd.Series]:
     px = pd.Series({pd.to_datetime(int(t), unit="ms").normalize(): float(v) for t, v in j.get("prices", [])}).sort_index()
     mc = pd.Series({pd.to_datetime(int(t), unit="ms").normalize(): float(v) for t, v in j.get("market_caps", [])}).sort_index()
@@ -248,7 +286,8 @@ def _coin_full(c: dict, btc: pd.Series) -> dict:
             "links": {"coinmarketcap": f"https://coinmarketcap.com/currencies/{c['cmc_slug']}/" if c.get("cmc_slug") else None,
                       "defillama": f"https://defillama.com/protocol/{c['defillama_slug']}" if c.get("defillama_slug") else None,
                       "coingecko": f"https://www.coingecko.com/en/coins/{c['coingecko_id']}"},
-            "kpi": {"price": _r(now, 6), "date": str(coin_px.index[-1].date()), "change_24h": _r(now / float(coin_px.iloc[-2]) - 1, 4) if len(coin_px) > 1 else None,
+            "notes": coin_notes()["coins"].get(c["ticker"], {}),
+            "kpi": {"price": _r(now, 6), "date": str(coin_px.index[-1].date()), "from_high": _r(now / float(coin_px.max()) - 1, 4), "change_24h": _r(now / float(coin_px.iloc[-2]) - 1, 4) if len(coin_px) > 1 else None,
                     "change_1y": _r(now / float(coin_px.iloc[0]) - 1, 4), "market_cap": _r(float(mc.iloc[-1]), 0) if len(mc) else None,
                     "rsi": _r(float(r_coin.dropna().iloc[-1]), 1) if r_coin.notna().any() else None,
                     "rsi_vs_btc": _r(float(r_ratio.dropna().iloc[-1]), 1) if r_ratio.notna().any() else None,
@@ -278,11 +317,18 @@ def _coins_now() -> dict:
     for c in coins_list():
         try:
             full = _coin_full(c, btc)
-            out["coins"].append({k: full[k] for k in ("ticker", "name", "rank", "sector", "note", "links", "kpi", "spark")})
+            out["coins"].append({k: full[k] for k in ("ticker", "name", "rank", "sector", "note", "links", "kpi", "spark", "notes")})
         except Exception as e:
             out["coins"].append({"ticker": c["ticker"], "name": c["name"], "rank": int(c["rank"]), "sector": c["sector"], "note": c.get("note", ""), "error": type(e).__name__,
                                  "links": {"coinmarketcap": f"https://coinmarketcap.com/currencies/{c['cmc_slug']}/" if c.get("cmc_slug") else None,
                                            "defillama": f"https://defillama.com/protocol/{c['defillama_slug']}" if c.get("defillama_slug") else None}})
+    peers = [c["kpi"] for c in out["coins"] if "kpi" in c]
+    for c in out["coins"]:
+        if "kpi" in c:
+            c["now"] = stands_out(c["kpi"], peers)
+        else:
+            c["notes"] = coin_notes()["coins"].get(c["ticker"], {})
+    out["notes_about"] = coin_notes().get("about", "")
     out["btc_now"] = _r(float(btc.iloc[-1]), 0)
     out["as_of"] = max((c["kpi"]["date"] for c in out["coins"] if "kpi" in c), default=None)
     from ._base import stale_info

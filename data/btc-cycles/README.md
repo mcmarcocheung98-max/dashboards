@@ -59,9 +59,13 @@ Coin Metrics community data is free for non-commercial use with attribution. Def
 
 **`coins.csv`** (`rank,sector,ticker,name,coingecko_id,cmc_slug,defillama_slug,note`): one row per candidate coin. `coingecko_id` is what the data is fetched by; the two slugs build the links (leave blank for no page). Rows marked `verify` carry an id copied from memory: run the network test below, which tries every id, and fix any that fail. Adding a coin is one row.
 
+**`coin_notes.json`**: per ticker, `narrative` (why it fits its sector), `standout` (the metric the doc highlights) and `thesis` (what the projection assumes and what would break it). Editorial, written from the doc; rewrite freely. The "Today" line under each coin is computed from live data (RSI vs BTC extremes, 90-day strength against the other candidates, distance from the 1-year high, beta, market-cap rank).
+
 **`scenarios.json`**: the BTC levels per scenario with a `why` each; change them and every coin's projection follows.
 
 **`evidence.csv`** (`date,series,value,source,note`): one row per published reading. Series names the page looks for, exactly: `RWA on-chain value ex-stablecoins (USD)`, `Prediction-market monthly volume (USD)`, `x402 cumulative payment volume (USD)`, `Launchpad launches per day`, `Perp-DEX share of global futures (%)`, `Hyperliquid TVL (USD)`, `Google Trends: sector search index`. The seed rows are the doc's own figures with the doc's sources; one prediction-market row is a zero placeholder to be filled, and the 2023 perp-share row is dated approximately (`verify`).
+
+**Dates**: every time chart on a tab shares one date axis. The range bar (3M to All) sets them all; dragging or zooming any chart moves the rest. Projections keep their 2027-28 end.
 
 ## Checking it
 

@@ -80,7 +80,8 @@ const VIEWS = {
     const method = card("Projection method (mechanical, not a forecast)", el("div", { class: "muted" }, sc.method || ""),
       el("div", { class: "scroll", style: "margin-top:8px" }, el("table", {}, el("tr", {}, ...["Scenario", "Bear BTC", "Base BTC", "Bull BTC"].map(h => el("th", {}, h))),
         ...(sc.scenarios || []).map(s => el("tr", {}, el("td", {}, s.label), ...["bear", "base", "bull"].map(x => el("td", { title: s[x].why }, usd(s[x].btc))))))),
-      note("Hover a BTC level for the reasoning. BTC now: " + usd(k.btc_now) + ". Edit data/btc-cycles/scenarios.json to change the levels."), stale(k));
+      note("Hover a BTC level for the reasoning. BTC now: " + usd(k.btc_now) + ". Edit data/btc-cycles/scenarios.json to change the levels."),
+      k.notes_about ? note("Coin notes: " + k.notes_about + " The \"Today\" line is computed from live data.") : null, stale(k));
     // one row per coin, grouped by the doc's rank
     const byRank = {};
     for (const c of k.coins || []) (byRank[c.rank] = byRank[c.rank] || []).push(c);
@@ -117,7 +118,11 @@ function coinRow(c, px, r1, rsiCls) {
     el("b", {}, c.name, " ", el("span", { class: "muted" }, c.ticker)),
     c.links && c.links.coinmarketcap ? link("CoinMarketCap", c.links.coinmarketcap) : null, c.links && c.links.defillama ? link("DefiLlama", c.links.defillama) : null,
     c.links && c.links.coingecko ? link("CoinGecko", c.links.coingecko) : null, c.note ? el("span", { class: "pill" }, c.note) : null);
-  if (c.error) return el("div", { class: "card", style: "margin-top:8px;opacity:.7" }, head, el("div", { class: "muted" }, "Not available right now (" + c.error + ")."));
+  const N = c.notes || {};
+  const notes = N.narrative ? el("div", { class: "notes", style: "margin-top:8px;display:grid;gap:4px;font-size:13px" },
+    el("div", {}, el("b", {}, "Why it fits: "), N.narrative), el("div", {}, el("b", {}, "What stands out: "), N.standout),
+    c.now && c.now.length ? el("div", {}, el("b", {}, "Today: "), c.now.join(" ")) : null) : null;
+  if (c.error) return el("div", { class: "card", style: "margin-top:8px;opacity:.7" }, head, notes, el("div", { class: "muted" }, "Not available right now (" + c.error + ")."));
   const K = c.kpi;
   const strip = el("div", { class: "kpis", style: "margin-top:8px" }, kpi("Price", px(K.price)), kpi("24h", pct(K.change_24h, 1), cls(K.change_24h)), kpi("1 year", pct(K.change_1y, 0), cls(K.change_1y)),
     kpi("Market cap", usdBig(K.market_cap)), kpi("RSI 14", r1(K.rsi), rsiCls(K.rsi)), kpi("RSI vs BTC", r1(K.rsi_vs_btc), rsiCls(K.rsi_vs_btc)),
@@ -133,7 +138,7 @@ function coinRow(c, px, r1, rsiCls) {
     try { const f = await api("coin-" + c.ticker.toLowerCase()); more.replaceChildren(...coinCharts(f, px, r1)); loaded = true; btn.textContent = "Hide charts"; }
     catch (err) { more.replaceChildren(el("div", { class: "err" }, "Could not load: " + err.message)); btn.textContent = "Retry"; }
   } }, "Show charts");
-  return el("div", { class: "card", style: "margin-top:8px" }, head, strip, spark, btn, more);
+  return el("div", { class: "card", style: "margin-top:8px" }, head, notes, strip, spark, btn, more);
 }
 
 function coinCharts(f, px, r1) {
@@ -155,6 +160,7 @@ function coinCharts(f, px, r1) {
       px, { log: true, extend: true, whitespace: ws }),
     el("div", { class: "scroll", style: "margin-top:8px" }, el("table", {}, el("tr", {}, ...["Scenario", "Bear", "Base", "Bull", "Implied market cap (base)"].map(h => el("th", {}, h))),
       ...pts.map((p, i) => el("tr", {}, el("td", {}, p.label), el("td", {}, px(p.bear)), el("td", {}, px(p.base)), el("td", {}, px(p.bull)), el("td", {}, usdBig((f.implied_mcap_base[i] || {}).mcap)))))),
+    f.notes && f.notes.thesis ? el("div", { style: "margin-top:8px;font-size:13px" }, el("b", {}, "Thesis behind the projection: "), f.notes.thesis) : null,
     note("Price now × (BTC scenario ÷ BTC now) ^ beta. Mechanical; it says nothing about the coin's own fundamentals, unlocks or survival."));
   return [el("div", { class: "grid2", style: "margin-top:8px" }, price, rsi, mcap, proj), stale(f)];
 }

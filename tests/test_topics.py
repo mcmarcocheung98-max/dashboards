@@ -332,3 +332,19 @@ def test_btc_cycles_rsi_and_beta_edges():
     flat = pd.Series(1.0, index=up.index)
     assert beta_to_btc(up, flat) is None                          # BTC never moves: no beta
     assert beta_to_btc(up ** 5, up) == 3.0 and beta_to_btc(up ** 0.1, up) == 0.5     # clipped to [0.5, 3]
+
+
+def test_btc_cycles_coin_notes(snapdir, monkeypatch):
+    from app.topics import btc_cycles as C
+    notes = C.coin_notes()["coins"]
+    assert {c["ticker"] for c in C.coins_list()} == set(notes)
+    assert all(n["narrative"] and n["standout"] and n["thesis"] for n in notes.values())
+    charts = _chart(mult=2.5)
+    monkeypatch.setattr(C, "fetch_json", lambda url, ttl, **k: charts["btc"] if "coins/bitcoin/" in url else charts["coin"])
+    monkeypatch.setattr(C, "PACE", 0)
+    k = C._coins_now()
+    hype = next(c for c in k["coins"] if c["ticker"] == "HYPE")
+    assert hype["notes"]["thesis"] and any("High beta" in t for t in hype["now"]) and any("Market cap rank" in t for t in hype["now"])
+    assert C._coin_now("SOL")["notes"]["narrative"].startswith("Solana")
+    assert C.stands_out({"rsi_vs_btc": 75, "beta": 0.6, "from_high": -0.8}, []) == [
+        "Running hot against BTC (RSI vs BTC 75).", "80% below its 1-year high.", "Low beta (0.6): has moved less than BTC, so its projection band is narrow."]

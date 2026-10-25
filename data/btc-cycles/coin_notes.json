@@ -1,0 +1,146 @@
+{
+ "about": "Editorial notes written from the research doc (as of 2026-10-21) and general knowledge of each project; figures are the doc's. Not advice.",
+ "as_of": "2026-10-25",
+ "coins": {
+  "HYPE": {
+   "narrative": "The doc's rank-1 sector is on-chain finance that earns real revenue, and Hyperliquid is its centre: its own L1 runs the largest perp DEX, and almost all fees go to buying back HYPE.",
+   "standout": "Per the doc: $1.4bn cumulative revenue, $1.26bn of buybacks, 57% of on-chain open interest, and TVL rising every month of the 2026 bear ($4.1bn to $7.4bn).",
+   "thesis": "Base case assumes the DeFi-2020 analogue holds: revenue keeps compounding while BTC recovers, so HYPE tracks BTC at its measured beta. Breaks if volume share keeps fragmenting (the doc notes 70% to 31%) or a bridge exploit hits."
+  },
+  "ASTER": {
+   "narrative": "A newer perp DEX in the same rank-1 sector, competing for the share Hyperliquid is losing as the market fragments.",
+   "standout": "Part of the doc's evidence that perp DEXs reached 12.3% of global futures volume; one of the venues taking share from Hyperliquid.",
+   "thesis": "The projection treats ASTER as high-beta exposure to perp-DEX growth. It fails if incentive-driven volume fades once emissions slow, the usual fate of points-led launches."
+  },
+  "LIT": {
+   "narrative": "Lighter is a zero-knowledge perp DEX in the rank-1 sector, aiming at retail with low or zero trading fees.",
+   "standout": "Named by the doc among the perp venues fragmenting Hyperliquid's share.",
+   "thesis": "Beta-scaled bet on perp DEXs continuing to take futures volume from exchanges. Risk: a zero-fee model leaves little revenue to accrue to the token."
+  },
+  "JUP": {
+   "narrative": "Jupiter is Solana's main trade router and also runs perps, so it sits in the doc's on-chain-finance sector and benefits from Solana activity.",
+   "standout": "Fee-earning venue on the chain the doc says hosted the 2024 retail cycle; part of the revenue-to-token group the doc prefers.",
+   "thesis": "Projection assumes Solana activity recovers with BTC. Breaks if Solana DEX volume stays depressed or token unlocks outpace buybacks."
+  },
+  "AAVE": {
+   "narrative": "Aave is the largest lending protocol and a survivor from the 2020 DeFi cycle, the doc's model of a fundamentals sector that came through a bear intact.",
+   "standout": "The doc's survival rule: every sector with real fee share survived the next bear. Aave has done so twice.",
+   "thesis": "Treated as lower-beta DeFi blue chip. Upside depends on credit demand returning with prices; risk is rate competition from tokenized Treasuries."
+  },
+  "PENDLE": {
+   "narrative": "Pendle splits yield-bearing tokens into principal and yield, the rail for trading on-chain yields; the doc lists it under fee-sharing DeFi and as a yield rail for RWA.",
+   "standout": "Grew with stablecoin yields in cycle 4 (the doc: PENDLE about 7x low to peak); its volume rises with yield products like USDe.",
+   "thesis": "Projection assumes on-chain yield markets grow with stablecoin supply. Breaks if rates fall and yield products shrink, the doc's named risk for the stablecoin sector."
+  },
+  "ENA": {
+   "narrative": "Ethena issues USDe, a synthetic dollar backed by a hedged basis trade, the token play in the doc's stablecoin and payments sector.",
+   "standout": "The doc: USDe went from zero to $14bn in cycle 4 and stablecoin supply is about $290-320bn and rising.",
+   "thesis": "Base case assumes stablecoin supply keeps growing and funding rates stay positive. Breaks on yield compression (the doc's risk) or negative funding that shrinks USDe."
+  },
+  "XPL": {
+   "narrative": "Plasma is a chain built for stablecoin payments, one of the doc's infrastructure plays on the 'boring rail' every sector settles on.",
+   "standout": "Listed by the doc under stablecoin and payments infrastructure, which grows with usage rather than with BTC.",
+   "thesis": "Projection is beta-scaled; the honest thesis is usage growth. Risk, per the doc: value accrues to private issuers like Tether and Circle rather than to chain tokens."
+  },
+  "TRX": {
+   "narrative": "Tron carries a large share of USDT transfers, so it is the incumbent payments chain in the doc's stablecoin sector.",
+   "standout": "Grows with stablecoin usage rather than speculation; historically lower beta than most of the list.",
+   "thesis": "Low-beta projection. Risk: regulation of offshore stablecoin flows, and new payment chains taking share."
+  },
+  "SKY": {
+   "narrative": "Sky is the rebrand of MakerDAO and issuer of USDS, the oldest decentralised stablecoin, in the doc's stablecoin sector.",
+   "standout": "One of the DeFi survivors with real revenue, much of it from Treasury-backed collateral.",
+   "thesis": "Assumes USDS supply and revenue grow. Breaks if falling rates cut collateral income, the doc's yield-compression risk."
+  },
+  "ONDO": {
+   "narrative": "Ondo tokenizes Treasuries and stocks, the most direct token play on the doc's rank-3 RWA sector.",
+   "standout": "The doc: on-chain RWA ex-stablecoins went from $5bn (Jan 2025) to $38.6bn (Sep 2026); ONDO ran about 26x low to peak in cycle 4.",
+   "thesis": "Projection assumes the RWA grind continues, the only narrative positive in both 2024 and 2025 per the doc. Breaks if value stays captured off-chain or the token keeps trading at a large multiple of fees."
+  },
+  "LINK": {
+   "narrative": "Chainlink supplies oracles and cross-chain messaging that tokenized assets depend on, so it spans the RWA sector and DeFi in general.",
+   "standout": "Survivor of two cycles (the doc lists it among the 2017 survivors) with TradFi integrations.",
+   "thesis": "Lower-beta infrastructure bet on RWA growth. Risk: usage growth not translating into token demand."
+  },
+  "SYRUP": {
+   "narrative": "Maple runs on-chain institutional lending (private credit), one of the doc's RWA sub-sectors.",
+   "standout": "The doc: tokenized private credit $7.9bn by Sep 2026.",
+   "thesis": "Projection scales with BTC; the thesis is credit growth. Breaks on borrower defaults, the risk that ended Maple's first version in 2022."
+  },
+  "PLUME": {
+   "narrative": "Plume is a chain built for real-world assets, listed by the doc in the RWA sector.",
+   "standout": "Rides the doc's RWA growth figures, but as a newer token it carries unlock risk.",
+   "thesis": "High-beta RWA exposure. Risk, per the doc: 56% of tokenized assets show zero weekly activity, so assets on a chain need not mean usage."
+  },
+  "CFG": {
+   "narrative": "Centrifuge pioneered on-chain credit from real-world receivables, part of the doc's RWA sector.",
+   "standout": "Long-running RWA infrastructure with institutional partners.",
+   "thesis": "Projection is beta-scaled. Risk: smaller, older token losing share to better-funded RWA platforms."
+  },
+  "TAO": {
+   "narrative": "Bittensor runs subnets that pay for AI work, the infrastructure side of the doc's rank-5 'second AI wave'.",
+   "standout": "The doc points to subnet revenue as the usage metric that survived the first AI-agent blow-off.",
+   "thesis": "Assumes the 2017-to-2020 pattern: a sector that blew off returns with fundamentals. Breaks if AI compute never needs a token, the doc's main risk."
+  },
+  "VIRTUAL": {
+   "narrative": "Virtuals is the AI-agent launchpad of cycle 4, now pushing agent payments (ACP, x402), the doc's second-wave AI play.",
+   "standout": "The doc: revenue peaked at $1.02m a day in Jan 2025 then fell 96%, while x402 processed $600m by Nov 2025.",
+   "thesis": "Projection assumes agent payments become real usage. Breaks if agent tokens stay wrappers, the doc's risk, as first-wave tokens did."
+  },
+  "RENDER": {
+   "narrative": "Render sells decentralised GPU rendering and compute, the decentralised-compute half of the doc's AI x crypto sector.",
+   "standout": "One of the cycle-4 AI infrastructure names that kept real paying work.",
+   "thesis": "Beta-scaled AI-compute exposure. Risk: centralised clouds remain cheaper and simpler for AI workloads."
+  },
+  "AKT": {
+   "narrative": "Akash is a decentralised cloud marketplace, in the doc's decentralised-compute group.",
+   "standout": "Usage-based revenue from compute leases rather than speculation.",
+   "thesis": "Projection is beta-scaled. Risk: small market share against hyperscalers."
+  },
+  "GRASS": {
+   "narrative": "Grass pays users for spare bandwidth used to gather AI training data, an AI x DePIN play the doc flags as a top 2026 narrative.",
+   "standout": "The doc cites CoinGecko naming AI x DePIN a leading 2026 narrative.",
+   "thesis": "High-beta bet on AI data demand. Risk: legal and data-sourcing limits, and emissions-driven supply."
+  },
+  "IO": {
+   "narrative": "io.net aggregates GPUs for AI workloads, in the doc's decentralised-compute group.",
+   "standout": "Part of the AI compute cohort the doc expects to return on usage.",
+   "thesis": "Projection is beta-scaled. Risk: utilisation, and unlocks from a recent launch."
+  },
+  "SOL": {
+   "narrative": "Solana is the doc's rank-6 high-throughput L1 and the chain that hosted the 2024 retail cycle; L1s led every mid-cycle recovery.",
+   "standout": "The doc: L1 narrative +80% in 2025, one of three positive; Solana ETF live; SOL ran about 37x low to peak in cycle 4.",
+   "thesis": "Projection is the cleanest beta-to-BTC case in the list. Breaks if retail issuance moves to another chain, which the doc says happens each cycle."
+  },
+  "SUI": {
+   "narrative": "Sui is a newer high-throughput L1, in the doc's rank-6 group.",
+   "standout": "The doc: SUI ran about 13x low to peak in cycle 4.",
+   "thesis": "High-beta L1 exposure. Risk, per the doc: new-launch L1 tokens carry low-float, high-valuation unlock risk."
+  },
+  "TON": {
+   "narrative": "TON is Telegram's chain; the doc names it the consumer on-ramp via Telegram mini-apps and a place to watch for the next memecoin launchpad.",
+   "standout": "Distribution through Telegram's user base rather than DeFi metrics.",
+   "thesis": "Projection is beta-scaled. Risk: Telegram-specific regulatory events and weak on-chain activity outside mini-apps."
+  },
+  "ZEC": {
+   "narrative": "Zcash is the doc's rank-7 privacy sleeve: privacy coins rally when BTC consolidates.",
+   "standout": "The doc: ZEC ran 20x+ in Q4 2025, after BTC's top; privacy and quantum-resistant sectors led H1 2025 sector gains.",
+   "thesis": "Speculative sleeve; the projection is mechanical. Breaks on exchange delistings, the doc's main risk."
+  },
+  "XMR": {
+   "narrative": "Monero is the other privacy coin in the doc's sleeve, mirroring Darkcoin 2014 and Monero 2017.",
+   "standout": "Longest-lived privacy coin; trades on fewer venues after delistings.",
+   "thesis": "Lower-beta privacy exposure. Risk: further delistings and regulatory pressure."
+  },
+  "CORE": {
+   "narrative": "Core is an EVM chain secured by bitcoin staking, the doc's rank-8 BTC-fi idea of making the largest asset productive.",
+   "standout": "The doc: ETF-era holders want yield on BTC.",
+   "thesis": "Projection is beta-scaled. The doc's own caveat: 2024's BTC-layer tokens all failed to hold, and value tends to accrue to BTC, not the layer."
+  },
+  "STX": {
+   "narrative": "Stacks is the longest-running Bitcoin layer with sBTC, in the doc's BTC-fi group.",
+   "standout": "The doc names STX among the 2024 BTC-L2 tokens that failed to hold.",
+   "thesis": "Projection is beta-scaled. Risk: low usage so far, per the doc."
+  }
+ }
+}
