@@ -11,4 +11,13 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
-      - run: python -c "import json; from app import topics; print(json.dumps({k: {'requests': v['requests'].get('status', v['requests'].get('error')), 'curl': v['curl']} for k, v in topics.probe().items()}, indent=1))"
+      - name: Probe from GitHub
+        run: |
+          python - <<'PY'
+          import json
+          from app import topics
+          res = topics.probe()
+          for k, v in res.items():
+              r = v["requests"]
+              print(f"{k:30} requests={r.get('status', r.get('error'))}  curl={v['curl']}")
+          PY
