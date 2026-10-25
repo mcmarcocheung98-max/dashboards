@@ -60,8 +60,8 @@ The first live check showed three sources refusing the server, so the dashboard 
 | UK HPI per region and borough | landregistry.data.gov.uk per-region download (HTTP 403 to cloud servers) | The monthly UK HPI full file from publicdata.landregistry.gov.uk (~33 MB, every region and borough in one file; the newest month is found automatically) |
 | CPIH and average weekly earnings | ONS timeseries API (retired: HTTP 404) | The same series as CSV from the ONS website (`/generator?format=csv`) |
 | US 30-year mortgage rate | FRED (times out from cloud servers) | Freddie Mac's PMMS workbook |
-
-Case-Shiller still comes from FRED and shows "not available" until an alternative is confirmed (FHFA's index is being checked).
+| US house prices (Case-Shiller) | FRED | FHFA house price indexes: US purchase-only (monthly, seasonally adjusted), New York and San Francisco metro divisions (quarterly) |
+| Hong Kong HIBOR | HKMA API with a 1,000-record page (HTTP 405) | The same API, 100 records a page |
 
 ## Added in round 3
 
@@ -70,7 +70,7 @@ Case-Shiller still comes from FRED and shows "not available" until an alternativ
 | Prices · Rents | London average monthly private rent | ONS Price Index of Private Rents | Hand-entered: `rents.csv` (no stable series id on the ONS API) |
 | Boroughs | All 33 London boroughs: average price, change on a year, 5-year change, sortable; yearly change as bars; the three most and least expensive indexed to 2015 | UK HPI per local authority (one download per borough, paced 0.4 s, cached a day) | Automated |
 | Rates & affordability | Bank of England quoted 2-year fixed mortgage rate at 75% LTV (series IUMBV34) next to Bank Rate; the mortgage illustration now uses it, falling back to Bank Rate + 1.5 points before the series starts | Bank of England database | Automated |
-| London vs US vs HK | House prices rebased to Jan 2015 = 100: London (UK HPI), US national, New York and San Francisco (S&P CoreLogic Case-Shiller via FRED: CSUSHPISA, NYXRSA, SFXRSA), Hong Kong (RVD private domestic index); latest table; borrowing costs: UK 2-year fixed, US 30-year fixed (MORTGAGE30US), HK 1-month HIBOR | FRED, RVD workbook, HKMA open API | Automated; `hk_price_index.csv` is the hand-entered fallback for Hong Kong |
+| London vs US vs HK | House prices rebased to Jan 2015 = 100: London (UK HPI), US national, New York and San Francisco (FHFA house price indexes), Hong Kong (RVD private domestic index); latest table; borrowing costs: UK 2-year fixed, US 30-year fixed (MORTGAGE30US), HK 1-month HIBOR | FRED, RVD workbook, HKMA open API | Automated; `hk_price_index.csv` is the hand-entered fallback for Hong Kong |
 
 The RVD workbook URL (`his_data_4.xls`) and its layout are the least certain part: the network test checks it, and the card says "not available" if neither the workbook nor the CSV has data.
 

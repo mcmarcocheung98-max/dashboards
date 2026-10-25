@@ -43,11 +43,12 @@ BOROUGHS = ["barking-and-dagenham", "barnet", "bexley", "brent", "bromley", "cam
             "kingston-upon-thames", "lambeth", "lewisham", "merton", "newham", "redbridge", "richmond-upon-thames", "southwark", "sutton",
             "tower-hamlets", "waltham-forest", "wandsworth", "city-of-westminster"]
 FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}"
-US_HPI = {"US national (Case-Shiller)": "CSUSHPISA", "New York (Case-Shiller)": "NYXRSA", "San Francisco (Case-Shiller)": "SFXRSA"}
+US_HPI = {"US national (Case-Shiller)": "CSUSHPISA", "New York (Case-Shiller)": "NYXRSA", "San Francisco (Case-Shiller)": "SFXRSA"}   # FRED: unreachable from Railway
+FHFA = "https://www.fhfa.gov/hpi/download/monthly/hpi_master.csv"   # FHFA house price indexes (US, states, metros); reachable, ~17 MB
 US_MORTGAGE = "MORTGAGE30US"                                    # Freddie Mac 30-year fixed, weekly (FRED copy; FRED is unreachable from Railway)
 PMMS = "https://www.freddiemac.com/pmms/docs/historicalweeklydata.xlsx"   # the same series from Freddie Mac directly
 HK_RVD = "https://www.rvd.gov.hk/doc/en/statistics/his_data_4.xls"   # private domestic price index, territory-wide, monthly (URL: verify)
-HK_HIBOR = "https://api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/er-ir/hk-interbank-ir-endperiod?pagesize=1000"
+HK_HIBOR = "https://api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/er-ir/hk-interbank-ir-endperiod?pagesize=100&offset={offset}"
 BOE = ("https://www.bankofengland.co.uk/boeapps/database/_iadb-fromshowcolumns.asp?csv.x=yes&Datefrom=01/Jan/1995&Dateto=now"
        "&SeriesCodes=IUDBEDR&CSVF=TN&UsingCodes=Y&Filter=N&title=Bank%20Rate&VPD=Y")
 
@@ -55,7 +56,7 @@ SOURCES = [{"name": "UK House Price Index (HM Land Registry / ONS)", "url": "htt
            {"name": "CPIH inflation (ONS, series L522)", "url": "https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/l522/mm23", "cadence": "monthly"},
            {"name": "Average weekly earnings (ONS, series KAB9)", "url": "https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/earningsandworkinghours/timeseries/kab9/lms", "cadence": "monthly"},
            {"name": "Bank Rate and quoted 2-year fixed mortgage rate (Bank of England)", "url": "https://www.bankofengland.co.uk/boeapps/database/", "cadence": "monthly"},
-           {"name": "S&P CoreLogic Case-Shiller indices (FRED)", "url": "https://fred.stlouisfed.org/series/CSUSHPISA", "cadence": "monthly"},
+           {"name": "FHFA House Price Indexes (US purchase-only; New York and San Francisco metros)", "url": "https://www.fhfa.gov/data/hpi", "cadence": "monthly / quarterly"},
            {"name": "30-year fixed mortgage rate (Freddie Mac PMMS)", "url": "https://www.freddiemac.com/pmms", "cadence": "weekly"},
            {"name": "Hong Kong private domestic price index (Rating and Valuation Department)", "url": "https://www.rvd.gov.hk/en/publications/property_market_statistics.html", "cadence": "monthly"},
            {"name": "HIBOR (Hong Kong Monetary Authority open API)", "url": "https://apidocs.hkma.gov.hk/", "cadence": "monthly"},
@@ -286,13 +287,41 @@ def hk_index() -> pd.Series:
 
 
 def hk_hibor() -> pd.Series:
-    j = fetch_json(HK_HIBOR, TTL)
-    rows = (j.get("result") or {}).get("records") or []
+    """HKMA open API, 100 records a page (a larger page is refused with HTTP 405)."""
+    rows = []
+    for k in range(12):
+        recs = (fetch_json(HK_HIBOR.format(offset=k * 100), TTL).get("result") or {}).get("records") or []
+        rows += recs
+        if len(recs) < 100:
+            break
     s = pd.Series({pd.to_datetime(r.get("end_of_month"), errors="coerce"): pd.to_numeric(r.get("ir_1m"), errors="coerce") for r in rows})
     s = s[s.index.notna()].dropna().sort_index()
     if s.empty:
         raise ValueError("HKMA HIBOR: no records")
     return s
+
+
+def parse_fhfa(text: str) -> dict[str, pd.Series]:
+    """FHFA master CSV -> US national purchase-only index (monthly, seasonally adjusted) and the New York and San Francisco metro
+    divisions (quarterly, all transactions)."""
+    d = pd.read_csv(StringIO(text), dtype=str)
+    d["t"] = pd.to_datetime(d["yr"].astype(int).astype(str) + "-" + (d["period"].astype(int) * (d["frequency"].str.startswith("quarter").map({True: 3, False: 1})) - (d["frequency"].str.startswith("quarter").map({True: 2, False: 0}))).astype(str) + "-01", errors="coerce")
+    out = {}
+    us = d[(d["frequency"] == "monthly") & (d["hpi_flavor"] == "purchase-only") & (d["place_id"] == "USA")]
+    if len(us):
+        col = "index_sa" if us["index_sa"].notna().any() else "index_nsa"
+        out["US national (FHFA)"] = pd.Series(pd.to_numeric(us[col], errors="coerce").to_numpy(), index=us["t"].to_numpy()).dropna().sort_index()
+    for label, needle in (("New York metro (FHFA)", "New York-Jersey City"), ("San Francisco metro (FHFA)", "San Francisco-San Mateo")):
+        m = d[(d["frequency"] == "quarterly") & (d["hpi_flavor"] == "all-transactions") & d["place_name"].str.contains(needle, na=False)]
+        if len(m):
+            out[label] = pd.Series(pd.to_numeric(m["index_nsa"], errors="coerce").to_numpy(), index=m["t"].to_numpy()).dropna().sort_index()
+    if not out:
+        raise ValueError("FHFA layout changed: no US or metro rows")
+    return out
+
+
+def fhfa() -> dict[str, pd.Series]:
+    return parse_fhfa(fetch(FHFA, TTL, min_bytes=100_000, timeout=120))
 
 
 def _rebase(s: pd.Series, at: str = "2015-01-01") -> pd.Series:
@@ -408,11 +437,11 @@ def _boroughs_now() -> dict:
 def _global_now() -> dict:
     lon = hpi("london")
     out = payload({"london": lambda: _pts(_rebase(lon["index"].dropna()), 1),
-                   "us": lambda: {k: _pts(_rebase(fred(sid)), 1) for k, sid in US_HPI.items()},
+                   "us": lambda: {k: _pts(_rebase(v), 1) for k, v in fhfa().items()},
                    "hk": lambda: _pts(_rebase(hk_index()), 1),
                    "rates": lambda: {"UK 2-year fixed (75% LTV)": _pts(boe_fixed(), 2), "US 30-year fixed": _pts(us_mortgage().resample("MS").last(), 2),
                                      "HK 1-month HIBOR": _pts(hk_hibor(), 2)}},
-                  sources=[HK_RVD, HK_HIBOR, BOE_FIXED] + [PMMS] + [FRED.format(sid=s) for s in US_HPI.values()],
+                  sources=[HK_RVD, HK_HIBOR, BOE_FIXED] + [PMMS, FHFA],
                   as_of=latest_date(lon["index"]))
 
     def yy(pts):

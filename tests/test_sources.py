@@ -115,19 +115,17 @@ def test_mstr_sources():
     assert len(F.yahoo_daily("MSTR", "2024-01-01")) > 300 and len(F.yahoo_daily("0434.HK", "2024-01-01")) > 100
 
 
-def test_fred_pay_series():
+def test_bls_series():
     from app.topics import ai_jobs as J
-    for sid in J.US_WAGES.values():
-        s = J.fred(sid)
-        assert len(s) > 100 and 10 < s.iloc[-1] < 200, sid
+    have = J.bls_all()
+    assert all(sid in have for sid in J.US_SERIES.values()) and "CES0500000003" in have
 
 
 def test_housing_new_sources():
     from app.topics import housing as H
     assert len(H.boe_fixed()) > 100
     assert len(H.borough("camden")) > 100
-    for sid in list(H.US_HPI.values()) + [H.US_MORTGAGE]:
-        assert len(H.fred(sid)) > 100, sid
+    assert len(H.fhfa()["US national (FHFA)"]) > 300 and len(H.us_mortgage()) > 1000
     assert len(H.hk_hibor()) > 50
     assert len(H.hk_index()) > 100            # RVD workbook URL and layout: verify
 

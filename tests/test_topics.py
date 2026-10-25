@@ -101,6 +101,17 @@ def _pmms_xlsx():
     return buf.getvalue().decode("latin-1")
 
 
+def _fhfa_csv():
+    rows = ["hpi_type,hpi_flavor,frequency,level,place_name,place_id,yr,period,index_nsa,index_sa,rstderr,note"]
+    for y in range(2010, 2027):
+        for m in range(1, 13):
+            rows.append(f"traditional,purchase-only,monthly,USA or Census Division,United States,USA,{y},{m},{200 + (y - 2010) * 10 + m},{201 + (y - 2010) * 10 + m},,")
+        for q in range(1, 5):
+            rows.append(f'traditional,all-transactions,quarterly,MSA,"New York-Jersey City-White Plains, NY-NJ (MSAD)",35614,{y},{q},{300 + (y - 2010) * 8 + q},,,')
+            rows.append(f'traditional,all-transactions,quarterly,MSA,"San Francisco-San Mateo-Redwood City, CA (MSAD)",41884,{y},{q},{400 + (y - 2010) * 9 + q},,,')
+    return "\n".join(rows)
+
+
 def housing_fetch(url, ttl, **k):
     if "publicdata.landregistry" in url:
         return HPI
@@ -110,6 +121,8 @@ def housing_fetch(url, ttl, **k):
         return _rvd_xls()
     if "freddiemac" in url:
         return _pmms_xlsx()
+    if "fhfa" in url:
+        return _fhfa_csv()
     if "fred" in url:
         return FRED
     return BOE
@@ -482,7 +495,7 @@ def test_ai_merged_endpoints(snapdir, monkeypatch):
     assert {"openings", "headcount", "wages", "ratio", "firms", "users", "agents", "skills"} <= set(ai.ENDPOINTS)
     w = J._wages_now()
     B.json_safe(w)
-    assert set(w["levels"]) == set(J.US_WAGES) and "All private" not in w["premium"] and w["as_of"]
+    assert set(w["levels"]) == set(J.US_WAGES) and "All private" not in w["premium"] and w["as_of"] and w["missing"] == []
     assert all(sid.endswith("03") for sid in J.US_WAGES.values())
     h = J._headcount_now()
     assert "HK" in h and h["HK"] == {}
@@ -519,7 +532,7 @@ def test_housing_boroughs_global_and_fixed_rate(snapdir, monkeypatch):
         B.json_safe(d)
     assert len(b["rows"]) == 33 and not b["errors"] and {"Kensington and Chelsea", "City of Westminster", "Richmond upon Thames"} <= {r["borough"] for r in b["rows"]}
     assert not [k for k in g if k.endswith("_error")], [k for k in g if k.endswith("_error")]
-    assert set(g["us"]) == set(H.US_HPI) and g["hk"] and set(g["rates"]) == {"UK 2-year fixed (75% LTV)", "US 30-year fixed", "HK 1-month HIBOR"}
+    assert set(g["us"]) == {"US national (FHFA)", "New York metro (FHFA)", "San Francisco metro (FHFA)"} and g["hk"] and set(g["rates"]) == {"UK 2-year fixed (75% LTV)", "US 30-year fixed", "HK 1-month HIBOR"}
     assert {r["market"] for r in g["table"]} >= {"London", "Hong Kong (RVD)"}
     assert a["mortgage_basis"].startswith("the Bank of England's quoted 2-year fixed") and a["fixed_2y"]
     assert len(H.parse_rvd(_rvd_xls().encode("latin-1"))) == 17 * 12

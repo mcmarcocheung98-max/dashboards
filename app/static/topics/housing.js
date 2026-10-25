@@ -71,8 +71,8 @@ const VIEWS = {
     const series = [...(d.london ? [{ name: "London", points: d.london, width: 3 }] : []), ...Object.entries(d.us || {}).map(([k, pts]) => ({ name: k, points: pts })),
       ...(d.hk ? [{ name: "Hong Kong", points: d.hk, width: 3, color: css("--s5") }] : [])];
     const idx = card("House prices, Jan 2015 = 100", ...linesChart(series, v => v == null ? "–" : v.toFixed(0)),
-      missing(d, "us", "US prices (FRED)"), missing(d, "hk", "Hong Kong prices (RVD)"), stale(d),
-      note("London: UK HPI index. US: S&P CoreLogic Case-Shiller (national seasonally adjusted, New York and San Francisco). Hong Kong: Rating and Valuation Department private domestic index. All rebased to January 2015."));
+      missing(d, "us", "US prices (FHFA)"), missing(d, "hk", "Hong Kong prices (RVD)"), stale(d),
+      note("London: UK HPI index. US: FHFA house price indexes (national purchase-only, monthly; New York and San Francisco metro divisions, quarterly). Hong Kong: Rating and Valuation Department private domestic index. All rebased to January 2015."));
     const tbl = card("Latest", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Market", "Index (2015 = 100)", "Change on a year", "Month"].map(h => el("th", {}, h))),
       ...(d.table || []).map(r => el("tr", {}, el("td", {}, r.market), el("td", {}, r.index == null ? "–" : r.index.toFixed(0)), el("td", { class: cls(r.yoy) }, pct(r.yoy, 1)), el("td", {}, r.month))))));
     const rates = d.rates ? card("Borrowing costs: UK 2-year fixed, US 30-year fixed, HK 1-month HIBOR (%)", ...linesChart(Object.entries(d.rates).map(([k, pts]) => ({ name: k, points: pts })), v => v == null ? "–" : v.toFixed(2) + "%", { small: true }),

@@ -33,7 +33,7 @@ const VIEWS = {
     const names = Object.keys(u.levels);
     const rows = names.map(n => el("tr", {}, el("td", {}, n), el("td", {}, num(u.latest[n].level * 1000)), el("td", { class: cls(u.latest[n].yoy) }, pct(u.latest[n].yoy / 100, 1)), el("td", { class: cls(u.latest[n].since_2020) }, pct(u.latest[n].since_2020 / 100, 1))));
     const head = card("US payroll employment", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Industry", "Jobs", "vs a year ago", "vs Feb 2020"].map(h => el("th", {}, h))), ...rows)), asOf(d), stale(d),
-      note("BLS Current Employment Statistics via FRED, seasonally adjusted. 'Computer systems design' is the closest industry to AI and software work."));
+      note("BLS Current Employment Statistics (public API), seasonally adjusted. 'Computer systems design' is the closest industry to AI and software work."));
     const idx = card("Headcount since February 2020 (= 100)", ...linesChart(names.map(n => ({ name: n, points: u.indexed[n], dashed: n === "All private", color: n === "All private" ? css("--hold") : undefined })), v => v == null ? "–" : v.toFixed(1)));
     const yoy = card("Change on a year earlier", ...linesChart(names.map(n => ({ name: n, points: u.yoy[n], dashed: n === "All private", color: n === "All private" ? css("--hold") : undefined })), v => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(1) + "%", { small: true }));
     const uk = Object.entries(d.UK || {}).filter(([, pts]) => pts.length);
@@ -64,7 +64,8 @@ const VIEWS = {
     const names = Object.keys(L);
     const head = card("US average hourly earnings, all employees", table(["Industry", "Hourly pay", "vs a year ago", "vs all private-sector pay"],
       names.map(n => [n, "$" + (L[n].level == null ? "–" : L[n].level.toFixed(2)), L[n].yoy == null ? "–" : (L[n].yoy > 0 ? "+" : "") + L[n].yoy.toFixed(1) + "%", n === "All private" ? "–" : (L[n].premium > 0 ? "+" : "") + L[n].premium.toFixed(0) + "%"])),
-      missing(d, "levels", "US pay"), asOf(d), stale(d), note("BLS Current Employment Statistics via FRED (series ending 03), seasonally adjusted."));
+      missing(d, "levels", "US pay"), (d.missing || []).length ? note("BLS publishes no hourly pay series for: " + d.missing.join(", ") + ".") : null, asOf(d), stale(d),
+      note("BLS Current Employment Statistics (series ending 03), seasonally adjusted, from the BLS public API."));
     const lv = d.levels ? card("Hourly pay ($)", ...linesChart(Object.entries(d.levels).map(([k, pts]) => ({ name: k, points: pts, dashed: k === "All private", color: k === "All private" ? css("--hold") : undefined })), v => v == null ? "–" : "$" + v.toFixed(2))) : null;
     const pr = d.premium ? card("Pay premium over all private-sector pay (%)", ...linesChart(Object.entries(d.premium).map(([k, pts]) => ({ name: k, points: pts })), v => v == null ? "–" : v.toFixed(0) + "%", { small: true }),
       note("If AI substitutes for legal and financial work, this premium should narrow before headcount falls.")) : null;

@@ -169,7 +169,10 @@ def _ratio_now() -> dict:
 
 def _wages_now() -> dict:
     """US average hourly earnings in the same industries: level, yearly change, and each against all private-sector pay."""
-    series = {n: fred(sid) for n, sid in US_WAGES.items()}
+    have = bls_all()
+    series = {n: have[sid] for n, sid in US_WAGES.items() if sid in have and len(have[sid])}
+    if "All private" not in series:
+        raise ValueError("BLS returned no all-private pay series")
     allp = series["All private"]
     since = pd.Timestamp("2010-01-01")
     out = payload({"levels": lambda: {n: _pts(s[s.index >= since], 2) for n, s in series.items()},
@@ -178,6 +181,7 @@ def _wages_now() -> dict:
                    "latest": lambda: {n: {"level": _r(s.iloc[-1], 2), "yoy": _r(yoy(s).iloc[-1] * 100, 2), "premium": _r((s.iloc[-1] / allp.iloc[-1] - 1) * 100, 1),
                                           "date": str(s.index[-1].date())} for n, s in series.items()}},
                   sources=[BLS])
+    out["missing"] = [n for n in US_WAGES if n not in series]           # industries BLS does not publish hourly pay for
     out["uk_hk"] = sorted(manual_rows("ai", "pay_uk_hk"), key=lambda r: r["date"], reverse=True)
     out["as_of"] = (out.get("latest") or {}).get("All private", {}).get("date")
     return out
