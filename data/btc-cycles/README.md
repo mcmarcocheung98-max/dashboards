@@ -82,11 +82,11 @@ Coin Metrics community data is free for non-commercial use with attribution. Def
 
 **Dates**: every time chart on a tab shares one date axis. The range bar (3M to All) sets them all; dragging or zooming any chart moves the rest. Projections keep their 2027-28 end.
 
-**`etf_holdings.csv`** (`date,series,value,source,note`): BTC held by non-US funds; series `Hong Kong spot ETFs (BTC)` or `UK ETNs (BTC)`. The two seed rows are from memory and marked `verify`.
+**`etf_holdings.csv`** (`date,series,value,source,note`): BTC held by non-US funds; series `Hong Kong spot ETFs (BTC)` or `UK ETNs (BTC)`. One cited reading so far (HK, 3 May 2024, from the first three days' inflows); the memory seed for mid-2025 had no source and was removed. Trackers (bitcointreasuries.net, bold.report, bitbo) disagree fund by fund, so add later points from the funds' HKEX filings or a dated report. No UK ETN holdings figure is published in one place yet; UK issuers' factsheets give per-product BTC.
 
-**`treasuries.csv`** (`date,company,country,yahoo,btc_held,source,note`): one row per disclosed holding of a UK or HK company; `yahoo` is the Yahoo ticker (`.L` London, `.HK` Hong Kong), from which the Stooq (`swc.uk`, `0434.hk`) and CNBC (`SWC-GB`, `0434-HK`) symbols are derived. Hover the "Holdings only" line on a card to see what each price source answered.
+**`treasuries.csv`** (`date,company,country,yahoo,btc_held,source,note`): one row per disclosed holding of a UK or HK company; `yahoo` is the Yahoo ticker (`.L` London, `.HK` Hong Kong), from which the Stooq (`swc.uk`, `0434.hk`) and CNBC (`SWC-GB`, `0434-HK`) symbols are derived. Hover the "Holdings only" line on a card to see what each price source answered. Rows cite the company's own RNS (FCA National Storage Mechanism or Investegate) or HKEX announcement.
 
-**`etf_milestones.csv`**: dated events shown on the ETFs tab.
+**`etf_milestones.csv`** (`date,event,market,source,note`): dated events shown on the ETFs tab, each cited to the regulator's or exchange's own release, or to the report that dates it.
 
 **Source notes (Oct 2026).** DefiLlama's perp-volume endpoints became paid (HTTP 402), so the page shows Hyperliquid's fees and all-chain spot DEX volume instead, both free. CoinGecko limits free calls to a few a minute, so coin data is filled by a background job 13 seconds apart every six hours; a coin not reached yet says "loading in the background". Yahoo refuses cloud servers, so stock prices fall back to Nasdaq's quote API (US tickers), Stooq and CNBC (London and Hong Kong), and MSTR uses BTC prices from Coin Metrics.
 

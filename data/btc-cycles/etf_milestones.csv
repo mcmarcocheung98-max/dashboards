@@ -1,8 +1,9 @@
 date,event,market,source,note
-2024-01-10,SEC approves 11 US spot bitcoin ETFs,US,https://www.sec.gov/newsroom/speeches-statements/gensler-statement-spot-bitcoin-011023,
-2024-01-11,US spot bitcoin ETFs start trading; GBTC converts from a trust,US,https://www.sec.gov/,
-2024-04-30,Hong Kong spot bitcoin and ether ETFs start trading (ChinaAMC, Harvest, Bosera/HashKey),HK,https://www.sfc.hk/,
-2024-05-28,London Stock Exchange admits bitcoin and ether ETNs for professional investors,UK,https://www.londonstockexchange.com/,
-2024-11-19,Options on IBIT start trading,US,https://www.nasdaq.com/,
-2025-07-29,SEC allows in-kind creations and redemptions for crypto ETPs,US,https://www.sec.gov/,
-2025-10-08,UK lifts the ban on crypto ETNs for retail investors,UK,https://www.fca.org.uk/,
+# Dated events shown on the ETFs tab, each with its primary source or the report that dates it.
+2024-01-10,SEC approves 11 US spot bitcoin ETFs,US,https://www.sec.gov/newsroom/speeches-statements/gensler-statement-spot-bitcoin-011023,Chair Gensler's statement on the approval
+2024-01-11,US spot bitcoin ETFs start trading; GBTC converts from a trust,US,https://news.bloomberglaw.com/crypto/bitcoin-etf-trades-top-3-billion-in-ground-breaking-first-day,about $4.6bn traded on day one (Bloomberg)
+2024-04-30,"Hong Kong spot bitcoin and ether ETFs start trading (ChinaAMC, Harvest, Bosera/HashKey)",HK,https://www.hkex.com.hk/News/News-Release/2024/240430news,HKEX news release: Asia's first spot virtual asset ETFs
+2024-05-28,London Stock Exchange admits bitcoin and ether ETNs for professional investors,UK,https://www.theblock.co/post/284493/london-stock-exchange-picks-may-28-as-start-date-for-crypto-etn-trading,start date set in the LSE's March 2024 notice; professional investors only
+2024-11-19,Options on IBIT start trading,US,https://www.nasdaq.com/articles/bitcoin-etf-options-start-trading,"listed by Nasdaq; 353,716 contracts on day one"
+2025-07-29,SEC allows in-kind creations and redemptions for crypto ETPs,US,https://www.sec.gov/newsroom/press-releases/2025-101-sec-permits-kind-creations-redemptions-crypto-etps,SEC press release 2025-101
+2025-10-08,UK lifts the ban on crypto ETNs for retail investors,UK,https://www.fca.org.uk/news/press-releases/fca-opens-retail-access-crypto-etns,"FCA announced 1 Aug 2025, in force 8 Oct 2025; only ETNs on a UK recognised investment exchange"

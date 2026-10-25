@@ -1,4 +1,3 @@
 date,series,value,source,note
-# BTC held by non-US spot bitcoin ETFs / ETNs, one row per reading. Series names: "Hong Kong spot ETFs (BTC)", "UK ETNs (BTC)". Seed rows are from memory: verify against the issuers' daily holdings pages and replace.
-2024-04-30,Hong Kong spot ETFs (BTC),4200,https://www.hkex.com.hk/,launch-week total - seed from memory - verify
-2025-06-30,Hong Kong spot ETFs (BTC),5000,https://www.hkex.com.hk/,seed from memory - verify
+# BTC held by non-US spot bitcoin ETFs / ETNs, one row per dated reading with its source. Series names: "Hong Kong spot ETFs (BTC)", "UK ETNs (BTC)". Add later readings from the funds' HKEX filings (hkexnews.hk) or issuer factsheets; trackers disagree by fund, so cite a dated report.
+2024-05-03,Hong Kong spot ETFs (BTC),4220,https://cryptocomresearch.substack.com/p/crypto-market-pulse-weekly-hk-spot,"net inflow of the three spot BTC ETFs over their first three trading days (30 Apr-3 May 2024), Crypto.com Research weekly; the funds started from zero so this is their holding"
