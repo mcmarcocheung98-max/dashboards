@@ -4,7 +4,8 @@ rides      paid driverless rides per week by operator (announcements, hand-enter
            counts where that is what the operator reports (Baidu Apollo Go)
 footprint  where each operator offers public driverless rides and since when (data/robotaxi/cities.csv)
 safety     crash reports filed by automated-driving-system operators under NHTSA's Standing General Order (CSV, monthly, automated),
-           counted per month and per reporting entity; incidents are not normalised by miles (operators report miles irregularly)
+           counted per month and per reporting entity (current file plus the pre-June-2025 archive), and per million driverless miles for
+           operators that publish miles (data/robotaxi/miles.csv)
 
 Each hand-entered row carries the source it came from. NHTSA data is cached a day and snapshotted.
 """
@@ -17,6 +18,7 @@ import pandas as pd
 from ._base import DAY, _pts, _r, fetch, fetch_json, manual, manual_rows, manual_sources, payload
 
 SGO = "https://static.nhtsa.gov/odi/ffdd/sgo-2021-01/SGO-2021-01_Incident_Reports_ADS.csv"
+SGO_ARCHIVE = "https://static.nhtsa.gov/odi/ffdd/sgo-2021-01/Archive-2021-2025/SGO-2021-01_Incident_Reports_ADS.csv"   # Jul 2021 to Jun 2025
 SLUG = "robotaxi"
 SOURCES = [{"name": "Operator announcements and press reports (hand-entered, cited per point)", "url": "", "cadence": "as announced"},
            {"name": "NHTSA Standing General Order crash reports, ADS", "url": "https://www.nhtsa.gov/laws-regulations/standing-general-order-crash-reporting", "cadence": "monthly"}]
@@ -43,8 +45,18 @@ def parse_sgo(text: str) -> pd.DataFrame:
     return out.dropna(subset=["month"])
 
 
+def sgo_parts() -> tuple[pd.DataFrame, bool]:
+    """Current file plus the archive (reports filed before the June 2025 amendment moved to their own file); False when the archive is missing."""
+    d, archived = parse_sgo(fetch(SGO, TTL, min_bytes=1000)), True
+    try:
+        d = pd.concat([d, parse_sgo(fetch(SGO_ARCHIVE, 30 * TTL, min_bytes=1000))])
+    except Exception:
+        archived = False
+    return (d.drop_duplicates("rid") if "rid" in d else d), archived
+
+
 def sgo() -> pd.DataFrame:
-    return parse_sgo(fetch(SGO, TTL, min_bytes=1000))
+    return sgo_parts()[0]
 
 
 # ------------------------------------------------------------------ endpoints
@@ -86,22 +98,23 @@ def _footprint_now() -> dict:
 
 def _safety_now() -> dict:
     def counts():
-        d = sgo()
+        d, archived = sgo_parts()
         d = d[d["month"] >= "2021-07-01"]
         top = d["entity"].value_counts().head(6).index.tolist()
         by = d.assign(entity=d["entity"].where(d["entity"].isin(top), "Others")).groupby(["month", "entity"]).size().unstack(fill_value=0)
         by = by.reindex(pd.date_range(by.index.min(), by.index.max(), freq="MS"), fill_value=0)
         miles = manual(SLUG, "miles")
         rate = []
-        for op, m in (miles.items() if isinstance(miles, dict) else []):
+        for op, m in (miles.items() if isinstance(miles, dict) and archived else []):     # without the archive, reports to date would be undercounted
+            mine = d["entity"].str.lower().str.startswith(op.lower())                         # "Waymo" matches "Waymo LLC"
             for t, v in m.items():
-                n = int(((d["entity"] == op) & (d["month"] <= t)).sum())
+                n = int((mine & (d["month"] <= t)).sum())
                 if v:
                     rate.append({"operator": op, "date": str(t.date()), "miles": _r(v, 0), "reports": n, "per_million": _r(n / (v / 1e6), 3)})
         return {"months": [int(t.timestamp()) for t in by.index], "entities": {e: [int(x) for x in by[e]] for e in by.columns}, "rate": rate,
                 "total": _pts(by.sum(axis=1), 0), "total_12m": _pts(by.sum(axis=1).rolling(12).sum(), 0),
-                "latest_month": str(by.index[-1].date()), "n": int(len(d))}
-    out = payload({"reports": counts}, sources=[SGO])
+                "latest_month": str(by.index[-1].date()), "n": int(len(d)), "archived": archived}
+    out = payload({"reports": counts}, sources=[SGO, SGO_ARCHIVE])
     out["as_of"] = (out.get("reports") or {}).get("latest_month")
     return out
 

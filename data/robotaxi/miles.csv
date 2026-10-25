@@ -1,4 +1,11 @@
 date,series,value,source,note
-# Cumulative fully driverless (rider-only) miles per operator, as published. Used to turn NHTSA crash reports into reports per million miles. series = operator as named in the NHTSA file's reporting entity where possible (e.g. "Waymo LLC").
-2025-03-31,Waymo LLC,71000000,https://waymo.com/safety/impact/,Waymo safety hub - verify figure and date
-2025-06-30,Waymo LLC,96000000,https://waymo.com/safety/impact/,verify
+# Cumulative fully driverless (rider-only) miles per operator, as published; date = the data cut-off the operator states. Used to turn NHTSA crash reports into reports per million miles. series = operator name; it matches NHTSA reporting entities that start with it ("Waymo" matches "Waymo LLC").
+# Not here on purpose: Tesla FSD (Supervised) miles (driver assistance; its crashes go to NHTSA's ADAS file, not the ADS file counted here; they are on the Tesla tab). Tesla Robotaxi: Tesla reports "nearly two million" unsupervised miles at the end of Q3 2026 (TSLA-Q3-2026-Update.pdf), but its ADS reports also cover rides with a safety monitor, so the rate would overstate. Zoox: "nearly two million autonomous miles in our robotaxi" (24 Mar 2026, https://cleantechnica.com/2026/03/24/zoox-hits-big-milestone/), but its ADS reports also cover its test fleet with safety drivers, so left out for the same reason.
+2024-06-30,Waymo,22000000,https://waymo.com/blog/2024/09/safety-data-hub/,"""over 22 million rider-only miles"" through the end of June 2024; a lower bound"
+2025-01-31,Waymo,56700000,https://waymo.com/research/comparison-of-waymo-rider-only-crash-rates-by-crash-type-to-human-benchmarks/,56.7 million rider-only miles through January 2025 (Waymo research paper)
+2025-03-31,Waymo,71000000,https://waymo.com/safety/impact/,71 million through March 2025: press reports of the safety hub update; the hub no longer shows this cut-off - verify
+2025-06-30,Waymo,96000000,https://waymo.com/safety/impact/,96 million through June 2025 per a Waymo presentation; the hub no longer shows this cut-off - verify
+2025-09-30,Waymo,127000000,https://waymo.com/blog/2026/02/waymo-raises-usd16-billion-investment-round/,127 million fully autonomous miles; September 2025 cut-off from the safety hub as reported - verify cut-off
+2025-12-31,Waymo,170700000,https://waymo.com/blog/shorts/waymo-safety-impact-update-170m/,170.7M rider-only miles through December 2025 (safety hub update)
+2026-03-31,Waymo,220600000,https://waymo.com/safety/impact/,220.6M rider-only miles through March 2026 (safety hub; Waymo post of 24 Jun 2026 says over 220 million)
+2026-06-30,Waymo,271300000,https://waymo.com/safety/impact/,"""Through June 2026, Waymo has driven 271.3M rider-only miles without a human driver"""

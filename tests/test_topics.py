@@ -635,8 +635,20 @@ def test_robotaxi_tesla_rate_and_rules(snapdir, monkeypatch):
         assert not [k for k in d if k.endswith("_error")], [k for k in d if k.endswith("_error")]
     assert t["kpi"]["deliveries_last"] > 0 and t["tsla"] and {"UK", "HK"} <= set(t["fsd_markets"]) and t["milestones"][0]["date"] >= t["milestones"][-1]["date"]
     assert {r["market"] for r in f["regulation"]} >= {"US", "UK", "HK", "China"}
-    w = [x for x in s["reports"]["rate"] if x["operator"] == "Waymo LLC"]
-    assert w and all(x["per_million"] >= 0 for x in w)
+    w = [x for x in s["reports"]["rate"] if x["operator"] == "Waymo"]                     # miles.csv says "Waymo", NHTSA "Waymo LLC"
+    assert w and all(x["reports"] > 0 and x["per_million"] > 0 for x in w) and s["reports"]["archived"]
+
+
+def test_robotaxi_rate_hidden_without_sgo_archive(snapdir, monkeypatch):
+    from app.topics import robotaxi as R
+
+    def fetch(url, ttl, **k):
+        if url == R.SGO_ARCHIVE:
+            raise OSError("archive down")
+        return SGO
+    monkeypatch.setattr(R, "fetch", fetch)
+    r = R._safety_now()["reports"]
+    assert r["n"] == 120 and r["rate"] == [] and r["archived"] is False
 
 
 def test_source_health(snapdir, monkeypatch):

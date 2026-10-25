@@ -24,6 +24,8 @@ Driverless ride-hailing: how many paid rides operators give, where they run a pu
 | Rides per quarter | Operator earnings releases (Baidu for Apollo Go) | Quarterly | Hand-entered: `rides_quarterly.csv` |
 | Cities | Operator announcements | As announced | Hand-entered: `cities.csv` |
 | Crash reports | [NHTSA Standing General Order 2021-01, ADS incident reports](https://www.nhtsa.gov/laws-regulations/standing-general-order-crash-reporting), CSV | Monthly | Automated |
+| Crash reports before June 2025 | The same order's archive file (`Archive-2021-2025/SGO-2021-01_Incident_Reports_ADS.csv`): NHTSA moved reports filed under the earlier versions of the order there when the third amendment took effect on 16 Jun 2025 | Fixed | Automated, fetched monthly |
+| Driverless miles | Waymo safety hub and posts | Quarterly, about three months after each cut-off | Hand-entered: `miles.csv` |
 
 NHTSA data is public domain.
 
@@ -35,7 +37,7 @@ NHTSA data is public domain.
 
 ## Keeping it up to date
 
-**Automated:** the NHTSA CSV is fetched daily and snapshotted. If NHTSA renames a column, the card says "not available right now (ValueError)"; the parser in `app/topics/robotaxi.py` looks for columns containing "Reporting Entity", "Incident Date" and "Report ID".
+**Automated:** the NHTSA CSV is fetched daily and snapshotted. Both NHTSA files are read and each report ID counted once; if the archive cannot be loaded, the per-mile table is hidden (reports to date would be undercounted) and the page says so. If NHTSA renames a column, the card says "not available right now (ValueError)"; the parser in `app/topics/robotaxi.py` looks for columns containing "Reporting Entity", "Incident Date" and "Report ID".
 
 **`rides.csv`** (`date,series,value,source,note`): one row per announcement of a weekly paid-ride figure; `series` is the operator, `value` rides per week, `date` the announcement date. Example:
 
@@ -48,6 +50,8 @@ NHTSA data is public domain.
 **`cities.csv`** (`date,operator,city,country,source,note`): a city counts when a fully driverless service is open to the general public (not employees or an invite list); note pilots in `note`.
 
 Rows marked `verify` in `note` and worth clearing against the source: Waymo 50,000 (May 2024, date), Waymo 175,000 (December 2024) and 450,000 (October 2025), Tesla Austin (invite-only with a safety monitor at the time of writing).
+
+**`miles.csv`** (`date,series,value,source,note`): cumulative rider-only miles; `date` is the data cut-off the operator states (Waymo: "through June 2026"), not the publish date. `series` is the operator name, matched to every NHTSA reporting entity that starts with it, case-insensitive (`Waymo` matches `Waymo LLC`). Waymo updates its safety hub (waymo.com/safety/impact) about three months after each quarter. Only operators whose ADS crash reports and published miles cover the same vehicles belong here: Tesla (reports include rides with a safety monitor; FSD miles are driver assistance) and Zoox (reports include its safety-driver test fleet) are left out, with the reason in the file's header.
 
 ## Checking it
 

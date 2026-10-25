@@ -61,8 +61,9 @@ def test_census_btos_workbook():
 
 def test_nhtsa_sgo():
     from app.topics import robotaxi as R
-    d = R.sgo()
-    assert len(d) > 1000 and d["month"].max() > pd.Timestamp.now() - pd.DateOffset(months=4)
+    d, archived = R.sgo_parts()
+    assert archived and len(d) > 1000 and d["month"].max() > pd.Timestamp.now() - pd.DateOffset(months=4)
+    assert d["month"].min() < pd.Timestamp("2022-01-01")                                # the archive reaches back to the 2021 order
 
 
 def test_coinmetrics_btc_price():

@@ -41,8 +41,9 @@ const VIEWS = {
     const by = card("Last 12 months by reporting entity", ...svgBars(ents, [{ name: "Reports", values: last12, color: css("--s1") }], { yFmt: v => Math.round(v), labelW: 80 }));
     const rate = r.rate && r.rate.length ? card("Crash reports per million driverless miles", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Operator", "Miles to date", "Reports to date", "Per million miles", "As of"].map(h => el("th", {}, h))),
       ...r.rate.map(x => el("tr", {}, el("td", {}, x.operator), el("td", {}, big(x.miles)), el("td", {}, num(x.reports)), el("td", {}, x.per_million.toFixed(2)), el("td", {}, x.date))))),
-      note("Cumulative reports since the order took effect (Jul 2021) divided by cumulative rider-only miles the operator has published (data/robotaxi/miles.csv). For scale, not a like-for-like comparison with human drivers: every minor contact is reportable."))
-      : card("Reports per mile", el("div", { class: "muted" }, "Add operators' published driverless miles to data/robotaxi/miles.csv to turn counts into a rate."));
+      note("Reports the operator filed since the order took effect (Jul 2021) up to that date, divided by the driverless miles it had published by then (data/robotaxi/miles.csv). For scale, not a like-for-like comparison with human drivers: every minor contact is reportable, whoever caused it."))
+      : card("Reports per mile", el("div", { class: "muted" }, r.archived === false ? "NHTSA's archive of reports before June 2025 could not be loaded, so reports to date would be undercounted; the rate is hidden until it loads."
+        : "Add operators' published driverless miles to data/robotaxi/miles.csv to turn counts into a rate."));
     return [total, by, rate];
   },
   async tesla() {
