@@ -506,7 +506,7 @@ def test_source_health(snapdir, monkeypatch):
     R.sgo()                                                     # fails, served from the snapshot
     h = topics.health()
     rt = h["dashboards"]["robotaxi"]
-    assert rt["stale"] == 1 and rt["sources"][0]["host"] == "static.nhtsa.gov" and rt["sources"][0]["error"] == "ConnectionError"
+    assert rt["stale"] == 1 and rt["sources"][0]["host"] == "static.nhtsa.gov" and rt["sources"][0]["error"] == "ConnectionError: down"
     assert set(topics.REGISTRY) <= set(h["dashboards"])
     B.HEALTH[R.SGO]["fail"] = B.HEALTH[R.SGO]["fail"]
     B.STALE[R.SGO] -= 5 * 86400                                  # snapshot five days old: past the 3-day threshold
