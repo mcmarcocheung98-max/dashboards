@@ -123,7 +123,7 @@ function coinRow(c, px, r1, rsiCls) {
     kpi("Market cap", usdBig(K.market_cap)), kpi("RSI 14", r1(K.rsi), rsiCls(K.rsi)), kpi("RSI vs BTC", r1(K.rsi_vs_btc), rsiCls(K.rsi_vs_btc)),
     kpi("Beta to BTC", K.beta == null ? "–" : K.beta.toFixed(2)), kpi("90d vs BTC", pct(K.vs_btc_90d, 0), cls(K.vs_btc_90d)),
     kpi("Base end-2027", px(K.base_2027)), kpi("Base end-2028", px(K.base_2028)));
-  const spark = el("div", { style: "margin-top:6px" }, ...linesChart([{ name: "90 days", points: c.spark || [] }], px, { small: true }));
+  const spark = el("div", { style: "margin-top:6px" }, ...linesChart([{ name: "90 days", points: c.spark || [] }], px, { small: true, sync: false }));
   spark.querySelector(".chart").style.height = "120px";
   const more = el("div", {});
   let loaded = false;
@@ -139,17 +139,20 @@ function coinRow(c, px, r1, rsiCls) {
 function coinCharts(f, px, r1) {
   const S = f.series, end = S.price[S.price.length - 1][0];
   const price = card("Price, 365 days (log), with BTC rebased to the same start", ...linesChart([{ name: f.ticker, points: S.price }, { name: "BTC, rebased", points: S.btc_indexed, dashed: true, color: css("--hold") }], px, { log: true, small: true }));
-  const rsi = card("RSI 14: the coin, and the coin ÷ BTC ratio", ...svgLines([{ name: "RSI vs BTC", points: S.rsi_vs_btc }, { name: "RSI (USD)", points: S.rsi, dashed: true }],
-    { xFmt: v => new Date(v * 1000).toLocaleDateString([], { month: "short", year: "2-digit", timeZone: "UTC" }), xTicks: (() => { const out = []; const d = new Date(S.price[0][0] * 1000); d.setUTCDate(1); d.setUTCMonth(Math.ceil(d.getUTCMonth() / 3) * 3); for (; d.getTime() / 1000 <= end; d.setUTCMonth(d.getUTCMonth() + 3)) out.push(d.getTime() / 1000); return out; })(),
-      yFmt: r1, h: 200, hline: 50, note: "Above 70: has run hard (against BTC for the solid line). Below 30: washed out." }));
+  const rsi = card("RSI 14: the coin ÷ BTC ratio (solid) and the coin in USD (dashed)", ...linesChart([{ name: "RSI vs BTC", points: S.rsi_vs_btc }, { name: "RSI (USD)", points: S.rsi, dashed: true }], r1, { small: true, hlines: [30, 50, 70] }),
+    note("Above 70: has run hard (against BTC for the solid line). Below 30: washed out."));
   const mcap = card("Market cap, 365 days", ...linesChart([{ name: "Market cap", points: S.market_cap }], v => usdBig(v), { small: true }));
   const pts = f.projection || [];
-  const projSeries = [{ name: "Price", points: S.price.filter((p, i) => i % 3 === 0) }];
-  const now = [end, S.price[S.price.length - 1][1]];
-  const band = pts.length ? [{ name: "Bear to bull", points: [[now[0], now[1], now[1]], ...pts.map(p => [new Date(p.date).getTime() / 1000, p.bear, p.bull])], color: css("--s1"), opacity: 0.18 }] : [];
-  const base = pts.length ? [{ name: "Base", points: [now, ...pts.map(p => [new Date(p.date).getTime() / 1000, p.base])], color: css("--s1"), width: 2.5 }] : [];
+  const nowPt = [end, S.price[S.price.length - 1][1]];
+  const at = p => Math.floor(new Date(p.date + "T00:00:00Z").getTime() / 1000);
+  const ws = [];                                        // empty days to the last scenario date, so the axis is to scale in time
+  if (pts.length) for (let t = end + 86400; t <= at(pts[pts.length - 1]); t += 86400) ws.push(t);
   const proj = card("Projection: bear / base / bull at end-2027 and end-2028 (beta " + (f.kpi.beta == null ? "–" : f.kpi.beta.toFixed(2)) + ")",
-    ...svgLines([...projSeries, ...base], { log: true, bands: band, xFmt: v => String(new Date(v * 1000).getUTCFullYear()), xTicks: [S.price[0][0], ...pts.map(p => new Date(p.date).getTime() / 1000)], yFmt: px, h: 240, note: "Shaded = bear to bull range; the line continues the base case." }),
+    ...linesChart([{ name: "Price", points: S.price },
+      ...(pts.length ? [{ name: "Base", points: [nowPt, ...pts.map(p => [at(p), p.base])], color: css("--s1"), width: 3 },
+        { name: "Bull", points: [nowPt, ...pts.map(p => [at(p), p.bull])], dashed: true, color: css("--up") },
+        { name: "Bear", points: [nowPt, ...pts.map(p => [at(p), p.bear])], dashed: true, color: css("--down") }] : [])],
+      px, { log: true, extend: true, whitespace: ws }),
     el("div", { class: "scroll", style: "margin-top:8px" }, el("table", {}, el("tr", {}, ...["Scenario", "Bear", "Base", "Bull", "Implied market cap (base)"].map(h => el("th", {}, h))),
       ...pts.map((p, i) => el("tr", {}, el("td", {}, p.label), el("td", {}, px(p.bear)), el("td", {}, px(p.base)), el("td", {}, px(p.bull)), el("td", {}, usdBig((f.implied_mcap_base[i] || {}).mcap)))))),
     note("Price now × (BTC scenario ÷ BTC now) ^ beta. Mechanical; it says nothing about the coin's own fundamentals, unlocks or survival."));

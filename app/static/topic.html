@@ -66,6 +66,10 @@
 <style>
   .crumbs { max-width: 1100px; margin: 0 auto; padding: 14px 16px 0; font-size: 12.5px; color: var(--muted); }
   .crumbs a { color: var(--muted); text-decoration: none; } .crumbs a:hover { color: var(--ink); }
+  .rangebar { position: sticky; top: 0; z-index: 5; max-width: 1100px; margin: 0 auto; padding: 8px 16px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; background: var(--bg); }
+  .rangebar[hidden] { display: none; }
+  .rangebar .seg { margin: 0; }
+  .rangebar .lab { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
   .warn { font-size: 12.5px; color: var(--sellt); }
   .src { font-size: 12px; color: var(--muted); } .src a { color: var(--ink2); }
   .tl { display: grid; grid-template-columns: 90px 1fr; gap: 6px 12px; font-size: 13px; }
@@ -80,6 +84,7 @@
   <div class="sub" id="stamp"></div>
 </header>
 <nav id="tabs"></nav>
+<div class="rangebar" id="rangebar" hidden></div>
 <main id="view"><div class="card muted">Loading…</div></main>
 <footer id="foot"></footer>
 <script>
@@ -116,6 +121,75 @@ function newChart(host, opts = {}) {
 }
 // fit once the chart has a real width (a chart created while its card was still being laid out would otherwise fit at width 0 and stay squashed)
 const fit = c => { let n = 0; const go = () => { if (c.timeScale().width() > 0 || n++ > 30) c.timeScale().fitContent(); else setTimeout(go, 100); }; requestAnimationFrame(() => requestAnimationFrame(go)); };
+// ---------- one date axis for the whole tab: every time chart joins SYNC; dragging or zooming one moves all, the range bar sets all.
+// A chart with `extend` (a projection running past today) follows the range's start and keeps its own end.
+const PRESETS = [["3m", "3M", 91], ["6m", "6M", 182], ["1y", "1Y", 365], ["2y", "2Y", 730], ["5y", "5Y", 1826], ["all", "All", 0]];
+let SYNC = [], SYNCING = false, RANGE = (() => { try { return JSON.parse(sessionStorage.getItem("range:" + location.pathname) || '"all"'); } catch (e) { return "all"; } })();
+const saveRange = () => { try { sessionStorage.setItem("range:" + location.pathname, JSON.stringify(RANGE)); } catch (e) {} };
+const lastTime = () => Math.max(0, ...SYNC.map(e => e.lastPast || 0)) || Math.floor(Date.now() / 1000);
+function rangeNow() {
+  if (RANGE && typeof RANGE === "object") return RANGE;
+  const p = PRESETS.find(x => x[0] === RANGE);
+  if (!p || !p[2]) return null;
+  const to = lastTime();
+  return { from: to - p[2] * 86400, to: to + 86400 };
+}
+function applyTo(e, r) {
+  if (!e.c.timeScale().width()) return;
+  SYNCING = true;
+  try {
+    if (!r) e.c.timeScale().fitContent();
+    else e.c.timeScale().setVisibleRange(e.extend ? { from: r.from, to: Math.max(r.to, e.last) } : r);
+  } catch (err) { /* a range outside this chart's data: leave it as it is */ }
+  setTimeout(() => { SYNCING = false; }, 0);
+}
+function applyAll() { const r = rangeNow(); SYNC.forEach(e => applyTo(e, r)); rangeBar(); }
+function syncAdd(c, series, pts, opts = {}) {
+  const map = new Map(pts.map(p => [p.time, p.value]));
+  const times = pts.map(p => p.time);
+  const now = Date.now() / 1000;
+  const e = { c, series, map, times, extend: !!opts.extend, last: times[times.length - 1] || 0, lastPast: Math.max(0, ...times.filter(t => t <= now + 86400)), ready: false };
+  SYNC.push(e);
+  let n = 0;
+  const first = () => { if (c.timeScale().width() > 0 || n++ > 30) { applyTo(e, rangeNow()); setTimeout(() => { e.ready = true; }, 120); rangeBar(); } else setTimeout(first, 100); };
+  requestAnimationFrame(() => requestAnimationFrame(first));
+  c.timeScale().subscribeVisibleTimeRangeChange(r => {
+    if (SYNCING || !e.ready || !r || !SYNC.includes(e)) return;
+    const to = e.extend ? Math.min(r.to, lastTime() + 86400) : r.to;
+    RANGE = { from: r.from, to }; saveRange();
+    SYNC.forEach(o => { if (o !== e && o.ready) applyTo(o, RANGE); });
+    rangeBar();
+  });
+  c.subscribeCrosshairMove(p => {
+    if (SYNCING || !SYNC.includes(e)) return;
+    SYNCING = true;
+    SYNC.forEach(o => {
+      if (o === e || !o.series) return;
+      if (!p || p.time == null) { o.c.clearCrosshairPosition(); return; }
+      let t = p.time, v = o.map.get(t);
+      if (v == null && o.times.length) {             // nearest point on the other chart (weekly vs daily data)
+        let lo = 0, hi = o.times.length - 1;
+        while (lo < hi) { const mid = (lo + hi) >> 1; if (o.times[mid] < t) lo = mid + 1; else hi = mid; }
+        if (Math.abs(o.times[lo] - t) <= 8 * 86400) { t = o.times[lo]; v = o.map.get(t); }
+      }
+      if (v == null) o.c.clearCrosshairPosition(); else o.c.setCrosshairPosition(v, t, o.series);
+    });
+    SYNCING = false;
+  });
+  return e;
+}
+function rangeBar() {
+  const bar = document.getElementById("rangebar");
+  if (!bar) return;
+  const live = SYNC.filter(e => charts.includes(e.c));
+  bar.hidden = !live.length;
+  if (!live.length) return;
+  const r = rangeNow(), d = t => new Date(t * 1000).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+  const key = typeof RANGE === "string" ? RANGE : null;
+  bar.replaceChildren(el("span", { class: "lab" }, "Dates, all charts:"),
+    el("div", { class: "seg" }, ...PRESETS.map(([k, l]) => el("button", { class: k === key ? "on" : "", onclick: () => { RANGE = k; saveRange(); applyAll(); } }, l))),
+    el("span", { class: "lab" }, r ? d(r.from) + " – " + d(Math.min(r.to, lastTime())) : "full history"));
+}
 const dedupe = pts => { const m = new Map(); pts.forEach(([t, v]) => m.set(Math.round(t), v)); return [...m].sort((a, b) => a[0] - b[0]).map(([time, value]) => ({ time, value })); };
 
 // several lines on one axis, a legend that toggles each line, values shown under the crosshair
@@ -141,7 +215,10 @@ function linesChart(series, fmt, opts = {}) {
       const d = p && p.seriesData ? p.seriesData.get(m.line) : null;
       m.val.textContent = (m.s.fmt || fmt)(d ? d.value : m.s.points[m.s.points.length - 1][1]);
     }));
-    fit(c);
+    if (made.length && opts.hlines) opts.hlines.forEach(h => made[0].line.createPriceLine({ price: h, color: css("--muted"), lineWidth: 1, lineStyle: 2, axisLabelVisible: false }));
+    if (opts.whitespace && opts.whitespace.length) c.addLineSeries({ visible: false, lastValueVisible: false, priceLineVisible: false }).setData(opts.whitespace.map(t => ({ time: t })));
+    if (made.length && opts.sync !== false) syncAdd(c, made[0].line, dedupe(made[0].s.points.filter(p => p[1] != null)), { extend: opts.extend });
+    else fit(c);
   });
   return [legend, host];
 }
@@ -302,6 +379,7 @@ async function render() {
   document.getElementById("stamp").textContent = "Loading…";
   const old = charts;
   charts = [];
+  SYNC = [];
   try {
     const nodes = await window.TOPIC.VIEWS[current]();
     view.replaceChildren(...[].concat(nodes).filter(Boolean));
@@ -312,6 +390,7 @@ async function render() {
   }
   view.style.opacity = "";
   document.getElementById("stamp").textContent = "Updated " + new Date().toLocaleTimeString();
+  rangeBar();
 }
 function footer() {
   const f = document.getElementById("foot");

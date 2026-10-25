@@ -3,3 +3,4 @@ __pycache__/
 snapshots/
 .venv/
 .DS_Store
+smoke-shots/
