@@ -49,7 +49,7 @@ NHTSA data is public domain.
 
 **`cities.csv`** (`date,operator,city,country,source,note`): a city counts when a fully driverless service is open to the general public (not employees or an invite list); note pilots in `note`.
 
-Rows marked `verify` in `note` and worth clearing against the source: Waymo 50,000 (May 2024, date), Waymo 175,000 (December 2024) and 450,000 (October 2025), Tesla Austin (invite-only with a safety monitor at the time of writing).
+Checked on 25 Oct 2026: Waymo's 50,000 is dated to its 9 May 2024 post. The 175,000 (Dec 2024) and 450,000 (Oct 2025) rows were removed: no Waymo or Alphabet source exists for either (the 450,000 comes from a leaked investor letter). Waymo's 500,000 (Mar 2026) and Baidu's weekly figures from its quarterly results were added. Pony.ai, WeRide and Zoox publish no rides-a-week figure yet: Pony.ai and WeRide report orders per vehicle per day and robotaxi revenue, Zoox cumulative riders. Baidu's Q2 2026 quarter is derived from its interim report (H1 minus Q1) and stays marked `verify` until a release states it.
 
 **`miles.csv`** (`date,series,value,source,note`): cumulative rider-only miles; `date` is the data cut-off the operator states (Waymo: "through June 2026"), not the publish date. `series` is the operator name, matched to every NHTSA reporting entity that starts with it, case-insensitive (`Waymo` matches `Waymo LLC`). Waymo updates its safety hub (waymo.com/safety/impact) about three months after each quarter. Only operators whose ADS crash reports and published miles cover the same vehicles belong here: Tesla (reports include rides with a safety monitor; FSD miles are driver assistance) and Zoox (reports include its safety-driver test fleet) are left out, with the reason in the file's header.
 
@@ -75,5 +75,5 @@ Tesla deliveries and production (Q1 2023 onwards) were checked on 25 Oct 2026 ag
 
 ## Known gaps
 
-- China (Baidu, Pony.ai, WeRide) is covered only by Baidu's quarterly figure and two cities.
+- China: Baidu's quarterly and weekly figures and two cities; Pony.ai and WeRide publish no ride counts, only per-vehicle orders and revenue.
 - Tesla's robotaxi numbers are not published; the Austin row is a marker, not a count.

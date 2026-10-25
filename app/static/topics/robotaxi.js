@@ -7,7 +7,7 @@ const VIEWS = {
     const d = await api("rides"), L = d.latest || {};
     const head = card(null, el("div", { class: "kpis" }, ...Object.entries(L).map(([k, v]) => kpi(k + " · paid rides a week (" + dateOf(v.date) + ")", big(v.value)))), asOf(d));
     const weekly = card("Paid driverless rides per week, as announced", ...linesChart(Object.entries(d.weekly || {}).map(([k, pts]) => ({ name: k, points: pts })), v => big(v)),
-      note("Operator announcements; lines join announcements. Waymo's figures are US-wide across its cities."), cite(d.cited));
+      note("Operator announcements; lines join announcements. Waymo's figures are paid rides, US-wide across its cities. Baidu Apollo Go's are fully driverless operational rides from its quarterly results, two of them peak weeks rather than averages."), cite(d.cited));
     const qs = Object.entries(d.quarterly || {});
     const quarterly = qs.length ? card("Fully driverless rides per quarter (operators that report quarterly)",
       ...svgBars(qs[0][1].map(p => q(p[0])), qs.map((x, i) => ({ name: x[0], values: x[1].map(p => p[1]), color: css(SERIES[i % SERIES.length]) })), { yFmt: v => big(v), labelW: 60 })) : null;

@@ -1,10 +1,13 @@
 date,series,value,source,note
-# Paid fully driverless rides per week, as announced by the operator. One row per announcement.
-2024-05-14,Waymo,50000,https://x.com/Waymo,Waymo announcement - verify date
+# Paid fully driverless rides per week, as announced by the operator. One row per announcement; date = when it was announced.
+2024-05-09,Waymo,50000,https://cleantechnica.com/2024/05/16/waymo-reaches-50000-paid-customer-trips-a-week/,"Waymo post on X: ""more than 50,000 paid trips a week"" in SF, Phoenix and LA (reported)"
 2024-08-20,Waymo,100000,https://x.com/Waymo/status/1825974480066592790,Waymo announcement
-2024-10-29,Waymo,150000,https://techcrunch.com/2024/10/29/waymo-is-now-giving-150000-paid-robotaxi-rides-per-week/,
-2024-12-30,Waymo,175000,https://waymo.com/blog/,year-end figure - verify
+2024-10-29,Waymo,150000,https://techcrunch.com/2024/10/29/waymo-is-now-giving-150000-paid-robotaxi-rides-per-week/,Alphabet Q3 2024 call
 2025-02-25,Waymo,200000,https://techcrunch.com/2025/02/25/waymo-is-now-giving-200000-paid-robotaxi-rides-every-week/,
-2025-04-24,Waymo,250000,https://techcrunch.com/2025/04/24/waymo-is-now-giving-250000-paid-robotaxi-rides-every-week/,
-2025-10-16,Waymo,450000,https://waymo.com/blog/,seed value - verify
-# Other operators: add Baidu Apollo Go, Pony.ai, WeRide, Zoox and Tesla weekly figures here as they announce them (series = operator).
+2025-04-24,Waymo,250000,https://techcrunch.com/2025/04/24/waymo-is-now-giving-250000-paid-robotaxi-rides-every-week/,Alphabet Q1 2025 call
+2026-03-26,Waymo,500000,https://techcrunch.com/2026/03/27/waymo-skyrocketing-ridership-in-one-chart/,"Waymo post on X (reported): over 500,000 paid rides a week across 10 US cities; repeated on Alphabet's Q1 2026 call"
+2025-11-18,Baidu Apollo Go,250000,https://ir.baidu.com/news-releases/news-release-details/baidu-announces-third-quarter-2025-results,"Q3 2025 results: weekly average of over 250,000 fully driverless rides in October 2025"
+2026-02-26,Baidu Apollo Go,300000,https://ir.baidu.com/news-releases/news-release-details/baidu-announces-fourth-quarter-and-fiscal-year-2025-results,"Q4 2025 results: weekly rides peaked at over 300,000 (a peak week, not an average)"
+2026-05-18,Baidu Apollo Go,350000,https://ir.baidu.com/news-releases/news-release-details/baidu-announces-first-quarter-2026-results,"Q1 2026 results: weekly rides peaked at over 350,000 in March 2026 (a peak week)"
+# Removed in Oct 2026 checks: Waymo 175,000 (Dec 2024; no Waymo or Alphabet source found) and 450,000 (Oct 2025 seed; the only report is a leaked investor letter of Dec 2025, not a Waymo figure).
+# No weekly figure published as of 25 Oct 2026: Pony.ai and WeRide report per-vehicle daily orders and revenue, Zoox cumulative riders, Tesla paid and unsupervised miles. Add them here when they announce rides a week.

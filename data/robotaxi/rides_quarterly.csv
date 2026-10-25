@@ -1,6 +1,10 @@
 date,series,value,source,note
-# Fully driverless rides per quarter where the operator reports quarterly (date = quarter start).
-2024-07-01,Baidu Apollo Go,988000,https://ir.baidu.com/,Q3 2024 earnings release
-2024-10-01,Baidu Apollo Go,1100000,https://ir.baidu.com/,Q4 2024 earnings release
-2025-01-01,Baidu Apollo Go,1400000,https://ir.baidu.com/,Q1 2025 earnings release
-2025-04-01,Baidu Apollo Go,2200000,https://ir.baidu.com/,Q2 2025 earnings release
+# Rides per quarter where the operator reports quarterly (date = quarter start). Baidu counts fully driverless rides from Q2 2025; before that its figure is all Apollo Go rides (over 70% driverless in Q3 2024).
+2024-07-01,Baidu Apollo Go,988000,https://ir.baidu.com/news-releases/news-release-details/baidu-announces-third-quarter-2024-results,Q3 2024 results: 988K rides (all rides; fully driverless over 70%)
+2024-10-01,Baidu Apollo Go,1100000,https://ir.baidu.com/news-releases/news-release-details/baidu-announces-fourth-quarter-and-fiscal-year-2024-results,Q4 2024 results: over 1.1 million rides (all rides)
+2025-01-01,Baidu Apollo Go,1400000,https://ir.baidu.com/news-releases/news-release-details/baidu-announces-first-quarter-2025-results,Q1 2025 results: over 1.4 million rides; fully driverless across China since Feb 2025
+2025-04-01,Baidu Apollo Go,2200000,https://ir.baidu.com/news-releases/news-release-details/baidu-announces-second-quarter-2025-results,Q2 2025 results: more than 2.2 million fully driverless rides
+2025-07-01,Baidu Apollo Go,3100000,https://ir.baidu.com/news-releases/news-release-details/baidu-announces-third-quarter-2025-results,Q3 2025 results: 3.1 million fully driverless operational rides
+2025-10-01,Baidu Apollo Go,3400000,https://ir.baidu.com/news-releases/news-release-details/baidu-announces-fourth-quarter-and-fiscal-year-2025-results,Q4 2025 results: 3.4 million fully driverless operational rides
+2026-01-01,Baidu Apollo Go,3200000,https://ir.baidu.com/news-releases/news-release-details/baidu-announces-first-quarter-2026-results,Q1 2026 results: approximately 3.2 million fully driverless operational rides
+2026-04-01,Baidu Apollo Go,900000,https://ir.baidu.com/news-releases/news-release-details/baidu-announces-second-quarter-2026-results,"derived: Baidu's interim report gives over 4.1 million rides in H1 2026, less Q1's 3.2 million; the Q2 release gives no count and the call called ride volume temporarily affected - verify"
