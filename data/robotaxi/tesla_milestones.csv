@@ -1,13 +1,16 @@
 date,area,event,market,source,note
-# Dated Tesla autonomy milestones. area: Robotaxi, Cybercab, FSD, Optimus. One row per event; 'verify' = written from memory.
+# Dated Tesla autonomy milestones. area: Robotaxi, Cybercab, FSD, Optimus. One row per event. Primary source where Tesla published one (its quarterly Update or an SEC filing); otherwise the press report the date was taken from. 'verify' = date or status not confirmed by a primary source.
 2016-10-19,FSD,All new Teslas ship with hardware Tesla says is capable of full self-driving,US,https://www.tesla.com/blog/all-tesla-cars-being-produced-now-have-full-self-driving-hardware,
-2020-10-20,FSD,FSD Beta released to a small group of US owners,US,https://www.tesla.com/,verify date
-2024-03-25,FSD,FSD renamed FSD (Supervised); free one-month trial to US owners,US,https://www.tesla.com/,verify date
+2020-10-20,FSD,FSD Beta starts rolling out to a small group of US owners,US,https://www.engadget.com/tesla-full-self-driving-beta-october-20-171500591.html,start date Tesla's CEO announced; owners reported access from 22 Oct 2020 (press reports)
+2024-03-23,FSD,"FSD renamed FSD (Supervised) with v12.3.3, released with a free one-month trial to US and Canadian owners",US,https://driveteslacanada.ca/?p=90154,press report; the weekend of release and the trial are reported but Tesla's own post was not found - verify exact day
 2024-10-10,Cybercab,Cybercab two-seat robotaxi unveiled at the We Robot event,US,https://www.tesla.com/we-robot,
-2025-02-25,FSD,Partial FSD features released in China,China,https://www.tesla.com/,verify
-2025-06-22,Robotaxi,Robotaxi service starts in Austin with a safety monitor in the passenger seat (invite-only),US,https://www.tesla.com/,verify
-2025-07-31,Robotaxi,Ride-hailing in the San Francisco Bay Area with a safety driver,US,https://www.tesla.com/,verify date
-2025-09-01,FSD,FSD (Supervised) launched in Australia and New Zealand,Australia/NZ,https://www.tesla.com/,verify date
-2026-04-01,Cybercab,Cybercab volume production targeted for 2026 (Tesla guidance),US,https://ir.tesla.com/,target - verify current guidance
-2026-10-25,FSD,UK: not yet approved for public roads; awaits the Automated Vehicles Act framework,UK,https://www.gov.uk/government/collections/connected-and-automated-vehicles,status as of this date - verify
+2025-02-25,FSD,"City-streets driver assistance (partial FSD features) pushed to cars in China, in batches",China,https://www.bloomberg.com/news/articles/2025-02-25/tesla-rolls-out-long-awaited-fsd-features-to-drivers-in-china,press report of Tesla's notice to owners; less capable than the US version
+2025-06-22,Robotaxi,Robotaxi service starts in Austin with a safety monitor in the front passenger seat (invite-only),US,https://www.sec.gov/Archives/edgar/data/1318605/000110465925087598/tm252289-4_pre14a.htm,Tesla 2025 proxy statement: launched 22 Jun 2025 with safety riders
+2025-07-30,Robotaxi,Ride-hailing opens in the San Francisco Bay Area with a safety driver in the driver's seat,US,https://driveteslacanada.ca/news/tesla-expands-robotaxi-service-to-the-bay-area-with-safety-drivers/,press report of the in-app announcement on a Wednesday night; launch confirmed in Tesla's Q3 2025 Update - verify exact day
+2025-09-17,FSD,FSD (Supervised) launched in Australia and New Zealand (HW4 cars),Australia/NZ,https://www.notateslaapp.com/news/3066/tesla-officially-launches-fsd-in-australia-new-zealand-introduces-30-day-free-trial,press report of Tesla's launch post
+2026-01-28,Robotaxi,Tesla reports it began removing the safety monitor from some Austin customer rides in January,US,https://assets-ir.tesla.com/tesla-contents/IR/TSLA-Q4-2025-Update.pdf,Q4 2025 Update gives the month (January 2026) not the day; row dated near the update - verify day of the update
+2026-04-22,Robotaxi,Tesla reports unsupervised Robotaxi rides launched in Dallas and Houston in April; Cybercab pilot production started,US,https://assets-ir.tesla.com/tesla-contents/IR/TSLA-Q1-2026-Update.pdf,date = Q1 2026 Update
+2026-07-22,Robotaxi,"Tesla reports Robotaxi live in seven US metros, with unsupervised rides in Miami, Orlando and Tampa from July",US,https://assets-ir.tesla.com/tesla-contents/IR/TSLA-Q2-2026-Update.pdf,date = Q2 2026 Update - verify day of the update
+2026-09-03,Cybercab,First Robotaxi rides in Cybercabs (Austin),US,https://assets-ir.tesla.com/tesla-contents/IR/TSLA-Q3-2026-Update.pdf,Q3 2026 Update
+2026-10-25,FSD,UK: FSD (Supervised) not approved; no approval announced by Tesla or the government by this date,UK,https://www.gov.uk/government/collections/connected-and-automated-vehicles,status as of this date: absence of an announcement - verify
 2026-10-25,FSD,Hong Kong: FSD not offered,HK,https://www.tesla.com/en_hk,status as of this date - verify

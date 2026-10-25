@@ -61,13 +61,13 @@ Local preview: `python -m app.server`, then open `/robotaxi`.
 
 | Tab | What | Source | How |
 |---|---|---|---|
-| Tesla | TSLA share price; quarterly deliveries; FSD (Supervised) cumulative miles; every autonomy milestone (Robotaxi, Cybercab, FSD by country including UK and Hong Kong status) | Yahoo Finance; Tesla investor releases and tesla.com | Price automated; the rest hand-entered: `tesla.csv`, `tesla_milestones.csv` |
+| Tesla | TSLA share price; quarterly deliveries; FSD (Supervised) cumulative miles; every autonomy milestone (Robotaxi, Cybercab, FSD by country including UK and Hong Kong status) | Nasdaq quote API (Yahoo refuses Railway); Tesla's quarterly production and deliveries releases (SEC 8-K copies), quarterly Updates and @Tesla posts | Price automated; the rest hand-entered: `tesla.csv`, `tesla_milestones.csv` |
 | Safety | Crash reports per million driverless miles for operators that publish miles | NHTSA SGO counts ÷ `miles.csv` | Automated count, hand-entered miles |
 | Footprint & rules | Laws, licences and pilots in the US, UK (Automated Vehicles Act, Wayve/Uber London pilot), Hong Kong (Baidu Apollo airport-area licence) and China | Government and operator pages | Hand-entered: `regulation.csv` |
 | Footprint & rules | California driverless trips per quarter | CPUC spreadsheets | Hand-entered: `cpuc_trips.csv` (the files move between addresses, so not automated) |
 | Rides | Room for Baidu Apollo Go, Pony.ai, WeRide, Zoox and Tesla weekly figures | Operator announcements | Hand-entered rows in `rides.csv` |
 
-Tesla deliveries, FSD miles and several milestone dates were written from memory and are marked `verify`: check them against ir.tesla.com and tesla.com before relying on them.
+Tesla deliveries and production (Q1 2023 onwards) were checked on 25 Oct 2026 against Tesla's quarterly production and deliveries releases; each row cites the copy Tesla files with the SEC (Form 8-K, exhibit 99.1), because ir.tesla.com is not reachable from every network. Add a quarter by copying the totals from the new release (out on about the 2nd of the month after the quarter). FSD (Supervised) miles are the round figures @Tesla posts (lower bounds: "over 10 billion"). Milestones cite Tesla's quarterly Update where it reports the event, otherwise the press report the date was taken from; rows still marked `verify` say which part (usually the exact day) is unconfirmed.
 
 ## Known gaps
 

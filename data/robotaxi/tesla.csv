@@ -1,14 +1,34 @@
 date,series,value,source,note
-# Tesla quarterly figures (date = quarter start) and FSD miles. series: "Deliveries", "Production", "FSD (Supervised) cumulative miles". Deliveries are from Tesla's quarterly releases as remembered; check each against ir.tesla.com and clear 'verify'.
-2023-01-01,Deliveries,422875,https://ir.tesla.com/,verify against the Q1 2023 release
-2023-04-01,Deliveries,466140,https://ir.tesla.com/,verify
-2023-07-01,Deliveries,435059,https://ir.tesla.com/,verify
-2023-10-01,Deliveries,484507,https://ir.tesla.com/,verify
-2024-01-01,Deliveries,386810,https://ir.tesla.com/,verify
-2024-04-01,Deliveries,443956,https://ir.tesla.com/,verify
-2024-07-01,Deliveries,462890,https://ir.tesla.com/,verify
-2024-10-01,Deliveries,495570,https://ir.tesla.com/,verify
-2025-01-01,Deliveries,336681,https://ir.tesla.com/,verify
-2025-04-01,Deliveries,384122,https://ir.tesla.com/,verify
-2025-07-01,Deliveries,497099,https://ir.tesla.com/,verify
-2025-03-31,FSD (Supervised) cumulative miles,3000000000,https://www.tesla.com/fsd,approximate - verify on tesla.com/fsd
+# Tesla quarterly figures (date = quarter start) and FSD miles. series: "Deliveries", "Production", "FSD (Supervised) cumulative miles". Deliveries and production are the totals in Tesla's quarterly production and deliveries release, cited as the copy Tesla files with the SEC (Form 8-K, exhibit 99.1); ir.tesla.com/press carries the same release.
+2023-01-01,Deliveries,422875,https://www.sec.gov/Archives/edgar/data/1318605/000156459023005126/tsla-ex991_7.htm,Q1 2023 production and deliveries release
+2023-04-01,Deliveries,466140,https://www.sec.gov/Archives/edgar/data/1318605/000095017023031241/tsla-ex99_1.htm,Q2 2023 production and deliveries release
+2023-07-01,Deliveries,435059,https://www.sec.gov/Archives/edgar/data/1318605/000095017023050938/tsla-ex99_1.htm,Q3 2023 production and deliveries release
+2023-10-01,Deliveries,484507,https://www.sec.gov/Archives/edgar/data/1318605/000095017024000282/tsla-ex99_1.htm,Q4 2023 production and deliveries release
+2024-01-01,Deliveries,386810,https://www.sec.gov/Archives/edgar/data/1318605/000095017024040274/tsla-ex99_1.htm,Q1 2024 production and deliveries release
+2024-04-01,Deliveries,443956,https://www.sec.gov/Archives/edgar/data/1318605/000162828024030714/exhibit991.htm,Q2 2024 production and deliveries release
+2024-07-01,Deliveries,462890,https://www.sec.gov/Archives/edgar/data/1318605/000162828024041816/ex991.htm,Q3 2024 production and deliveries release
+2024-10-01,Deliveries,495570,https://www.sec.gov/Archives/edgar/data/1318605/000162828025000007/exhibit991.htm,Q4 2024 production and deliveries release
+2025-01-01,Deliveries,336681,https://www.sec.gov/Archives/edgar/data/1318605/000162828025016070/exhibit9911.htm,Q1 2025 production and deliveries release
+2025-04-01,Deliveries,384122,https://www.sec.gov/Archives/edgar/data/1318605/000162828025033842/exhibit99111.htm,Q2 2025 production and deliveries release
+2025-07-01,Deliveries,497099,https://www.sec.gov/Archives/edgar/data/1318605/000162828025043530/exhibit991111.htm,Q3 2025 production and deliveries release
+2025-10-01,Deliveries,418227,https://www.sec.gov/Archives/edgar/data/1318605/000162828026000016/exhibit9914.htm,Q4 2025 production and deliveries release
+2026-01-01,Deliveries,358023,https://www.sec.gov/Archives/edgar/data/1318605/000162828026022956/exhibit9911111.htm,Q1 2026 production and deliveries release
+2026-04-01,Deliveries,480126,https://www.sec.gov/Archives/edgar/data/1318605/000162828026046717/exhibit99111111.htm,Q2 2026 production and deliveries release
+2026-07-01,Deliveries,486532,https://www.sec.gov/Archives/edgar/data/1318605/000162828026064366/exhibit991111111.htm,Q3 2026 production and deliveries release
+2023-01-01,Production,440808,https://www.sec.gov/Archives/edgar/data/1318605/000156459023005126/tsla-ex991_7.htm,Q1 2023 production and deliveries release
+2023-04-01,Production,479700,https://www.sec.gov/Archives/edgar/data/1318605/000095017023031241/tsla-ex99_1.htm,Q2 2023 production and deliveries release
+2023-07-01,Production,430488,https://www.sec.gov/Archives/edgar/data/1318605/000095017023050938/tsla-ex99_1.htm,Q3 2023 production and deliveries release
+2023-10-01,Production,494989,https://www.sec.gov/Archives/edgar/data/1318605/000095017024000282/tsla-ex99_1.htm,Q4 2023 production and deliveries release
+2024-01-01,Production,433371,https://www.sec.gov/Archives/edgar/data/1318605/000095017024040274/tsla-ex99_1.htm,Q1 2024 production and deliveries release
+2024-04-01,Production,410831,https://www.sec.gov/Archives/edgar/data/1318605/000162828024030714/exhibit991.htm,Q2 2024 production and deliveries release
+2024-07-01,Production,469796,https://www.sec.gov/Archives/edgar/data/1318605/000162828024041816/ex991.htm,Q3 2024 production and deliveries release
+2024-10-01,Production,459445,https://www.sec.gov/Archives/edgar/data/1318605/000162828025000007/exhibit991.htm,Q4 2024 production and deliveries release
+2025-01-01,Production,362615,https://www.sec.gov/Archives/edgar/data/1318605/000162828025016070/exhibit9911.htm,Q1 2025 production and deliveries release
+2025-04-01,Production,410244,https://www.sec.gov/Archives/edgar/data/1318605/000162828025033842/exhibit99111.htm,Q2 2025 production and deliveries release
+2025-07-01,Production,447450,https://www.sec.gov/Archives/edgar/data/1318605/000162828025043530/exhibit991111.htm,Q3 2025 production and deliveries release
+2025-10-01,Production,434358,https://www.sec.gov/Archives/edgar/data/1318605/000162828026000016/exhibit9914.htm,Q4 2025 production and deliveries release
+2026-01-01,Production,408386,https://www.sec.gov/Archives/edgar/data/1318605/000162828026022956/exhibit9911111.htm,Q1 2026 production and deliveries release
+2026-04-01,Production,451758,https://www.sec.gov/Archives/edgar/data/1318605/000162828026046717/exhibit99111111.htm,Q2 2026 production and deliveries release
+2026-07-01,Production,464391,https://www.sec.gov/Archives/edgar/data/1318605/000162828026064366/exhibit991111111.htm,Q3 2026 production and deliveries release
+2026-02-18,FSD (Supervised) cumulative miles,8000000000,https://x.com/Tesla/status/2024177015570767920,@Tesla: owners have driven >8 billion miles on FSD (Supervised); a lower bound
+2026-05-03,FSD (Supervised) cumulative miles,10000000000,https://x.com/Tesla/status/2050991662076477504,@Tesla: over 10 billion miles on FSD (Supervised); a lower bound
