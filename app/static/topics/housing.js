@@ -76,6 +76,7 @@ const VIEWS = {
     const tbl = card("Latest", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Market", "Index (2015 = 100)", "Change on a year", "Month"].map(h => el("th", {}, h))),
       ...(d.table || []).map(r => el("tr", {}, el("td", {}, r.market), el("td", {}, r.index == null ? "–" : r.index.toFixed(0)), el("td", { class: cls(r.yoy) }, pct(r.yoy, 1)), el("td", {}, r.month))))));
     const rates = d.rates ? card("Borrowing costs: UK 2-year fixed, US 30-year fixed, HK 1-month HIBOR (%)", ...linesChart(Object.entries(d.rates).map(([k, pts]) => ({ name: k, points: pts })), v => v == null ? "–" : v.toFixed(2) + "%", { small: true }),
+      Object.keys(d.rates_missing || {}).length ? el("div", { class: "muted" }, "Not available right now: " + Object.keys(d.rates_missing).join(", ") + ".") : null,
       note("Most Hong Kong mortgages float on HIBOR or prime, most US ones are fixed for 30 years, most UK ones are fixed for two to five years: the same move in policy rates reaches each market at a different speed.")) : card("Rates", el("div", { class: "muted" }, "Not available right now (" + (d.rates_error || "no data") + ")."));
     return [idx, tbl, rates];
   },

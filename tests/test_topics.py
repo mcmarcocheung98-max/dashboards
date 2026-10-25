@@ -539,6 +539,18 @@ def test_housing_boroughs_global_and_fixed_rate(snapdir, monkeypatch):
     assert {"London", "United Kingdom", "Camden", "City of Westminster"} <= set(H.regions()) and "Leeds" not in H.regions()
 
 
+def test_housing_global_survives_a_refused_hibor_and_dates_quarterly_change(snapdir, monkeypatch):
+    H = housing_mocks(monkeypatch)
+
+    def refused(url, ttl, **k):
+        raise RuntimeError("405 Client Error: Not Allowed")
+    monkeypatch.setattr(H, "fetch_json", refused)
+    g = H._global_now()
+    assert set(g["rates"]) == {"UK 2-year fixed (75% LTV)", "US 30-year fixed"} and list(g["rates_missing"]) == ["HK 1-month HIBOR"]
+    ny = next(r for r in g["table"] if r["market"] == "New York metro (FHFA)")
+    assert abs(ny["yoy"] - 8 / 424) < 0.001, ny            # fixture: +8 a year on a quarterly series, not 13 quarters back
+
+
 def test_robotaxi_tesla_rate_and_rules(snapdir, monkeypatch):
     from app.topics import robotaxi as R
     monkeypatch.setattr(R, "fetch", lambda url, ttl, **k: SGO)

@@ -61,7 +61,9 @@ The first live check showed three sources refusing the server, so the dashboard 
 | CPIH and average weekly earnings | ONS timeseries API (retired: HTTP 404) | The same series as CSV from the ONS website (`/generator?format=csv`) |
 | US 30-year mortgage rate | FRED (times out from cloud servers) | Freddie Mac's PMMS workbook |
 | US house prices (Case-Shiller) | FRED | FHFA house price indexes: US purchase-only (monthly, seasonally adjusted), New York and San Francisco metro divisions (quarterly) |
-| Hong Kong HIBOR | HKMA API with a 1,000-record page (HTTP 405) | The same API, 100 records a page |
+| Hong Kong HIBOR | HKMA API (HTTP 405 with an HTML block page, even for a 3-record page: the HKMA firewall refuses Railway, not the page size) | Still the HKMA API, 100 records a page; until it answers, the borrowing-costs card shows the UK and US lines and names HIBOR as not available |
+
+Live check, 25 Oct 2026 (Actions > live-check, `/api/housing/global`): London, US national, New York and San Francisco (FHFA) lines all load; HIBOR fails (HKMA 405) and the Hong Kong index fails to parse (the RVD workbook downloads, 296 KB, but its layout is not the one assumed). `/api/housing/layout` (not a tab, cached 30 minutes) shows what the server sees at the uncertain sources: the first and last rows of RVD workbooks 1 to 6, HKMA with other request headers, Nomis ASHE for London, and the file links on the ONS private rents pages. Read it with Actions > show-json and that URL.
 
 ## Added in round 3
 
@@ -79,3 +81,7 @@ The RVD workbook URL (`his_data_4.xls`) and its layout are the least certain par
 - The UK HPI is about two months behind the market and its latest months are provisional.
 - Pay is UK-wide, not London (see above). London earnings exist in ONS's ASHE tables but only yearly.
 - The Land Registry, ONS and Bank of England sites may refuse requests from Railway's US servers; the page would then show the stale note until a snapshot exists. If that happens on first deploy, the fix is to fetch once from elsewhere and copy the snapshot files to the volume, or to route those downloads through a UK proxy.
+
+## Requests for shared code
+
+- **`xlrd` in requirements.txt** (requested 25 Oct 2026). The Rating and Valuation Department publishes its Hong Kong price and rental indices as legacy `.xls` workbooks (`his_data_N.xls`); pandas reads those only with `xlrd` (`xlrd>=2.0`), which is not installed, so the Hong Kong line cannot load from the workbook on the server. openpyxl reads `.xlsx` only. One line: `xlrd>=2.0`.

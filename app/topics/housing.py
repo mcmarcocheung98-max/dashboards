@@ -274,15 +274,15 @@ def parse_rvd(content: bytes) -> pd.Series:
 
 
 def hk_index() -> pd.Series:
-    auto = pd.Series(dtype=float)
+    auto, why = pd.Series(dtype=float), ""
     try:
         auto = parse_rvd(fetch(HK_RVD, TTL, binary=True, min_bytes=1000).encode("latin-1"))
-    except Exception:
-        pass
+    except Exception as e:          # a legacy .xls needs xlrd, which requirements.txt does not have yet (see README, requests for shared code)
+        why = f" ({type(e).__name__}: {str(e)[:120]})"
     hand = manual("housing", "hk_price_index")
     s = pd.concat([hand if isinstance(hand, pd.Series) else pd.Series(dtype=float), auto])
     if s.empty:
-        raise ValueError("no Hong Kong price index: RVD workbook not readable and data/housing/hk_price_index.csv empty")
+        raise ValueError(f"no Hong Kong price index: RVD workbook not readable{why} and data/housing/hk_price_index.csv empty")
     return s[~s.index.duplicated(keep="last")].sort_index()
 
 
@@ -434,20 +434,37 @@ def _boroughs_now() -> dict:
     return {"rows": rows, "indexed": series, "errors": errors, "as_of": max(r["month"] for r in rows), "stale": {}, "updated": int(time.time())}
 
 
+def _rates(missing: dict) -> dict:
+    """Each borrowing cost on its own, so one refused source (HKMA refuses Railway) leaves the others on the chart; missing names it."""
+    out = {}
+    for name, fn in (("UK 2-year fixed (75% LTV)", boe_fixed), ("US 30-year fixed", lambda: us_mortgage().resample("MS").last()), ("HK 1-month HIBOR", hk_hibor)):
+        try:
+            out[name] = _pts(fn(), 2)
+        except Exception as e:
+            missing[name] = f"{type(e).__name__}: {str(e)[:120]}"
+    if not out:
+        raise ValueError("no borrowing-cost series reachable")
+    return out
+
+
 def _global_now() -> dict:
     lon = hpi("london")
+    missing: dict = {}
     out = payload({"london": lambda: _pts(_rebase(lon["index"].dropna()), 1),
                    "us": lambda: {k: _pts(_rebase(v), 1) for k, v in fhfa().items()},
                    "hk": lambda: _pts(_rebase(hk_index()), 1),
-                   "rates": lambda: {"UK 2-year fixed (75% LTV)": _pts(boe_fixed(), 2), "US 30-year fixed": _pts(us_mortgage().resample("MS").last(), 2),
-                                     "HK 1-month HIBOR": _pts(hk_hibor(), 2)}},
+                   "rates": lambda: _rates(missing)},
                   sources=[HK_RVD, HK_HIBOR, BOE_FIXED] + [PMMS, FHFA],
                   as_of=latest_date(lon["index"]))
+    out["rates_missing"] = missing
 
     def yy(pts):
-        if not pts or len(pts) < 13:
+        """Change on the point a year before the latest (by date, so monthly and quarterly series both work)."""
+        if not pts:
             return None
-        return _r(pts[-1][1] / pts[-13][1] - 1, 4)
+        t = pts[-1][0] - 365 * 86400
+        prev = [p for p in pts if p[0] <= t + 20 * 86400]
+        return _r(pts[-1][1] / prev[-1][1] - 1, 4) if prev and prev[-1][0] >= t - 40 * 86400 else None
     table = []
     if out.get("london"):
         table.append({"market": "London", "index": out["london"][-1][1], "yoy": yy(out["london"]), "month": pd.Timestamp(out["london"][-1][0], unit="s").strftime("%Y-%m")})
@@ -460,13 +477,70 @@ def _global_now() -> dict:
     return out
 
 
-def _cached_ep(name, fn):
+LAYOUT_PROBES = {
+    "hkma json accept": (HK_HIBOR.format(offset=0).replace("pagesize=100", "pagesize=3"), {"Accept": "application/json"}),
+    "hkma plain ua": (HK_HIBOR.format(offset=0).replace("pagesize=100", "pagesize=3"), {"User-Agent": "python-requests/2.32", "Accept": "*/*"}),
+    "nomis ashe london": ("https://www.nomisweb.co.uk/api/v01/dataset/NM_30_1.data.csv?geography=2013265927&sex=8&item=2&pay=7&measures=20100"
+                          "&select=date_name,geography_name,sex_name,item_name,pay_name,obs_value", None),
+    "nomis ashe london workplace": ("https://www.nomisweb.co.uk/api/v01/dataset/NM_99_1.data.csv?geography=2013265927&sex=8&item=2&pay=7&measures=20100"
+                                    "&select=date_name,geography_name,sex_name,item_name,pay_name,obs_value", None),
+}
+LAYOUT_PAGES = ["https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics",
+                "https://www.ons.gov.uk/economy/inflationandpriceindices/bulletins/privaterentandhousepricesuk/latest"]
+
+
+def _layout_now() -> dict:
+    """Not a tab: what the server sees at sources whose layout or reachability is uncertain (RVD workbooks, HKMA, ONS rents, Nomis ASHE),
+    so parsers can be written against the real files. Read with Actions > show-json on /api/housing/layout."""
+    import re
+    from concurrent.futures import ThreadPoolExecutor
+    from io import BytesIO
+    import requests
+    from ._base import UA
+
+    def rvd(url):
+        r = requests.get(url, headers=UA, timeout=20)
+        row = {"status": r.status_code, "bytes": len(r.content)}
+        if r.ok:
+            xl = pd.ExcelFile(BytesIO(r.content))
+            for sh in xl.sheet_names[:4]:
+                d = xl.parse(sh, header=None).dropna(how="all")
+                rows = [[str(c)[:40] for c in rw if not (isinstance(c, float) and np.isnan(c))] for rw in d.values.tolist()]
+                row[sh] = {"shape": list(d.shape), "head": rows[:14], "tail": rows[-4:]}
+        return row
+
+    def probe(url, headers):
+        r = requests.get(url, headers=headers or UA, timeout=20)
+        return {"status": r.status_code, "type": r.headers.get("content-type", ""), "bytes": len(r.content), "start": r.text[:600]}
+
+    def page(url):
+        r = requests.get(url, headers=UA, timeout=20)
+        return {"status": r.status_code, "links": sorted(set(re.findall(r'href="(/file\?uri=[^"]+|[^"]*/timeseries/[^"]+)"', r.text)))[:60]}
+
+    jobs = {("rvd", f"{k}.{e}"): (rvd, f"https://www.rvd.gov.hk/doc/en/statistics/his_data_{k}.{e}") for k in range(1, 7) for e in ("xls", "xlsx")}
+    jobs.update({("probes", name): (probe, url, headers) for name, (url, headers) in LAYOUT_PROBES.items()})
+    jobs.update({("pages", url): (page, url) for url in LAYOUT_PAGES})
+
+    def run(job):
+        try:
+            return job[0](*job[1:])
+        except Exception as e:
+            return {"error": f"{type(e).__name__}: {str(e)[:160]}"}
+    out: dict = {"rvd": {}, "probes": {}, "pages": {}}
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        for (group, key), res in zip(jobs, ex.map(run, jobs.values())):
+            out[group][key] = res
+    return out
+
+
+def _cached_ep(name, fn, ttl=6 * 3600):
     from ..cache import _cached
-    return lambda: _cached(f"topic:housing:{name}", 6 * 3600, fn)
+    return lambda: _cached(f"topic:housing:{name}", ttl, fn)
 
 
 ENDPOINTS = {"prices": _cached_ep("prices", _prices_now), "market": _cached_ep("market", _market_now), "afford": _cached_ep("afford", _afford_now),
-             "boroughs": _cached_ep("boroughs", _boroughs_now), "global": _cached_ep("global", _global_now)}
+             "boroughs": _cached_ep("boroughs", _boroughs_now), "global": _cached_ep("global", _global_now),
+             "layout": _cached_ep("layout", _layout_now, 1800)}
 
 
 REGIONS = ["London", "United Kingdom"] + [borough_name(b) for b in BOROUGHS]
