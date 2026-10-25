@@ -532,6 +532,18 @@ def test_ai_merged_endpoints(snapdir, monkeypatch):
     assert r["US"]["ai_wide_index"] and r["US"]["ai_wide_over_professions"]
 
 
+def test_ai_layout_probe_reports_errors_instead_of_failing(monkeypatch):
+    import requests
+    from app.topics import ai
+    def down(*a, **k):
+        raise requests.ConnectionError("offline")
+    monkeypatch.setattr(requests, "get", down)
+    out = ai._layout_now()
+    B.json_safe(out)
+    assert set(out) == {"pages", "csd", "files"} and len(out["csd"]) == len(ai.CSD_TABLES)
+    assert all("error" in v for g in out.values() for v in g.values())
+
+
 # ------------------------------------------------------------------ housing: boroughs, fixed rate, US and HK
 def _rvd_xls():
     import io
