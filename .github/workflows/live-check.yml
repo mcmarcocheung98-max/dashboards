@@ -1,0 +1,37 @@
+name: live-check
+# Opens every tab of every dashboard on the deployed site in headless Chromium (scripts/smoke.py --live) and checks /api/health.
+# Run it by hand after a deploy (Actions > live-check > Run workflow); screenshots are attached to the run.
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Site to check"
+        default: "https://dashboards-production-bde6.up.railway.app"
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt playwright && python -m playwright install --with-deps chromium
+      - name: Source health
+        run: |
+          curl -fsS "${{ inputs.url }}/api/health" | python -c "
+          import json, sys
+          h = json.load(sys.stdin)
+          print('checked', h['checked'])
+          for slug, d in h['dashboards'].items():
+              print(f\"{slug:12} fresh={d['fresh']} stale={d['stale']} failing={d['failing']} alerts={d['alerts']}\")
+              for s in d['sources']:
+                  if s['status'] != 'fresh':
+                      print('   ', s['status'], s['host'], s['since'], s['error'] or '')
+          "
+      - name: Every tab
+        run: python scripts/smoke.py --live "${{ inputs.url }}" --out smoke-shots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-shots
+          path: smoke-shots/

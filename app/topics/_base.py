@@ -67,6 +67,17 @@ def _last(s: pd.Series):
 
 # ------------------------------------------------------------------ fetch with a disk snapshot
 STALE: dict[str, float] = {}            # url -> snapshot time, for sources served from the snapshot because the download failed
+HEALTH: dict[str, dict] = {}            # url -> {"module", "ok", "fail", "error"}: last success / failure (unix s) of each real download
+
+
+def _caller_module() -> str:
+    """The dashboard module that asked for this download (app.topics.<name>), for grouping /api/health by dashboard."""
+    import inspect
+    for f in inspect.stack()[2:12]:
+        m = f.frame.f_globals.get("__name__", "")
+        if m.startswith("app.topics.") and not m.endswith("._base"):
+            return m.rsplit(".", 1)[1]
+    return "unknown"
 
 
 def _snap(url: str) -> Path:
@@ -89,6 +100,7 @@ def fetch(url: str, ttl: float = DAY, *, curl: bool = False, headers: dict | Non
     download fails. Raises only when there is neither."""
     def go():
         snap = _snap(url)
+        h = HEALTH.setdefault(url, {"module": _caller_module(), "ok": None, "fail": None, "error": None})
         try:
             text = _download(url, timeout, curl, headers, binary)
             if len(text) < min_bytes:
@@ -96,8 +108,10 @@ def fetch(url: str, ttl: float = DAY, *, curl: bool = False, headers: dict | Non
             SNAP_DIR.mkdir(parents=True, exist_ok=True)
             snap.write_text(text, encoding="utf-8")
             STALE.pop(url, None)
+            h.update(ok=time.time(), error=None)
             return text
-        except Exception:
+        except Exception as e:
+            h.update(fail=time.time(), error=type(e).__name__)
             if snap.exists():
                 STALE[url] = snap.stat().st_mtime
                 return snap.read_text(encoding="utf-8")
@@ -159,6 +173,30 @@ def manual_sources(slug: str, name: str) -> list[dict]:
 
 
 # ------------------------------------------------------------------ payloads
+def health(module_to_slug: dict[str, str], stale_days: float = 3, failing_days: float = 1) -> dict:
+    """Every source downloaded since the server started, grouped by dashboard: fresh (last download worked), stale (serving a snapshot
+    because downloads fail), failing (no snapshot to fall back on). `alert` marks those past the thresholds the daily check uses."""
+    from urllib.parse import urlparse
+    now = time.time()
+    out: dict = {}
+    for url, h in sorted(HEALTH.items()):
+        slug = module_to_slug.get(h["module"], h["module"])
+        if url in STALE:
+            status, since = "stale", STALE[url]
+        elif h["ok"] and (not h["fail"] or h["ok"] >= h["fail"]):
+            status, since = "fresh", h["ok"]
+        else:
+            status, since = "failing", h["fail"]
+        age = (now - since) / 86400 if since else None
+        alert = (status == "stale" and age is not None and age > stale_days) or (status == "failing" and (h["ok"] is None or (now - h["ok"]) / 86400 > failing_days))
+        d = out.setdefault(slug, {"fresh": 0, "stale": 0, "failing": 0, "alerts": 0, "sources": []})
+        d[status] += 1
+        d["alerts"] += int(bool(alert))
+        d["sources"].append({"host": urlparse(url).netloc, "url": url, "status": status, "since": time.strftime("%Y-%m-%d %H:%M", time.gmtime(since)) if since else None,
+                             "days": round(age, 2) if age is not None else None, "error": h["error"], "alert": bool(alert)})
+    return {"dashboards": out, "checked": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(now)), "thresholds": {"stale_days": stale_days, "failing_days": failing_days}}
+
+
 def payload(parts: dict, sources: list[str] = (), as_of=None) -> dict:
     """{key: fn()} with _part; adds as_of (latest date seen, or the one given) and stale ({url: since} for snapshot-served sources)."""
     out: dict = {}

@@ -7,6 +7,7 @@ GET /api/index        the list of dashboards
 GET /api/<slug>/meta  title, tabs, sources
 GET /api/<slug>/<n>   that dashboard's data (JSON); 404 unknown, 503 when the source is down and no snapshot exists
 GET /healthz          'ok'
+GET /api/health       every data source used since start, per dashboard: fresh / stale (serving a snapshot) / failing, with alerts
 
 A background warmer recomputes expired data every 10 minutes so a visitor never waits for a cold cache (WARM=0 turns it off).
 """
@@ -54,6 +55,9 @@ def make_app() -> web.Application:
     async def api_index(request):
         return _json(topics.index())
 
+    async def api_health(request):
+        return _json(topics.health())
+
     async def api(request):
         slug, name = request.match_info["slug"], request.match_info["name"]
         if slug not in topics.REGISTRY:
@@ -79,6 +83,7 @@ def make_app() -> web.Application:
     app.router.add_get("/", index)
     app.router.add_get("/healthz", healthz)
     app.router.add_get("/api/index", api_index)
+    app.router.add_get("/api/health", api_health)
     app.router.add_get("/api/{slug}/{name}", api)
     app.router.add_get("/{slug}", page)
     return app

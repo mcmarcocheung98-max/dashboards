@@ -34,6 +34,13 @@ pytest -q                                   # unit tests on fixtures, no network
 pytest -m network tests/test_sources.py     # fetches every live source: run by hand to see what changed or went away
 ```
 
+## Checking that it works
+
+- `python scripts/smoke.py` opens every tab of every dashboard in headless Chromium against a local server fed with the test fixtures, checks for JavaScript errors and that the shared date axis moves every chart, and saves screenshots to `smoke-shots/`.
+- `python scripts/smoke.py --live https://<domain>` does the same against the deployed site with real data. On GitHub: Actions → **live-check** → Run workflow; it also prints `/api/health`.
+- `/api/health` on the site lists every data source used since the last restart, per dashboard: fresh, stale (serving its last good copy) or failing. The index page shows the counts under each dashboard.
+- Actions → **source-health** runs daily at 07:17 UTC and keeps one issue labelled `source-health` open while any source has served a copy older than 3 days or failed for more than a day with nothing to show; it closes the issue when all are healthy. Set the repository variable `DASHBOARDS_URL` if the domain changes.
+
 ## Deploy on Railway
 
 1. Railway → New Project → Deploy from GitHub repo → this repository. Railway reads `railway.json` and builds the `Dockerfile`.

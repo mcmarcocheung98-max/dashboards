@@ -17,7 +17,7 @@ How the four public dashboards (`/`) go from built to trusted and growing, in or
 
 Done when: every tab shows live or snapshot data, no "not available" card, no `verify` rows.
 
-## Phase 1: make them self-reporting (one small change to the shared plumbing)
+## Phase 1: make them self-reporting (done: /api/health, index counts, daily source-health issue, live-check workflow) (one small change to the shared plumbing)
 
 Goal: nobody has to open four pages to know they are healthy.
 

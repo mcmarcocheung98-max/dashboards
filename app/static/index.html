@@ -79,9 +79,11 @@
 <script>
 const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === "class") e.className = v; else e.setAttribute(k, v); }
   for (const k of kids.flat()) if (k != null && k !== false) e.append(k instanceof Node ? k : document.createTextNode(String(k))); return e; };
-fetch("/api/index").then(r => r.json()).then(d => {
+const healthLine = (slug, H) => { const h = H && H.dashboards && H.dashboards[slug]; if (!h || !(h.fresh + h.stale + h.failing)) return null;
+  return el("div", { class: "muted", style: "margin-top:8px;font-size:12px" }, "Sources: " + h.fresh + " fresh" + (h.stale ? " · " + h.stale + " showing last copy" : "") + (h.failing ? " · " + h.failing + " failing" : "")); };
+Promise.all([fetch("/api/index").then(r => r.json()), fetch("/api/health").then(r => r.json()).catch(() => null)]).then(([d, H]) => {
   document.getElementById("view").replaceChildren(el("div", { class: "tiles" }, ...d.dashboards.map(t => el("a", { class: "tile", href: "/" + t.slug },
-    el("div", { class: "card" }, el("h2", {}, t.title), el("div", { class: "muted" }, t.blurb))))));
+    el("div", { class: "card" }, el("h2", {}, t.title), el("div", { class: "muted" }, t.blurb), healthLine(t.slug, H))))));
 }).catch(e => document.getElementById("view").replaceChildren(el("div", { class: "card err" }, "Could not load: " + e.message)));
 </script>
 </body>

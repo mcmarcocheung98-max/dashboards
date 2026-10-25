@@ -482,3 +482,39 @@ def test_robotaxi_tesla_rate_and_rules(snapdir, monkeypatch):
     assert {r["market"] for r in f["regulation"]} >= {"US", "UK", "HK", "China"}
     w = [x for x in s["reports"]["rate"] if x["operator"] == "Waymo LLC"]
     assert w and all(x["per_million"] >= 0 for x in w)
+
+
+def test_source_health(snapdir, monkeypatch):
+    pytest.importorskip("aiohttp")
+    import asyncio
+    from aiohttp.test_utils import TestClient, TestServer
+    from app.server import make_app
+    from app.topics import robotaxi as R
+    B.HEALTH.clear()
+    calls = {"n": 0}
+
+    def dl(url, *a, **k):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return SGO
+        raise ConnectionError("down")
+    monkeypatch.setattr(B, "_download", dl)
+    monkeypatch.setattr(R, "fetch", B.fetch)                    # the real fetch, over the fake download
+    R.sgo()                                                     # works, snapshot written
+    from app import cache
+    cache._cache.clear()
+    R.sgo()                                                     # fails, served from the snapshot
+    h = topics.health()
+    rt = h["dashboards"]["robotaxi"]
+    assert rt["stale"] == 1 and rt["sources"][0]["host"] == "static.nhtsa.gov" and rt["sources"][0]["error"] == "ConnectionError"
+    assert set(topics.REGISTRY) <= set(h["dashboards"])
+    B.HEALTH[R.SGO]["fail"] = B.HEALTH[R.SGO]["fail"]
+    B.STALE[R.SGO] -= 5 * 86400                                  # snapshot five days old: past the 3-day threshold
+    assert topics.health()["dashboards"]["robotaxi"]["sources"][0]["alert"]
+
+    async def go():
+        async with TestClient(TestServer(make_app())) as c:
+            j = await (await c.get("/api/health")).json()
+            assert "robotaxi" in j["dashboards"] and j["thresholds"]["stale_days"] == 3
+    asyncio.run(go())
+    B.HEALTH.clear()
