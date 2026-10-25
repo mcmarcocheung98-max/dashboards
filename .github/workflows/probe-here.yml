@@ -1,0 +1,14 @@
+name: probe-here
+# Runs the same source probe as /api/probe, but from a GitHub runner: shows which sources GitHub can reach when Railway cannot.
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python -c "import json; from app import topics; print(json.dumps({k: {'requests': v['requests'].get('status', v['requests'].get('error')), 'curl': v['curl']} for k, v in topics.probe().items()}, indent=1))"

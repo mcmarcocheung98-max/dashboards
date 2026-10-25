@@ -91,6 +91,14 @@ PROBE_URLS = {   # fixed list: what each dashboard downloads, to see from the se
     "rvd": "https://www.rvd.gov.hk/doc/en/statistics/his_data_4.xls",
     "hkma": "https://api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/er-ir/hk-interbank-ir-endperiod?pagesize=3",
     "farside": "https://farside.co.uk/bitcoin-etf-flow-all-data/",
+    "landregistry full file": "http://publicdata.landregistry.gov.uk/market-trend-data/house-price-index-data/UK-HPI-full-file-2025-08.csv",
+    "ons generator csv": "https://www.ons.gov.uk/generator?format=csv&uri=/economy/inflationandpriceindices/timeseries/l522/mm23",
+    "ons beta api": "https://api.beta.ons.gov.uk/v1/datasets/cpih01",
+    "bls api v1": "https://api.bls.gov/publicAPI/v1/timeseries/data/CES6054110001",
+    "freddie mac pmms": "https://www.freddiemac.com/pmms/docs/historicalweeklydata.xlsx",
+    "llama dexs overview": "https://api.llama.fi/overview/dexs?excludeTotalDataChart=false&excludeTotalDataChartBreakdown=true",
+    "llama hl derivatives": "https://api.llama.fi/summary/derivatives/hyperliquid",
+    "llama hl fees": "https://api.llama.fi/summary/fees/hyperliquid?dataType=dailyFees",
 }
 
 
