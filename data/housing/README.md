@@ -1,6 +1,6 @@
 # Housing: London, US & Hong Kong (`/housing`)
 
-What London homes cost, how that compares with the rest of the UK and with inflation, how many change hands, and what buyers can afford at today's rates. London is automated from UK public data; the US comes from FRED; Hong Kong from the Rating and Valuation Department and the HKMA. Rents and, if its workbook cannot be read, the Hong Kong index are hand-entered.
+What London homes cost, how that compares with the rest of the UK and with inflation, how many change hands, and what buyers can afford at today's rates. London is automated from UK public data (prices, rents, pay, rates); the US comes from FHFA and Freddie Mac; Hong Kong from the Rating and Valuation Department and the HKMA. Only the Hong Kong index, if its workbook cannot be read, is hand-entered.
 
 ## What it shows
 
@@ -10,6 +10,7 @@ What London homes cost, how that compares with the rest of the UK and with infla
 | | London average price: as paid, and in today's money | Average price; the same restated in the latest month's money using CPIH |
 | | London vs the UK | House price index for London and for the UK (January 2015 = 100) |
 | | Change on a year earlier | Yearly % change, London and UK |
+| | Average monthly private rent | London rent, change on a year, gross yield (a year's rent ÷ average price); London and England average rent since 2015 |
 | Types & volume | Headline figures | Latest average by property type; sales last month and last 12 months |
 | | Average price by property type | Detached, semi-detached, terraced, flat / maisonette |
 | | Change on a year earlier, by type | Yearly % change per type |
@@ -24,6 +25,7 @@ What London homes cost, how that compares with the rest of the UK and with infla
 | Series | Source | Cadence | How |
 |---|---|---|---|
 | Average price, index, yearly change, sales volume, by property type (London and UK) | [UK House Price Index](https://landregistry.data.gov.uk/app/ukhpi), HM Land Registry with ONS, Registers of Scotland and Land & Property Services NI; CSV download for the London and United Kingdom regions | Monthly, published about six weeks after the month, revised later | Automated |
+| Average monthly private rent, London region (E12000007) and England (E92000001) | [ONS Price Index of Private Rents, monthly price statistics](https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics), sheet "Table 1", column "Rental price" | Monthly, about six weeks after the month | Automated: the dataset page is read for the newest dated workbook (~19 MB) |
 | CPIH, all items, 2015 = 100 | [ONS series L522, dataset MM23](https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/l522/mm23) | Monthly | Automated (ONS API) |
 | Average weekly earnings, regular pay, whole economy, seasonally adjusted | [ONS series KAB9, dataset LMS](https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/earningsandworkinghours/timeseries/kab9/lms) | Monthly | Automated (ONS API) |
 | London median gross annual pay, full-time employees, workplace analysis | [ONS Annual Survey of Hours and Earnings](https://www.nomisweb.co.uk/datasets/ashe) via the Nomis API (dataset NM_99_1, London region) | Yearly (April), published each autumn | Automated |
@@ -70,7 +72,7 @@ Live check, 25 Oct 2026 (Actions > live-check, `/api/housing/global`): London, U
 
 | Tab or card | What | Source | How |
 |---|---|---|---|
-| Prices · Rents | London average monthly private rent | ONS Price Index of Private Rents | Hand-entered: `rents.csv` (no stable series id on the ONS API) |
+| Prices · Rents | London average monthly private rent | ONS Price Index of Private Rents | Automated since 25 Oct 2026 from the monthly workbook; `rents.csv` only adds series or months the workbook lacks |
 | Boroughs | All 33 London boroughs: average price, change on a year, 5-year change, sortable; yearly change as bars; the three most and least expensive indexed to 2015 | UK HPI per local authority (one download per borough, paced 0.4 s, cached a day) | Automated |
 | Rates & affordability | Bank of England quoted 2-year fixed mortgage rate at 75% LTV (series IUMBV34) next to Bank Rate; the mortgage illustration now uses it, falling back to Bank Rate + 1.5 points before the series starts | Bank of England database | Automated |
 | London vs US vs HK | House prices rebased to Jan 2015 = 100: London (UK HPI), US national, New York and San Francisco (FHFA house price indexes), Hong Kong (RVD private domestic index); latest table; borrowing costs: UK 2-year fixed, US 30-year fixed (MORTGAGE30US), HK 1-month HIBOR | FRED, RVD workbook, HKMA open API | Automated; `hk_price_index.csv` is the hand-entered fallback for Hong Kong |

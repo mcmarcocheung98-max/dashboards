@@ -15,10 +15,13 @@ const VIEWS = {
       missing(d, "uk_index", "The UK line"));
     const yoy = card("Change on a year earlier", ...linesChart([{ name: "London", points: d.london_yoy || [] }, { name: "United Kingdom", points: d.uk_yoy || [], color: css("--s2") }], v => pc(v), { small: true }),
       note("Percentage change in the average price against the same month a year earlier."));
-    const rk = Object.entries(d.rents || {}).filter(([, p]) => p.length);
-    const rents = rk.length ? card("Average monthly private rent (ONS PIPR, hand-entered)", ...linesChart(rk.map(([k, pts]) => ({ name: k, points: pts })), v => gbp(v), { small: true }),
-      note("Rents against prices: a rising rent while prices are flat lifts the rental yield and usually comes before buyers return."))
-      : card("Rents", el("div", { class: "muted" }, "No rent figures yet: add monthly London average rents from ONS PIPR to data/housing/rents.csv."));
+    const rk = Object.entries(d.rents || {}).filter(([, p]) => p.length), r = d.rent_now || {};
+    const rents = rk.length ? card("Average monthly private rent (ONS Price Index of Private Rents)",
+      r.rent ? el("div", { class: "kpis" }, kpi("London rent a month (" + month(new Date(r.month).getTime() / 1000) + ")", gbp(r.rent)), kpi("Change on a year ago", pc(r.yoy), cls(r.yoy)),
+        kpi("Gross yield: a year's rent ÷ average price", r.rent_to_price == null ? "–" : (r.rent_to_price * 100).toFixed(1) + "%")) : null,
+      ...linesChart(rk.map(([k, pts]) => ({ name: k, points: pts })), v => gbp(v), { small: true }),
+      note("Average rent agreed on new and existing private tenancies, all property types (ONS PIPR, from January 2015). Rents against prices: a rising rent while prices are flat lifts the rental yield and usually comes before buyers return."))
+      : card("Rents", el("div", { class: "muted" }, "Not available right now (" + (d.rents_error || "no data") + ")."));
     return [head, real, idx, yoy, rents];
   },
   async market() {

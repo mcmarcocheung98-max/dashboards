@@ -127,7 +127,28 @@ def housing_fetch(url, ttl, **k):
         return FRED
     if "nomisweb" in url:
         return NOMIS
+    if "priceindexofprivaterents" in url:
+        return _pipr_xlsx() if "file?uri" in url else PIPR_PAGE
     return BOE
+PIPR_PAGE = ('<a href="/file?uri=/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics/16september2026/a.xlsx">'
+             '<a href="/file?uri=/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics/21october2026/priceindexofprivaterentsukmonthlypricestatistics.xlsx">') * 40
+
+
+def _pipr_xlsx():
+    """The live layout (Oct 2026): title, note, header row, then one row per area and month; [x] where there is no value."""
+    import io
+    import openpyxl
+    wb = openpyxl.Workbook(); wb.active.title = "Cover sheet"; ws = wb.create_sheet("Table 1")
+    ws.append(["Price Index of Private Rents, UK: monthly price statistics"]); ws.append(["This worksheet contains one table."])
+    ws.append(["Time period", "Area code", "Area name", "Region or country name", "Index", "Monthly change", "Annual change", "Rental price", "Index one bed"])
+    areas = [("K02000001", "United Kingdom", "[z]", 900), ("E92000001", "England", "[z]", 950), ("E12000007", "London", "[z]", 1600), ("E09000033", "Westminster", "London", 2500)]
+    for i, t in enumerate(pd.date_range("2015-01-01", "2026-09-01", freq="MS")):
+        for code, name, reg, base in areas:
+            ws.append([t.to_pydatetime(), code, name, reg, 100, "[x]" if i == 0 else 0.3, "[x]" if i < 12 else 5.0, base + i * 5, 100])
+    buf = io.BytesIO(); wb.save(buf)
+    return buf.getvalue().decode("latin-1")
+
+
 NOMIS = ('"DATE_NAME","GEOGRAPHY_NAME","SEX_NAME","ITEM_NAME","PAY_NAME","OBS_VALUE"\n"1998","London","Full Time Workers","Median","Annual pay - gross",\n'
          + "".join(f'"{y}","London","Full Time Workers","Median","Annual pay - gross",{30000 + (y - 2000) * 1000}\n' for y in range(1999, 2026)))
 BOE = "DATE,IUDBEDR\n05 Mar 2009,0.5\n02 Nov 2017,0.75\n16 Dec 2021,0.25\n03 Aug 2023,5.25\n01 Aug 2024,5.0\n"
@@ -564,6 +585,16 @@ def test_housing_london_pay_ratio(snapdir, monkeypatch):
     lon = H.hpi("london")["avg"].dropna()
     last = a["price_to_london_pay"][-1]
     assert abs(last[1] - lon.iloc[-1] / p[p.index <= lon.index[-1]].iloc[-1]) < 0.01      # each price month uses the survey in force then
+
+
+def test_housing_rents_from_pipr(snapdir, monkeypatch):
+    H = housing_mocks(monkeypatch)
+    assert H.pipr_url(PIPR_PAGE).endswith("/21october2026/priceindexofprivaterentsukmonthlypricestatistics.xlsx")
+    r = H.parse_pipr(_pipr_xlsx().encode("latin-1"))
+    assert set(r) == {"London average rent", "England average rent"} and r["London average rent"]["rent"].iloc[-1] == 1600 + 140 * 5
+    p = H._prices_now()
+    assert set(p["rents"]) >= {"London average rent", "England average rent"} and p["rent_now"]["rent"] == 2300 and p["rent_now"]["yoy"] == 5.0
+    assert p["rent_now"]["month"] == "2026-09-01" and 0 < p["rent_now"]["rent_to_price"] < 0.2
 
 
 def test_robotaxi_tesla_rate_and_rules(snapdir, monkeypatch):

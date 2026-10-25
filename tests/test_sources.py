@@ -127,6 +127,7 @@ def test_housing_new_sources():
     assert len(H.borough("camden")) > 100
     assert len(H.fhfa()["US national (FHFA)"]) > 300 and len(H.us_mortgage()) > 1000
     assert len(H.hk_hibor()) > 50
+    assert len(H.rents()["London average rent"]) > 100
     assert len(H.london_pay()) > 20 and H.london_pay().index[-1].year >= pd.Timestamp.now().year - 2
     assert len(H.hk_index()) > 100            # RVD workbook URL and layout: verify
 

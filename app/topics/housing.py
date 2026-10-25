@@ -7,6 +7,8 @@ afford   Bank Rate (Bank of England IADB series IUDBEDR), the London price-to-ea
          pay of people working in London, ONS ASHE via Nomis, yearly) and, as a monthly trend, the same price / UK average weekly regular pay
          (ONS KAB9 / LMS)
 
+prices   also London and England average monthly private rent (ONS Price Index of Private Rents, newest monthly workbook)
+
 Hand-entered (data/housing/): none required. Everything is cached a day and kept on disk; a source that is down leaves its last
 snapshot on the page with a 'stale since' note.
 """
@@ -20,7 +22,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from ._base import DAY, _pts, _r, fetch, fetch_json, latest_date, manual, manual_rows, payload, yoy
+from ._base import DAY, _part, _pts, _r, fetch, fetch_json, latest_date, manual, manual_rows, payload, yoy
 
 HPI_URL = ("https://landregistry.data.gov.uk/app/ukhpi/download/new.csv?from=1995-01-01&to=2035-01-01&location={loc}"
            "&thm%5B%5D=property_type%2Fall&thm%5B%5D=property_type%2Fdetached&thm%5B%5D=property_type%2Fsemi-detached"
@@ -66,7 +68,7 @@ SOURCES = [{"name": "UK House Price Index (HM Land Registry / ONS)", "url": "htt
            {"name": "30-year fixed mortgage rate (Freddie Mac PMMS)", "url": "https://www.freddiemac.com/pmms", "cadence": "weekly"},
            {"name": "Hong Kong private domestic price index (Rating and Valuation Department)", "url": "https://www.rvd.gov.hk/en/publications/property_market_statistics.html", "cadence": "monthly"},
            {"name": "HIBOR (Hong Kong Monetary Authority open API)", "url": "https://apidocs.hkma.gov.hk/", "cadence": "monthly"},
-           {"name": "London private rents (ONS, hand-entered)", "url": "https://www.ons.gov.uk/economy/inflationandpriceindices/bulletins/privaterentandhousepricesuk/latest", "cadence": "monthly"}]
+           {"name": "Private rents, London and England (ONS Price Index of Private Rents)", "url": "https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics", "cadence": "monthly"}]
 NOTES = "Prices are HM Land Registry averages (completed sales, so about two months behind the market). Real terms uses CPIH. Contains public sector information licensed under the Open Government Licence v3.0."
 TTL = DAY
 PACE = 0.4
@@ -212,6 +214,35 @@ def pipr_url(html: str) -> str:
     return "https://www.ons.gov.uk" + max(dated)[1]
 
 
+RENT_AREAS = {"E12000007": "London average rent", "E92000001": "England average rent"}
+
+
+def parse_pipr(content: bytes) -> dict[str, pd.DataFrame]:
+    """ONS PIPR workbook, sheet "Table 1" (one row per area and month: Time period, Area code, Area name, ..., Index, Monthly change,
+    Annual change, Rental price, then the same by bedrooms and type) -> {series name: frame with rent (£ a month) and yoy (%)} for
+    RENT_AREAS. Streams the sheet (the file is ~19 MB) and keeps only those areas."""
+    from io import BytesIO
+    import openpyxl
+    wb = openpyxl.load_workbook(BytesIO(content), read_only=True, data_only=True)
+    ws = wb["Table 1"] if "Table 1" in wb.sheetnames else wb[wb.sheetnames[-1]]
+    head, rows = None, {k: [] for k in RENT_AREAS}
+    for r in ws.iter_rows(values_only=True):
+        if head is None:
+            if r and str(r[0]).strip().lower() == "time period":
+                head = [str(c or "").strip().lower() for c in r]
+                code, rent, ann = head.index("area code"), head.index("rental price"), head.index("annual change")
+            continue
+        if r[code] in rows:
+            rows[r[code]].append((pd.Timestamp(r[0]), pd.to_numeric(r[rent], errors="coerce"), pd.to_numeric(r[ann], errors="coerce")))
+    wb.close()
+    if head is None:
+        raise ValueError("PIPR layout changed: no 'Time period' header row")
+    out = {RENT_AREAS[k]: pd.DataFrame(v, columns=["t", "rent", "yoy"]).set_index("t").sort_index() for k, v in rows.items() if v}
+    if "London average rent" not in out or out["London average rent"]["rent"].dropna().empty:
+        raise ValueError("PIPR layout changed: no London rents")
+    return out
+
+
 # ------------------------------------------------------------------ data
 def hpi(which: str) -> pd.DataFrame:
     return regions()["London" if which == "london" else "United Kingdom"]
@@ -223,6 +254,16 @@ def cpih() -> pd.Series:
 
 def earnings() -> pd.Series:
     return parse_ons_csv(fetch(AWE, TTL))
+
+
+def rents() -> dict[str, pd.DataFrame]:
+    """The newest PIPR workbook (its link is read from the dataset page, a new dated folder each month)."""
+    from ..cache import _cached
+
+    def go():
+        url = pipr_url(fetch(PIPR_PAGE, TTL, min_bytes=5000))
+        return parse_pipr(fetch(url, TTL, binary=True, min_bytes=1_000_000, timeout=180).encode("latin-1"))
+    return _cached("housing:rents", TTL, go)
 
 
 def london_pay() -> pd.Series:
@@ -384,8 +425,27 @@ def _prices_now() -> dict:
                    "london_real": lambda: _pts(_real(lon["avg"].dropna(), cpih()), 0)},
                   sources=[CPIH], as_of=latest_date(lon["avg"]))
     a = lon["avg"].dropna()
-    rents = manual("housing", "rents")
-    out["rents"] = {k: _pts(v, 0) for k, v in rents.items()} if isinstance(rents, dict) else {}
+
+    def rent_lines():
+        """ONS PIPR (automated) first; rows in data/housing/rents.csv add series or months the workbook lacks."""
+        hand = manual("housing", "rents")
+        try:
+            auto = {k: f["rent"].dropna() for k, f in rents().items()}
+        except Exception:
+            if not isinstance(hand, dict) or not hand:
+                raise
+            auto = {}
+        for k, v in (hand.items() if isinstance(hand, dict) else []):
+            auto[k] = v.combine_first(auto[k]) if k in auto else v
+        return {k: _pts(v, 0) for k, v in auto.items() if len(v)}
+    _part(out, "rents", rent_lines)
+    out["rents"] = out.get("rents") or {}
+    try:
+        lr = rents()["London average rent"].dropna()
+        out["rent_now"] = {"rent": _r(lr["rent"].iloc[-1], 0), "yoy": _r(lr["yoy"].iloc[-1], 2), "month": str(lr.index[-1].date()),
+                           "rent_to_price": _r(lr["rent"].iloc[-1] * 12 / a.iloc[-1], 4) if len(a) else None}
+    except Exception:
+        out["rent_now"] = {}
     out["now"] = {"avg": _r(a.iloc[-1], 0) if len(a) else None, "yoy": _r(lon["pc_ann"].dropna().iloc[-1], 2) if lon["pc_ann"].notna().any() else None,
                   "peak": _r(a.max(), 0) if len(a) else None, "peak_month": str(a.idxmax().date()) if len(a) else None,
                   "from_peak": _r(a.iloc[-1] / a.max() - 1, 4) if len(a) else None,
