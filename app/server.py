@@ -44,6 +44,9 @@ def make_app() -> web.Application:
             if slug[:-3] not in topics.REGISTRY or not f.exists():
                 raise web.HTTPNotFound()
             return web.FileResponse(f, headers={**HEADERS, "Cache-Control": "public, max-age=300"})
+        if slug in topics.REDIRECTS:                          # merged dashboards keep their old links working
+            to, tab = topics.REDIRECTS[slug]
+            raise web.HTTPMovedPermanently(f"/{to}#{tab}")
         if slug not in topics.REGISTRY:
             raise web.HTTPNotFound()
         return web.FileResponse(STATIC / "topic.html", headers=HEADERS)

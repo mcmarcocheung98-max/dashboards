@@ -22,7 +22,7 @@ def snapdir(tmp_path, monkeypatch):
 
 
 def test_registry_is_complete():
-    assert set(topics.REGISTRY) == {"housing", "ai-adoption", "robotaxi", "ai-jobs", "btc-cycles"}
+    assert set(topics.REGISTRY) == {"housing", "ai", "robotaxi", "btc-cycles"}
     for slug, t in topics.REGISTRY.items():
         m = topics.meta(slug)
         eps = topics.endpoints(slug)
@@ -197,6 +197,10 @@ def test_routes(snapdir, monkeypatch):
             meta = await (await c.get("/api/housing/meta")).json()
             assert meta["title"] == "London Housing Index" and meta["tabs"][0] == ["prices", "Prices"] and meta["sources"]
             assert (await c.get("/api/housing/nope")).status == 404 and (await c.get("/api/nope/meta")).status == 404
+            red = await c.get("/ai-jobs", allow_redirects=False)
+            assert red.status == 301 and red.headers["Location"] == "/ai#openings"
+            assert (await c.get("/ai-adoption", allow_redirects=False)).headers["Location"] == "/ai#firms"
+            assert (await c.get("/ai")).status == 200 and (await c.get("/ai.js")).status == 200
             r = await c.get("/api/robotaxi/safety")
             assert r.status == 200 and (await r.json())["reports"]["n"] == 120
     asyncio.run(go())
@@ -407,3 +411,17 @@ def test_farside_parser_rejects_a_changed_page():
         parse_farside("<table><tr><td>nothing</td></tr></table>")
     df = parse_farside(_farside_html(80))
     assert len(df) == 80 and df["GBTC"].iloc[0] == -12.5 and df["BTCW"].iloc[0] == 0
+
+
+def test_ai_merged_endpoints(snapdir, monkeypatch):
+    from app.topics import ai, ai_jobs as J
+    monkeypatch.setattr(J, "fetch", lambda url, ttl, **k: AIS if "ai-tracker" in url else FRED if "fred" in url else AGG if "aggregate" in url else IND)
+    assert {"openings", "headcount", "wages", "ratio", "firms", "users", "agents", "skills"} <= set(ai.ENDPOINTS)
+    w = J._wages_now()
+    B.json_safe(w)
+    assert set(w["levels"]) == set(J.US_WAGES) and "All private" not in w["premium"] and w["as_of"]
+    assert all(sid.endswith("03") for sid in J.US_WAGES.values())
+    h = J._headcount_now()
+    assert "HK" in h and h["HK"] == {}
+    r = J._ratio_now()
+    assert r["US"]["ai_wide_index"] and r["US"]["ai_wide_over_professions"]

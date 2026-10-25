@@ -112,3 +112,10 @@ def test_mstr_sources():
     h = F.mstr_history()
     assert h["hold"].iloc[-1] > 500_000 and h.index[-1] > pd.Timestamp.now() - pd.DateOffset(days=30)
     assert len(F.yahoo_daily("MSTR", "2024-01-01")) > 300 and len(F.yahoo_daily("0434.HK", "2024-01-01")) > 100
+
+
+def test_fred_pay_series():
+    from app.topics import ai_jobs as J
+    for sid in J.US_WAGES.values():
+        s = J.fred(sid)
+        assert len(s) > 100 and 10 < s.iloc[-1] < 200, sid

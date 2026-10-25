@@ -1,0 +1,2 @@
+date,series,value,source,note
+# Share of firms using AI, %, outside the US. series: "UK: firms using AI (ONS BICS)" from the ONS Business Insights and Conditions Survey AI questions; "HK: firms using AI" from the Hong Kong Productivity Council / C&SD surveys. One row per published reading. Empty until filled from the source.

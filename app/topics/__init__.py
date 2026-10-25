@@ -26,12 +26,11 @@ class Topic:
 REGISTRY: dict[str, Topic] = {t.slug: t for t in (
     Topic("housing", "London Housing Index", "House prices, sales, rents and what buyers can afford in London, against the UK and inflation.",
           "housing", (("prices", "Prices"), ("market", "Types & volume"), ("afford", "Rates & affordability")), ("prices", "market", "afford")),
-    Topic("ai-adoption", "AI Tool & Agent Adoption", "How fast businesses and people are taking up AI tools and agents: surveys, spend, users, milestones.",
-          "ai_adoption", (("firms", "Firms"), ("users", "Users"), ("agents", "Agents"), ("skills", "Skills demand")), ("firms", "skills")),
     Topic("robotaxi", "Autonomous Car Adoption", "Driverless ride-hailing: paid rides, where it operates, and safety reports.",
           "robotaxi", (("rides", "Rides"), ("footprint", "Footprint"), ("safety", "Safety")), ("safety",)),
-    Topic("ai-jobs", "AI Jobs vs Law & Finance", "AI job openings against hiring and headcount in law and finance, US and UK.",
-          "ai_jobs", (("openings", "Openings"), ("headcount", "Headcount"), ("ratio", "AI vs the professions")), ("openings", "headcount", "ratio")),
+    Topic("ai", "AI: Jobs & Adoption", "AI job openings against hiring, headcount and pay in law and finance, and how fast firms and people take up AI tools and agents, in the US, UK and Hong Kong.",
+          "ai", (("openings", "Openings"), ("headcount", "Headcount"), ("wages", "Pay"), ("ratio", "AI vs the professions"), ("firms", "Firms adopting"),
+                 ("users", "Users"), ("agents", "Agents"), ("skills", "Skills demand")), ("openings", "headcount", "wages", "ratio", "firms", "skills")),
     Topic("btc-cycles", "BTC Cycles & Sector Rotation", "Four Bitcoin cycles, which altcoin sectors won each one, what the winners had in common, and the 2026-27 candidates, checked daily against live data.",
           "btc_cycles", (("cycles", "Cycles"), ("sectors", "Sectors"), ("metrics", "Winner metrics"), ("candidates", "Candidates 2026-27"), ("etf", "ETFs"),
                          ("mstr", "Strategy (MSTR)"), ("signals", "Signals")),
@@ -55,3 +54,7 @@ def meta(slug: str) -> dict:
 
 def index() -> dict:
     return {"dashboards": [{"slug": t.slug, "title": t.title, "blurb": t.blurb, "icon": t.icon} for t in REGISTRY.values()]}
+
+
+# old addresses of dashboards that were merged or renamed: slug -> (new slug, tab)
+REDIRECTS = {"ai-jobs": ("ai", "openings"), "ai-adoption": ("ai", "firms")}

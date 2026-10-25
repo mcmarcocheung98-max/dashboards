@@ -1,4 +1,4 @@
-"""AI jobs vs law & finance (/ai-jobs). Free data only.
+"""AI jobs vs law & finance: the jobs half of /ai. Free data only.
 
 openings   Indeed Hiring Lab job postings index by sector (daily, 1 Feb 2020 = 100, refreshed weekly; US and UK): Software Development
            and Data & Analytics (where AI roles sit) against Legal, Banking & Finance, Accounting and Insurance; plus the share of all
@@ -7,7 +7,7 @@ headcount  US payroll employment (BLS via FRED, monthly, thousands): legal servi
            computer systems design. BLS.gov itself blocks automated downloads, so FRED's CSV is used (through curl, see _base._download)
 ratio      the AI share of postings against the professions' postings index, and headcount growth since 2020 side by side
 
-Hand-entered (data/ai-jobs/): uk_headcount.csv (ONS workforce jobs for legal and financial services, quarterly: no stable
+Hand-entered (data/ai/): uk_headcount.csv (ONS workforce jobs for legal and financial services, quarterly: no stable
 free API, so a few points copied by hand with their source). Indeed data: CC BY 4.0, cite Indeed Hiring Lab.
 """
 from __future__ import annotations
@@ -16,15 +16,17 @@ from io import StringIO
 
 import pandas as pd
 
-from ._base import DAY, _pts, _r, fetch, fetch_csv, latest_date, manual, monthly, payload, weekly, yoy
+from ._base import DAY, _pts, _r, fetch, fetch_csv, latest_date, manual, manual_rows, monthly, payload, weekly, yoy
 
 IND = "https://raw.githubusercontent.com/hiring-lab/job_postings_tracker/master/{cc}/job_postings_by_sector_{cc}.csv"
 IND_ALL = "https://raw.githubusercontent.com/hiring-lab/job_postings_tracker/master/{cc}/aggregate_job_postings_{cc}.csv"
 AI_SHARE = "https://raw.githubusercontent.com/hiring-lab/ai-tracker/main/AI_posting.csv"
 FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}"
-SECTORS = {"ai": ["Software Development", "Data & Analytics"], "professions": ["Legal", "Banking & Finance", "Accounting", "Insurance"]}
+SECTORS = {"ai": ["Software Development", "Data & Analytics"], "ai_wide": ["IT Systems & Solutions"], "professions": ["Legal", "Banking & Finance", "Accounting", "Insurance"]}
 US_SERIES = {"Legal services": "CES6054110001", "Finance & insurance": "CES5552000001", "Securities & investments": "CES5552300001",
              "Computer systems design": "CES6054150001", "All private": "CES0500000001"}
+# average hourly earnings, all employees, same industries (the "...03" twin of each employment series)
+US_WAGES = {n: sid[:-2] + "03" for n, sid in US_SERIES.items()}
 SOURCES = [{"name": "Indeed Hiring Lab job postings index", "url": "https://github.com/hiring-lab/job_postings_tracker", "cadence": "weekly"},
            {"name": "Indeed Hiring Lab AI tracker", "url": "https://github.com/hiring-lab/ai-tracker", "cadence": "monthly"},
            {"name": "US employment by industry (BLS CES via FRED)", "url": "https://fred.stlouisfed.org/series/CES6054110001", "cadence": "monthly"},
@@ -61,7 +63,7 @@ def parse_fred(text: str) -> pd.Series:
 
 # ------------------------------------------------------------------ data
 def sectors(cc: str) -> dict[str, pd.Series]:
-    return parse_sectors(fetch(IND.format(cc=cc), TTL, min_bytes=10000), SECTORS["ai"] + SECTORS["professions"])
+    return parse_sectors(fetch(IND.format(cc=cc), TTL, min_bytes=10000), SECTORS["ai"] + SECTORS["ai_wide"] + SECTORS["professions"])
 
 
 def aggregate(cc: str) -> pd.Series:
@@ -106,9 +108,13 @@ def _headcount_now() -> dict:
                                "date": str(s.index[-1].date())} for n, s in series.items()}}
 
     def uk():
-        m = manual("ai-jobs", "uk_headcount")
+        m = manual("ai", "uk_headcount")
         return {n: _pts(s, 0) for n, s in m.items()} if isinstance(m, dict) else {}
-    out = payload({"US": us, "UK": uk}, sources=[FRED.format(sid=s) for s in US_SERIES.values()])
+
+    def hk():
+        m = manual("ai", "hk_headcount")
+        return {n: _pts(s, 0) for n, s in m.items()} if isinstance(m, dict) else {}
+    out = payload({"US": us, "UK": uk, "HK": hk}, sources=[FRED.format(sid=s) for s in US_SERIES.values()])
     try:
         out["as_of"] = (out.get("US") or {}).get("latest", {}).get("Legal services", {}).get("date")
     except Exception:
@@ -120,8 +126,10 @@ def _ratio_now() -> dict:
     def ai_vs_professions(cc):
         s = sectors(cc)
         ai = pd.concat([s[n] for n in SECTORS["ai"] if n in s], axis=1).mean(axis=1)
+        wide = pd.concat([s[n] for n in SECTORS["ai"] + SECTORS["ai_wide"] if n in s], axis=1).mean(axis=1)
         prof = pd.concat([s[n] for n in SECTORS["professions"] if n in s], axis=1).mean(axis=1)
-        return {"ai_index": _pts(weekly(ai), 1), "professions_index": _pts(weekly(prof), 1), "ai_over_professions": _pts(weekly(ai / prof), 3),
+        return {"ai_index": _pts(weekly(ai), 1), "ai_wide_index": _pts(weekly(wide), 1), "professions_index": _pts(weekly(prof), 1),
+                "ai_over_professions": _pts(weekly(ai / prof), 3), "ai_wide_over_professions": _pts(weekly(wide / prof), 3),
                 "ai_share": _pts(monthly(ai_share()[cc], "mean"), 3)}
     out = payload({"US": lambda: ai_vs_professions("US"), "GB": lambda: ai_vs_professions("GB")},
                   sources=[IND.format(cc="US"), IND.format(cc="GB"), AI_SHARE])
@@ -132,9 +140,26 @@ def _ratio_now() -> dict:
     return out
 
 
+def _wages_now() -> dict:
+    """US average hourly earnings in the same industries: level, yearly change, and each against all private-sector pay."""
+    series = {n: fred(sid) for n, sid in US_WAGES.items()}
+    allp = series["All private"]
+    since = pd.Timestamp("2010-01-01")
+    out = payload({"levels": lambda: {n: _pts(s[s.index >= since], 2) for n, s in series.items()},
+                   "yoy": lambda: {n: _pts(yoy(s)[s.index >= since] * 100, 2) for n, s in series.items()},
+                   "premium": lambda: {n: _pts((s / allp - 1).dropna()[lambda x: x.index >= since] * 100, 1) for n, s in series.items() if n != "All private"},
+                   "latest": lambda: {n: {"level": _r(s.iloc[-1], 2), "yoy": _r(yoy(s).iloc[-1] * 100, 2), "premium": _r((s.iloc[-1] / allp.iloc[-1] - 1) * 100, 1),
+                                          "date": str(s.index[-1].date())} for n, s in series.items()}},
+                  sources=[FRED.format(sid=s) for s in US_WAGES.values()])
+    out["uk_hk"] = sorted(manual_rows("ai", "pay_uk_hk"), key=lambda r: r["date"], reverse=True)
+    out["as_of"] = (out.get("latest") or {}).get("All private", {}).get("date")
+    return out
+
+
 def _cached_ep(name, fn):
     from ..cache import _cached
     return lambda: _cached(f"topic:ai-jobs:{name}", 6 * 3600, fn)
 
 
-ENDPOINTS = {"openings": _cached_ep("openings", _openings_now), "headcount": _cached_ep("headcount", _headcount_now), "ratio": _cached_ep("ratio", _ratio_now)}
+ENDPOINTS = {"openings": _cached_ep("openings", _openings_now), "headcount": _cached_ep("headcount", _headcount_now), "ratio": _cached_ep("ratio", _ratio_now),
+             "wages": _cached_ep("wages", _wages_now)}

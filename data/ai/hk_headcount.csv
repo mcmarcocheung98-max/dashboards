@@ -1,0 +1,2 @@
+date,series,value,source,note
+# Hong Kong employment, thousands, from the Census and Statistics Department's quarterly Labour Force / Quarterly Report of Employment and Vacancies (table 215-16xxx). One row per quarter (date = quarter start). Empty until filled from the source.

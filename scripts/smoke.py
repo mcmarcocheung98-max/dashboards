@@ -23,7 +23,7 @@ sys.path.insert(0, str(ROOT))
 def mock_sources() -> None:
     """Point every dashboard's fetchers at the fixtures in tests/test_topics.py."""
     import tests.test_topics as T
-    from app.topics import ai_adoption, ai_jobs, btc_cycles, housing, robotaxi
+    from app.topics import ai_adoption, ai_jobs, btc_cycles, housing, robotaxi   # /ai joins ai_jobs and ai_adoption
     housing.fetch = lambda url, ttl, **k: T.HPI if "ukhpi" in url else T.BOE
     housing.fetch_json = lambda url, ttl, **k: T.ONS(100) if "L522" in url else T.ONS(500)
     ai_jobs.fetch = lambda url, ttl, **k: T.AIS if "ai-tracker" in url else T.FRED if "fred" in url else T.AGG if "aggregate" in url else T.IND
