@@ -5,7 +5,7 @@ Public, read-only data dashboards, each on its own page:
 | Dashboard | Page | What it tracks |
 |---|---|---|
 | Housing: London, US & Hong Kong | `/housing` | London prices (as paid and in today's money), boroughs, types, sales, rents, rates and affordability; London vs the US (Case-Shiller) and Hong Kong (RVD) |
-| Autonomous Car Adoption | `/robotaxi` | Paid driverless rides by operator, cities with public service, NHTSA crash reports |
+| Autonomous Car Adoption | `/robotaxi` | Paid driverless rides by operator, cities, rules and pilots in the US, UK, HK and China, crash reports per mile, and a Tesla tab (price, deliveries, FSD, Robotaxi, Cybercab) |
 | AI: Jobs & Adoption | `/ai` | AI openings vs law and finance (US, UK), headcount and pay (US, UK, HK), firms and people adopting AI tools and agents, AI share of job postings. Replaces `/ai-jobs` and `/ai-adoption`, which redirect here |
 | BTC Cycles & Sector Rotation | `/btc-cycles` | Four Bitcoin cycles, the altcoin sectors that won each, winner metrics, 2026–27 candidates and signals, checked daily against live data |
 

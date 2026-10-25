@@ -1,0 +1,13 @@
+date,area,event,market,source,note
+# Dated Tesla autonomy milestones. area: Robotaxi, Cybercab, FSD, Optimus. One row per event; 'verify' = written from memory.
+2016-10-19,FSD,All new Teslas ship with hardware Tesla says is capable of full self-driving,US,https://www.tesla.com/blog/all-tesla-cars-being-produced-now-have-full-self-driving-hardware,
+2020-10-20,FSD,FSD Beta released to a small group of US owners,US,https://www.tesla.com/,verify date
+2024-03-25,FSD,FSD renamed FSD (Supervised); free one-month trial to US owners,US,https://www.tesla.com/,verify date
+2024-10-10,Cybercab,Cybercab two-seat robotaxi unveiled at the We Robot event,US,https://www.tesla.com/we-robot,
+2025-02-25,FSD,Partial FSD features released in China,China,https://www.tesla.com/,verify
+2025-06-22,Robotaxi,Robotaxi service starts in Austin with a safety monitor in the passenger seat (invite-only),US,https://www.tesla.com/,verify
+2025-07-31,Robotaxi,Ride-hailing in the San Francisco Bay Area with a safety driver,US,https://www.tesla.com/,verify date
+2025-09-01,FSD,FSD (Supervised) launched in Australia and New Zealand,Australia/NZ,https://www.tesla.com/,verify date
+2026-04-01,Cybercab,Cybercab volume production targeted for 2026 (Tesla guidance),US,https://ir.tesla.com/,target - verify current guidance
+2026-10-25,FSD,UK: not yet approved for public roads; awaits the Automated Vehicles Act framework,UK,https://www.gov.uk/government/collections/connected-and-automated-vehicles,status as of this date - verify
+2026-10-25,FSD,Hong Kong: FSD not offered,HK,https://www.tesla.com/en_hk,status as of this date - verify

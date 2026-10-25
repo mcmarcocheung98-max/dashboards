@@ -57,9 +57,19 @@ pytest -m network tests/test_sources.py -k nhtsa
 
 Local preview: `python -m app.server`, then open `/robotaxi`.
 
+## Added in round 3
+
+| Tab | What | Source | How |
+|---|---|---|---|
+| Tesla | TSLA share price; quarterly deliveries; FSD (Supervised) cumulative miles; every autonomy milestone (Robotaxi, Cybercab, FSD by country including UK and Hong Kong status) | Yahoo Finance; Tesla investor releases and tesla.com | Price automated; the rest hand-entered: `tesla.csv`, `tesla_milestones.csv` |
+| Safety | Crash reports per million driverless miles for operators that publish miles | NHTSA SGO counts ÷ `miles.csv` | Automated count, hand-entered miles |
+| Footprint & rules | Laws, licences and pilots in the US, UK (Automated Vehicles Act, Wayve/Uber London pilot), Hong Kong (Baidu Apollo airport-area licence) and China | Government and operator pages | Hand-entered: `regulation.csv` |
+| Footprint & rules | California driverless trips per quarter | CPUC spreadsheets | Hand-entered: `cpuc_trips.csv` (the files move between addresses, so not automated) |
+| Rides | Room for Baidu Apollo Go, Pony.ai, WeRide, Zoox and Tesla weekly figures | Operator announcements | Hand-entered rows in `rides.csv` |
+
+Tesla deliveries, FSD miles and several milestone dates were written from memory and are marked `verify`: check them against ir.tesla.com and tesla.com before relying on them.
+
 ## Known gaps
 
-- No miles-driven series, so crash reports are not a rate. Waymo publishes rider-only miles irregularly; a `miles.csv` in the same format would allow reports per million miles.
-- California's CPUC publishes quarterly driverless trip counts as spreadsheets; not automated yet.
 - China (Baidu, Pony.ai, WeRide) is covered only by Baidu's quarterly figure and two cities.
 - Tesla's robotaxi numbers are not published; the Austin row is a marker, not a count.

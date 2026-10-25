@@ -1,0 +1,9 @@
+date,market,event,source,note
+# Laws, licences and pilots for driverless vehicles in the US, UK, Hong Kong and China. One row per event; 'verify' = written from memory.
+2021-06-29,US,NHTSA Standing General Order requires crash reports from automated driving systems,https://www.nhtsa.gov/laws-regulations/standing-general-order-crash-reporting,
+2023-08-10,US,California CPUC approves 24/7 paid driverless service for Waymo and Cruise in San Francisco,https://www.cpuc.ca.gov/,
+2023-10-24,US,California DMV suspends Cruise's driverless permit,https://www.dmv.ca.gov/,
+2024-05-20,UK,Automated Vehicles Act receives Royal Assent,https://www.legislation.gov.uk/ukpga/2024/10,
+2025-06-10,UK,Wayve and Uber announce a London robotaxi pilot (planned for 2026) under the accelerated pilot scheme,https://www.gov.uk/,verify
+2024-12-01,HK,Baidu Apollo granted a Transport Department pilot licence for driverless tests around the airport area (Lantau),https://www.td.gov.hk/,verify date
+2022-08-08,China,Baidu Apollo Go receives fully driverless commercial permits in Wuhan and Chongqing,https://www.prnewswire.com/,

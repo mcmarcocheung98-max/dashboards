@@ -468,3 +468,17 @@ def test_housing_boroughs_global_and_fixed_rate(snapdir, monkeypatch):
     assert {r["market"] for r in g["table"]} >= {"London", "Hong Kong (RVD)"}
     assert a["mortgage_basis"].startswith("the Bank of England's quoted 2-year fixed") and a["fixed_2y"]
     assert len(H.parse_rvd(_rvd_xls().encode("latin-1"))) == 17 * 12
+
+
+def test_robotaxi_tesla_rate_and_rules(snapdir, monkeypatch):
+    from app.topics import robotaxi as R
+    monkeypatch.setattr(R, "fetch", lambda url, ttl, **k: SGO)
+    monkeypatch.setattr(R, "fetch_json", lambda url, ttl, **k: _yahoo(250))
+    t, f, s = R._tesla_now(), R._footprint_now(), R._safety_now()
+    for d in (t, f, s):
+        B.json_safe(d)
+        assert not [k for k in d if k.endswith("_error")], [k for k in d if k.endswith("_error")]
+    assert t["kpi"]["deliveries_last"] > 0 and t["tsla"] and {"UK", "HK"} <= set(t["fsd_markets"]) and t["milestones"][0]["date"] >= t["milestones"][-1]["date"]
+    assert {r["market"] for r in f["regulation"]} >= {"US", "UK", "HK", "China"}
+    w = [x for x in s["reports"]["rate"] if x["operator"] == "Waymo LLC"]
+    assert w and all(x["per_million"] >= 0 for x in w)

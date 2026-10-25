@@ -1,0 +1,2 @@
+date,series,value,source,note
+# California CPUC quarterly driverless deployment data: passenger trips per quarter per operator (date = quarter start). Published as spreadsheets at changing addresses (https://www.cpuc.ca.gov/regulatory-services/licensing/transportation-licensing-and-analysis-branch/autonomous-vehicle-programs), so entered by hand. Empty until filled from the source.

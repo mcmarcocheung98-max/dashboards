@@ -7,3 +7,4 @@ date,series,value,source,note
 2025-02-25,Waymo,200000,https://techcrunch.com/2025/02/25/waymo-is-now-giving-200000-paid-robotaxi-rides-every-week/,
 2025-04-24,Waymo,250000,https://techcrunch.com/2025/04/24/waymo-is-now-giving-250000-paid-robotaxi-rides-every-week/,
 2025-10-16,Waymo,450000,https://waymo.com/blog/,seed value - verify
+# Other operators: add Baidu Apollo Go, Pony.ai, WeRide, Zoox and Tesla weekly figures here as they announce them (series = operator).

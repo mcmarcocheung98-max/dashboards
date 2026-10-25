@@ -1,0 +1,14 @@
+date,series,value,source,note
+# Tesla quarterly figures (date = quarter start) and FSD miles. series: "Deliveries", "Production", "FSD (Supervised) cumulative miles". Deliveries are from Tesla's quarterly releases as remembered; check each against ir.tesla.com and clear 'verify'.
+2023-01-01,Deliveries,422875,https://ir.tesla.com/,verify against the Q1 2023 release
+2023-04-01,Deliveries,466140,https://ir.tesla.com/,verify
+2023-07-01,Deliveries,435059,https://ir.tesla.com/,verify
+2023-10-01,Deliveries,484507,https://ir.tesla.com/,verify
+2024-01-01,Deliveries,386810,https://ir.tesla.com/,verify
+2024-04-01,Deliveries,443956,https://ir.tesla.com/,verify
+2024-07-01,Deliveries,462890,https://ir.tesla.com/,verify
+2024-10-01,Deliveries,495570,https://ir.tesla.com/,verify
+2025-01-01,Deliveries,336681,https://ir.tesla.com/,verify
+2025-04-01,Deliveries,384122,https://ir.tesla.com/,verify
+2025-07-01,Deliveries,497099,https://ir.tesla.com/,verify
+2025-03-31,FSD (Supervised) cumulative miles,3000000000,https://www.tesla.com/fsd,approximate - verify on tesla.com/fsd

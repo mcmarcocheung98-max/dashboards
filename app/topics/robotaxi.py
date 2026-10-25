@@ -14,7 +14,7 @@ from io import StringIO
 
 import pandas as pd
 
-from ._base import DAY, _pts, _r, fetch, manual, manual_rows, manual_sources, payload
+from ._base import DAY, _pts, _r, fetch, fetch_json, manual, manual_rows, manual_sources, payload
 
 SGO = "https://static.nhtsa.gov/odi/ffdd/sgo-2021-01/SGO-2021-01_Incident_Reports_ADS.csv"
 SLUG = "robotaxi"
@@ -78,6 +78,9 @@ def _footprint_now() -> dict:
     out = payload({"rows": lambda: rows[::-1], "cumulative": cumulative, "operators": lambda: ops,
                    "by_operator": lambda: {op: sum(r["operator"] == op for r in rows) for op in ops}})
     out["as_of"] = rows[-1]["date"] if rows else None
+    out["regulation"] = sorted(manual_rows(SLUG, "regulation"), key=lambda r: r["date"], reverse=True)
+    cp = manual(SLUG, "cpuc_trips")
+    out["cpuc"] = {k: _pts(v, 0) for k, v in cp.items()} if isinstance(cp, dict) else {}
     return out
 
 
@@ -88,11 +91,45 @@ def _safety_now() -> dict:
         top = d["entity"].value_counts().head(6).index.tolist()
         by = d.assign(entity=d["entity"].where(d["entity"].isin(top), "Others")).groupby(["month", "entity"]).size().unstack(fill_value=0)
         by = by.reindex(pd.date_range(by.index.min(), by.index.max(), freq="MS"), fill_value=0)
-        return {"months": [int(t.timestamp()) for t in by.index], "entities": {e: [int(x) for x in by[e]] for e in by.columns},
+        miles = manual(SLUG, "miles")
+        rate = []
+        for op, m in (miles.items() if isinstance(miles, dict) else []):
+            for t, v in m.items():
+                n = int(((d["entity"] == op) & (d["month"] <= t)).sum())
+                if v:
+                    rate.append({"operator": op, "date": str(t.date()), "miles": _r(v, 0), "reports": n, "per_million": _r(n / (v / 1e6), 3)})
+        return {"months": [int(t.timestamp()) for t in by.index], "entities": {e: [int(x) for x in by[e]] for e in by.columns}, "rate": rate,
                 "total": _pts(by.sum(axis=1), 0), "total_12m": _pts(by.sum(axis=1).rolling(12).sum(), 0),
                 "latest_month": str(by.index[-1].date()), "n": int(len(d))}
     out = payload({"reports": counts}, sources=[SGO])
     out["as_of"] = (out.get("reports") or {}).get("latest_month")
+    return out
+
+
+def yahoo(sym: str, start: str = "2019-01-01") -> pd.Series:
+    from ._base import yahoo_daily
+    return yahoo_daily(sym, start, lambda *a, **k: fetch_json(*a, **k))
+
+
+def _tesla_now() -> dict:
+    t = manual(SLUG, "tesla")
+    t = t if isinstance(t, dict) else {}
+    out = payload({"tsla": lambda: _pts(yahoo("TSLA"), 2)}, sources=[])
+    out["quarterly"] = {k: _pts(v, 0) for k, v in t.items() if k in ("Deliveries", "Production")}
+    out["fsd_miles"] = _pts(t.get("FSD (Supervised) cumulative miles", pd.Series(dtype=float)), 0)
+    d = t.get("Deliveries")
+    if d is not None and len(d) >= 5:
+        out["kpi"] = {"deliveries_last": _r(d.iloc[-1], 0), "quarter": str(d.index[-1].date()), "yoy": _r(d.iloc[-1] / d.iloc[-5] - 1, 4),
+                      "ttm": _r(d.iloc[-4:].sum(), 0)}
+    ms = sorted(manual_rows(SLUG, "tesla_milestones"), key=lambda r: r["date"], reverse=True)
+    out["milestones"] = ms
+    out["fsd_markets"] = sorted({r["market"] for r in ms if r.get("area") == "FSD"})
+    out["rows"] = sorted(manual_rows(SLUG, "tesla"), key=lambda r: r["date"], reverse=True)
+    if out.get("tsla"):
+        px = out["tsla"]
+        out.setdefault("kpi", {})["tsla"] = px[-1][1]
+        out["kpi"]["tsla_1y"] = _r(px[-1][1] / next((v for t0, v in reversed(px) if t0 <= px[-1][0] - 365 * 86400), px[0][1]) - 1, 4)
+    out["as_of"] = max([r["date"] for r in out["rows"]] + ([pd.Timestamp(out["tsla"][-1][0], unit="s").strftime("%Y-%m-%d")] if out.get("tsla") else []), default=None)
     return out
 
 
@@ -101,4 +138,5 @@ def _cached_ep(name, fn, ttl=6 * 3600):
     return lambda: _cached(f"topic:{SLUG}:{name}", ttl, fn)
 
 
-ENDPOINTS = {"rides": _cached_ep("rides", _rides_now, 600), "footprint": _cached_ep("footprint", _footprint_now, 600), "safety": _cached_ep("safety", _safety_now)}
+ENDPOINTS = {"rides": _cached_ep("rides", _rides_now, 600), "footprint": _cached_ep("footprint", _footprint_now, 600), "safety": _cached_ep("safety", _safety_now),
+             "tesla": _cached_ep("tesla", _tesla_now)}

@@ -191,6 +191,29 @@ def weekly(s: pd.Series, how: str = "mean") -> pd.Series:
     return getattr(s.resample("W"), how)().dropna()
 
 
+YAHOO = "https://query{n}.finance.yahoo.com/v8/finance/chart/{sym}?period1={p1}&period2={p2}&interval=1d"
+
+
+def yahoo_daily(sym: str, start: str = "2020-01-01", fetcher=None) -> pd.Series:
+    """Daily closes from Yahoo's chart API (ported from the trading bot: explicit dates, the other host after a pause on 429).
+    `fetcher` is the calling module's fetch_json, so tests can replace it there."""
+    fetcher = fetcher or fetch_json
+
+    def go():
+        last = None
+        for k in range(4):
+            url = YAHOO.format(n=1 + k % 2, sym=sym, p1=int(pd.Timestamp(start).timestamp()), p2=int(time.time()))
+            try:
+                res = fetcher(url, DAY, min_bytes=200)["chart"]["result"][0]
+                s = pd.Series(res["indicators"]["quote"][0]["close"], index=pd.to_datetime(res["timestamp"], unit="s").normalize(), dtype=float)
+                return s[~s.index.duplicated(keep="last")].dropna()
+            except Exception as e:
+                last = e
+                time.sleep(1 + 2 * k)
+        raise last
+    return _cached(f"yahoo:{sym}:{start}", 6 * 3600, go)
+
+
 def json_safe(obj):
     """What the server does to every payload (json.dumps allow_nan=False) must not fail: a quick check used in tests."""
     return json.loads(json.dumps(obj, default=str, allow_nan=False))

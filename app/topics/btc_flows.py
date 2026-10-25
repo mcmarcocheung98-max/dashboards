@@ -27,30 +27,15 @@ SLUG = "btc-cycles"
 FARSIDE = "https://farside.co.uk/bitcoin-etf-flow-all-data/"
 BITBO = "https://bitbo.io/treasuries/etf-flows/"
 MSTR_HISTORY = "https://raw.githubusercontent.com/jefferych1/mstr-nav-tracker/main/data/history.json"
-YAHOO = "https://query{n}.finance.yahoo.com/v8/finance/chart/{sym}?period1={p1}&period2={p2}&interval=1d"
 LAUNCH = pd.Timestamp("2024-01-11")
 ISSUERS = {"IBIT": "BlackRock", "FBTC": "Fidelity", "GBTC": "Grayscale", "BTC": "Grayscale Mini", "BITB": "Bitwise", "ARKB": "ARK 21Shares",
            "HODL": "VanEck", "BRRR": "Valkyrie / CoinShares", "EZBC": "Franklin", "BTCO": "Invesco Galaxy", "BTCW": "WisdomTree", "MSBT": "Morgan Stanley"}
 TTL = DAY
 
 
-# ------------------------------------------------------------------ Yahoo (ported from the trading bot: explicit dates, retry on 429)
 def yahoo_daily(sym: str, start: str = "2020-01-01") -> pd.Series:
-    def go():
-        import requests
-        last = None
-        for k in range(4):
-            url = YAHOO.format(n=1 + k % 2, sym=sym, p1=int(pd.Timestamp(start).timestamp()), p2=int(time.time()))
-            try:
-                j = fetch_json(url, TTL, min_bytes=200)
-                res = j["chart"]["result"][0]
-                s = pd.Series(res["indicators"]["quote"][0]["close"], index=pd.to_datetime(res["timestamp"], unit="s").normalize(), dtype=float)
-                return s[~s.index.duplicated(keep="last")].dropna()
-            except Exception as e:                       # 429 or a bad payload: the other host, after a pause
-                last = e
-                time.sleep(1 + 2 * k)
-        raise last
-    return _cached(f"yahoo:{sym}:{start}", 6 * 3600, go)
+    from ._base import yahoo_daily as yd
+    return yd(sym, start, lambda *a, **k: fetch_json(*a, **k))      # looked up at call time, so a test can replace fetch_json here
 
 
 # ------------------------------------------------------------------ ETF flows

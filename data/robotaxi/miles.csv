@@ -1,0 +1,4 @@
+date,series,value,source,note
+# Cumulative fully driverless (rider-only) miles per operator, as published. Used to turn NHTSA crash reports into reports per million miles. series = operator as named in the NHTSA file's reporting entity where possible (e.g. "Waymo LLC").
+2025-03-31,Waymo LLC,71000000,https://waymo.com/safety/impact/,Waymo safety hub - verify figure and date
+2025-06-30,Waymo LLC,96000000,https://waymo.com/safety/impact/,verify

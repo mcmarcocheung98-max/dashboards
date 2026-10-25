@@ -129,3 +129,8 @@ def test_housing_new_sources():
         assert len(H.fred(sid)) > 100, sid
     assert len(H.hk_hibor()) > 50
     assert len(H.hk_index()) > 100            # RVD workbook URL and layout: verify
+
+
+def test_tsla_price():
+    from app.topics import robotaxi as R
+    assert len(R.yahoo("TSLA", "2024-01-01")) > 300

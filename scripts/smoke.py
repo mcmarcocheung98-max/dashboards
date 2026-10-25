@@ -30,6 +30,7 @@ def mock_sources() -> None:
     ai_jobs.fetch = lambda url, ttl, **k: T.AIS if "ai-tracker" in url else T.FRED if "fred" in url else T.AGG if "aggregate" in url else T.IND
     ai_adoption.fetch = lambda url, ttl, **k: (_ for _ in ()).throw(ConnectionError("fixture: no workbook"))
     robotaxi.fetch = lambda url, ttl, **k: T.SGO
+    robotaxi.fetch_json = lambda url, ttl, **k: T._yahoo(250)
     charts = T._chart(mult=1.6)
 
     def cyc(url, ttl, **k):
