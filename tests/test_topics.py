@@ -140,11 +140,15 @@ def _pipr_xlsx():
     import openpyxl
     wb = openpyxl.Workbook(); wb.active.title = "Cover sheet"; ws = wb.create_sheet("Table 1")
     ws.append(["Price Index of Private Rents, UK: monthly price statistics"]); ws.append(["This worksheet contains one table."])
-    ws.append(["Time period", "Area code", "Area name", "Region or country name", "Index", "Monthly change", "Annual change", "Rental price", "Index one bed"])
-    areas = [("K02000001", "United Kingdom", "[z]", 900), ("E92000001", "England", "[z]", 950), ("E12000007", "London", "[z]", 1600), ("E09000033", "Westminster", "London", 2500)]
+    ws.append(["Time period", "Area code", "Area name", "Region or country name", "Index", "Monthly change", "Annual change", "Rental price", "Index one bed",
+               "Monthly change one bed", "Annual change one bed", "Rental price one bed", "Index two bed", "Monthly change two bed", "Annual change two bed", "Rental price two bed"])
+    areas = [("K02000001", "United Kingdom", "[z]", 900), ("E92000001", "England", "[z]", 950), ("E12000007", "London", "[z]", 1600), ("E09000033", "Westminster", "London", 2500),
+             ("E09000007", "Camden", "London", 2300), ("E09000001", "City of London", "London", "[x]")]
     for i, t in enumerate(pd.date_range("2015-01-01", "2026-09-01", freq="MS")):
         for code, name, reg, base in areas:
-            ws.append([t.to_pydatetime(), code, name, reg, 100, "[x]" if i == 0 else 0.3, "[x]" if i < 12 else 5.0, base + i * 5, 100])
+            rent = base if base == "[x]" else base + i * 5
+            two = base if base == "[x]" else base + 400 + i * 5
+            ws.append([t.to_pydatetime(), code, name, reg, 100, "[x]" if i == 0 else 0.3, "[x]" if i < 12 else 5.0, rent, 100, 0.3, 5.0, 1, 100, 0.3, 5.0, two])
     buf = io.BytesIO(); wb.save(buf)
     return buf.getvalue().decode("latin-1")
 
@@ -587,11 +591,23 @@ def test_housing_london_pay_ratio(snapdir, monkeypatch):
     assert abs(last[1] - lon.iloc[-1] / p[p.index <= lon.index[-1]].iloc[-1]) < 0.01      # each price month uses the survey in force then
 
 
+def test_housing_borough_map(snapdir, monkeypatch):
+    H = housing_mocks(monkeypatch)
+    b = H._boroughs_now()
+    B.json_safe(b)
+    assert len(b["map"]["shapes"]) == 33 and b["map"]["viewBox"].startswith("0 0 1000") and all(s["d"].startswith("M") for s in b["map"]["shapes"])
+    assert {r["code"] for r in b["rows"]} == {s["code"] for s in b["map"]["shapes"]}            # every borough row has an outline, Westminster included
+    w = next(r for r in b["rows"] if r["borough"] == "City of Westminster")
+    assert w["code"] == "E09000033" and w["rent_2bed"] == 3600 and w["flat"] and w["terraced"] and w["rent_month"] == "2026-09-01"
+    assert next(r for r in b["rows"] if r["borough"] == "City of London")["rent_2bed"] is None and b["rents_error"] is None
+
+
 def test_housing_rents_from_pipr(snapdir, monkeypatch):
     H = housing_mocks(monkeypatch)
     assert H.pipr_url(PIPR_PAGE).endswith("/21october2026/priceindexofprivaterentsukmonthlypricestatistics.xlsx")
     r = H.parse_pipr(_pipr_xlsx().encode("latin-1"))
-    assert set(r) == {"London average rent", "England average rent"} and r["London average rent"]["rent"].iloc[-1] == 1600 + 140 * 5
+    assert {"London average rent", "England average rent", "E09000033"} <= set(r) and r["London average rent"]["rent"].iloc[-1] == 1600 + 140 * 5
+    assert r["E09000033"]["rent_2bed"].iloc[-1] == 2900 + 140 * 5 and r["E09000001"]["rent_2bed"].isna().all()
     p = H._prices_now()
     assert set(p["rents"]) >= {"London average rent", "England average rent"} and p["rent_now"]["rent"] == 2300 and p["rent_now"]["yoy"] == 5.0
     assert p["rent_now"]["month"] == "2026-09-01" and 0 < p["rent_now"]["rent_to_price"] < 0.2

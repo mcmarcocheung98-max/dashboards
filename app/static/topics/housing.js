@@ -1,6 +1,46 @@
 // London Housing Index: tabs and cards. Data from /api/housing/<prices|market|afford>; helpers from topic.html.
 (() => {
 const pc = (v, d = 1) => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(d) + "%";
+// Borough map: one blue ramp, five quantile bins, low to high = away from the page colour (light theme light→dark, dark theme dark→light);
+// both ends clear 2:1 against the surface (checked with the dataviz palette validator); grey = no figure
+const RAMPS = { light: ["#86b6ef", "#5598e7", "#2a78d6", "#1c5cab", "#104281"], dark: ["#184f95", "#256abf", "#3987e5", "#6da7ec", "#b7d3f6"] };
+const isDark = () => parseInt((css("--surface").match(/^#(..)/) || [0, "ff"])[1], 16) < 0x80;
+const MAP_METRICS = [["flat", "Flat"], ["terraced", "Terraced house"], ["semi", "Semi-detached"], ["detached", "Detached"], ["rent_2bed", "2-bed rent / month"]];
+let mapMetric = "flat";
+const money = v => v == null ? "–" : v >= 1e6 ? "£" + (v / 1e6).toFixed(2) + "m" : v >= 1e4 ? "£" + Math.round(v / 1000) + "k" : gbp(v);
+function boroughMap(d) {
+  const host = el("div", {}), info = el("div", { class: "muted", style: "min-height:40px;margin-top:6px" }, "Hover over or tap a borough.");
+  const byCode = Object.fromEntries(d.rows.filter(r => r.code).map(r => [r.code, r]));
+  const show = r => info.replaceChildren(el("b", { style: "color:var(--ink)" }, r.borough), " · flat " + money(r.flat) + " · terraced " + money(r.terraced) +
+    " · semi " + money(r.semi) + " · detached " + money(r.detached) + " · 2-bed rent " + (r.rent_2bed ? gbp(r.rent_2bed) + " a month" : "–") + " · all homes " + money(r.avg));
+  const draw = () => {
+    const vals = d.rows.map(r => r[mapMetric]).filter(v => v != null).sort((a, b) => a - b);
+    const cuts = [1, 2, 3, 4].map(i => vals[Math.floor(i * vals.length / 5)]);
+    const bin = v => v == null ? null : cuts.filter(c => v >= c).length;
+    const RAMP = RAMPS[isDark() ? "dark" : "light"];
+    const svg = svgEl("svg", { viewBox: d.map.viewBox, role: "img", "aria-label": "Map of London boroughs coloured by " + MAP_METRICS.find(m => m[0] === mapMetric)[1], style: "width:100%;height:auto;max-height:560px;display:block" });
+    for (const sh of d.map.shapes) {
+      const r = byCode[sh.code], b = r ? bin(r[mapMetric]) : null;
+      const p = svgEl("path", { d: sh.d, fill: b == null ? css("--chip") : RAMP[b], stroke: css("--surface"), "stroke-width": 2, "stroke-linejoin": "round", style: "cursor:pointer" }, svg);
+      if (!r) continue;
+      svgEl("title", {}, p).textContent = r.borough + ": " + (r[mapMetric] == null ? "no figure" : mapMetric === "rent_2bed" ? gbp(r[mapMetric]) + " a month" : money(r[mapMetric]));
+      const on = () => { svg.querySelectorAll("path").forEach(x => x.setAttribute("stroke", css("--surface"))); p.setAttribute("stroke", css("--ink")); svg.append(p); show(r); };
+      p.addEventListener("mouseenter", on); p.addEventListener("click", on);
+    }
+    const lo = vals[0], edges = [lo, ...cuts, vals[vals.length - 1]];
+    const legend = el("div", { class: "chips", style: "margin-top:6px;font-size:12px" }, ...RAMP.map((c, i) => el("span", { style: "display:inline-flex;align-items:center;gap:5px;color:var(--ink2)" },
+      el("i", { style: `display:inline-block;width:14px;height:14px;border-radius:3px;background:${c}` }), money(edges[i]) + "–" + money(edges[i + 1]))),
+      el("span", { style: "display:inline-flex;align-items:center;gap:5px;color:var(--ink2)" }, el("i", { style: "display:inline-block;width:14px;height:14px;border-radius:3px;background:var(--chip)" }), "no figure"));
+    const seg = el("div", { class: "seg" }, ...MAP_METRICS.map(([k, l]) => el("button", { class: k === mapMetric ? "on" : "", onclick: () => { mapMetric = k; draw(); } }, l)));
+    host.replaceChildren(seg, svg, legend);
+  };
+  draw();
+  const rm = (d.rows.find(r => r.rent_month) || {}).rent_month;
+  return card("Map: what a home costs in each borough", host, info,
+    d.rents_error ? el("div", { class: "muted" }, "2-bed rents not available right now (" + d.rents_error + ").") : null,
+    note("Colour: five equal-sized groups of boroughs, light (cheapest fifth) to dark (dearest fifth), for the measure chosen above. Prices: UK HPI average by property type, " +
+      (d.as_of || "").slice(0, 7) + ". Rent: ONS Price Index of Private Rents, average agreed rent for a 2-bedroom home" + (rm ? ", " + rm.slice(0, 7) : "") + ". " + d.map.source));
+}
 const VIEWS = {
   async prices() {
     const d = await api("prices"), n = d.now || {};
@@ -59,8 +99,10 @@ const VIEWS = {
     const draw = () => {
       const rows = [...d.rows].sort((a, b) => (b[sortKey] ?? -1e18) - (a[sortKey] ?? -1e18));
       const th = (k, l) => el("th", { style: "cursor:pointer", onclick: () => { sortKey = k; draw(); } }, l + (k === sortKey ? " ↓" : ""));
-      host.replaceChildren(el("div", { class: "scroll" }, el("table", {}, el("tr", {}, el("th", {}, "Borough"), th("avg", "Average price"), th("yoy", "Change on a year"), th("change_5y", "5 years")),
-        ...rows.map(r => el("tr", {}, el("td", {}, r.borough), el("td", {}, gbp(r.avg)), el("td", { class: cls(r.yoy) }, pc(r.yoy)), el("td", { class: cls(r.change_5y) }, pct(r.change_5y, 0)))))));
+      host.replaceChildren(el("div", { class: "scroll" }, el("table", {}, el("tr", {}, el("th", {}, "Borough"), th("avg", "Average price"), th("flat", "Flat"), th("terraced", "Terraced house"),
+        th("rent_2bed", "2-bed rent / month"), th("yoy", "Change on a year"), th("change_5y", "5 years")),
+        ...rows.map(r => el("tr", {}, el("td", {}, r.borough), el("td", {}, gbp(r.avg)), el("td", {}, gbp(r.flat)), el("td", {}, gbp(r.terraced)), el("td", {}, gbp(r.rent_2bed)),
+          el("td", { class: cls(r.yoy) }, pc(r.yoy)), el("td", { class: cls(r.change_5y) }, pct(r.change_5y, 0)))))));
     };
     draw();
     const ranked = [...d.rows].filter(r => r.yoy != null).sort((a, b) => b.yoy - a.yoy);
@@ -70,7 +112,7 @@ const VIEWS = {
     const lines = card("Most and least expensive boroughs, indexed (Jan 2015 = 100)", ...linesChart([...top, ...bottom].filter(b => d.indexed[b]).map(b => ({ name: b, points: d.indexed[b], dashed: bottom.includes(b) })), v => v == null ? "–" : v.toFixed(0)),
       note("Solid: the three most expensive; dashed: the three cheapest. Prime central London has lagged outer boroughs since 2015."));
     const errs = Object.keys(d.errors || {}).length ? note("Not available right now: " + Object.keys(d.errors).join(", ") + ".") : null;
-    return [card("London's 33 boroughs (UK HPI, " + (d.as_of || "–").slice(0, 7) + ")", el("div", { class: "muted" }, "Click a column to sort."), host, errs), bars, lines];
+    return [d.map ? boroughMap(d) : null, card("London's 33 boroughs (UK HPI, " + (d.as_of || "–").slice(0, 7) + ")", el("div", { class: "muted" }, "Click a column to sort."), host, errs), bars, lines].filter(Boolean);
   },
   async global() {
     const d = await api("global");

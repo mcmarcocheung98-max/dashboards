@@ -220,24 +220,27 @@ RENT_AREAS = {"E12000007": "London average rent", "E92000001": "England average 
 def parse_pipr(content: bytes) -> dict[str, pd.DataFrame]:
     """ONS PIPR workbook, sheet "Table 1" (one row per area and month: Time period, Area code, Area name, ..., Index, Monthly change,
     Annual change, Rental price, then the same by bedrooms and type) -> {series name: frame with rent (£ a month) and yoy (%)} for
-    RENT_AREAS. Streams the sheet (the file is ~19 MB) and keeps only those areas."""
+    RENT_AREAS, and {borough code (E09...): the same plus rent_2bed} for the London boroughs. Streams the sheet (~19 MB)."""
     from io import BytesIO
     import openpyxl
     wb = openpyxl.load_workbook(BytesIO(content), read_only=True, data_only=True)
     ws = wb["Table 1"] if "Table 1" in wb.sheetnames else wb[wb.sheetnames[-1]]
-    head, rows = None, {k: [] for k in RENT_AREAS}
+    head, rows = None, {}
     for r in ws.iter_rows(values_only=True):
         if head is None:
             if r and str(r[0]).strip().lower() == "time period":
                 head = [str(c or "").strip().lower() for c in r]
                 code, rent, ann = head.index("area code"), head.index("rental price"), head.index("annual change")
+                two = head.index("rental price two bed") if "rental price two bed" in head else None
             continue
-        if r[code] in rows:
-            rows[r[code]].append((pd.Timestamp(r[0]), pd.to_numeric(r[rent], errors="coerce"), pd.to_numeric(r[ann], errors="coerce")))
+        c = r[code]
+        if c in RENT_AREAS or str(c).startswith("E09"):          # E09: the London boroughs, kept for the map
+            num = lambda i: pd.to_numeric(r[i], errors="coerce") if i is not None else np.nan
+            rows.setdefault(c, []).append((pd.Timestamp(r[0]), num(rent), num(ann), num(two)))
     wb.close()
     if head is None:
         raise ValueError("PIPR layout changed: no 'Time period' header row")
-    out = {RENT_AREAS[k]: pd.DataFrame(v, columns=["t", "rent", "yoy"]).set_index("t").sort_index() for k, v in rows.items() if v}
+    out = {RENT_AREAS.get(k, k): pd.DataFrame(v, columns=["t", "rent", "yoy", "rent_2bed"]).set_index("t").sort_index() for k, v in rows.items() if v}
     if "London average rent" not in out or out["London average rent"]["rent"].dropna().empty:
         raise ValueError("PIPR layout changed: no London rents")
     return out
@@ -430,7 +433,7 @@ def _prices_now() -> dict:
         """ONS PIPR (automated) first; rows in data/housing/rents.csv add series or months the workbook lacks."""
         hand = manual("housing", "rents")
         try:
-            auto = {k: f["rent"].dropna() for k, f in rents().items()}
+            auto = {k: f["rent"].dropna() for k, f in rents().items() if k in RENT_AREAS.values()}
         except Exception:
             if not isinstance(hand, dict) or not hand:
                 raise
@@ -518,24 +521,45 @@ def _afford_now() -> dict:
     return out
 
 
+def borough_map() -> dict:
+    """data/housing/london_boroughs.json: SVG outlines of the 33 boroughs (ONS boundaries, simplified), keyed by ONS code."""
+    import json
+    from ._base import MANUAL_DIR
+    return json.loads((MANUAL_DIR / "housing" / "london_boroughs.json").read_text())
+
+
 def _boroughs_now() -> dict:
-    """Every London borough's average price and yearly change from the UK HPI (one paced download each, cached a day)."""
-    rows, series, errors = [], {}, {}
+    """Every London borough's average price (all, flat, and the three house types) and yearly change from the UK HPI, the 2-bed and
+    all-property rent from ONS PIPR, and the outlines for the map."""
+    rows, series, errors, rents_error = [], {}, {}, None
+    geo = borough_map()
+    code_of = {g["name"]: g["code"] for g in geo["boroughs"]} | {"City of Westminster": "E09000033"}
+    try:
+        rent = {k: f for k, f in rents().items() if k.startswith("E09")}
+    except Exception as e:
+        rent, rents_error = {}, type(e).__name__
+    last = lambda s: _r(s.dropna().iloc[-1], 0) if s.notna().any() else None
     for i, b in enumerate(BOROUGHS):
         try:
             d = borough(b)
             a = d["avg"].dropna()
             five = a[a.index <= a.index[-1] - pd.DateOffset(years=5)]
             name = borough_name(b)
-            rows.append({"borough": name, "avg": _r(a.iloc[-1], 0), "yoy": _r(d["pc_ann"].dropna().iloc[-1], 2) if d["pc_ann"].notna().any() else None,
-                         "change_5y": _r(a.iloc[-1] / five.iloc[-1] - 1, 4) if len(five) else None, "month": str(a.index[-1].date())})
+            code = code_of.get(name)
+            rf = rent.get(code)
+            rows.append({"borough": name, "code": code, "avg": _r(a.iloc[-1], 0), "yoy": _r(d["pc_ann"].dropna().iloc[-1], 2) if d["pc_ann"].notna().any() else None,
+                         "change_5y": _r(a.iloc[-1] / five.iloc[-1] - 1, 4) if len(five) else None, "month": str(a.index[-1].date()),
+                         "flat": last(d["avg_flat"]), "terraced": last(d["avg_terraced"]), "semi": last(d["avg_semi"]), "detached": last(d["avg_detached"]),
+                         "rent_2bed": last(rf["rent_2bed"]) if rf is not None else None, "rent": last(rf["rent"]) if rf is not None else None,
+                         "rent_month": str(rf["rent_2bed"].dropna().index[-1].date()) if rf is not None and rf["rent_2bed"].notna().any() else None})
             series[name] = _pts(_rebase(a, "2015-01-01"), 1)
         except Exception as e:
             errors[b] = type(e).__name__
-    if not rows:
+    if not [r for r in rows if r["avg"]]:
         raise ValueError(f"no borough could be read ({len(errors)} failed)")
     rows.sort(key=lambda r: -(r["avg"] or 0))
-    return {"rows": rows, "indexed": series, "errors": errors, "as_of": max(r["month"] for r in rows), "stale": {}, "updated": int(time.time())}
+    return {"rows": rows, "indexed": series, "errors": errors, "rents_error": rents_error, "as_of": max(r["month"] for r in rows), "stale": {},
+            "updated": int(time.time()), "map": {"viewBox": geo["viewBox"], "source": geo["source"], "shapes": [{"code": g["code"], "d": g["d"]} for g in geo["boroughs"]]}}
 
 
 def _rates(missing: dict) -> dict:
