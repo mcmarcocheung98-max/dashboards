@@ -70,3 +70,48 @@ def health() -> dict:
     for t in REGISTRY.values():
         out["dashboards"].setdefault(t.slug, {"fresh": 0, "stale": 0, "failing": 0, "alerts": 0, "sources": []})
     return out
+
+
+PROBE_URLS = {   # fixed list: what each dashboard downloads, to see from the server itself which sources answer and how
+    "landregistry csv": "https://landregistry.data.gov.uk/app/ukhpi/download/new.csv?from=2024-01-01&to=2035-01-01&location=http%3A%2F%2Flandregistry.data.gov.uk%2Fid%2Fregion%2Flondon&thm%5B%5D=property_type%2Fall&in%5B%5D=avg&lang=en",
+    "landregistry json": "https://landregistry.data.gov.uk/data/ukhpi/region/london/month/2025-06.json",
+    "landregistry full file index": "https://www.gov.uk/government/statistical-data-sets/uk-house-price-index-data-downloads-august-2025",
+    "fred csv": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=CES6054110001",
+    "fred alfred": "https://alfred.stlouisfed.org/graph/fredgraph.csv?id=CES6054110001",
+    "ons api": "https://api.ons.gov.uk/timeseries/L522/dataset/MM23/data",
+    "boe": "https://www.bankofengland.co.uk/boeapps/database/_iadb-fromshowcolumns.asp?csv.x=yes&Datefrom=01/Jan/2024&Dateto=now&SeriesCodes=IUDBEDR&CSVF=TN&UsingCodes=Y",
+    "yahoo": "https://query1.finance.yahoo.com/v8/finance/chart/TSLA?range=1mo&interval=1d",
+    "stooq": "https://stooq.com/q/d/l/?s=tsla.us&i=d",
+    "coingecko chart": "https://api.coingecko.com/api/v3/coins/solana/market_chart?vs_currency=usd&days=365&interval=daily",
+    "coingecko markets": "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=solana,hyperliquid",
+    "binance mirror": "https://data-api.binance.vision/api/v3/klines?symbol=SOLUSDT&interval=1d&limit=5",
+    "llama derivatives": "https://api.llama.fi/overview/derivatives?excludeTotalDataChart=false&excludeTotalDataChartBreakdown=true",
+    "llama hl revenue": "https://api.llama.fi/summary/fees/hyperliquid?dataType=dailyRevenue",
+    "census btos": "https://www.census.gov/hfp/btos/downloads/National.xlsx",
+    "rvd": "https://www.rvd.gov.hk/doc/en/statistics/his_data_4.xls",
+    "hkma": "https://api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/er-ir/hk-interbank-ir-endperiod?pagesize=3",
+    "farside": "https://farside.co.uk/bitcoin-etf-flow-all-data/",
+}
+
+
+def probe() -> dict:
+    """Try each PROBE_URLS entry from this server with requests and with curl; report status, size and the start of the body."""
+    import subprocess
+    import requests
+    from ._base import UA
+    out = {}
+    for name, url in PROBE_URLS.items():
+        row = {"url": url}
+        try:
+            r = requests.get(url, headers=UA, timeout=25)
+            row["requests"] = {"status": r.status_code, "bytes": len(r.content), "type": r.headers.get("content-type", ""), "start": r.text[:120]}
+        except Exception as e:
+            row["requests"] = {"error": f"{type(e).__name__}: {str(e)[:120]}"}
+        try:
+            c = subprocess.run(["curl", "-s", "-L", "--max-time", "25", "-A", UA["User-Agent"], "-o", "/dev/null", "-w", "%{http_code} %{size_download}", url],
+                               capture_output=True, text=True, timeout=40)
+            row["curl"] = c.stdout.strip() or f"exit {c.returncode}"
+        except Exception as e:
+            row["curl"] = f"{type(e).__name__}"
+        out[name] = row
+    return out

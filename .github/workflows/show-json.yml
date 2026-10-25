@@ -1,0 +1,13 @@
+name: show-json
+# Prints a JSON page from the deployed site (default /api/probe), for diagnosing sources from the server's own network.
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Page to print"
+        default: "https://dashboards-production-bde6.up.railway.app/api/probe"
+jobs:
+  show:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS --max-time 300 "${{ inputs.url }}" | python3 -m json.tool

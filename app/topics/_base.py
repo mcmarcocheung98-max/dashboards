@@ -88,8 +88,13 @@ def _download(url: str, timeout: int = 60, curl: bool = False, headers: dict | N
     """The body as text. binary=True returns the bytes decoded as latin-1 (lossless: .encode("latin-1") gives the bytes back), so a
     workbook or zip goes through the same snapshot path as a CSV."""
     if curl:    # FRED (and some UK sites) reset python-requests connections (TLS fingerprinting); plain curl is unaffected (see events._curl)
-        cmd = ["curl", "-s", "-f", "-L", "--retry", "2", "--max-time", str(timeout), "-A", UA["User-Agent"], url]
-        return subprocess.run(cmd, capture_output=True, text=True, check=True).stdout
+        cmd = ["curl", "-s", "-L", "--retry", "2", "--max-time", str(timeout), "-A", UA["User-Agent"], "-w", "\n%{http_code}", url]
+        r = subprocess.run(cmd, capture_output=True, text=not binary)
+        out = r.stdout if not binary else r.stdout.decode("latin-1")
+        body, _, code = out.rpartition("\n")
+        if r.returncode != 0 or not code.isdigit() or int(code) >= 400:
+            raise RuntimeError(f"curl exit {r.returncode}, HTTP {code or '?'}: {body[:120]!r}")
+        return body
     r = requests.get(url, headers={**UA, **(headers or {})}, timeout=timeout)
     r.raise_for_status()
     return r.content.decode("latin-1") if binary else r.text
@@ -111,7 +116,7 @@ def fetch(url: str, ttl: float = DAY, *, curl: bool = False, headers: dict | Non
             h.update(ok=time.time(), error=None)
             return text
         except Exception as e:
-            h.update(fail=time.time(), error=type(e).__name__)
+            h.update(fail=time.time(), error=f"{type(e).__name__}: {str(e)[:160]}")
             if snap.exists():
                 STALE[url] = snap.stat().st_mtime
                 return snap.read_text(encoding="utf-8")
