@@ -371,6 +371,72 @@ const asOf = d => d && d.as_of ? el("div", { class: "muted", style: "margin-top:
 const missing = (d, key, what) => d && d[key + "_error"] ? el("div", { class: "muted" }, (what || key) + " is not available right now (" + d[key + "_error"] + ").") : null;
 const cite = rows => rows && rows.length ? el("div", { class: "src", style: "margin-top:6px" }, "Sources: ", ...rows.flatMap((r, i) => [i ? ", " : "", link(host(r.source) + " (" + r.date + ")", r.source)])) : null;
 
+// ---- A top card that follows the timeline (every dashboard): hover a date on any chart in the tab to see that day's figures, click to
+// keep that date, "Back to latest" to return. Two ways to build one:
+//   followHead([{ label, points: [[t, v], ...], fmt, cls?: v => "up"|"down"|"", delta?: { lag: "1y"|"3m"|"1m"|"90d"|seconds, fmt, text? } }], opts)
+//     each figure is the last point of `points` on or before the date (the same series its chart draws)
+//   datedHead([{ label: t => text, value: t => [text, class] }], opts)      for figures computed some other way (t = null: latest)
+// opts: { latest: "Latest figures", scope: element | () => element }  scope limits which charts drive it (default: the whole tab,
+// except charts inside an element marked data-follow, which drive their own head). Names here avoid the per-dashboard helpers
+// (asof, dateOf) so a dashboard script can keep its own.
+const valueAt = (pts, t) => {
+  if (!pts || !pts.length) return null;
+  if (t == null) return pts[pts.length - 1][1];
+  if (t < pts[0][0]) return null;
+  let lo = 0, hi = pts.length - 1;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (pts[mid][0] <= t) lo = mid; else hi = mid - 1; }
+  return pts[lo][1];
+};
+const dayLabel = t => new Date(t * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const LAGS = { "1y": 365 * 86400, "3m": 91 * 86400, "1m": 30 * 86400, "90d": 90 * 86400, "30d": 30 * 86400, "7d": 7 * 86400, "1d": 86400 };
+function datedHead(items, opts = {}) {
+  let pinned = null;
+  const cells = items.map(it => { const k = kpi("", ""); return { it, v: k.querySelector(".v"), l: k.querySelector(".l"), k }; });
+  const status = el("span", { class: "muted" }), back = el("button", { class: "pill", style: "cursor:pointer;border:0;font:inherit;display:none", onclick: () => { pinned = null; show(null); } }, "Back to latest");
+  const bar = el("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px;min-height:24px" }, status, back);
+  const show = t => {
+    for (const c of cells) {
+      let txt = "–", cl = "", lab = "";
+      try { [txt, cl] = c.it.value(t); lab = c.it.label(t); } catch (e) {}
+      c.v.textContent = txt == null ? "–" : txt; c.v.className = "v " + (cl || ""); c.l.textContent = lab;
+    }
+    status.textContent = t == null ? (opts.latest || "Latest figures") + " · hover a chart to see any date, click to keep it" : (t === pinned ? "Kept: " : "On ") + dayLabel(t);
+    back.style.display = pinned == null ? "none" : "";
+  };
+  const root = el("div", { "data-follow-head": "1" }, bar, el("div", { class: "kpis" }, ...cells.map(c => c.k)));
+  const hooked = new WeakSet();
+  const scan = setInterval(() => {                     // charts are created after the tab is laid out, some only when a section opens
+    if (root.isConnected) scan.seen = true;
+    else if (scan.seen) { clearInterval(scan); return; }                 // the tab was left
+    for (const c of charts) {
+      if (hooked.has(c)) continue;
+      const host = c.chartElement && c.chartElement();
+      if (!host || !host.isConnected) continue;
+      const own = host.closest("[data-follow]");
+      const scope = typeof opts.scope === "function" ? opts.scope() : opts.scope;
+      if (scope ? !scope.contains(host) : (own && !own.contains(root))) continue;
+      hooked.add(c);
+      c.subscribeCrosshairMove(p => show(p && p.time != null ? Number(p.time) : pinned));
+      c.subscribeClick(p => { if (p && p.time != null) { pinned = Number(p.time); show(pinned); } });
+    }
+  }, 400);
+  show(null);
+  return root;
+}
+function followHead(items, opts = {}) {
+  return datedHead(items.map(it => ({
+    label: t => {
+      if (!it.delta) return it.label;
+      const v = valueAt(it.points, t), last = t == null ? (it.points && it.points.length ? it.points[it.points.length - 1][0] : null) : t;
+      const lag = typeof it.delta.lag === "number" ? it.delta.lag : LAGS[it.delta.lag || "1y"];
+      const was = last == null ? null : valueAt(it.points, last - lag);
+      const ch = v == null || was == null ? null : it.delta.abs ? v - was : was ? (v / was - 1) * 100 : null;
+      return it.label + (ch == null ? "" : " · " + (it.delta.fmt ? it.delta.fmt(ch) : (ch > 0 ? "+" : "") + ch.toFixed(1) + (it.delta.abs ? "" : "%")) + " " + (it.delta.text || ({ "1y": "on a year", "3m": "on 3 months", "1m": "on a month", "90d": "in 90 days", "30d": "in 30 days", "7d": "in 7 days", "1d": "on the day" }[it.delta.lag || "1y"] || "")));
+    },
+    value: t => { const v = valueAt(it.points, t); return [v == null ? "–" : (it.fmt ? it.fmt(v) : num(v, 1)), it.cls && v != null ? it.cls(v) : ""]; },
+  })), opts);
+}
+
 // What changed since yesterday (/api/<slug>/changes, one snapshot a day): the first tab lists every reading that flipped and a row of
 // squares per tab (its lean day by day); every other tab shows its own. Dashboards without readings show nothing.
 let CHANGES = null;

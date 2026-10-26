@@ -108,6 +108,38 @@ def mock_discovered() -> None:
             tm.smoke_patch()
 
 
+def follow_check(pg) -> dict | None:
+    """On a tab whose top card follows the timeline (data-follow-head): hover the first chart, the head must show a date; click keeps
+    it after the mouse leaves; 'Back to latest' returns. None when the tab has no such head or no chart under it."""
+    head = pg.locator("#view [data-follow-head]").first
+    if not head.count():
+        return None
+    time.sleep(0.6)                                     # the head hooks charts every 400 ms
+    charts = pg.locator("#view .chart")
+    target = None
+    for i in range(charts.count()):
+        c = charts.nth(i)
+        if c.is_visible() and c.evaluate("e => !e.closest('[data-follow]')"):
+            target = c; break
+    if target is None:
+        return None
+    target.scroll_into_view_if_needed()
+    box = target.bounding_box()
+    status = lambda: head.locator("span.muted").first.inner_text()
+    x, y = box["x"] + box["width"] * 0.3, box["y"] + box["height"] * 0.5
+    pg.mouse.move(x, y); time.sleep(0.3)
+    hovered = status()
+    pg.mouse.click(x, y); time.sleep(0.2)
+    pg.mouse.move(box["x"] + box["width"] / 2, box["y"] - 40); time.sleep(0.3)
+    kept = status()
+    back = head.get_by_text("Back to latest")
+    if back.count():
+        back.click(); time.sleep(0.2)
+    latest = status()
+    ok = hovered.startswith(("On ", "Kept: ")) and kept.startswith("Kept: ") and not latest.startswith(("On ", "Kept: "))
+    return {"ok": ok, "hover": hovered[:24], "kept": kept[:24]}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--live"); ap.add_argument("--out", default=str(ROOT / "smoke-shots")); ap.add_argument("--only"); ap.add_argument("--lwc")
@@ -141,10 +173,11 @@ def main() -> int:
                     key = pg.evaluate("location.hash.slice(1)")
                     text = pg.locator("#view").inner_text()
                     sync = pg.evaluate(SYNC_CHECK) if theme == "light" else {"n": "-", "ok": None}
+                    follow = follow_check(pg) if theme == "light" else None
                     line = (f"{theme:5} {slug:12} {key:11} cards={pg.locator('#view .card').count():3} charts={pg.locator('#view .chart').count():3} "
-                            f"unavailable={text.count('not available'):2} could-not-load={'Could not load' in text} sync={sync}")
+                            f"unavailable={text.count('not available'):2} could-not-load={'Could not load' in text} sync={sync}" + (f" follow={follow}" if follow else ""))
                     print(line, flush=True)
-                    if "Could not load" in text or sync.get("ok") is False:
+                    if "Could not load" in text or sync.get("ok") is False or (follow and follow.get("ok") is False):
                         bad.append(line)
                     if theme == "light":
                         pg.screenshot(path=str(out / f"{slug}-{key}.png"), full_page=True)

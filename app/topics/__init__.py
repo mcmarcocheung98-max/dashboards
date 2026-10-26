@@ -11,6 +11,10 @@ nothing shared changes. A helper module that only feeds a dashboard sets DASHBOA
 What changed since yesterday: a module may define READINGS() -> [{"tab", "key", "label", "value", "lean": +1/0/-1, "note"?}], its
 headline indicators as they read now (from cached data only). One snapshot a day is saved and the page shows what flipped and each
 tab's lean day by day (see _daily.py). Without READINGS the dashboard simply shows no such card.
+
+A top card that follows the timeline: in the dashboard's JS, build each tab's top KPI card with followHead([{label, points, fmt,
+delta?}], opts) or datedHead(items, opts) from static/topic.html. Hovering any chart in the tab shows that day's figures, a click
+keeps the day, "Back to latest" returns; scripts/smoke.py checks it on every tab that has one.
 """
 from __future__ import annotations
 
@@ -106,6 +110,7 @@ CATEGORIES = (
     ("Money & markets", "Prices, rates and where capital is flowing.", ("btc-cycles", "debt-rates", "housing", "pokemon-cards")),
     ("AI & technology", "How fast AI, chips and machines are arriving, and who leads.", ("ai", "compute-chips", "china-us-tech", "robotaxi", "space")),
     ("People & planet", "The slow forces: population, health and climate.", ("demographics", "longevity", "climate")),
+    ("Sentiment & attention", "What people are betting on and paying attention to.", ("prediction-markets", "trends")),
 )
 
 
