@@ -15,7 +15,15 @@ New dashboards are included automatically. The zip is also attached to the workf
 2. Run `rclone config` → `n` (new remote) → name it **`onedrive`** → storage type **Microsoft OneDrive** → leave client id and
    secret blank → region **Microsoft Cloud Global** → answer **y** to "use web browser" and sign in to your Microsoft account →
    choose **OneDrive Personal or Business** → pick your drive → confirm.
-3. Run `rclone config file`, open the file it names and copy everything in it.
+3. Copy the whole config file, not its path: run `cat "$(rclone config file | tail -1)"` (Windows: `type` followed by the path
+   that `rclone config file` prints) and copy everything it prints. It is several lines and looks like:
+   ```
+   [onedrive]
+   type = onedrive
+   token = {"access_token":"...","token_type":"Bearer","refresh_token":"...","expiry":"..."}
+   drive_id = ...
+   drive_type = personal
+   ```
 4. On GitHub: repository **Settings › Secrets and variables › Actions › New repository secret**, name **`RCLONE_CONFIG`**, paste, save.
 5. Test it: **Actions › archive › Run workflow**. The zip appears in OneDrive under `Dashboards/Archive/<this month>/`.
 
