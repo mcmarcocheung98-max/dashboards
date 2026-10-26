@@ -80,41 +80,7 @@ const asof = (pts, t) => {
   return pts[lo][1];
 };
 const dateOf = t => new Date(t * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
-// A top card that follows the charts: hover a date on any chart inside `scope` (the whole tab when no scope) to see that day's figures,
-// click to keep that date, "Back to latest" to return. items: [{ label: t => text, value: t => [text, class] }], t = null for the latest.
-function datedHead(items, opts = {}) {
-  let pinned = null;
-  const cells = items.map(it => { const k = kpi("", ""); return { it, v: k.querySelector(".v"), l: k.querySelector(".l"), k }; });
-  const status = el("span", { class: "muted" }), back = el("button", { class: "pill", style: "cursor:pointer;border:0;font:inherit;display:none", onclick: () => { pinned = null; show(null); } }, "Back to latest");
-  const bar = el("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px;min-height:24px" }, status, back);
-  const show = t => {
-    for (const c of cells) {
-      const [txt, cl] = c.it.value(t); c.v.textContent = txt; c.v.className = "v " + (cl || ""); c.l.textContent = c.it.label(t);
-    }
-    status.textContent = t == null ? (opts.latest || "Latest figures") + " · hover a chart to see any date, click to keep it" : (t === pinned ? "Kept: " : "On ") + dateOf(t);
-    back.style.display = pinned == null ? "none" : "";
-  };
-  const root = el("div", {}, bar, el("div", { class: "kpis" }, ...cells.map(c => c.k)));
-  const hooked = new WeakSet();
-  const scan = setInterval(() => {                     // charts are created after the tab is laid out, and a coin's charts only when opened
-    if (root.isConnected) scan.seen = true;
-    else if (scan.seen) { clearInterval(scan); return; }                 // the tab was left
-    for (const c of charts) {
-      if (hooked.has(c)) continue;
-      const host = c.chartElement && c.chartElement();
-      if (!host || !host.isConnected) continue;
-      const own = host.closest("[data-follow]");
-      const scope = typeof opts.scope === "function" ? opts.scope() : opts.scope;
-      if (scope ? !scope.contains(host) : own) continue;                  // a coin's charts drive that coin's strip, not the tab's head
-      hooked.add(c);
-      c.subscribeCrosshairMove(p => show(p && p.time != null ? Number(p.time) : pinned));
-      c.subscribeClick(p => { if (p && p.time != null) { pinned = Number(p.time); show(pinned); } });
-    }
-  }, 400);
-  show(null);
-  return root;
-}
-
+// The top cards that follow the charts use the shared datedHead / followHead (topic.html).
 // A card whose body folds away: click the title. Each reader's choice is remembered in this browser (when storage allows).
 function fold(title, open, ...kids) {
   const key = "fold:" + location.pathname + ":" + title.slice(0, 60);
@@ -294,8 +260,9 @@ const VIEWS = {
   },
   async metrics() {
     const d = await api("metrics"), R = d.research, L = d.latest || {};
-    const head = card(null, el("div", { class: "kpis" }, kpi("DeFi TVL", usdBig(L.defi_tvl)), kpi("Stablecoin supply", usdBig(L.stablecoins)), kpi("Hyperliquid TVL", usdBig(L.hl_tvl)),
-      kpi("Hyperliquid revenue, 30 days", usdBig(L.hl_revenue_30d)), kpi("Hyperliquid fees, 30 days", usdBig(L.hl_fees_30d)), kpi("DEX volume (spot), 30 days", usdBig(L.dex_volume_30d))), asOf(d), stale(d));
+    const head = card(null, followHead([["defi_tvl", "DeFi TVL"], ["stablecoins", "Stablecoin supply"], ["hl_tvl", "Hyperliquid TVL"], ["hl_revenue_30d", "Hyperliquid revenue, 30 days"],
+      ["hl_fees_30d", "Hyperliquid fees, 30 days"], ["dex_volume_30d", "DEX volume (spot), 30 days"]].map(([k2, l2]) => ({ label: l2, points: d[k2] || [], fmt: usdBig, delta: { lag: "90d" } })),
+      { latest: "Latest (" + (d.as_of || "–") + ")" }), asOf(d), stale(d));
     const live = (key, title, noteText) => d[key] && d[key].length ? card(title, ...linesChart([{ name: title, points: d[key] }], v => usdBig(v), { small: true }), note(noteText))
       : card(title, el("div", { class: "muted" }, "Not available right now (" + (d[key + "_error"] || "no data") + ")."));
     const grid = el("div", { class: "grid2" },
@@ -446,7 +413,10 @@ const VIEWS = {
     const charts = [];
     if (d.volume && d.volume.length) charts.push(card("BTC spot volume, 30-day average (CoinGecko)", ...linesChart([{ name: "Volume", points: d.volume }, { name: "$10bn threshold", points: d.volume.map(p => [p[0], 10e9]), dashed: true, color: css("--hold") }], v => usdBig(v), { small: true })));
     if (d.dominance_log && d.dominance_log.length > 1) charts.push(card("BTC dominance, logged daily since deploy", ...linesChart([{ name: "Dominance", points: d.dominance_log }], v => v == null ? "–" : v.toFixed(1) + "%", { small: true })));
-    return [status, ...charts, doc, timing, breakers];
+    const hd = [d.volume && d.volume.length ? { label: "BTC spot volume, 30-day average", points: d.volume, fmt: usdBig, delta: { lag: "90d" } } : null,
+      d.dominance_log && d.dominance_log.length > 1 ? { label: "BTC dominance", points: d.dominance_log, fmt: v => v.toFixed(1) + "%", delta: { lag: "30d", abs: true, fmt: v => (v > 0 ? "+" : "") + v.toFixed(1) + " pts" } } : null].filter(Boolean);
+    const head = hd.length ? card(null, followHead(hd, { latest: "Latest" })) : null;
+    return [head, status, ...charts, doc, timing, breakers];
   },
 };
 
