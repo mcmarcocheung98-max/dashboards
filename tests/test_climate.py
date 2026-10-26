@@ -342,3 +342,15 @@ def test_live_sources_parse():
     _cache.clear()
     assert len(C.gistemp()) > 1000 and len(C.co2()) > 700 and len(C.sea_ice("north")) > 10000
     assert len(C.station("Hong Kong")) > 40000 and len(C.station("New York")) > 50000
+
+
+def test_a_station_that_stopped_gives_no_reading_for_today(fixtures, monkeypatch):
+    def old_london(url, ttl=0, **k):
+        text = fake_fetch(url, ttl, **k)
+        if "UKM00003772" in url:                   # Heathrow in GHCN stops in August 2025
+            text = "\n".join(l for l in text.splitlines() if not l.startswith('"UKM') or l[15:25] <= "2025-08-24")
+        return text
+    monkeypatch.setattr(C, "fetch", old_london)
+    h = C._heat_now()
+    keys = {r["key"] for r in h["readings"]}
+    assert h["London"]["upto"] == "2025-08-24" and "hot_London" not in keys and "rec_London" not in keys and "hot_New York" in keys

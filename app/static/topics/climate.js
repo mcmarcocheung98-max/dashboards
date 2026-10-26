@@ -134,7 +134,7 @@ const VIEWS = {
   async heat() {
     const d = await api("heat"), C = ["Hong Kong", "London", "New York"].filter(c => d[c]);
     const head = card(null, el("div", { class: "kpis" },
-      ...C.map(c => kpi(c + ": hot days so far this year (≥" + d[c].threshold + " °C)", d[c].ytd == null ? "–" : d[c].ytd + (d[c].ytd_normal == null ? "" : " vs " + num(d[c].ytd_normal, 0) + " normal"),
+      ...C.map(c => kpi(c + ": hot days in " + (d[c].upto || "").slice(0, 4) + " to " + (d[c].upto || "–").slice(5) + " (≥" + d[c].threshold + " °C)", d[c].ytd == null ? "–" : d[c].ytd + (d[c].ytd_normal == null ? "" : " vs " + num(d[c].ytd_normal, 0) + " normal"),
         d[c].ytd_normal == null ? "" : d[c].ytd > d[c].ytd_normal ? "down" : d[c].ytd < d[c].ytd_normal ? "up" : "")),
       ...C.map(c => kpi(c + ": record highs : lows, last 365 days", d[c].rec365 && d[c].rec365[0] != null ? d[c].rec365[0] + " : " + (d[c].rec365[1] == null ? "–" : d[c].rec365[1]) : "–")),
       ...C.map(c => kpi(c + ": hottest day on record", d[c].hottest ? d[c].hottest.v + " °C (" + d[c].hottest.date + ")" : "–"))), asOf(d), stale(d),
@@ -142,7 +142,7 @@ const VIEWS = {
     const series = key => C.map(c => ({ name: c, points: d[c][key] || [], color: col(CITY, c) }));
     const hot = card("Hot days a year: Hong Kong ≥33 °C, London ≥30 °C, New York ≥32.2 °C (90 °F)",
       ...linesChart(series("hot"), v => num(v, 0)),
-      note("Each city's own line: the Hong Kong Observatory's 'very hot day', the 30 °C the Met Office uses for London, and New York's 90 °F. Hong Kong: the Observatory at Tsim Sha Tsui since 1884 (none 1940–46). London: Heathrow (GHCN-Daily, from 1973). New York: Central Park since 1869. The current year is counted to date."),
+      note("Each city's own line: the Hong Kong Observatory's 'very hot day', the 30 °C the Met Office uses for London, and New York's 90 °F. Hong Kong: the Observatory at Tsim Sha Tsui since 1884 (none 1940–46). London: Heathrow (GHCN-Daily from December 1948; NCEI's copy stopped in August 2025). New York: Central Park since 1869. The current year is counted to date."),
       ask("5 years: is Hong Kong's count of very hot days (about 10 a year in the 1990s, 40–50 recently) still climbing? 10 years: London's 30 °C days are rare enough that one heatwave decides the year: is the 10-year average rising? 20 years: urban heat adds to the global trend in all three cities, so local counts run ahead of the 1.5 °C story."));
     const nights = card("Hot nights a year: minimum ≥28 °C in Hong Kong, ≥24 °C in New York, ≥20 °C in London",
       ...linesChart(series("nights"), v => num(v, 0), { small: true }),

@@ -743,8 +743,11 @@ def _heat_now() -> dict:
     parts["heathrow"] = lambda: _pts(annual(heathrow_monthly())[lambda s: s.index.year < pd.Timestamp.now().year], 2)
     out = payload(parts, sources=[HKO.format(t="CLMMAXT"), HKO.format(t="CLMMINT"), HEATHROW] + [ncei_url(c) for c in STATIONS])
     rows = []
+    fresh = (pd.Timestamp.now() - pd.Timedelta(days=20)).strftime("%Y-%m-%d")
     for c in CITIES:
         d = out.get(c) or {}
+        if (d.get("upto") or "") < fresh:      # a station that stopped reporting (Heathrow in GHCN, 2025) gives no reading for today
+            continue
         if d.get("ytd") is not None and d.get("ytd_normal") is not None:
             diff = d["ytd"] - d["ytd_normal"]
             rows.append({"tab": "heat", "key": f"hot_{c}", "label": f"{c}: hot days this year (≥{d['threshold']} °C) vs the 1991-2020 average to date",

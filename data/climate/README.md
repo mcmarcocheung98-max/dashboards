@@ -54,7 +54,7 @@ Every row carries a `source` URL. Rows whose `note` says **verify** were written
 | CO₂ | `emis_china`, `emis_world`, `emis_us` | Fossil CO₂ change in the latest year | fell | rose | ±0.25% |
 | Sea level & ice | `gmsl_rate` | Global sea-level rise a year over the last 10 complete years against the 10 before | slower | faster | ±0.3 mm |
 | Sea level & ice | `ice_north`, `ice_south` | Extent on the latest day against the 2011–2020 average for that date | more ice | less | ±0.1 million km² |
-| Local heat | `hot_<city>` | Hot days this year so far against the 1991–2020 average to the same date | fewer | more | ±max(1 day, 15%) |
+| Local heat | `hot_<city>` | Hot days this year so far against the 1991–2020 average to the same date (only while the station's data is under 20 days old) | fewer | more | ±max(1 day, 15%) |
 | Local heat | `rec_<city>` | Calendar-day record highs : record lows over the last 365 days | more lows | more highs | none |
 | Costs | `insured_vs_trend` | Latest year's insured nat-cat losses against the log-linear trend | below trend | above | ±10% |
 | Costs | `billions` | US billion-dollar disasters in the latest year against the 10 years before | fewer | more | ±2 events |
@@ -65,11 +65,11 @@ Every row carries a `source` URL. Rows whose `note` says **verify** were written
 - 1.5 °C in the Paris Agreement is a 20-year average. A month, a 12-month window or a calendar year above it is a warning, not a breach. The trend-crossing year in the KPIs is a straight line through the last 30 yearly values, not a projection.
 - GISTEMP starts in 1880, so its "pre-industrial" is 1880–1900; this reads a little cooler than 1850–1900 baselines (by about 0.05 °C).
 - Tide gauges include vertical land motion; global satellite sea level does not.
-- London hot days come from GHCN-Daily for Heathrow, which starts in the 1970s, so London's record counts start about 30 years later. The Met Office monthly file goes back to 1948 but has no daily values.
+- London hot days come from GHCN-Daily for Heathrow (`UKM00003772`, December 1948 on), the only GHCN station with daily maxima within about 25 km of central London. NCEI's copy stopped on 2025-08-24 (checked from Railway, October 2026), so London's counts end there and London gives no `hot_London` / `rec_London` reading while it is more than 20 days old. The Met Office monthly Heathrow file is current but has no daily values. See "Requests for shared code".
 - Hot-day thresholds differ by city on purpose (each city's own convention); compare trends, not levels, across cities.
 - Insured losses are nominal: part of the trend is inflation and more property in exposed places. NOAA's counts are CPI-adjusted, Swiss Re's here are not.
 - Railway runs in the US. The Met Office and Copernicus are the sources most likely to refuse a cloud server; each feeds one line, so the rest still shows. Check `/api/climate/layout` after a deploy.
 
 ## Requests for shared code
 
-None so far.
+None needed for the code. One data gap: a current daily maximum for London. The Met Office's daily station data (MIDAS Open via CEDA) needs a registered account, and ECA&D's per-station files are zips behind a form; if either can be fetched from Railway (a CEDA token as an environment variable, say), `station("London")` can take it with a parser and nothing shared changes.
