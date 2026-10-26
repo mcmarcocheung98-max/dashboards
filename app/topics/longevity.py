@@ -50,6 +50,8 @@ CONCEPT = "https://data.sec.gov/api/xbrl/companyconcept/CIK{cik:010d}/{tax}/{tag
 SEC_HEADERS = {"User-Agent": os.environ.get("SEC_UA", "Dashboards admin@dashboards-production-bde6.up.railway.app"), "Accept": "application/json"}
 FIRMS = {"Eli Lilly": (59478, "USD", (("us-gaap", "Revenues"), ("us-gaap", "RevenueFromContractWithCustomerExcludingAssessedTax"))),
          "Novo Nordisk": (353278, "DKK", (("ifrs-full", "Revenue"),))}
+XMART = "https://xmart-api-public.who.int/DATA_/RELAY_WHS"
+NHSBSA = "https://opendata.nhsbsa.net/api/3/action/"
 NASDAQ_ETF = "https://api.nasdaq.com/api/quote/{sym}/historical?assetclass={cls}&fromdate={a}&todate={b}&limit=9999"
 NASDAQ_HEADERS = {"Accept": "application/json, text/plain, */*", "Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"}
 TICKERS = {"XBI": "etf", "IBB": "etf", "SPY": "etf", "LLY": "stocks", "NVO": "stocks"}
@@ -515,24 +517,29 @@ def _layout_now() -> dict:
             "openprescribing search": OP_SEARCH.format(q="tirzepatide"), "openprescribing spend": OP_SPEND.format(code=OP_FALLBACK["semaglutide"]),
             "sec lilly": CONCEPT.format(cik=59478, tax="us-gaap", tag="Revenues"), "sec novo": CONCEPT.format(cik=353278, tax="ifrs-full", tag="Revenue"),
             "nasdaq XBI": NASDAQ_ETF.format(sym="XBI", cls="etf", a="2026-09-01", b=b),
-            "gho one country": "https://ghoapi.azureedge.net/api/WHOSIS_000002?$filter=SpatialDim%20eq%20%27GBR%27",
-            "gho no filter": "https://ghoapi.azureedge.net/api/WHOSIS_000002?$top=3",
-            "gho indicator list": "https://ghoapi.azureedge.net/api/Indicator?$top=2",
-            "who xmart": "https://xmart-api-public.who.int/DATA_/RELAY_WHS?$top=3",
-            "nhsbsa epd package": "https://opendata.nhsbsa.net/api/3/action/package_show?id=english-prescribing-data-epd",
-            "nhsbsa pca package": "https://opendata.nhsbsa.net/api/3/action/package_show?id=prescription-cost-analysis-pca-monthly-data",
-            "nhsbsa package list": "https://opendata.nhsbsa.net/api/3/action/package_list"}
+            "xmart hale": XMART + "?$filter=" + quote("IND_CODE eq 'WHOSIS_000002' and DIM_GEO_CODE_M49 eq '826'", safe="'") + "&$top=2",
+            "xmart ncd": XMART + "?$filter=" + quote("IND_CODE eq 'NCDMORT3070' and DIM_GEO_CODE_M49 eq '840'", safe="'") + "&$top=2"}
 
     def one(item):
         k, u = item
         h = {**B.UA, **(NASDAQ_HEADERS if "nasdaq" in k else SEC_HEADERS if "sec" in k else {})}
         try:
             r = requests.get(u, headers=h, timeout=25)
-            return k, {"status": r.status_code, "bytes": len(r.content), "type": r.headers.get("content-type", ""), "start": r.text[:400]}
+            return k, {"status": r.status_code, "bytes": len(r.content), "type": r.headers.get("content-type", ""), "start": r.text[:1500 if "xmart" in k else 400]}
         except Exception as e:
             return k, {"error": f"{type(e).__name__}: {str(e)[:160]}"}
     with ThreadPoolExecutor(max_workers=16) as ex:
-        return dict(ex.map(one, urls.items()))
+        out = dict(ex.map(one, urls.items()))
+    for pkg in ("prescription-cost-analysis-pca-monthly-data", "english-prescribing-data-epd"):      # the newest monthly tables and their fields
+        try:
+            res = requests.get(NHSBSA + "package_show?id=" + pkg, headers=B.UA, timeout=25).json()["result"]["resources"]
+            names = [r.get("name") for r in res]
+            last = names[-1]
+            r = requests.get(NHSBSA + "datastore_search?resource_id=" + last + "&limit=2", headers=B.UA, timeout=40)
+            out[pkg] = {"n": len(names), "first": names[:2], "last": names[-3:], "sample_status": r.status_code, "sample": r.text[:1500]}
+        except Exception as e:
+            out[pkg] = {"error": f"{type(e).__name__}: {str(e)[:160]}"}
+    return out
 
 
 def _cached_ep(name, fn, ttl=6 * 3600):
