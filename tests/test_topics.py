@@ -844,6 +844,21 @@ def test_housing_borough_map(snapdir, monkeypatch):
     assert wr[(2014 - 2005) * 12] is None and wr[(2015 - 2005) * 12] == 2900 and wr[-1] == 3600         # rents start in 2015
 
 
+def test_housing_readings(snapdir, monkeypatch):
+    H = housing_mocks(monkeypatch)
+    from app import cache
+    assert H.READINGS() == []                                   # nothing cached yet: nothing read, nothing downloaded
+    for tab in ("prices", "afford", "boroughs", "global"):
+        H.ENDPOINTS[tab]()
+    r = {x["key"]: x for x in H.READINGS()}
+    assert set(r) == {"london_price_yoy", "london_rent_yoy", "fixed_2y_6m", "price_to_pay_1y", "boroughs_rising", "london_vs_us_yoy"}
+    assert all(x["tab"] in {t for t, _ in topics.REGISTRY["housing"].tabs} and x["lean"] in (-1, 0, 1) for x in r.values())
+    assert r["london_rent_yoy"]["value"] == 5.0 and r["london_rent_yoy"]["lean"] == 0           # fixture rents +5%: neither cheap nor dear
+    assert H._lean(-1, 0, 3) == 1 and H._lean(4, 0, 3) == -1 and H._lean(None, 0, 3) == 0
+    from app.topics import _daily
+    assert _daily._clean(H.READINGS()) and len(_daily._clean(H.READINGS())) == len(r)
+
+
 def test_housing_rents_from_pipr(snapdir, monkeypatch):
     H = housing_mocks(monkeypatch)
     assert H.pipr_url(PIPR_PAGE).endswith("/21october2026/priceindexofprivaterentsukmonthlypricestatistics.xlsx")

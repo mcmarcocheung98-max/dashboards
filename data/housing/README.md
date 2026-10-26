@@ -42,6 +42,22 @@ All four are public sector information licensed under the Open Government Licenc
 - **Bank Rate by month** is the rate in force on the first of each month.
 - **Sales, last 12 months** compares the latest 12 months with the 12 before. The latest two or three months are always revised upward as late registrations arrive.
 
+## What changed since yesterday (leans)
+
+Each tab's headline readings are saved once a day; the page shows which flipped overnight and a row of coloured squares per tab.
+For housing, **+1 means better for buyers, -1 worse for buyers**, 0 in between:
+
+| Tab | Reading | +1 when | -1 when |
+|---|---|---|---|
+| Prices | London average price, change on a year | falling (below 0%) | rising more than 3% |
+| Prices | London private rent, change on a year | below 2% | above 5% |
+| Rates & affordability | 2-year fixed mortgage rate, change on 6 months | down more than 0.25 points | up more than 0.25 points |
+| Rates & affordability | Price to London pay, change on a year | down more than 0.2 | up more than 0.2 |
+| Boroughs | Share of boroughs where prices rose on a year | under a third | over two thirds |
+| London vs US vs HK | London minus US (FHFA) yearly price change | London more than 2 points weaker | more than 2 points stronger |
+
+They are read from the tab data the server already holds; a tab not yet computed is left out of that day's save.
+
 ## Keeping it up to date
 
 Nothing to do: all four sources are fetched automatically, at most once a day, and the page data is recomputed every six hours. If a card says "Source not reachable right now: showing the last copy from <date>", the source was down or refused the request and the last snapshot (`the snapshot folder (`SNAPSHOT_DIR`, `/app/snapshots` on Railway)` on the Railway volume) is being shown; it clears itself when the source is back. If a card says "not available right now", the source has never been reached from the server: run the check below from a UK or EU machine to tell a changed download format from a site that blocks US servers.

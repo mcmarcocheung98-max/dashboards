@@ -9,6 +9,8 @@ afford   Bank Rate (Bank of England IADB series IUDBEDR), the London price-to-ea
 
 prices   also London and England average monthly private rent (ONS Price Index of Private Rents, newest monthly workbook)
 
+Leans in READINGS(): +1 better for buyers, -1 worse, 0 neutral (data/housing/README.md).
+
 Hand-entered (data/housing/): none required. Everything is cached a day and kept on disk; a source that is down leaves its last
 snapshot on the page with a 'stale since' note.
 """
@@ -701,6 +703,67 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 ENDPOINTS = {"prices": _cached_ep("prices", _prices_now), "market": _cached_ep("market", _market_now), "afford": _cached_ep("afford", _afford_now),
              "boroughs": _cached_ep("boroughs", _boroughs_now), "global": _cached_ep("global", _global_now),
              "layout": _cached_ep("layout", _layout_now, 1800)}
+
+
+# ------------------------------------------------------------------ what changed since yesterday
+def _ago(pts: list, days: int):
+    """The value of the last point at least `days` before the latest one (pts are [unix seconds, value])."""
+    pts = [p for p in pts or [] if p[1] is not None]
+    if not pts:
+        return None, None
+    t = pts[-1][0] - days * 86400
+    prev = [p for p in pts if p[0] <= t]
+    return pts[-1][1], (prev[-1][1] if prev else None)
+
+
+def _lean(v, good_below, bad_above) -> int:
+    """+1 better for buyers (v under good_below), -1 worse (v over bad_above), 0 between or unknown."""
+    return 0 if v is None else 1 if v < good_below else -1 if v > bad_above else 0
+
+
+def READINGS() -> list[dict]:
+    """Each tab's headline readings, from the payloads the endpoints already cached (the warmer computes them before the daily save);
+    a tab not computed yet is left out. Lean: +1 better for buyers, -1 worse (data/housing/README.md)."""
+    from ..cache import _cache
+
+    def cached(tab):
+        hit = _cache.get(f"topic:housing:{tab}")
+        return hit[1] if hit and isinstance(hit[1], dict) else None
+    rows = []
+    if (p := cached("prices")):
+        y = (p.get("now") or {}).get("yoy")
+        if y is not None:
+            rows.append({"tab": "prices", "key": "london_price_yoy", "label": "London average price, change on a year", "value": y,
+                         "lean": _lean(y, 0, 3), "note": f"{y:+.1f}%"})
+        r = (p.get("rent_now") or {}).get("yoy")
+        if r is not None:
+            rows.append({"tab": "prices", "key": "london_rent_yoy", "label": "London private rent, change on a year", "value": r,
+                         "lean": _lean(r, 2, 5), "note": f"{r:+.1f}%"})
+    if (a := cached("afford")):
+        now, before = _ago(a.get("fixed_2y"), 182)
+        if now is not None and before is not None:
+            d = round(now - before, 2)
+            rows.append({"tab": "afford", "key": "fixed_2y_6m", "label": "2-year fixed mortgage rate, change on 6 months", "value": d,
+                         "lean": _lean(d, -0.25, 0.25), "note": f"{now:.2f}% ({d:+.2f} points)"})
+        now, before = _ago(a.get("price_to_london_pay") or a.get("price_to_earnings"), 365)
+        if now is not None and before is not None:
+            d = round(now - before, 2)
+            rows.append({"tab": "afford", "key": "price_to_pay_1y", "label": "Price to London pay, change on a year", "value": d,
+                         "lean": _lean(d, -0.2, 0.2), "note": f"{now:.1f}× ({d:+.1f})"})
+    if (b := cached("boroughs")):
+        ys = [r["yoy"] for r in b.get("rows") or [] if r.get("yoy") is not None]
+        if ys:
+            share = round(sum(y > 0 for y in ys) / len(ys), 3)
+            rows.append({"tab": "boroughs", "key": "boroughs_rising", "label": "Boroughs where prices rose on a year", "value": share,
+                         "lean": _lean(share, 1 / 3, 2 / 3), "note": f"{sum(y > 0 for y in ys)} of {len(ys)}"})
+    if (g := cached("global")):
+        t = {r["market"]: r.get("yoy") for r in g.get("table") or []}
+        lon, us = t.get("London"), t.get("US national (FHFA)")
+        if lon is not None and us is not None:
+            d = round((lon - us) * 100, 2)
+            rows.append({"tab": "global", "key": "london_vs_us_yoy", "label": "London minus US yearly price change", "value": d,
+                         "lean": _lean(d, -2, 2), "note": f"{d:+.1f} points"})
+    return rows
 
 
 REGIONS = ["London", "United Kingdom"] + [borough_name(b) for b in BOROUGHS]
