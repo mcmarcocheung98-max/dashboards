@@ -8,6 +8,10 @@ Tabs: Openings · Headcount · Pay · AI vs the professions · Firms adopting ·
 
 FRED times out from cloud servers (Railway and GitHub alike), so US employment and pay now come from the BLS public API v1 (no key; two queries a day cover all ten series, 2010 to now). Same BLS series ids as before.
 
+The build container cannot reach ONS, C&SD, Census or Ramp; `/api/ai/layout` (not a tab) shows what the Railway server sees there. Read it with Actions > show-json.
+
+**UK firms using AI** (ONS BICS): share using at least one AI technology = 100% − "does not currently use" − "not sure", weighted, dated at the end of the survey period. Wave 165 (21 Sep–4 Oct 2026) gives 29.7% of all businesses and 38.1% of those with 10+ employees, which matches ONS's published "around 3 in 10".
+
 ## Added in the merge
 
 | What | Where | Source | How |
@@ -17,7 +21,7 @@ FRED times out from cloud servers (Railway and GitHub alike), so US employment a
 | Hong Kong headcount (financing & insurance, professional services) | Headcount tab | C&SD quarterly employment | Hand-entered: `hk_headcount.csv` |
 | IT Systems & Solutions in the AI group | AI vs the professions, toggle | Indeed sector file | Automated |
 | US firms expecting to use AI within six months | Firms adopting | Census BTOS National workbook, same parser with the "six months" question | Automated, with `btos_ai_expect_us.csv` as the hand-entered fallback |
-| UK and Hong Kong share of firms using AI | Firms adopting | ONS BICS; HKPC / C&SD surveys | Hand-entered: `firm_adoption_uk_hk.csv` |
+| UK share of firms using AI (all businesses; 10+ employees) | Firms adopting | [ONS BICS](https://www.ons.gov.uk/economy/economicoutputandproductivity/output/datasets/businessinsightsandimpactontheukeconomy), sheet `AI Current Usage TS (WTD)` of the newest wave workbook that carries the AI questions (about every sixth wave; the sheet holds the whole series from Sep 2023) | Automated (Oct 2026); `firm_adoption_uk_hk.csv` for extra or Hong Kong points |
 
 Indeed's postings index does not cover Hong Kong, so the Openings and ratio tabs switch between the US and UK only.
 

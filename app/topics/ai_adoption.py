@@ -3,7 +3,7 @@
 firms    share of US businesses using AI in the last two weeks, national and by sector (US Census Bureau Business Trends and Outlook
          Survey, every two weeks; the national workbook is parsed when reachable, and data/ai-adoption/btos_ai_use_us.csv holds
          the headline figures by hand so the chart survives a layout change); Ramp AI Index (share of US businesses paying for AI tools,
-         monthly, hand-entered)
+         monthly, hand-entered); UK share of firms using AI (ONS BICS, quarterly, newest wave workbook that carries the AI questions)
 users    consumer reach: weekly active users of ChatGPT and other reported milestones (hand-entered, each with its source)
 agents   a dated timeline of agent products and protocols (hand-entered)
 skills   the share of job postings mentioning AI by country (Indeed Hiring Lab AI tracker, shared with /ai-jobs)
@@ -19,9 +19,13 @@ import pandas as pd
 from ._base import DAY, _pts, _r, fetch, manual, manual_rows, manual_sources, monthly, payload
 
 BTOS_XLSX = "https://www.census.gov/hfp/btos/downloads/National.xlsx"
+BICS_PAGE = "https://www.ons.gov.uk/economy/economicoutputandproductivity/output/datasets/businessinsightsandimpactontheukeconomy"
+BICS_SHEET = "AI Current Usage TS (WTD)"
+BICS_BANDS = {"All businesses": "UK: all businesses (ONS BICS)", "All size bands excluding 0 - 9": "UK: 10+ employees (ONS BICS)"}
 AI_SHARE = "https://raw.githubusercontent.com/hiring-lab/ai-tracker/main/AI_posting.csv"
 SLUG = "ai"
 SOURCES = [{"name": "US Census Bureau, Business Trends and Outlook Survey (AI questions)", "url": "https://www.census.gov/hfp/btos/", "cadence": "every 2 weeks"},
+           {"name": "ONS Business Insights and Conditions Survey (AI questions)", "url": BICS_PAGE, "cadence": "quarterly"},
            {"name": "Ramp AI Index (hand-entered)", "url": "https://ramp.com/data", "cadence": "monthly"},
            {"name": "Indeed Hiring Lab AI tracker", "url": "https://github.com/hiring-lab/ai-tracker", "cadence": "monthly"},
            {"name": "Company announcements and press reports (hand-entered, cited per point)", "url": "", "cadence": "as announced"}]
@@ -92,17 +96,79 @@ def btos(needle: str = "two weeks", hand_file: str = "btos_ai_use_us") -> pd.Ser
     return s[~s.index.duplicated(keep="last")].sort_index()
 
 
+# ------------------------------------------------------------------ ONS BICS (UK): the AI questions are asked every sixth wave or so
+def parse_bics_ai(content: bytes) -> dict[str, pd.Series]:
+    """Share of UK businesses using at least one AI technology, %, by survey period end, for all businesses and for 10+ employees.
+    Sheet 'AI Current Usage TS (WTD)' of a BICS wave workbook: title lines, then Dates | Wave | Industry/Size Band | <technology>...
+    | Not sure | Business does not currently use artificial intelligence technologies, as fractions; using = 1 - not sure - does not use
+    (the same arithmetic gives ONS's published 'around 3 in 10' for September 2026)."""
+    import re
+    d = pd.read_excel(BytesIO(content), sheet_name=BICS_SHEET, header=None, dtype=str)
+    h = next(i for i in range(len(d)) if str(d.iat[i, 0]).strip() == "Dates")
+    cols = [str(c).strip() for c in d.iloc[h]]
+    body = pd.DataFrame(d.iloc[h + 1:].to_numpy(), columns=cols)
+    no = next(c for c in cols if c.lower().startswith("business does not"))
+    out = {}
+    for band, name in BICS_BANDS.items():
+        rows = body[body["Industry/Size Band"].fillna("").str.strip() == band]
+        end = pd.to_datetime(rows["Dates"].map(lambda x: re.split(r"\s+to\s+", str(x))[-1]), errors="coerce", format="%d %B %Y")
+        use = (1 - pd.to_numeric(rows[no], errors="coerce") - pd.to_numeric(rows["Not sure"], errors="coerce")) * 100
+        s = pd.Series(use.to_numpy(), index=end.to_numpy()).dropna()
+        s = s[s.index.notna()].sort_index()
+        if len(s):
+            out[name] = s.round(1)
+    if not out:
+        raise ValueError("BICS AI usage: no all-business rows")
+    return out
+
+
+def bics_ai(tries: int = 7) -> dict[str, pd.Series]:
+    """The newest wave workbook that carries the AI sheet (it holds the whole series back to 2023), newest wave first."""
+    import re
+    page = fetch(BICS_PAGE, TTL, headers={"Accept": "text/html,*/*"}, min_bytes=5000)
+    links = {int(n): u for u, n in re.findall(r'href="(/file\?uri=[^"]+/bicswave(\d+)/[^"]+\.xlsx)"', page)}
+    last = None
+    for n in sorted(links, reverse=True)[:tries]:
+        try:
+            return parse_bics_ai(fetch("https://www.ons.gov.uk" + links[n], TTL, min_bytes=10000, binary=True).encode("latin-1"))
+        except Exception as e:
+            last = e
+    raise ValueError(f"no BICS wave with AI questions among the newest {tries} ({last})")
+
+
+def firm_adoption_intl() -> dict[str, pd.Series]:
+    """UK from ONS BICS (automated) plus anything hand-entered in firm_adoption_uk_hk.csv; a hand-entered date wins."""
+    out = {}
+    try:
+        out.update(bics_ai())
+    except Exception:
+        pass
+    m = manual(SLUG, "firm_adoption_uk_hk")
+    for k, v in (m.items() if isinstance(m, dict) else []):
+        s = pd.concat([out.get(k, pd.Series(dtype=float)), v])
+        out[k] = s[~s.index.duplicated(keep="last")].sort_index()
+    return out
+
+
 # ------------------------------------------------------------------ endpoints
+def _year_ago(pts: list) -> float | None:
+    """The value nearest one year before the last point, if one lies within 60 days of it."""
+    if not pts:
+        return None
+    want = pts[-1][0] - 365 * 86400
+    t, v = min(pts, key=lambda p: abs(p[0] - want))
+    return v if abs(t - want) <= 60 * 86400 else None
+
+
 def _firms_now() -> dict:
     def sectors():
         m = manual(SLUG, "btos_ai_use_by_sector")
         return {k: _pts(v, 2) for k, v in m.items()} if isinstance(m, dict) else {}
     def countries():
-        m = manual(SLUG, "firm_adoption_uk_hk")
-        return {k: _pts(v, 2) for k, v in m.items()} if isinstance(m, dict) else {}
+        return {k: _pts(v, 2) for k, v in firm_adoption_intl().items()}
     out = payload({"btos_us": lambda: _pts(btos(), 2), "btos_expect": lambda: _pts(btos("six months", "btos_ai_expect_us"), 2), "btos_sectors": sectors,
                    "ramp": lambda: _pts(manual(SLUG, "ramp_ai_index"), 2), "uk_hk": countries},
-                  sources=[BTOS_XLSX])
+                  sources=[BTOS_XLSX, BICS_PAGE])
     b = out.get("btos_us") or []
     out["now"] = {"btos": b[-1][1] if b else None, "btos_date": pd.Timestamp(b[-1][0], unit="s").strftime("%Y-%m-%d") if b else None,
                   "btos_year_ago": next((v for t, v in reversed(b) if t <= b[-1][0] - 365 * 86400), None) if b else None,
@@ -110,6 +176,8 @@ def _firms_now() -> dict:
     out["as_of"] = out["now"]["btos_date"]
     out["cited"] = manual_sources(SLUG, "btos_ai_use_us")[:3] + manual_sources(SLUG, "ramp_ai_index")[:3]
     out["uk_hk_rows"] = sorted(manual_rows(SLUG, "firm_adoption_uk_hk"), key=lambda r: r["date"], reverse=True)
+    out["uk_hk_latest"] = {k: {"value": p[-1][1], "date": pd.Timestamp(p[-1][0], unit="s").strftime("%Y-%m-%d"), "year_ago": _year_ago(p)}
+                           for k, p in (out.get("uk_hk") or {}).items() if p}
     return out
 
 

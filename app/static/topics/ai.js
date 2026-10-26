@@ -77,16 +77,20 @@ const VIEWS = {
   async firms() {
     const d = await api("firms"), n = d.now || {};
     const head = card(null, el("div", { class: "kpis" }, kpi("US businesses using AI", sh(n.btos)), kpi("A year earlier", sh(n.btos_year_ago)),
-      kpi("Change", n.btos != null && n.btos_year_ago != null ? pp(n.btos - n.btos_year_ago) : "–", cls(n.btos - n.btos_year_ago)), kpi("Paying for AI tools (Ramp)", sh(n.ramp))), asOf(d), stale(d));
+      kpi("Change", n.btos != null && n.btos_year_ago != null ? pp(n.btos - n.btos_year_ago) : "–", cls(n.btos - n.btos_year_ago)), kpi("Paying for AI tools (Ramp)", sh(n.ramp)),
+      kpi("UK businesses using AI (ONS)", sh((d.uk_hk_latest || {})["UK: all businesses (ONS BICS)"]?.value))), asOf(d), stale(d));
     const btos = card("Share of US businesses that used AI in the last two weeks",
       ...linesChart([{ name: "All businesses (Census BTOS)", points: d.btos_us || [] }, { name: "Paying for AI tools (Ramp AI Index)", points: d.ramp || [], color: css("--s2") }], sh),
       note("US Census Bureau Business Trends and Outlook Survey, asked every two weeks of about 1.2 million businesses; Ramp's index counts businesses on its card platform with a paid AI subscription."), cite(d.cited));
     const expect = (d.btos_expect || []).length ? card("Using AI now vs expecting to within six months (US, Census BTOS)",
       ...linesChart([{ name: "Using now", points: d.btos_us || [] }, { name: "Expect to use within 6 months", points: d.btos_expect, color: css("--s4"), dashed: true }], sh, { small: true }),
       note("The gap between the two lines is intent not yet acted on.")) : card("Expect to use AI within six months", el("div", { class: "muted" }, "Not read yet: the Census workbook was not reachable or its layout changed; add points to data/ai/btos_ai_expect_us.csv."));
-    const intl = Object.keys(d.uk_hk || {}).length ? card("UK and Hong Kong: share of firms using AI (hand-entered)", ...linesChart(Object.entries(d.uk_hk).map(([k, pts]) => ({ name: k, points: pts })), sh, { small: true }),
-      table(["Date", "Series", "%", "Source"], (d.uk_hk_rows || []).map(r => [r.date, r.series, r.value, "[" + host(r.source) + "](" + r.source + ")"])))
-      : card("UK and Hong Kong", el("div", { class: "muted" }, "No points yet: add ONS BICS (UK) and HKPC / C&SD (Hong Kong) readings to data/ai/firm_adoption_uk_hk.csv."));
+    const lat = Object.entries(d.uk_hk_latest || {});
+    const intl = Object.keys(d.uk_hk || {}).length ? card("UK and Hong Kong: share of firms using AI", ...linesChart(Object.entries(d.uk_hk).map(([k, pts]) => ({ name: k, points: pts })), sh, { small: true }),
+      table(["Series", "Latest", "Period ending", "A year earlier"], lat.map(([k, v]) => [k, sh(v.value), v.date, sh(v.year_ago)])),
+      note("UK: ONS Business Insights and Conditions Survey, asked about once a quarter: businesses using at least one AI technology (100% minus 'does not use' minus 'not sure'), weighted. Hong Kong has no comparable periodic survey yet; hand-entered points, if any, are listed below."),
+      ...((d.uk_hk_rows || []).length ? [table(["Date", "Series", "%", "Source"], d.uk_hk_rows.map(r => [r.date, r.series, r.value, "[" + host(r.source) + "](" + r.source + ")"]))] : []), stale(d))
+      : card("UK and Hong Kong", el("div", { class: "muted" }, "Not available right now: the ONS BICS workbook could not be read. Hand-entered points go in data/ai/firm_adoption_uk_hk.csv."));
     const sec = Object.entries(d.btos_sectors || {}).filter(([, p]) => p.length);
     const sectors = sec.length ? card("By sector (latest)", ...svgBars(sec.map(([k]) => k), [{ name: "Using AI", values: sec.map(([, p]) => p[p.length - 1][1]), color: css("--s1") }], { yFmt: sh, labelW: 90 }))
       : card("By sector", el("div", { class: "muted" }, "No sector points entered yet: copy the sector rows of the BTOS workbook into data/ai/btos_ai_use_by_sector.csv."));

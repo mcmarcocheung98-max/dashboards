@@ -279,6 +279,47 @@ def btos_national_xlsx() -> bytes:
     return buf.getvalue()
 
 
+def bics_wave_xlsx(with_ai: bool = True) -> bytes:
+    """A BICS wave workbook as published (Oct 2026): title lines, then the table; fractions, [c] where suppressed."""
+    import io
+    head = ["Dates", "Wave", "Industry/Size Band", "Text generation using Large Language Models", "Other", "Not sure",
+            "Business does not currently use artificial intelligence technologies"]
+    rows = [["Question: Which of the following artificial intelligence technologies...", None, None, None, None, None, None],
+            ["Back to Table of Contents", None, None, None, None, None, None], head]
+    for dates, wave, no, unsure in (("21 September 2026 to 4 October 2026", "Wave 165", 0.641, 0.062), ("15 June 2026 to 28 June 2026", "Wave 159", 0.653, 0.058),
+                                    ("18 September 2023 to 1 October 2023", "Wave 92", 0.837, 0.069)):
+        rows += [[dates, wave, "Manufacturing", 0.1, "[c]", 0.037, 0.761], [dates, wave, "All businesses", 0.19, 0.022, unsure, no],
+                 [dates, wave, "All size bands excluding 0 - 9", 0.2, "[c]", 0.111, 0.508 if wave == "Wave 165" else 0.6]]
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf) as w:
+        pd.DataFrame([["Read me"]]).to_excel(w, sheet_name="Read me", index=False, header=False)
+        if with_ai:
+            pd.DataFrame(rows).to_excel(w, sheet_name="AI Current Usage TS (WTD)", index=False, header=False)
+    return buf.getvalue()
+
+
+BICS_PAGE_HTML = "".join(f'<a href="/file?uri=/economy/x/businessinsightsandimpactontheukeconomy/bicswave{n}/bicswave{n}2final.xlsx">w</a>' for n in (164, 166, 165, 99)) + " " * 5000
+
+
+def test_uk_firm_adoption_from_the_newest_bics_wave_with_ai_questions(snapdir, monkeypatch):
+    pytest.importorskip("openpyxl")
+    from app.topics import ai_adoption as A
+    asked = []
+    def fake(url, ttl, **k):
+        asked.append(url)
+        if url == A.BICS_PAGE:
+            return BICS_PAGE_HTML
+        return bics_wave_xlsx(with_ai="bicswave165" in url).decode("latin-1")
+    monkeypatch.setattr(A, "fetch", fake)
+    uk = A.firm_adoption_intl()
+    assert [u.split("/")[-2] for u in asked[1:]] == ["bicswave166", "bicswave165"]          # newest first, stops at the first with the AI sheet
+    s = uk["UK: all businesses (ONS BICS)"]
+    assert s.index[-1] == pd.Timestamp("2026-10-04") and s.iloc[-1] == 29.7 and s.index[0] == pd.Timestamp("2023-10-01") and s.iloc[0] == 9.4
+    assert uk["UK: 10+ employees (ONS BICS)"].iloc[-1] == 38.1
+    f = A._firms_now()
+    assert f["uk_hk"]["UK: all businesses (ONS BICS)"][-1][1] == 29.7 and f["uk_hk_latest"]["UK: all businesses (ONS BICS)"]["year_ago"] is None
+
+
 def test_btos_parser_reads_the_live_layout():
     from app.topics.ai_adoption import parse_btos
     pytest.importorskip("openpyxl")
