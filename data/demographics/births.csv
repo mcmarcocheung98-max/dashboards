@@ -1,0 +1,37 @@
+date,series,value,source,note
+# Live births in the calendar year, dated 1 July of that year. UK = England and Wales (ONS). China = mainland (NBS).
+2007-07-01,US,4316233,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory; NCHS final births 2007 (NVSR Births: Final Data for 2007)
+2010-07-01,US,3999386,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory; NCHS final births 2010
+2015-07-01,US,3978497,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory; NCHS final births 2015
+2019-07-01,US,3747540,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory; NCHS final births 2019
+2020-07-01,US,3613647,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory; NCHS final births 2020
+2021-07-01,US,3664292,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory; NCHS final births 2021
+2022-07-01,US,3667758,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory; NCHS final births 2022
+2023-07-01,US,3596017,https://www.cdc.gov/nchs/products/databriefs/db535.htm,NCHS Data Brief 535 (2023 comparison figure)
+2024-07-01,US,3628934,https://www.cdc.gov/nchs/products/databriefs/db535.htm,NCHS Data Brief 535: final 2024 births
+2012-07-01,UK,729674,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths,verify: written from memory; England and Wales
+2015-07-01,UK,697852,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths,verify: written from memory; England and Wales
+2019-07-01,UK,640370,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths,verify: written from memory; England and Wales
+2020-07-01,UK,613936,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths,verify: written from memory; England and Wales
+2021-07-01,UK,624828,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths,verify: written from memory; England and Wales
+2022-07-01,UK,605479,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths,verify: written from memory; England and Wales
+2023-07-01,UK,591072,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2024refreshedpopulations,England and Wales; 2023 comparison figure in the 2024 bulletin
+2024-07-01,UK,594677,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2024refreshedpopulations,England and Wales
+2012-07-01,Hong Kong,91558,https://www.censtatd.gov.hk/en/,verify: written from memory; includes births to mainland mothers before the 2013 zero-quota policy
+2015-07-01,Hong Kong,59878,https://www.censtatd.gov.hk/en/,verify: written from memory
+2019-07-01,Hong Kong,52856,https://www.censtatd.gov.hk/en/,verify: written from memory
+2020-07-01,Hong Kong,43031,https://www.censtatd.gov.hk/en/,verify: written from memory
+2021-07-01,Hong Kong,37955,https://www.censtatd.gov.hk/en/,verify: written from memory
+2022-07-01,Hong Kong,32950,https://www.censtatd.gov.hk/en/,verify: written from memory
+2023-07-01,Hong Kong,33288,https://www.censtatd.gov.hk/en/,verify: written from memory
+2024-07-01,Hong Kong,36700,https://www.scmp.com/news/hong-kong/education/article/3299155/number-babies-born-hong-kong-rises-11-36700-last-year,verify: rounded figure as reported by SCMP; replace with the C&SD table value
+2016-07-01,China,17860000,https://www.stats.gov.cn/english/,verify: written from memory; NBS statistical communiqué
+2017-07-01,China,17230000,https://www.stats.gov.cn/english/,verify: written from memory
+2018-07-01,China,15230000,https://www.stats.gov.cn/english/,verify: written from memory
+2019-07-01,China,14650000,https://www.stats.gov.cn/english/,verify: written from memory
+2020-07-01,China,12020000,https://www.stats.gov.cn/english/,verify: written from memory
+2021-07-01,China,10620000,https://www.stats.gov.cn/english/,verify: written from memory
+2022-07-01,China,9560000,https://www.stats.gov.cn/english/,verify: written from memory
+2023-07-01,China,9020000,https://www.stats.gov.cn/english/,verify: written from memory
+2024-07-01,China,9540000,https://www.caixinglobal.com/2026-01-19/chinas-population-decline-accelerates-as-births-hit-modern-era-low-in-2025-102405520.html,NBS figure as reported by Caixin (19 Jan 2026); verify against the NBS communiqué
+2025-07-01,China,7920000,https://www.caixinglobal.com/2026-01-19/chinas-population-decline-accelerates-as-births-hit-modern-era-low-in-2025-102405520.html,NBS figure as reported by Caixin (19 Jan 2026); birth rate 5.63 per 1000; verify against the NBS communiqué

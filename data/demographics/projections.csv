@@ -1,0 +1,6 @@
+date,series,value,source,note
+# National projections, for comparison with the UN's. value is the figure in the unit named in series.
+2032-07-01,UK population (ONS 2022-based; millions),72.5,https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationprojections,verify: written from memory; mid-2032
+2080-07-01,US population peak (Census 2023 projections; millions),370,https://www.census.gov/programs-surveys/popproj.html,verify: written from memory; main series peaks around 2080
+2046-07-01,Hong Kong population (C&SD 2022-based; millions),8.19,https://www.censtatd.gov.hk/en/,verify: written from memory
+2046-07-01,Hong Kong share aged 65+ (C&SD 2022-based; %),36,https://www.censtatd.gov.hk/en/,verify: written from memory
