@@ -568,7 +568,9 @@ def series_paths(j, prefix: str = "", out: list | None = None) -> list[tuple[str
     if isinstance(j, dict):
         for k, v in j.items():
             series_paths(v, f"{prefix}.{k}" if prefix else str(k), out)
-    elif isinstance(j, list) and len(j) >= 3 and all(isinstance(p, list) and len(p) == 2 and isinstance(p[0], (int, float)) and p[0] > 1e8 for p in j[:5]):
+    # unix seconds: a history starting before 1973 (temperatures since 1880, launches since 1957) has negative or small first times
+    elif (isinstance(j, list) and len(j) >= 3 and all(isinstance(p, list) and len(p) == 2 and isinstance(p[0], (int, float)) for p in j[:5] + j[-1:])
+          and j[-1][0] > 1e8):
         out.append((prefix, len(j)))
     return out
 
@@ -788,6 +790,7 @@ def _reality_now() -> dict:
                 row["paths"] = [p for p, _ in series_paths(j)][:20]
             else:
                 real = to_series(pts)
+                real = real[real.index >= WIKI_START - pd.DateOffset(years=1)]      # the pageviews start in 2016
                 real_m = real.resample("MS").last().dropna()
                 row["reality"] = _pts(real, 4)
                 row["stats"] = lead_lag(att_m, real_m)

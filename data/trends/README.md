@@ -62,7 +62,9 @@ fresh when any of its downloads worked in the last run, stale (since its last go
 - Wikimedia pageviews (English and Chinese) and the MediaWiki title API: **200**. Every article resolved except 香港房地產 (no such page on Chinese Wikipedia; removed). Redirects followed: Zoox (company) → Zoox, Mortgage loan → Mortgage, Zoopla → Houseful (company), Stamp Duty Land Tax → Stamp duty in the United Kingdom, Housing crisis in the United Kingdom → Affordability of housing in the United Kingdom, 宝可梦 → 宝可梦系列, 恒生指数 → 恒生指數; 宝可梦集换式卡牌游戏 and 气候变化 converted to their traditional-script titles.
 - HN Algolia: **200** (its nbHits is marked non-exhaustive for large counts: treat big weekly numbers as estimates).
 - GitHub API: **200** (60 requests an hour unauthenticated).
-- Bluesky: `public.api.bsky.app` answers **403** to Railway; `api.bsky.app` answers **200**, so that host is used.
+- Bluesky: `public.api.bsky.app` answers **403** to Railway. `api.bsky.app` answered 200 to a bare search, but **403** to the searches the fill makes (with `sort`, `since`, `until`) on the first run. Unauthenticated search looks closed to this server; the Bluesky card stays empty until it opens again or an app password is configured (not done: it would need a shared secret).
+- Second run (19:26 UTC): HN 84 of 84 requests answered and GitHub 10 of 10; the HN backfill continues over the next runs.
+- Attention vs reality: every other dashboard's payload was read from the server. The paths in `reality.csv` were set from `/layout` → `_reality_paths`: housing has no nominal London series (`london_real`, in today's money), AI uses `ai_share.US`, chips `chips.prices.NVDA`, space `satellites` → `active.cumulative_starlink`, rates `nominal.US`.
 - Reddit: **403** on `www`, `old` and `api.reddit.com`. Counts come only from `reddit.csv` until that changes; the fill stops asking after two refusals a run.
 - Google Trends: **429**. Hand-entered only.
 - This site's own API at `http://127.0.0.1:8080`: **200**.

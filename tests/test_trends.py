@@ -116,9 +116,11 @@ def site_json(url: str) -> dict:
     return {"btc-cycles/cycles": {"price": site_points("2016-01-03", "W-SUN", btc), "price_recent": [], "as_of": "2026-10-25"},
             "pokemon-cards/prices": {"all": site_points("2016-01-01", "MS", lambda t: 100 + 8 * (t.year - 2016) + 60 * math.exp(-((t.year + t.month / 12 - 2021.2) ** 2) / 0.2))},
             "robotaxi/tesla": {"tsla": site_points("2020-01-01", "B", lambda t: 100 + 50 * math.sin(t.dayofyear / 40) + 20 * (t.year - 2020))},
-            "housing/prices": {"london_avg": site_points("2016-01-01", "MS", lambda t: 450000 + 1000 * (t.year - 2016) * 12)},
-            "ai/openings": {"US": {"all": site_points("2020-02-02", "W-SUN", lambda t: 100 + 5 * (t.year - 2020)), "sectors": {}}},
-            "climate/temperature": {"monthly": {"GISTEMP": site_points("1980-01-01", "MS", lambda t: 0.2 + 0.02 * (t.year - 1980))}},
+            "housing/prices": {"london_real": site_points("2016-01-01", "MS", lambda t: 450000 + 1000 * (t.year - 2016) * 12)},
+            "ai/openings": {"US": {"all": site_points("2020-02-02", "W-SUN", lambda t: 100), "sectors": {}},
+                            "ai_share": {"US": site_points("2020-02-01", "MS", lambda t: 0.5 + 0.1 * (t.year - 2020))}},
+            "space/satellites": {"active": {"cumulative_starlink": site_points("2019-05-01", "MS", lambda t: 60 * ((t.year - 2019) * 12 + t.month))}},
+            "climate/temperature": {"monthly": {"GISTEMP": site_points("1880-01-01", "MS", lambda t: 0.2 + 0.02 * (t.year - 1980))}},
             }.get(path, {"nothing": "here"})
 
 
@@ -410,7 +412,8 @@ def test_reality(filled):
     th = {t["theme"]: t for t in d["themes"]}
     assert th["bitcoin"]["stats"]["n"] > 100 and th["bitcoin"]["stats"]["level"] is not None
     assert th["ai"]["reality"] and th["climate"]["reality"]                     # dotted path and 'monthly.*'
-    assert "error" in th["space"] and th["space"]["paths"] == []                # a payload with no series says so
+    assert th["space"]["reality"] and th["climate"]["reality"][0][0] == int(pd.Timestamp("2015-01-01").timestamp())   # 1880 on, read from 2015
+    assert "error" in th["rates"] and th["rates"]["paths"] == []                # a payload with no series says so
     last = pd.to_datetime(th["bitcoin"]["attention"][-1][0], unit="s")
     assert last == pd.Timestamp("2026-09-01")                                     # October is not finished
 
