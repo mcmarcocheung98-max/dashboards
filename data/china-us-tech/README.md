@@ -77,7 +77,8 @@ exports (via CnEVPost); SNE Research 2025 shares and the 2024 CATL, BYD and LGES
 - Country attribution follows the source: developer organisation (Epoch), applicant residence (WIPO), author institution (OpenAlex). Hong Kong is shown separately where the source separates it; in the AI Index it is separate from China.
 - OpenAlex citation counts favour older papers; the share of highly cited papers compares the US and China within each year, and the reading skips the last two years.
 - The Nasdaq baskets are price-only, equal-weighted buy and hold from January 2019. Tencent, Meituan and Xiaomi trade in Hong Kong and are not on Nasdaq's API, which is why the Hang Seng TECH return is entered by hand.
-- Reachability from Railway: Epoch AI and the Nasdaq API already serve other dashboards. Our World in Data and OpenAlex are new here; check them with `/api/china-us-tech/layout`. If either refuses the server, the cards fall back to the hand-entered rows (EV shares) or say what is missing (OpenAlex), and the rest of the page is unaffected.
+- Reachability from Railway, checked with `/api/china-us-tech/layout` on 2026-10-26: Epoch AI (CSV, 2.3 MB), Our World in Data (both grapher CSVs), OpenAlex (JSON) and the Nasdaq API (stocks and `assetclass=etf`) all answered 200. If one refuses the server later, its last snapshot is served and marked stale; with no snapshot the cards fall back to the hand-entered rows (EV shares) or say what is missing, and the rest of the page is unaffected.
+- OpenAlex without an API key shares a small free daily budget with everyone on the same IP address (its reply says so). This page makes 8 grouped calls a day. If the budget runs out, the last snapshot is served. A key is not added because it would travel in the URL, and `/api/health` lists source URLs publicly.
 
 ## Requests for shared code
 
