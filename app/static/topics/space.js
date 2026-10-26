@@ -9,6 +9,9 @@ const table = (head, rows) => el("div", { class: "scroll" }, el("table", {}, el(
 const srcCell = r => el("td", { class: "wrap" }, link(host(r.source), r.source), r.note ? " · " + r.note : "");
 const bySeries = (obj, fmt, opts = {}) => linesChart(Object.entries(obj || {}).filter(([, p]) => p && p.length).map(([k, p], i) => ({ name: k, points: p, color: css(SERIES[i % SERIES.length]) })), fmt, opts);
 const yr = ts => new Date(ts * 1000).getUTCFullYear();
+// top cards follow the date hovered or clicked on any chart (followHead from topic.html): each figure reads the series its chart draws
+const SHARE = v => pct(v, 0).replace("+", ""), SIGN0 = v => (v > 0 ? "+" : "") + v.toFixed(0) + "%";
+const DECADE = 10 * 365.25 * 86400;
 
 function checklistCard(items) {
   const mark = m => m == null ? el("span", { class: "pill" }, "unknown") : m ? el("span", { class: "pill ok" }, "met") : el("span", { class: "pill bad" }, "not yet");
@@ -24,13 +27,17 @@ const VIEWS = {
   async launches() {
     const [d, a] = await Promise.all([api("launches"), api("answer").catch(() => ({ checklist: [] }))]);
     const L = d.launches || {}, K = L.kpi || {}, MK = (d.mass || {}).kpi || {};
-    const head = card(null, el("div", { class: "kpis" },
-      kpi("Orbital launches " + (K.year || "") + " so far (same day last year)", f0(K.ytd) + " (" + f0(K.ytd_prev) + ")", cls((K.ytd || 0) - (K.ytd_prev || 0))),
-      kpi("Last 12 months (vs the 12 before)", f0(K.r12) + " (" + pct(K.r12_yoy, 0) + ")", cls(K.r12_yoy)),
-      kpi((K.last_year || "") + " total · success rate", f0(K.last_total) + " · " + pct(K.last_ok, 0).replace("+", "")),
-      kpi("SpaceX share of launches, " + (K.last_year || ""), pct(K.spacex_share, 0).replace("+", "")),
-      kpi("China, last 12 months (12 before)", f0(K.china_12) + " (" + f0(K.china_prev) + ")", cls((K.china_12 || 0) - (K.china_prev || 0))),
-      kpi("Payload mass to orbit, " + (MK.year || "") + " (tonnes)", f0(MK.tonnes) + " (" + pct(MK.yoy, 0) + ")", cls(MK.yoy))),
+    const RB = L.rolling_by || {}, MT = (d.mass || {}).total || [];
+    const head = card(null, followHead([
+      { label: "Orbital launches in the 12 months to that month", points: L.rolling || [], fmt: f0, delta: { lag: "1y", fmt: SIGN0 } },
+      { label: "US, 12 months", points: RB.US || [], fmt: f0, delta: { lag: "1y", fmt: SIGN0 } },
+      { label: "China, 12 months", points: RB.China || [], fmt: f0, delta: { lag: "1y", fmt: SIGN0 } },
+      { label: "World launches that year", points: L.total || [], fmt: f0, delta: { lag: "1y", fmt: SIGN0 } },
+      { label: "SpaceX share that year", points: L.spacex_share || [], fmt: SHARE },
+      { label: "Reached orbit that year", points: L.success_rate || [], fmt: SHARE },
+      { label: "Payload mass to orbit that year (tonnes)", points: MT, fmt: f0, delta: { lag: "1y", fmt: SIGN0 } }],
+      { latest: "Latest figures (launch list to " + (K.latest || "–") + ")" }),
+      el("div", { class: "kpis", style: "margin-top:10px" }, kpi("Orbital launches " + (K.year || "") + " so far (same day last year)", f0(K.ytd) + " (" + f0(K.ytd_prev) + ")", cls((K.ytd || 0) - (K.ytd_prev || 0)))),
       asOf(d), stale(d), note("A launch counts when it tries for orbit, success or not. Country is the launch provider's (Rocket Lab's New Zealand pads count for the US)."));
     const ans = (a.checklist || []).length ? checklistCard(a.checklist) : null;
     const ctry = has(L.countries) ? card("Orbital launch attempts per year by country, 1957 on",
@@ -57,9 +64,11 @@ const VIEWS = {
   },
   async cost() {
     const d = await api("cost"), K = d.kpi || {}, V = d.vehicles || [];
-    const head = card(null, el("div", { class: "kpis" },
-      kpi("Cheapest flown to LEO (" + (K.best_vehicle || "–") + ", " + (K.best_year || "") + ")", kg(K.best)),
-      kpi("10 years earlier", kg(K.ten_y)), kpi("Change in 10 years", pct(K.fall_10y, 0), cls(-(K.fall_10y || 0))), kpi("20 years earlier", kg(K.twenty_y))),
+    const head = card(null, followHead([
+      { label: "Cheapest flown cost to LEO that year", points: d.frontier || [], fmt: kg, delta: { lag: DECADE, fmt: SIGN0, text: "in 10 years" } }],
+      { latest: "Latest year" }),
+      el("div", { class: "kpis", style: "margin-top:10px" }, kpi("Cheapest rocket (" + (K.best_vehicle || "–") + ", first flown " + (K.best_year || "–") + ")", kg(K.best)),
+        kpi("20 years earlier", kg(K.twenty_y))),
       note("Published estimates for a full rocket at list price divided by its capacity to low Earth orbit; not what any one customer pays. Every row marked 'verify' was entered from memory."));
     const fr = (d.frontier || []).length ? card("Cheapest flown cost to low Earth orbit, by year (USD per kg, log scale)", ...linesChart([{ name: "Cheapest available", points: d.frontier, color: css("--s1") }], kg, { log: true }),
       note("The lowest cost per kg of any rocket that had flown by that year (CSIS estimates in 2021 dollars, plus list prices). 5 years: Starship's first commercial price is the next step down, if it comes. " +
@@ -76,10 +85,15 @@ const VIEWS = {
   },
   async satellites() {
     const d = await api("satellites"), A = d.active || {}, K = A.kpi || {}, SK = d.subs_kpi || {};
-    const head = card(null, el("div", { class: "kpis" },
-      kpi("Active satellites (CelesTrak)", f0(K.active)), kpi("Starlink", f0(K.starlink) + " (" + pct(K.starlink_share, 0).replace("+", "") + ")"),
-      kpi("China's (constellations and others)", f0(K.china)), kpi("Launched in the last 12 months, still active (vs 12 before)", f0(K.added_12m) + " (" + pct(K.added_yoy, 0) + ")", cls(K.added_yoy)),
-      kpi("Starlink subscribers, " + (SK.date || "").slice(0, 7), SK.m == null ? "–" : f1(SK.m) + "m (" + pct(SK.yoy, 0) + ")", cls(SK.yoy))), asOf(d), stale(d));
+    const head = card(null, followHead([
+      { label: "Starlink subscribers (last announced)", points: d.subs || [], fmt: v => f1(v) + "m", delta: { lag: "1y", fmt: SIGN0 } },
+      { label: "Today's active satellites launched by then", points: A.cumulative || [], fmt: f0, delta: { lag: "1y", fmt: SIGN0 } },
+      { label: "…of which Starlink", points: A.cumulative_starlink || [], fmt: f0, delta: { lag: "1y", fmt: SIGN0 } }],
+      { latest: "Latest figures" }),
+      el("div", { class: "kpis", style: "margin-top:10px" },
+        kpi("Active satellites now (CelesTrak)", f0(K.active)), kpi("Starlink now", f0(K.starlink) + " (" + SHARE(K.starlink_share) + ")"),
+        kpi("China's (constellations and others)", f0(K.china)), kpi("Launched in the last 12 months, still active (vs 12 before)", f0(K.added_12m) + " (" + pct(K.added_yoy, 0) + ")", cls(K.added_yoy))),
+      asOf(d), stale(d));
     const ops = (A.by_operator || []).length ? card("Active satellites by operator",
       ...svgBars(A.by_operator.map(o => o.operator.split(" (")[0]), [{ name: "Active", values: A.by_operator.map(o => o.n), color: css("--s1") }],
         { yFmt: v => big(v), catName: i => A.by_operator[i].operator + " · " + pct(A.by_operator[i].share, 1).replace("+", "") + " of all", labelW: 80, h: 240 }),
@@ -99,11 +113,15 @@ const VIEWS = {
   async industry() {
     const d = await api("industry"), S = d.stats || {}, E = d.eco_kpi || {};
     const syms = ["RKLB", "ASTS", "IRDM", "PL", "UFO", "SPY"], names = { RKLB: "Rocket Lab", ASTS: "AST SpaceMobile", IRDM: "Iridium", PL: "Planet Labs", UFO: "UFO (space ETF)", SPY: "SPY" };
-    const head = card(null, el("div", { class: "kpis" },
-      kpi("Global space economy, " + (E.date || "").slice(0, 4) + " (USD)", E.bn == null ? "–" : "$" + f0(E.bn) + "bn (" + pct(E.yoy, 0) + ")", cls(E.yoy)),
-      kpi("…5-year growth a year", pct(E.cagr5, 1), cls(E.cagr5)),
-      kpi("Space stocks (RKLB, ASTS, IRDM, PL) 1 year, average", pct((S.basket || {}).r1y, 0), cls((S.basket || {}).r1y)),
-      ...syms.filter(k => S[k]).map(k => kpi(names[k] + " · 1 year / from peak", pct(S[k].r1y, 0) + " / " + pct(S[k].from_peak, 0), cls(S[k].r1y)))), asOf(d), stale(d));
+    const R = d.rebased || {}, GE = (d.economy || {})["Global space economy (Space Foundation USD bn)"] || [];
+    const head = card(null, followHead([
+      { label: "Global space economy (USD), that year", points: GE, fmt: v => "$" + f0(v) + "bn", delta: { lag: "1y", fmt: SIGN0 } },
+      ...syms.filter(k => (R[k] || []).length).map(k => ({ label: names[k] + " (rebased, start = 100)", points: R[k], fmt: f1, delta: { lag: "1y", fmt: SIGN0 } }))],
+      { latest: "Latest figures" }),
+      el("div", { class: "kpis", style: "margin-top:10px" },
+        kpi("Space economy, 5-year growth a year (to " + (E.date || "").slice(0, 4) + ")", pct(E.cagr5, 1), cls(E.cagr5)),
+        kpi("Space stocks (RKLB, ASTS, IRDM, PL) 1 year, average", pct((S.basket || {}).r1y, 0), cls((S.basket || {}).r1y)),
+        ...syms.filter(k => S[k]).map(k => kpi(names[k] + " from its peak", pct(S[k].from_peak, 0), cls(S[k].from_peak)))), asOf(d), stale(d));
     const eco = d.economy || {};
     const gl = Object.fromEntries(Object.entries(eco).filter(([k]) => /USD/.test(k)));
     const uk = Object.fromEntries(Object.entries(eco).filter(([k]) => /GBP/.test(k)));
@@ -123,11 +141,14 @@ const VIEWS = {
   },
   async ukhk() {
     const d = await api("ukhk"), U = d.uk_kpi || {}, CH = d.china || {}, K = CH.kpi || {};
-    const head = card(null, el("div", { class: "kpis" },
-      kpi("UK orbital launch attempts (all time)", f0(U.attempts) + " (" + f0(U.successes) + " reached orbit)"), kpi("…from UK soil", f0(U.from_uk_soil)),
-      kpi("Days since the last UK attempt (" + (U.last || "–") + ")", f0(U.days_since)),
-      kpi("China launches " + (K.last_year || "") + " (commercial)", f0(K.total) + " (" + f0(K.commercial) + ")", cls((K.commercial || 0) - (K.commercial_prev || 0))),
-      kpi("China " + (K.last_year ? K.last_year + 1 : "") + " so far", f0(K.ytd))), asOf(d), stale(d),
+    const head = card(null, followHead([
+      { label: "China commercial (not CASC) launches that year", points: CH.commercial || [], fmt: f0, delta: { lag: "1y", fmt: SIGN0 } },
+      ...Object.entries(CH.providers || {}).slice(0, 4).map(([k, p]) => ({ label: k + " launches that year", points: p, fmt: f0 }))],
+      { latest: "Latest full year" }),
+      el("div", { class: "kpis", style: "margin-top:10px" },
+        kpi("UK orbital launch attempts (all time)", f0(U.attempts) + " (" + f0(U.successes) + " reached orbit)"), kpi("…from UK soil", f0(U.from_uk_soil)),
+        kpi("Days since the last UK attempt (" + (U.last || "–") + ")", f0(U.days_since)),
+        kpi("China " + (K.last_year ? K.last_year + 1 : "") + " so far", f0(K.ytd))), asOf(d), stale(d),
       note("UK attempts are hand-entered (data/space/milestones.csv, kind 'launch'); China's count is GCAT's. Hong Kong has no launch site; it builds satellites and instruments that fly on Chinese rockets."));
     const ukl = card("UK orbital launch attempts", table(["Date", "Attempt", "Site", "Outcome", "Source"], (d.uk_launches || []).slice().reverse().map(r => el("tr", {}, el("td", {}, r.date), el("td", { class: "wrap" }, r.event), el("td", {}, r.site || "–"),
       el("td", {}, el("span", { class: "pill " + (r.outcome === "success" ? "ok" : "bad") }, r.outcome || "–")), srcCell(r)))),
