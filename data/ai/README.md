@@ -159,3 +159,7 @@ Local preview: `python -m app.server`, then open `/ai`.
 - The BTOS sector file is empty; its card says so. Ramp's figures cover businesses on Ramp's platform, which lean towards tech and finance, so they run well above the Census share.
 - Usage surveys with a consistent series (Stanford AI Index, McKinsey's annual survey) are not included; they would fit `users.csv` or a new file with the same format.
 - "Agent adoption" has no public time series yet; the timeline is a list of launches, not a measure of use.
+
+# Requests for shared code
+
+- **`app/topics/_base.py` `fetch()`: let a caller validate a reply before it replaces the snapshot.** Today any 200 reply over `min_bytes` overwrites the disk copy. BLS answers an over-limit request with HTTP 200 and `{"status": "REQUEST_NOT_PROCESSED", ...}`, so on 26 Oct 2026 the good BLS data was replaced by an error body and the Headcount and Pay tabs lost their US data. A `validate=callable` argument (raise to reject: keep the old snapshot, mark it stale) would cover this for every dashboard. Until then `ai_jobs._bls_query` keeps its own last-good copy (`bls-good-*.json` beside the snapshots). The same check would also stop a restart from re-downloading when the snapshot is less than `ttl` old, which matters for rate-limited APIs.
