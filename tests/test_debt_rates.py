@@ -91,14 +91,27 @@ def nyfed_json() -> dict:
                           "targetRateTo": round(0.5 + i * 0.004, 2)} for i, t in enumerate(reversed(days))]}
 
 
-def bls_text() -> str:
-    lines = ["series_id        \tyear\tperiod\t       value\tfootnote_codes"]
-    for i, t in enumerate(pd.date_range("2000-01-01", NOW - pd.DateOffset(months=1), freq="MS")):
-        lines.append(f"CUUR0000SA0      \t{t.year}\tM{t.month:02d}\t{170 * 1.0025 ** i:12.3f}\t")
-        if t.month == 12:
-            lines.append(f"CUUR0000SA0      \t{t.year}\tM13\t{999:12.3f}\t")
-        lines.append(f"CUUR0100SA0      \t{t.year}\tM{t.month:02d}\t{1.0:12.3f}\t")
-    return "\n".join(lines)
+CPI_U = {pd.Timestamp("2008-02-01") + pd.DateOffset(months=i): round(211.693 * 1.0025 ** i, 3) for i in range(240)}
+
+
+def tips_json() -> dict:
+    """Fiscal Data TIPS table for one CUSIP: daily reference CPI, the 1st of month M = CPI-U of M-3, straight line within the month;
+    published to the end of the month after the latest CPI-U's reference month (latest CPI here: two months ago)."""
+    last = (NOW - pd.DateOffset(months=2)).normalize().replace(day=1)
+    rows = []
+    for m in pd.date_range("2008-05-01", last + pd.DateOffset(months=2), freq="MS"):
+        a, b = CPI_U.get(m - pd.DateOffset(months=3)), CPI_U.get(m - pd.DateOffset(months=2))
+        if a is None or m - pd.DateOffset(months=3) > last:
+            break
+        for day in range(1, m.days_in_month + 1):
+            if b is None or m - pd.DateOffset(months=2) > last:
+                if day > 1:
+                    break
+                v = a
+            else:
+                v = a + (b - a) * (day - 1) / m.days_in_month
+            rows.append({"index_date": str((m + pd.Timedelta(days=day - 1)).date()), "ref_cpi": f"{v:.5f}"})
+    return {"data": rows}
 
 
 def csd_json() -> dict:
@@ -116,7 +129,11 @@ def poly_json() -> list:
     return [{"title": "How many Fed rate cuts in 2026?", "slug": "how-many-fed-rate-cuts-in-2026", "endDate": "2026-12-31T00:00:00Z", "volume": "9000000",
              "markets": [mk("No cuts", 0.01), mk("3 cuts", 0.6), mk("4 cuts", 0.3), mk("old", 0.5, closed=True)]},
             {"title": "Fed decision in October?", "slug": "fed-decision-in-october", "endDate": nxt, "volume": "5000000",
-             "markets": [mk("25 bps decrease", 0.83), mk("No change", 0.16), mk("50+ bps decrease", 0.01)]}]
+             "markets": [mk("25 bps decrease", 0.83), mk("No change", 0.16), mk("50+ bps decrease", 0.01)]},
+            {"title": "Hike 25 bps flips No change for October Fed?", "slug": "flips", "endDate": nxt, "volume": "3752",
+             "markets": [mk("Yes", 0.01)]},
+            {"title": "Fed decision in December?", "slug": "fed-decision-in-december", "endDate": "2026-12-09T00:00:00Z", "volume": "800000",
+             "markets": [mk("No change", 0.6), mk("25 bps decrease", 0.4)]}]
 
 
 def clob_json(token: str) -> dict:
@@ -134,8 +151,6 @@ def fake_fetch(url, ttl=0, **k):
     if "bankofengland" in url:
         code = url.split("SeriesCodes=")[1].split("&")[0]
         return boe_csv(code, int(url.split("Datefrom=01/Jan/")[1][:4]))
-    if "download.bls.gov" in url:
-        return bls_text()
     if "ons.gov.uk" in url:
         return ons_csv(url.split("/timeseries/")[1].split("/")[0])
     raise ConnectionError(f"fixture: no text for {url}")
@@ -144,6 +159,8 @@ def fake_fetch(url, ttl=0, **k):
 def fake_fetch_json(url, ttl=0, **k):
     if "imf.org" in url:
         return imf_json(url.rsplit("/", 1)[1])
+    if "tips_cpi_data" in url:
+        return tips_json()
     if "debt_to_penny" in url:
         return penny_json()
     if "mts_table_9" in url:
@@ -302,18 +319,20 @@ def test_fed_range_with_a_point_target_from_the_api(fixtures, monkeypatch):
 
 
 def test_cpi_parsers():
-    s = D.parse_bls_cpi(bls_text())
-    assert s.index[0] == pd.Timestamp("2000-01-01") and s.max() < 900                  # M13 annual averages and other areas left out
+    s = D.parse_tips_cpi(tips_json())
+    assert s.index[0] == pd.Timestamp("2008-02-01") and s.iloc[0] == pytest.approx(211.693)
+    last = (NOW - pd.DateOffset(months=2)).normalize().replace(day=1)
+    assert s.index[-1] == last and s.iloc[-1] == pytest.approx(CPI_U[last], abs=0.001)    # the newest month, read off the daily line
     h = D.parse_csd_cpi(csd_json())
     assert (h == 1.5).all()                                                             # the composite CPI (A_CM), not the others
     with pytest.raises(ValueError):
-        D.parse_bls_cpi("series_id\tyear\tperiod\tvalue\n")
+        D.parse_tips_cpi({"data": []})
 
 
 def test_poly_parser_keeps_open_markets_and_reads_yes():
     ev = D.parse_poly(poly_json())
-    assert [e["slug"] for e in ev] == ["fed-decision-in-october", "how-many-fed-rate-cuts-in-2026"]      # soonest first
-    cuts = ev[1]["markets"]
+    assert [e["slug"] for e in ev][:2] == ["fed-decision-in-october", "flips"] and ev[-1]["slug"] == "how-many-fed-rate-cuts-in-2026"   # soonest first
+    cuts = next(e for e in ev if e["slug"] == "how-many-fed-rate-cuts-in-2026")["markets"]
     assert "old" not in [m["label"] for m in cuts] and next(m for m in cuts if m["label"] == "3 cuts")["yes"] == 0.6
     assert ev[0]["markets"][0]["token"] == "tok-25 bps decrease"
     assert D.parse_poly([{"title": "x", "markets": [{"outcomes": "not json"}]}]) == []
@@ -331,11 +350,13 @@ def test_policy_and_odds_payloads(fixtures):
     p = D.ENDPOINTS["policy"]()
     assert set(p["cpi"]) == {"US", "UK", "Hong Kong", "China"} and not p["cpi_missing"]
     assert p["cpi"]["US"][-1][1] == pytest.approx((1.0025 ** 12 - 1) * 100, abs=0.01)
+    assert pd.Timestamp(p["cpi"]["US"][0][0], unit="s") == pd.Timestamp("2009-02-01")      # a year after the first TIPS month
     assert set(p["real"]) >= {"US", "UK", "Hong Kong"} and p["decisions"]
     o = D.ENDPOINTS["odds"]()
     assert not {k for k in o if k.endswith("_error")}, o
     assert o["history"]["title"] == "Fed decision in October?" and set(o["history"]["lines"]) == {"25 bps decrease", "No change"}
-    assert o["events"][0]["slug"] == "fed-decision-in-october" and o["fed_now"] is not None
+    assert [e["slug"] for e in o["events"]] == ["how-many-fed-rate-cuts-in-2026", "fed-decision-in-october", "fed-decision-in-december"]   # by volume, side market dropped
+    assert o["fed_now"] is not None
     B.json_safe(p), B.json_safe(o)
 
 

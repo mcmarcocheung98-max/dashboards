@@ -61,15 +61,18 @@ ONS_SERIES = {"psnd": "hf6x", "interest": "nmfx", "receipts": "anbt"}
 HKMA = "https://api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/{path}?pagesize=100&offset={offset}"
 HK_EFBN, HK_HIBOR = "efbn/efbn-yield-endperiod", "er-ir/hk-interbank-ir-endperiod"
 NYFED = "https://markets.newyorkfed.org/api/rates/unsecured/effr/search.json?startDate=2000-01-01&endDate={end}"
-# CPI, all items, year-on-year %: US from the BLS bulk file (no daily quota, unlike the BLS API the ai dashboard uses; BLS asks bulk
-# downloaders to say who they are in the User-Agent), UK from ONS D7G7, Hong Kong from C&SD table 510-60001, China hand-entered
-BLS_CPI = "https://download.bls.gov/pub/time.series/cu/cu.data.1.AllItems"
-BLS_HEADERS = {"User-Agent": "dashboards/1.0 (+https://github.com/mcmarcocheung98-max/dashboards; public data dashboard)", "Accept": "text/plain,*/*"}
+# CPI, all items, year-on-year %: UK from ONS D7G7, Hong Kong from C&SD table 510-60001, China hand-entered, and the US from Treasury's
+# TIPS reference CPI: by definition the reference CPI on the 1st of a month is the CPI-U (NSA) of the third month before, so the TIPS
+# table on Fiscal Data carries BLS's index exactly (from February 2008). BLS itself refuses the Railway server (403, both its bulk files
+# and, after the ai dashboard's 25 daily queries, its API).
+TIPS_CPI = FISCAL + "v1/accounting/od/tips_cpi_data_detail?fields=index_date,ref_cpi&filter=cusip:eq:{cusip}&page%5Bsize%5D=10000"
+TIPS_CUSIPS = ("912810FQ6", "912810FH6")         # TIPS maturing 2032 and 2029, both in the table since 2008
 ONS_CPI = "https://www.ons.gov.uk/generator?format=csv&uri=/economy/inflationandpriceindices/timeseries/d7g7/mm23"
 CSD_CPI = "https://www.censtatd.gov.hk/api/get.php?id=510-60001&lang=en&full_series=1"
 # Polymarket: open markets on Fed rates and Treasury yields (Gamma API), and the price history of a market's Yes token (CLOB API)
 POLY = "https://gamma-api.polymarket.com/events?tag_slug={tag}&closed=false&limit=50"
 POLY_TAGS = ("fed-rates",)
+POLY_MIN_VOLUME = 100_000          # side markets ("Hike flips No change by ...") trade a few thousand dollars; show the ones people bet on
 POLY_HIST = "https://clob.polymarket.com/prices-history?market={token}&interval=max&fidelity=720"
 
 SOURCES = [{"name": "IMF World Economic Outlook (DataMapper API): gross debt, overall and primary balance, revenue, growth, inflation", "url": "https://www.imf.org/external/datamapper/", "cadence": "April and October"},
@@ -79,7 +82,7 @@ SOURCES = [{"name": "IMF World Economic Outlook (DataMapper API): gross debt, ov
            {"name": "Bank Rate and gilt yield curves (Bank of England database)", "url": "https://www.bankofengland.co.uk/boeapps/database/", "cadence": "daily"},
            {"name": "Public sector finances: net debt, debt interest, receipts (ONS PUSF)", "url": "https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/publicsectorfinance", "cadence": "monthly"},
            {"name": "Exchange Fund Bills and Notes yields, HIBOR (HKMA open API)", "url": "https://apidocs.hkma.gov.hk/", "cadence": "monthly"},
-           {"name": "CPI: US (BLS CPI-U, all items), UK (ONS D7G7), Hong Kong (C&SD composite CPI)", "url": "https://www.bls.gov/cpi/", "cadence": "monthly"},
+           {"name": "CPI: US (CPI-U from Treasury's TIPS reference CPI, Fiscal Data), UK (ONS D7G7), Hong Kong (C&SD composite CPI)", "url": "https://fiscaldata.treasury.gov/datasets/tips-cpi-data/", "cadence": "monthly"},
            {"name": "Prediction-market odds (Polymarket Gamma and CLOB APIs)", "url": "https://polymarket.com/", "cadence": "hourly"},
            {"name": "Hand-entered: HM Treasury PESA, OBR, CBO, HK Budget, China MoF, ChinaBond, PBoC, HKGB tenders (see data/debt-rates/README.md)", "url": "https://github.com/mcmarcocheung98-max/dashboards/tree/main/data/debt-rates", "cadence": "as published"}]
 NOTES = ("General government figures (IMF) are comparable across countries; national series (US federal, UK central government) are what each "
@@ -199,19 +202,26 @@ def parse_nyfed(j: dict) -> pd.DataFrame:
     return d[~d.index.duplicated(keep="last")]
 
 
-def parse_bls_cpi(text: str, series: str = "CUUR0000SA0") -> pd.Series:
-    """BLS bulk file (tab-separated series_id, year, period, value, footnotes) -> monthly CPI-U index for `series` (M13, the annual
-    average, dropped)."""
-    rows = {}
-    for line in text.splitlines():
-        f = [x.strip() for x in line.split("\t")]
-        if len(f) >= 4 and f[0] == series and f[2].startswith("M") and f[2] != "M13":
-            v = pd.to_numeric(f[3], errors="coerce")
-            if pd.notna(v):
-                rows[pd.Timestamp(year=int(f[1]), month=int(f[2][1:]), day=1)] = float(v)
-    if len(rows) < 24:
-        raise ValueError(f"BLS CPI file: {len(rows)} months of {series}")
-    return pd.Series(rows).sort_index()
+def parse_tips_cpi(j: dict) -> pd.Series:
+    """Fiscal Data TIPS reference CPI (daily, one CUSIP) -> monthly CPI-U, NSA. The value on the 1st of month M is CPI-U for M-3. Within
+    a month the reference CPI moves in a straight line to the next month's, so the last day published also gives CPI-U for M-2:
+    CPI(M-2) = r1 + (r_d - r1) x days_in_month / (d - 1)."""
+    rows = (j or {}).get("data") or []
+    if not rows:
+        raise ValueError("TIPS reference CPI: no rows")
+    r = pd.Series({pd.to_datetime(x.get("index_date"), errors="coerce"): pd.to_numeric(x.get("ref_cpi"), errors="coerce") for x in rows}, dtype=float)
+    r = r[r.index.notna()].dropna().sort_index()
+    r = r[~r.index.duplicated(keep="last")]
+    first = r[r.index.day == 1]
+    if len(first) < 15:
+        raise ValueError(f"TIPS reference CPI: {len(first)} month starts")
+    out = pd.Series({t - pd.DateOffset(months=3): v for t, v in first.items()})
+    m0 = first.index[-1]
+    tail = r[(r.index > m0) & (r.index.to_period("M") == m0.to_period("M"))]
+    if len(tail):
+        t, v = tail.index[-1], tail.iloc[-1]
+        out[m0 - pd.DateOffset(months=2)] = first.iloc[-1] + (v - first.iloc[-1]) * m0.days_in_month / (t.day - 1)
+    return out.sort_index()
 
 
 def parse_csd_cpi(j: dict) -> pd.Series:
@@ -365,7 +375,15 @@ def cpi() -> tuple[dict[str, pd.Series], dict[str, str]]:
     out, why = {}, {}
 
     def us():
-        idx = parse_bls_cpi(fetch(BLS_CPI, TTL, headers=BLS_HEADERS, min_bytes=10_000, timeout=90))
+        last = None
+        for c in TIPS_CUSIPS:
+            try:
+                idx = parse_tips_cpi(fetch_json(TIPS_CPI.format(cusip=c), TTL, min_bytes=1000, timeout=90))
+                break
+            except Exception as e:
+                last = e
+        else:
+            raise last
         idx = idx.reindex(pd.date_range(idx.index[0], idx.index[-1], freq="MS"))
         return (idx / idx.shift(12) * 100 - 100).dropna()
     for name, fn in (("US", us), ("UK", lambda: parse_ons(fetch(ONS_CPI, TTL, min_bytes=200))),
@@ -380,14 +398,21 @@ def cpi() -> tuple[dict[str, pd.Series], dict[str, str]]:
     return out, why
 
 
-def poly_events() -> list[dict]:
+def poly_events(min_volume: float = POLY_MIN_VOLUME) -> list[dict]:
+    """Open events from POLY_TAGS with at least `min_volume` dollars traded, the most traded first."""
     seen, out = set(), []
     for tag in POLY_TAGS:
         for e in parse_poly(fetch_json(POLY.format(tag=tag), HOUR, min_bytes=20, timeout=30)):
-            if e["slug"] not in seen:
+            if e["slug"] not in seen and (e["volume"] or 0) >= min_volume:
                 seen.add(e["slug"])
                 out.append(e)
-    return out
+    return sorted(out, key=lambda e: -(e["volume"] or 0))
+
+
+def next_decision(events: list[dict]) -> dict | None:
+    """The Fed-decision event that closes first (the next meeting), e.g. 'Fed Decision in October?'."""
+    ds = [e for e in events if "fed decision" in e["title"].lower()]
+    return min(ds, key=lambda e: e["end"] or "9999") if ds else None
 
 
 def poly_history(token: str) -> pd.Series:
@@ -638,7 +663,7 @@ def _policy_now() -> dict:
     out = payload({"fed": fed, "boe": lambda: _pts(steps(boe("bank_rate")), 2), "hk": lambda: _pts(hk_base(), 2),
                    "pboc": lambda: {k: _pts(steps(v), 2) for k, v in pb.items()}, "cpi": infl, "real": real,
                    "decisions": lambda: fomc_decisions()[:40]},
-                  sources=[NYFED.format(end=pd.Timestamp.now().strftime("%Y-%m-%d")), BOE.format(y=1995, code="IUDBEDR"), BLS_CPI, ONS_CPI, CSD_CPI])
+                  sources=[NYFED.format(end=pd.Timestamp.now().strftime("%Y-%m-%d")), BOE.format(y=1995, code="IUDBEDR"), TIPS_CPI.format(cusip=TIPS_CUSIPS[0]), ONS_CPI, CSD_CPI])
     out["cpi_missing"] = why
     c = out.get("cpi") or {}
     out["cpi_now"] = {k: {"v": p[-1][1], "t": str(pd.Timestamp(p[-1][0], unit="s").date())[:7]} for k, p in c.items() if p}
@@ -661,7 +686,7 @@ def _odds_now() -> dict:
     """Next FOMC meetings, recent decisions, and Polymarket odds on Fed rates and Treasury yields; the price history of the markets in
     the next decision's event (one line per outcome that has a 2%+ chance now)."""
     def history():
-        ev = next((e for e in poly_events() if "decision" in e["title"].lower()), None)
+        ev = next_decision(poly_events())
         if not ev:
             return {}
         out = {}
@@ -671,7 +696,7 @@ def _odds_now() -> dict:
                 if len(s):
                     out[m["label"]] = _pts(s * 100, 1)
         return {"title": ev["title"], "lines": out}
-    out = payload({"events": lambda: poly_events()[:12], "history": history, "decisions": lambda: fomc_decisions()[:12]},
+    out = payload({"events": lambda: poly_events()[:10], "history": history, "decisions": lambda: fomc_decisions()[:12]},
                   sources=[POLY.format(tag=t) for t in POLY_TAGS])
     out["meetings"] = next_meetings()
     out["fed_now"] = (out.get("decisions") or [{}])[0].get("to") if out.get("decisions") else None
@@ -747,7 +772,8 @@ def _layout_now() -> dict:
     urls.update({f"ons {s}": ONS.format(sid=s) for s in ONS_SERIES.values()})
     urls.update({"ons d7g7 cpi": ONS_CPI, "csd cpi": CSD_CPI, "polymarket": POLY.format(tag="fed-rates").replace("limit=50", "limit=2"),
                  "polymarket clob": "https://clob.polymarket.com/time"})
-    heads = {"bls cpi (own UA)": (BLS_CPI, BLS_HEADERS), "bls cpi (browser UA)": (BLS_CPI, None)}
+    urls["tips cpi"] = TIPS_CPI.format(cusip=TIPS_CUSIPS[0]).replace("10000", "2")
+    heads = {"bls cpi (bulk file, refused from Railway on 2026-10-26)": ("https://download.bls.gov/pub/time.series/cu/cu.data.1.AllItems", None)}
 
     def one(u):
         try:
