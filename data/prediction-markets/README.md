@@ -30,8 +30,9 @@ Every chart's card says what it shows. Changes are in points of probability (0.6
 `date,key,label,category,region,polymarket,pick,kalshi,manifold,predictit,source,note`: one row per question. Rows find their market on
 each venue by **keywords**, so the next Fed meeting or a new contract is picked up without editing the file:
 
-- `polymarket`: words that must all appear in the event title, question or outcome of an open two-outcome market in the pool; `a/b` means
-  either, `_` stands for a space (`no_change`).
+- `polymarket`: words that must all appear in the event title, question or outcome of an open two-outcome market in the pool, each at
+  the start of a word (`boe` does not match "Nijboer"; `democrat` matches "Democratic"); `a/b` means either, `_` stands for a space
+  (`no_change`), `!word` means the word must not appear (`cpi !china`).
 - `kalshi`: `SERIES:keywords`, e.g. `KXFEDDECISION:hold/maintain` (keywords matched on the market title, its Yes subtitle and its ticker, so `CONTROLH:2026` picks the 2026 House race).
 - `manifold`: `search term:keywords` (open binary markets only).
 - `predictit`: keywords on the market and contract name.

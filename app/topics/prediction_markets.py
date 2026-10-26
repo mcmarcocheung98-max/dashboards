@@ -134,10 +134,14 @@ def get_json(url: str, ttl: float = TTL, **kw):
 
 
 def matches(text: str, spec: str) -> bool:
-    """spec: words that must all appear in text (any case); a/b means either; an underscore stands for a space ('no_change')."""
+    """spec: words that must all appear in text (any case), each starting a word ('boe' is not in 'Nijboer'; 'democrat' is in
+    'Democratic'); a/b means either; an underscore stands for a space ('no_change'); !word means the word must not appear."""
+    import re
     t = (text or "").lower()
+    has = lambda alt: re.search(r"(?<![a-z0-9])" + re.escape(alt.replace("_", " ")), t) is not None
     words = [w for w in (spec or "").lower().split() if w]
-    return bool(words) and all(any(alt.replace("_", " ") in t for alt in w.split("/") if alt) for w in words)
+    need = [w for w in words if not w.startswith("!")]
+    return bool(need) and all(any(has(a) for a in w.split("/") if a) for w in need) and not any(has(w[1:]) for w in words if w.startswith("!") and len(w) > 1)
 
 
 def category(tags, kalshi: str | None = None) -> str:

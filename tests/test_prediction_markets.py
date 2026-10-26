@@ -120,7 +120,7 @@ def manifold_json(term: str) -> list:
         return [{**base, "id": "m1", "question": "Will Democrats win the House in 2026?", "probability": 0.81, "url": "https://manifold.markets/x/house"},
                 {**base, "id": "m0", "question": "Which party wins the House?", "outcomeType": "MULTIPLE_CHOICE"}]
     if "december" in t:
-        return [{**base, "id": "m2", "question": "Will the Fed cut in December 2026?", "probability": 0.6, "url": "https://manifold.markets/x/dec"}]
+        return [{**base, "id": "m2", "question": "Will the Fed cut at its December 2026 meeting?", "probability": 0.6, "url": "https://manifold.markets/x/dec"}]
     if "taiwan" in t:
         return [{**base, "id": "m3", "question": "Will China invade Taiwan before 2027?", "probability": 0.03, "url": "https://manifold.markets/x/tw"}]
     if "bitcoin" in t:
@@ -221,6 +221,10 @@ def test_keyword_matching():
     assert M.matches("Will the Fed cut", "hike/cut fed")
     assert not M.matches("Fed Decision in October? 25 bps decrease", "fed_decision no_change")
     assert not M.matches("anything", "")
+    assert not M.matches("Guayaquil: Ryan Nijboer vs Lorenzo Claverie", "bank_of_england/boe")      # live false match, 2026-10-26
+    assert M.matches("Will the Democratic Party win?", "democrat") and M.matches("CONTROLH-2026-D", "2026-d")
+    assert not M.matches("Will China's CPI rise?", "cpi !china") and M.matches("US CPI above 3%?", "cpi !china")
+    assert not M.matches("x", "!china")                                                  # exclusions alone match nothing
 
 
 def test_history_kalshi_manifold_predictit_parsers():
