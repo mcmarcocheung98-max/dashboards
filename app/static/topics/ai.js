@@ -6,8 +6,13 @@ const COL = { "Software Development": "--s1", "Data & Analytics": "--s6", "Legal
 const seg = rerender => el("div", { class: "seg" }, ...[["US", "United States"], ["GB", "United Kingdom"]].map(([k, l]) => el("button", { class: k === cc ? "on" : "", onclick: () => { cc = k; rerender(); } }, l)));
 const i1 = v => v == null ? "–" : v.toFixed(0);
 const sh = v => v == null ? "–" : v.toFixed(1) + "%";
-const table = (cols, rows) => el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...cols.map(h => el("th", {}, h))),
-  ...rows.map(r => el("tr", {}, ...r.map((v, i) => { const s = String(v ?? ""), m = s.match(/^\[([^\]]+)\]\(([^)]+)\)(.*)$/); return el("td", { class: i ? "wrap" : "" }, ...(m ? [link(m[1], m[2]), m[3]] : [s])); })))));
+// Columns of figures stay right-aligned (the page default); columns of text are left-aligned, header included.
+const isFig = v => v == null || /^\s*([–-]|[$£+−-]*\s*[\d.,]+\s*(%|[mkb]n?|pts?)?)\s*$/i.test(String(v));
+const table = (cols, rows) => {
+  const text = cols.map((_, i) => i > 0 && rows.some(r => !isFig(r[i])));
+  return el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...cols.map((h, i) => el("th", text[i] ? { style: "text-align:left" } : {}, h))),
+    ...rows.map(r => el("tr", {}, ...r.map((v, i) => { const s = String(v ?? ""), m = s.match(/^\[([^\]]+)\]\(([^)]+)\)(.*)$/); return el("td", { class: text[i] ? "wrap" : "" }, ...(m ? [link(m[1], m[2]), m[3]] : [s])); })))));
+};
 const dateOf = s => new Date(s).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 const VIEWS = {
   async openings() {
@@ -104,7 +109,7 @@ const VIEWS = {
     const chart = card("Reported users", ...linesChart(s.map(([k, pts]) => ({ name: k, points: pts.filter(p => p[1] > 0) })), v => big(v)), asOf(d),
       note("Each point is a company announcement; lines join announcements and say nothing about the months between."));
     const rows = (d.rows || []).map(r => el("tr", {}, el("td", {}, dateOf(r.date)), el("td", { class: "wrap" }, r.series), el("td", {}, big(+r.value)), el("td", { class: "wrap" }, link(host(r.source), r.source), r.note ? " · " + r.note : "")));
-    const table = card("Announcements", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Date", "What", "Users", "Source"].map(h => el("th", {}, h))), ...rows)));
+    const table = card("Announcements", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Date", "What", "Users", "Source"].map(h => el("th", h === "What" || h === "Source" ? { style: "text-align:left" } : {}, h))), ...rows)));
     return [chart, table];
   },
   async agents() {
