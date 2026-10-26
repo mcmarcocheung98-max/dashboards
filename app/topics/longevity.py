@@ -1,12 +1,13 @@
 """Longevity & Biotech (/longevity): do healthy life years start rising again, and does biotech deliver it?
 
 lifespan   life expectancy at birth 1960 on (World Bank, which carries Hong Kong; US, UK, Hong Kong, China), healthy life expectancy
-           (WHO GHO HALE; US, UK, China, as WHO does not report Hong Kong) and the years lived in poor health between the two, plus each
+           (WHO HALE via the xMart API; US, UK, China, as WHO does not report Hong Kong) and the years lived in poor health between the two, plus each
            agency's own latest figures (CDC NCHS, ONS, C&SD/DH, NHC; hand-entered: life_expectancy.csv, healthy.csv)
 causes     US age-adjusted death rates for heart disease, cancer, Alzheimer disease and drug overdoses, 12 months ending each quarter
            (CDC NCHS VSRR quarterly provisional estimates, Socrata JSON), the WHO's chance of dying 30-70 from the four main NCDs
            (US, UK, China), and England and Wales drug and dementia deaths (ONS; hand-entered: causes_uk.csv, causes_hk.csv)
-glp1       NHS England primary-care prescriptions of semaglutide, tirzepatide, liraglutide and dulaglutide (OpenPrescribing API),
+glp1       NHS England prescription items of semaglutide, tirzepatide, liraglutide and dulaglutide dispensed each month (NHSBSA
+           Prescription Cost Analysis, CKAN datastore SQL; OpenPrescribing is behind a Cloudflare challenge from Railway),
            Lilly and Novo Nordisk revenue (SEC EDGAR companyconcept: Lilly's 10-K/10-Q, Novo's 20-F in DKK), brand revenue and survey
            uptake (hand-entered: products.csv, uptake.csv)
 approvals  FDA CDER novel drug approvals per year, cell and gene therapy approvals (FDA CBER, MHRA), and regulatory milestones
@@ -36,31 +37,31 @@ TOPIC = Topic(SLUG, "Longevity & Biotech",
 
 PLACES = {"USA": "US", "GBR": "UK", "HKG": "Hong Kong", "CHN": "China"}
 WB_LE = "https://api.worldbank.org/v2/country/USA;GBR;HKG;CHN/indicator/SP.DYN.LE00.IN?format=json&per_page=20000&date=1960:2100"
-GHO = "https://ghoapi.azureedge.net/api/{code}?$filter=" + quote("SpatialDim eq 'USA' or SpatialDim eq 'GBR' or SpatialDim eq 'CHN'", safe="'")
-GHO_LE, GHO_HALE, GHO_NCD = "WHOSIS_000001", "WHOSIS_000002", "NCDMORT3070"
+XMART = "https://xmart-api-public.who.int/DATA_/RELAY_WHS"     # WHO's GHO OData API answers 500 to everything from Railway; xMart serves the same data
+WHO_LE, WHO_HALE, WHO_NCD = "WHOSIS_000001", "WHOSIS_000002", "NCDMORT3070"
+M49 = {"840": "US", "826": "UK", "344": "Hong Kong", "156": "China"}
 CDC_Q = "https://data.cdc.gov/resource/489q-934x.json?$limit=50000"
 CDC_Q_SLIM = CDC_Q + "&$select=year_and_quarter,time_period,cause_of_death,rate_type,rate_overall"
 CAUSES = {"Heart disease": "heart", "Cancer": "cancer", "Alzheimer disease": "alzheimer", "Drug overdose": "overdose", "All causes": "all"}
-OP_SEARCH = "https://openprescribing.net/api/1.0/bnf_code/?q={q}&format=json"
-OP_SPEND = "https://openprescribing.net/api/1.0/spending/?code={code}&format=json"
+NHSBSA = "https://opendata.nhsbsa.net/api/3/action/"
+PCA_PKG = NHSBSA + "package_show?id=prescription-cost-analysis-pca-monthly-data"
 GLP1 = ("semaglutide", "tirzepatide", "liraglutide", "dulaglutide")
-OP_FALLBACK = {"semaglutide": "0601023AW"}             # used when the BNF search does not answer
+PCA_SQL = ('SELECT "BNF_CHEMICAL_SUBSTANCE" AS chem, SUM("ITEMS") AS items, SUM("NIC") AS nic FROM "{res}" WHERE lower("BNF_CHEMICAL_SUBSTANCE") IN ('
+           + ",".join(f"'{d}'" for d in GLP1) + ') GROUP BY "BNF_CHEMICAL_SUBSTANCE"')
 CONCEPT = "https://data.sec.gov/api/xbrl/companyconcept/CIK{cik:010d}/{tax}/{tag}.json"
 # The SEC answers 403 unless the User-Agent reads "Name email" (see data/compute-chips/README.md); SEC_UA overrides it on the server
 SEC_HEADERS = {"User-Agent": os.environ.get("SEC_UA", "Dashboards admin@dashboards-production-bde6.up.railway.app"), "Accept": "application/json"}
 FIRMS = {"Eli Lilly": (59478, "USD", (("us-gaap", "Revenues"), ("us-gaap", "RevenueFromContractWithCustomerExcludingAssessedTax"))),
          "Novo Nordisk": (353278, "DKK", (("ifrs-full", "Revenue"),))}
-XMART = "https://xmart-api-public.who.int/DATA_/RELAY_WHS"
-NHSBSA = "https://opendata.nhsbsa.net/api/3/action/"
 NASDAQ_ETF = "https://api.nasdaq.com/api/quote/{sym}/historical?assetclass={cls}&fromdate={a}&todate={b}&limit=9999"
 NASDAQ_HEADERS = {"Accept": "application/json, text/plain, */*", "Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"}
 TICKERS = {"XBI": "etf", "IBB": "etf", "SPY": "etf", "LLY": "stocks", "NVO": "stocks"}
 START = "2016-01-04"
 
 SOURCES = [{"name": "World Bank WDI: life expectancy at birth (API)", "url": "https://data.worldbank.org/indicator/SP.DYN.LE00.IN", "cadence": "yearly"},
-           {"name": "WHO Global Health Observatory: HALE, life expectancy, NCD mortality 30-70 (OData API)", "url": "https://www.who.int/data/gho/info/gho-odata-api", "cadence": "every few years"},
+           {"name": "WHO Global Health Observatory via the xMart API: HALE, life expectancy, NCD mortality 30-70", "url": "https://www.who.int/data/gho", "cadence": "every few years"},
            {"name": "CDC NCHS VSRR quarterly provisional mortality estimates (data.cdc.gov 489q-934x)", "url": "https://www.cdc.gov/nchs/nvss/vsrr/mortality.htm", "cadence": "quarterly"},
-           {"name": "OpenPrescribing (NHS England prescribing data, API)", "url": "https://openprescribing.net/api/", "cadence": "monthly"},
+           {"name": "NHSBSA Prescription Cost Analysis, monthly (England, open data API)", "url": "https://opendata.nhsbsa.net/dataset/prescription-cost-analysis-pca-monthly-data", "cadence": "monthly"},
            {"name": "SEC EDGAR companyconcept (Eli Lilly 10-K/10-Q, Novo Nordisk 20-F)", "url": "https://www.sec.gov/edgar/sec-api-documentation", "cadence": "quarterly"},
            {"name": "Nasdaq quote API (XBI, IBB, SPY, LLY, NVO)", "url": "https://www.nasdaq.com/market-activity/etf/xbi", "cadence": "daily"},
            {"name": "CDC NCHS, ONS, HK C&SD and DH, NHC, FDA, MHRA, NMPA, KFF, Gallup, company reports (hand-entered, cited per row)",
@@ -113,25 +114,41 @@ def parse_wb(j) -> dict[str, pd.Series]:
     return {k: _annual(v) for k, v in out.items()}
 
 
-def parse_gho(j) -> dict[str, pd.Series]:
-    """GHO OData ({"value": [...]}) -> {"US": Series on 1 July}, both sexes only."""
-    rows = (j or {}).get("value") or []
-    out: dict[str, dict] = {}
-    for r in rows:
-        sex = str(r.get("Dim1") or "SEX_BTSX").upper()
-        if r.get("SpatialDim") in PLACES and sex.endswith("BTSX") and r.get("NumericValue") is not None and r.get("TimeDim"):
-            out.setdefault(PLACES[r["SpatialDim"]], {})[int(r["TimeDim"])] = float(r["NumericValue"])
-    if not out:
-        raise ValueError("GHO: no rows for the three places")
-    return {k: _annual(v) for k, v in out.items()}
+def parse_xmart(j) -> pd.Series:
+    """WHO xMart OData ({"value": [...]}) for one indicator and place -> Series on 1 July, both sexes only. The value sits in whichever
+    *_N column fits the indicator (AMOUNT_N for years, RATE_PER_100_N for a percentage)."""
+    out = {}
+    for r in (j or {}).get("value") or []:
+        if str(r.get("DIM_SEX") or "TOTAL").upper() not in ("TOTAL", "BTSX", "BOTHSEXES") or not str(r.get("DIM_TIME", "")).isdigit():
+            continue
+        v = next((r[k] for k in r if k.endswith("_N") and k != "TEXT_N" and isinstance(r[k], (int, float))), None)
+        if v is not None:
+            out[int(r["DIM_TIME"])] = float(v)
+    return _annual(out)
+
+
+def xmart_url(code: str, m49: str) -> str:
+    return XMART + "?$filter=" + quote(f"IND_CODE eq '{code}' and DIM_GEO_CODE_M49 eq '{m49}'", safe="'")
 
 
 def life_wb() -> dict[str, pd.Series]:
     return parse_wb(fetch_json(WB_LE, DAY, min_bytes=200))
 
 
-def gho(code: str) -> dict[str, pd.Series]:
-    return parse_gho(fetch_json(GHO.format(code=code), DAY, min_bytes=200))
+def who(code: str) -> dict[str, pd.Series]:
+    """{"US": Series} for one WHO indicator, one small request per place (WHO publishes nothing for Hong Kong: that place comes back empty)."""
+    out = {}
+    for m49, name in M49.items():
+        s = parse_xmart(fetch_json(xmart_url(code, m49), DAY, min_bytes=20))
+        if len(s):
+            out[name] = s
+    if not out:
+        raise ValueError(f"WHO xMart: no rows for {code}")
+    return out
+
+
+def who_urls(*codes) -> list[str]:
+    return [xmart_url(c, m) for c in codes for m in M49]
 
 
 # ------------------------------------------------------------------ CDC NCHS quarterly provisional mortality
@@ -172,33 +189,57 @@ def cdc() -> dict[str, pd.Series]:
         return parse_cdc(fetch_json(CDC_Q, DAY, min_bytes=200))      # a renamed column breaks $select: take every column
 
 
-# ------------------------------------------------------------------ OpenPrescribing (NHS England)
-def bnf_code(drug: str) -> str:
-    """The chemical-level BNF code for `drug` from OpenPrescribing's search, else the known one."""
-    try:
-        hits = fetch_json(OP_SEARCH.format(q=drug), 30 * DAY, min_bytes=2)
-        for h in hits or []:
-            if str(h.get("type", "")).lower() == "chemical" and str(h.get("name", "")).lower().startswith(drug):
-                return str(h["id"])
-    except Exception:
-        pass
-    if drug in OP_FALLBACK:
-        return OP_FALLBACK[drug]
-    raise LookupError(f"no BNF code for {drug}")
+# ------------------------------------------------------------------ NHSBSA Prescription Cost Analysis (England, monthly)
+def pca_months(j) -> list[str]:
+    """The monthly table names (PCA_YYYYMM) listed by the CKAN package, oldest first."""
+    import re
+    names = [str(r.get("name") or "") for r in ((j or {}).get("result") or {}).get("resources") or []]
+    out = sorted({n for n in names if re.fullmatch(r"PCA_\d{6}", n)})
+    if not out:
+        raise ValueError("NHSBSA: no PCA_YYYYMM tables in the package")
+    return out
 
 
-def parse_spend(rows) -> pd.DataFrame:
-    d = pd.DataFrame(rows or [])
-    if d.empty or "date" not in d:
-        raise ValueError("OpenPrescribing: no rows")
-    d["date"] = pd.to_datetime(d["date"])
-    for c in ("items", "actual_cost", "quantity"):
-        d[c] = pd.to_numeric(d[c], errors="coerce") if c in d else np.nan
-    return d.set_index("date").sort_index()[["items", "actual_cost", "quantity"]]
+def pca_url(table: str) -> str:
+    return NHSBSA + "datastore_search_sql?sql=" + quote(PCA_SQL.format(res=table))
 
 
-def england(drug: str) -> pd.DataFrame:
-    return parse_spend(fetch_json(OP_SPEND.format(code=bnf_code(drug)), DAY, min_bytes=2))
+def parse_pca(j) -> dict[str, tuple[float, float]]:
+    """datastore_search_sql result -> {"semaglutide": (items, net ingredient cost)}."""
+    if not (j or {}).get("success", True):
+        raise ValueError("NHSBSA: " + str((j or {}).get("error"))[:120])
+    out = {}
+    for r in ((j or {}).get("result") or {}).get("records") or []:
+        d = str(r.get("chem") or "").lower()
+        if d in GLP1:
+            out[d] = (float(pd.to_numeric(r.get("items"), errors="coerce") or 0), float(pd.to_numeric(r.get("nic"), errors="coerce") or 0))
+    return out
+
+
+def pca() -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+    """(items, net ingredient cost £) by month and drug, and {table: error} for months that did not answer. A month's table never
+    changes once published, so each is kept for 30 days in memory and for good on the snapshot volume."""
+    from concurrent.futures import ThreadPoolExecutor
+    months = pca_months(fetch_json(PCA_PKG, DAY, min_bytes=200))
+
+    def one(t):
+        try:
+            return t, parse_pca(fetch_json(pca_url(t), 30 * DAY, min_bytes=20)), None
+        except Exception as e:
+            return t, None, type(e).__name__
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        got = list(ex.map(one, months))
+    items, nic, errs = {}, {}, {}
+    for t, rec, err in got:
+        if rec is None:
+            errs[t] = err
+            continue
+        m = pd.Timestamp(f"{t[4:8]}-{t[8:10]}-01")
+        items[m] = {d: v[0] for d, v in rec.items()}
+        nic[m] = {d: v[1] for d, v in rec.items()}
+    if not items:
+        raise LookupError("NHSBSA: no month answered")
+    return pd.DataFrame(items).T.sort_index(), pd.DataFrame(nic).T.sort_index(), errs
 
 
 # ------------------------------------------------------------------ SEC EDGAR companyconcept
@@ -281,14 +322,14 @@ def _lifespan_now() -> dict:
         return {k: _pts(v, 2) for k, v in life_wb().items()}
 
     def hale():
-        h, l = gho(GHO_HALE), gho(GHO_LE)
+        h, l = who(WHO_HALE), who(WHO_LE)
         gap = {k: (l[k] - h[k]).dropna() for k in h if k in l}
         return {"hale": {k: _pts(v, 2) for k, v in h.items()}, "le": {k: _pts(v, 2) for k, v in l.items()}, "gap": {k: _pts(v, 2) for k, v in gap.items()},
                 "kpi": {k: {"hale": _latest(h[k]), "gap": _latest(gap.get(k, pd.Series(dtype=float))), "hale_10y": _change(h[k], 10)} for k in h}}
     nat, hl = hand("life_expectancy"), hand("healthy")
     out = payload({"le": le, "hale": hale, "national": lambda: {k: _pts(v, 2) for k, v in nat.items()},
                    "healthy": lambda: {k: _pts(v, 2) for k, v in hl.items()}},
-                  sources=[WB_LE, GHO.format(code=GHO_HALE), GHO.format(code=GHO_LE)])
+                  sources=[WB_LE, *who_urls(WHO_HALE, WHO_LE)])
     out["kpi"] = {}
     for k, v in (life_wb().items() if out.get("le") else []):
         pre = v[v.index.year == 2019]
@@ -314,11 +355,11 @@ def _causes_now() -> dict:
         return {"series": {k: _pts(v, 1) for k, v in c.items()}, "kpi": kpi}
 
     def ncd():
-        n = gho(GHO_NCD)
+        n = who(WHO_NCD)
         return {"series": {k: _pts(v, 2) for k, v in n.items()}, "latest": {k: {**(_latest(v) or {}), "chg_10y": _change(v, 10)} for k, v in n.items()}}
     uk, hk = hand("causes_uk"), hand("causes_hk")
     out = payload({"us": us, "ncd": ncd, "uk": lambda: {k: _pts(v, 2) for k, v in uk.items()}, "hk": lambda: {k: _pts(v, 2) for k, v in hk.items()}},
-                  sources=[CDC_Q_SLIM, CDC_Q, GHO.format(code=GHO_NCD)])
+                  sources=[CDC_Q_SLIM, CDC_Q, *who_urls(WHO_NCD)])
     out["uk_latest"] = {k: {**(_latest(v) or {}), "prev": _r(v.iloc[-2], 2) if len(v) > 1 else None} for k, v in uk.items() if len(v)}
     out["rows"] = rows("causes_uk") + rows("causes_hk")
     out["cited"] = cited("causes_uk", "causes_hk")
@@ -328,20 +369,12 @@ def _causes_now() -> dict:
 
 
 def _glp1_now() -> dict:
-    eng, errs = {}, {}
-    for d in GLP1:
-        try:
-            eng[d] = england(d)
-        except Exception as e:
-            errs[d] = type(e).__name__
-
     def nhs():
-        if not eng:
-            raise LookupError("OpenPrescribing: " + ", ".join(f"{k} {v}" for k, v in errs.items()))
-        tot = pd.concat([v["items"] for v in eng.values()], axis=1).sum(axis=1, min_count=1).dropna()
+        it, nic, errs = pca()
+        tot = it.sum(axis=1, min_count=1).dropna()
         y12 = tot.rolling(12).sum().dropna()
-        cost = pd.concat([v["actual_cost"] for v in eng.values()], axis=1).sum(axis=1, min_count=1).dropna()
-        return {"items": {k.capitalize(): _pts(v["items"], 0) for k, v in eng.items()}, "cost": {k.capitalize(): _pts(v["actual_cost"] / 1e6, 2) for k, v in eng.items()},
+        cost = nic.sum(axis=1, min_count=1).dropna()
+        return {"items": {k.capitalize(): _pts(it[k], 0) for k in GLP1 if k in it}, "cost": {k.capitalize(): _pts(nic[k] / 1e6, 2) for k in GLP1 if k in nic},
                 "total": _pts(tot, 0), "kpi": {"month": str(tot.index[-1].date()), "items": _r(tot.iloc[-1], 0),
                                                "items_12m": _r(y12.iloc[-1], 0) if len(y12) else None,
                                                "yoy_12m": _r(y12.iloc[-1] / y12.iloc[-13] - 1, 4) if len(y12) > 12 and y12.iloc[-13] else None,
@@ -360,7 +393,7 @@ def _glp1_now() -> dict:
     prod, up = hand("products"), hand("uptake")
     out = payload({"nhs": nhs, "revenue": rev, "products": lambda: {k: [[int(t.year), _r(v, 2)] for t, v in s.items()] for k, s in prod.items()},
                    "uptake": lambda: {k: _pts(v, 1) for k, v in up.items()}},
-                  sources=[OP_SPEND.format(code=OP_FALLBACK["semaglutide"]), *concept_urls()])
+                  sources=[PCA_PKG, *concept_urls()])
     out["uptake_latest"] = {k: {**(_latest(v, 1) or {}), "prev": _r(v.iloc[-2], 1) if len(v) > 1 else None} for k, v in up.items() if len(v)}
     out["rows"] = rows("products") + rows("uptake")
     out["cited"] = cited("products", "uptake")
@@ -513,33 +546,20 @@ def _layout_now() -> dict:
     from concurrent.futures import ThreadPoolExecutor
     import requests
     b = pd.Timestamp.now().strftime("%Y-%m-%d")
-    urls = {"worldbank": WB_LE, "gho hale": GHO.format(code=GHO_HALE), "gho ncd": GHO.format(code=GHO_NCD), "cdc slim": CDC_Q_SLIM.replace("50000", "3"),
-            "openprescribing search": OP_SEARCH.format(q="tirzepatide"), "openprescribing spend": OP_SPEND.format(code=OP_FALLBACK["semaglutide"]),
-            "sec lilly": CONCEPT.format(cik=59478, tax="us-gaap", tag="Revenues"), "sec novo": CONCEPT.format(cik=353278, tax="ifrs-full", tag="Revenue"),
-            "nasdaq XBI": NASDAQ_ETF.format(sym="XBI", cls="etf", a="2026-09-01", b=b),
-            "xmart hale": XMART + "?$filter=" + quote("IND_CODE eq 'WHOSIS_000002' and DIM_GEO_CODE_M49 eq '826'", safe="'") + "&$top=2",
-            "xmart ncd": XMART + "?$filter=" + quote("IND_CODE eq 'NCDMORT3070' and DIM_GEO_CODE_M49 eq '840'", safe="'") + "&$top=2"}
+    urls = {"worldbank": WB_LE, "xmart hale UK": xmart_url(WHO_HALE, "826"), "xmart le HK": xmart_url(WHO_LE, "344"), "cdc slim": CDC_Q_SLIM.replace("50000", "3"),
+            "nhsbsa pca 202601": pca_url("PCA_202601"), "sec lilly": CONCEPT.format(cik=59478, tax="us-gaap", tag="Revenues"),
+            "sec novo": CONCEPT.format(cik=353278, tax="ifrs-full", tag="Revenue"), "nasdaq XBI": NASDAQ_ETF.format(sym="XBI", cls="etf", a="2026-09-01", b=b)}
 
     def one(item):
         k, u = item
         h = {**B.UA, **(NASDAQ_HEADERS if "nasdaq" in k else SEC_HEADERS if "sec" in k else {})}
         try:
             r = requests.get(u, headers=h, timeout=25)
-            return k, {"status": r.status_code, "bytes": len(r.content), "type": r.headers.get("content-type", ""), "start": r.text[:1500 if "xmart" in k else 400]}
+            return k, {"status": r.status_code, "bytes": len(r.content), "type": r.headers.get("content-type", ""), "start": r.text[:400 if "sec" in k else 1200]}
         except Exception as e:
             return k, {"error": f"{type(e).__name__}: {str(e)[:160]}"}
     with ThreadPoolExecutor(max_workers=16) as ex:
-        out = dict(ex.map(one, urls.items()))
-    for pkg in ("prescription-cost-analysis-pca-monthly-data", "english-prescribing-data-epd"):      # the newest monthly tables and their fields
-        try:
-            res = requests.get(NHSBSA + "package_show?id=" + pkg, headers=B.UA, timeout=25).json()["result"]["resources"]
-            names = [r.get("name") for r in res]
-            last = names[-1]
-            r = requests.get(NHSBSA + "datastore_search?resource_id=" + last + "&limit=2", headers=B.UA, timeout=40)
-            out[pkg] = {"n": len(names), "first": names[:2], "last": names[-3:], "sample_status": r.status_code, "sample": r.text[:1500]}
-        except Exception as e:
-            out[pkg] = {"error": f"{type(e).__name__}: {str(e)[:160]}"}
-    return out
+        return dict(ex.map(one, urls.items()))
 
 
 def _cached_ep(name, fn, ttl=6 * 3600):

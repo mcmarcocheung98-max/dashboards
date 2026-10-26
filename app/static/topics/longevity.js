@@ -33,7 +33,7 @@ const VIEWS = {
         "20 years: whether Hong Kong's lead (now over 85) keeps rising or stalls, which says whether the frontier of human lifespan still moves."))
       : card("Life expectancy", missing(d, "le", "The World Bank series"), stale(d));
     const hale = d.hale ? card("Healthy life expectancy, 2000–2021 (WHO HALE, years)", ...byPlace(d.hale.hale, f1, { small: true }),
-      note("WHO Global Health Observatory, both sexes; not published for Hong Kong. 5 years: Covid's dent (2020–21). 10 years: whether healthy years grow as fast as total years. 20 years: the case for longevity drugs is that they lift this line, not just the one above."))
+      note("WHO Global Health Observatory (through WHO's xMart API), both sexes; not published for Hong Kong. 5 years: Covid's dent (2020–21). 10 years: whether healthy years grow as fast as total years. 20 years: the case for longevity drugs is that they lift this line, not just the one above."))
       : card("Healthy life expectancy", missing(d, "hale", "WHO's series"));
     const gap = d.hale ? card("Years lived in poor health (life expectancy minus HALE)", ...byPlace(d.hale.gap, f2, { small: true }),
       note("WHO, both sexes. A widening gap means extra years are added in poor health. 5 and 10 years: is it still widening? 20 years: compression of morbidity, the gap shrinking, is what 'healthy ageing' would look like in data.")) : null;
@@ -73,15 +73,15 @@ const VIEWS = {
     const head = card(null, el("div", { class: "kpis" },
       kpi("NHS England GLP-1 items, 12 months to " + (N.month ? N.month.slice(0, 7) : "–"), big(N.items_12m)),
       kpi("…vs the 12 months before", pct(N.yoy_12m, 0), cls(N.yoy_12m)),
-      kpi("NHS cost, last 12 months", N.cost_12m_m == null ? "–" : "£" + num(N.cost_12m_m, 0) + "m"),
+      kpi("NHS net ingredient cost, last 12 months", N.cost_12m_m == null ? "–" : "£" + num(N.cost_12m_m, 0) + "m"),
       ...Object.entries(R).map(([f, r]) => kpi(f + " revenue " + (r.latest_year || "") + " (" + r.unit + ")", num((r.annual || []).slice(-1)[0]?.[1], 1) + "bn (" + pct(r.growth, 0) + ")", cls(r.growth)))),
       asOf(d), stale(d));
     const n = d.nhs;
-    const items = n ? card("NHS England primary-care prescription items per month, by drug", ...linesChart(Object.entries(n.items).map(([k, p], i) => ({ name: k, points: p, color: css(SERIES[i]) })), v => big(v)),
-      note("OpenPrescribing (NHS Business Services Authority data), every GP prescription in England. Most weight-loss use in the UK is private (online pharmacies), so this is diabetes plus the NHS weight-loss rollout. " +
+    const items = n ? card("NHS England prescription items dispensed per month, by drug", ...linesChart(Object.entries(n.items).map(([k, p], i) => ({ name: k, points: p, color: css(SERIES[i]) })), v => big(v)),
+      note("NHSBSA Prescription Cost Analysis: every NHS prescription dispensed in the community in England (from January 2021). Most weight-loss use in the UK is private (online pharmacies), so this is diabetes plus the NHS weight-loss rollout. " +
         "5 years: tirzepatide's primary-care rollout from June 2025. 10 years: whether these drugs become as routine as statins. 20 years: whether the population's obesity, diabetes and heart deaths fall with them.") ,
-      Object.keys(n.missing || {}).length ? el("div", { class: "muted" }, "Missing: " + Object.entries(n.missing).map(([k, v]) => k + " (" + v + ")").join(", ")) : null)
-      : card("NHS England prescriptions", missing(d, "nhs", "OpenPrescribing"), stale(d));
+      Object.keys(n.missing || {}).length ? el("div", { class: "muted" }, "Months not loaded: " + Object.entries(n.missing).map(([k, v]) => k + " (" + v + ")").join(", ")) : null)
+      : card("NHS England prescriptions", missing(d, "nhs", "NHSBSA prescription data"), stale(d));
     const rev = Object.keys(R).length ? card("Annual revenue: Eli Lilly (USD bn) and Novo Nordisk (DKK bn)", el("div", { class: "grid2" }, ...Object.entries(R).map(([f, r], i) => el("div", {},
       el("div", { class: "muted" }, f + " (" + r.unit + " bn)"), ...svgBars(r.annual.map(a => String(a[0])), [{ name: f, values: r.annual.map(a => a[1]), color: css(SERIES[i]) }], { yFmt: v => num(v, 0), h: 180 })))),
       note("SEC EDGAR: Lilly's 10-K revenue, Novo Nordisk's 20-F (IFRS, Danish kroner). The two makers of semaglutide and tirzepatide. 5 years: does growth hold as prices fall and Medicare negotiates? 10 years: oral pills and generics (semaglutide patents end in China and Canada in 2026). " +

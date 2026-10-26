@@ -1,4 +1,4 @@
-"""Longevity & Biotech on fixtures (no network): the World Bank, WHO GHO, CDC, OpenPrescribing, EDGAR and Nasdaq parsers, every payload,
+"""Longevity & Biotech on fixtures (no network): the World Bank, WHO xMart, CDC, NHSBSA, EDGAR and Nasdaq parsers, every payload,
 READINGS and the seed files. smoke_patch() points the module's fetchers at the same fixtures for scripts/smoke.py."""
 import pandas as pd
 import pytest
@@ -18,15 +18,19 @@ def wb_json():
     return [{"page": 1, "pages": 1, "per_page": 20000, "total": len(rows)}, rows]
 
 
-def gho_json(code: str):
+def xmart_json(code: str, m49: str):
+    """WHO xMart RELAY_WHS rows: the value in AMOUNT_N (years) or RATE_PER_100_N (%), three sexes; nothing for Hong Kong (344)."""
+    if m49 == "344":
+        return {"@odata.context": "x", "value": []}
     base = {"WHOSIS_000001": 77.0, "WHOSIS_000002": 66.0, "NCDMORT3070": 16.0}[code]
     step = {"WHOSIS_000001": 0.15, "WHOSIS_000002": 0.1, "NCDMORT3070": -0.2}[code]
+    d = {"840": 0.0, "826": 1.0, "156": -2.0}[m49]
+    col = "RATE_PER_100_N" if code == "NCDMORT3070" else "AMOUNT_N"
     rows = []
-    for iso, d in (("USA", 0.0), ("GBR", 1.0), ("CHN", -2.0)):
-        for y in range(2000, 2022):
-            for sex in ("SEX_BTSX", "SEX_MLE", "SEX_FMLE"):
-                rows.append({"Id": 1, "IndicatorCode": code, "SpatialDimType": "COUNTRY", "SpatialDim": iso, "TimeDimType": "YEAR", "TimeDim": y,
-                             "Dim1Type": "SEX", "Dim1": sex, "NumericValue": base + d + (y - 2000) * step + (0 if sex == "SEX_BTSX" else 3)})
+    for y in range(2000, 2022):
+        for sex in ("TOTAL", "MALE", "FEMALE"):
+            rows.append({"IND_CODE": code, "DIM_TIME": str(y), "DIM_TIME_TYPE": "YEAR", "DIM_GEO_CODE_M49": m49, "DIM_SEX": sex, "TEXT_N": None, "AMOUNT_N": None,
+                         "RATE_PER_100_N": None, col: base + d + (y - 2000) * step + (0 if sex == "TOTAL" else 3)})
     return {"@odata.context": "x", "value": rows}
 
 
@@ -45,19 +49,22 @@ def cdc_json():
     return rows
 
 
-def op_search(drug):
-    return [{"type": "chemical", "id": {"semaglutide": "0601023AW", "tirzepatide": "0601023AZ", "liraglutide": "0601023AB", "dulaglutide": "0601023AQ"}[drug],
-             "name": drug.capitalize()}, {"type": "product", "id": "0601023AWBB", "name": drug.capitalize() + " (Ozempic)"}]
+PCA_MONTHS = [f"PCA_{t:%Y%m}" for t in pd.date_range("2021-01-01", "2026-08-01", freq="MS")]
 
 
-def op_spend(code):
-    k = {"0601023AW": 3.0, "0601023AZ": 0.5, "0601023AB": 1.0, "0601023AQ": 1.5}.get(code[:9], 1.0)
-    out = []
-    for i, t in enumerate(pd.date_range("2019-01-01", "2026-07-01", freq="MS")):
-        start = 0 if code.startswith("0601023AZ") and t < pd.Timestamp("2024-01-01") else 1
-        if start:
-            out.append({"date": str(t.date()), "items": int(k * 10000 * (1 + i / 30)), "actual_cost": k * 1e6 * (1 + i / 25), "quantity": k * 5e4})
-    return out
+def pca_package():
+    return {"success": True, "result": {"name": "prescription-cost-analysis-pca-monthly-data",
+                                        "resources": [{"name": n} for n in PCA_MONTHS] + [{"name": "PCA metadata"}]}}
+
+
+def pca_sql(table: str):
+    i = PCA_MONTHS.index(table)
+    recs = []
+    for d, k in (("Semaglutide", 3.0), ("Tirzepatide", 0.5), ("Liraglutide", 1.0), ("Dulaglutide", 1.5)):
+        if d == "Tirzepatide" and i < 36:
+            continue
+        recs.append({"chem": d, "items": str(int(k * 10000 * (1 + i / 30))), "nic": k * 1e6 * (1 + i / 25)})
+    return {"success": True, "result": {"records": recs, "fields": [{"id": "chem"}, {"id": "items"}, {"id": "nic"}]}}
 
 
 def concept_json(firm):
@@ -84,14 +91,20 @@ def nasdaq_json(sym):
 def fake_fetch_json(url, ttl=0, **k):
     if "worldbank" in url:
         return wb_json()
-    if "ghoapi" in url:
-        return gho_json(url.split("/api/")[1].split("?")[0])
+    if "xmart" in url:
+        from urllib.parse import unquote
+        f = unquote(url)
+        return xmart_json(f.split("IND_CODE eq '")[1].split("'")[0], f.split("M49 eq '")[1].split("'")[0])
     if "data.cdc.gov" in url:
         return cdc_json()
-    if "bnf_code" in url:
-        return op_search(url.split("q=")[1].split("&")[0])
-    if "openprescribing" in url:
-        return op_spend(url.split("code=")[1].split("&")[0])
+    if "package_show" in url:
+        return pca_package()
+    if "datastore_search_sql" in url:
+        from urllib.parse import unquote
+        t = unquote(url).split('FROM "')[1].split('"')[0]
+        if t == "PCA_202203":
+            raise ConnectionError("one month down")
+        return pca_sql(t)
     if "data.sec.gov" in url:
         if "RevenueFromContract" in url:
             raise ConnectionError("404")
@@ -129,10 +142,14 @@ def test_topic_is_registered():
 def test_parsers():
     le = M.parse_wb(wb_json())
     assert set(le) == {"US", "UK", "Hong Kong", "China"} and le["US"].index[-1] == pd.Timestamp("2023-07-01")
-    h = M.parse_gho(gho_json("WHOSIS_000002"))
-    assert set(h) == {"US", "UK", "China"} and h["US"].iloc[0] == pytest.approx(66.0)          # both sexes only
+    h = M.parse_xmart(xmart_json("WHOSIS_000002", "826"))
+    assert len(h) == 22 and h.iloc[0] == pytest.approx(67.0)          # both sexes only
+    assert M.parse_xmart(xmart_json("NCDMORT3070", "840")).iloc[-1] == pytest.approx(16 - 21 * 0.2)
+    assert M.parse_xmart({"value": []}).empty
+    assert M.pca_months(pca_package())[0] == "PCA_202101" and "PCA metadata" not in M.pca_months(pca_package())
+    assert M.parse_pca(pca_sql("PCA_202608"))["tirzepatide"][0] > 0
     with pytest.raises(ValueError):
-        M.parse_gho({"value": []})
+        M.parse_pca({"success": False, "error": {"message": "bad sql"}})
     c = M.parse_cdc(cdc_json())
     assert set(c) == {"heart", "cancer", "alzheimer", "overdose", "all"}
     assert c["heart"].index[-1] == pd.Timestamp("2025-12-31") and c["heart"].iloc[0] == pytest.approx(170 * 0.996, abs=0.06)
@@ -153,10 +170,12 @@ def test_payloads(mocked):
         out = B.json_safe(fn())
         assert not [k for k in out if k.endswith("_error")], (name, {k: v for k, v in out.items() if k.endswith("_error")})
     L = M.ENDPOINTS["lifespan"]()
+    assert set(L["hale"]["hale"]) == {"US", "UK", "China"}                          # WHO has no Hong Kong
     assert L["kpi"]["Hong Kong"]["value"] == pytest.approx(80 + 33 * 0.12) and L["kpi"]["US"]["vs_2019"] > 0
     assert L["hale"]["gap"]["US"][-1][1] == pytest.approx(11 + 21 * 0.05)
     G = M.ENDPOINTS["glp1"]()
     assert set(G["nhs"]["items"]) == {"Semaglutide", "Tirzepatide", "Liraglutide", "Dulaglutide"} and G["nhs"]["kpi"]["yoy_12m"] > 0
+    assert G["nhs"]["missing"] == {"PCA_202203": "ConnectionError"} and G["nhs"]["kpi"]["month"] == "2026-08-01"
     assert G["revenue"]["Eli Lilly"]["annual"][-1][0] == 2025 and G["revenue"]["Novo Nordisk"]["unit"] == "DKK"
     A = M.ENDPOINTS["approvals"]()
     assert A["kpi"]["record"] == 59 and A["cgt_by_year"]["years"][0] == 2017 and sum(A["cgt_by_year"]["counts"]["FDA"]) >= 25
@@ -181,7 +200,7 @@ def test_readings(mocked):
 
 
 def test_one_dead_source_blanks_one_chart(mocked, monkeypatch):
-    monkeypatch.setattr(M, "fetch_json", lambda url, ttl=0, **k: (_ for _ in ()).throw(ConnectionError("down")) if "ghoapi" in url else fake_fetch_json(url))
+    monkeypatch.setattr(M, "fetch_json", lambda url, ttl=0, **k: (_ for _ in ()).throw(ConnectionError("down")) if "xmart" in url else fake_fetch_json(url))
     L = M.ENDPOINTS["lifespan"]()
     assert L["hale"] is None and L["hale_error"] == "ConnectionError" and L["le"]["US"]
 
@@ -214,6 +233,7 @@ def test_seed_files():
 def test_live_sources():
     import json
     assert len(M.parse_wb(json.loads(B._download(M.WB_LE)))) == 4
-    assert M.parse_gho(json.loads(B._download(M.GHO.format(code=M.GHO_HALE))))
+    assert len(M.parse_xmart(json.loads(B._download(M.xmart_url(M.WHO_HALE, "826"))))) > 10
     assert "heart" in M.parse_cdc(json.loads(B._download(M.CDC_Q_SLIM)))
-    assert len(M.parse_spend(json.loads(B._download(M.OP_SPEND.format(code="0601023AW"))))) > 24
+    months = M.pca_months(json.loads(B._download(M.PCA_PKG)))
+    assert "semaglutide" in M.parse_pca(json.loads(B._download(M.pca_url(months[-1]))))
