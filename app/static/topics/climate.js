@@ -7,6 +7,9 @@ const col = (map, k) => css(map[k] || "--hold");
 const deg = (v, d = 2) => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(d) + " °C";
 const sgn = (v, d = 1) => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(d);
 const ask = s => el("div", { class: "muted", style: "margin-top:6px" }, el("b", { style: "color:var(--ink2)" }, "Questions: "), s);
+// plain figures under a timeline-following head (followHead from topic.html)
+const fixed = (...k) => el("div", { class: "kpis", style: "margin-top:10px" }, ...k.filter(Boolean));
+const downIf = lim => v => v >= lim ? "down" : "";
 const doyFmt = v => MONTHS[new Date(Date.UTC(2001, 0, Math.max(1, Math.round(v)))).getUTCMonth()];
 const DOY_TICKS = [1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];
 // yearly points next to monthly charts: invisible monthly points let the shared date axis land on any month, not only on 1 January
@@ -31,9 +34,12 @@ const doyLines = (years, bands, fmt, o = {}) => svgLines([
 const VIEWS = {
   async temperature() {
     const d = await api("temperature"), K = d.kpis || {}, m = K[d.main] || {}, dy = d.daily;
-    const head = card(null, el("div", { class: "kpis" },
-      kpi("Latest month, " + (m.month || "–") + " (" + (d.main || "–") + ")", deg(m.latest), m.latest >= 1.5 ? "down" : ""),
-      kpi("Last 12 months", deg(m.r12), m.r12 >= 1.5 ? "down" : ""),
+    const M = d.main, abs = { lag: "1y", abs: true, fmt: v => sgn(v, 2) + " °C" };
+    const head = card(null, followHead([
+      { label: "Monthly, " + (M || "–"), points: (d.monthly || {})[M] || [], fmt: v => deg(v), cls: downIf(1.5), delta: abs },
+      { label: "12-month average", points: (d.rolling || {})[M] || [], fmt: v => deg(v), cls: downIf(1.5), delta: abs },
+      { label: "Calendar-year average", points: (d.annual || {})[M] || [], fmt: v => deg(v), cls: downIf(1.5), delta: abs }],
+      { latest: "Latest: " + (m.month || "–") }), fixed(
       kpi("Warming rate, last 20 years", m.rate20 == null ? "–" : sgn(m.rate20, 2) + " °C a decade", m.rate20 > 0.2 ? "down" : ""),
       kpi("30-year trend reaches 1.5 °C", m.cross == null ? "–" : String(Math.floor(m.cross))),
       kpi("Warmest year (" + (d.main || "") + ")", m.warmest ? m.warmest + " · " + deg(m.warmest_v) : "–"),
@@ -61,12 +67,16 @@ const VIEWS = {
 
   async co2() {
     const d = await api("co2"), K = d.kpis || {}, E = d.emissions || {};
-    const head = card(null, el("div", { class: "kpis" },
-      kpi("Mauna Loa CO₂, " + (K.month || "–"), K.ppm == null ? "–" : num(K.ppm, 1) + " ppm"),
-      kpi("Growth, last 12 months", K.growth12 == null ? "–" : sgn(K.growth12, 2) + " ppm", cls(-(K.growth12 - K.growth10))),
+    const co2E = k => ((E[k] || {}).co2) || [];
+    const head = card(null, followHead([
+      { label: "Mauna Loa CO₂", points: (d.mlo || {}).average || [], fmt: v => num(v, 1) + " ppm", delta: { lag: "1y", abs: true, fmt: v => sgn(v, 2) + " ppm" } },
+      { label: "Growth over 12 months (seasonally adjusted)", points: d.growth12 || [], fmt: v => sgn(v, 2) + " ppm", cls: v => K.growth10 == null ? "" : v > K.growth10 ? "down" : "up" },
+      { label: "Global methane", points: (d.ch4 || {}).average || [], fmt: v => num(v, 0) + " ppb", delta: { lag: "1y", abs: true, fmt: v => sgn(v, 1) + " ppb" } },
+      { label: "China fossil CO₂, Mt", points: co2E("China"), fmt: v => num(v, 0), delta: { lag: "1y" } },
+      { label: "World fossil CO₂, Mt", points: co2E("World"), fmt: v => num(v, 0), delta: { lag: "1y" } }],
+      { latest: "Latest: " + (K.month || "–") }), fixed(
       kpi("Average growth, last 10 years", K.growth10 == null ? "–" : sgn(K.growth10, 2) + " ppm a year"),
       kpi("Average growth in the 1960s", K.growth_1960s == null ? "–" : sgn(K.growth_1960s, 2) + " ppm a year"),
-      kpi("Global methane, " + (K.ch4_month || "–"), K.ch4 == null ? "–" : num(K.ch4, 0) + " ppb"),
       kpi("China's share of world fossil CO₂ (" + (K.china_year || "–") + ")", K.china_share == null ? "–" : num(K.china_share, 0) + "%")), asOf(d), stale(d));
     const mlo = card("Atmospheric CO₂ at Mauna Loa, ppm (monthly)",
       ...linesChart([{ name: "Monthly mean", points: (d.mlo || {}).average || [], color: css("--s1"), width: 1.5 }, { name: "Seasonally adjusted", points: (d.mlo || {}).trend || [], color: css("--down") }], v => num(v, 1)),
@@ -101,7 +111,13 @@ const VIEWS = {
   async sea() {
     const d = await api("sea"), K = d.kpis || {}, I = d.ice || {}, G = K.gauges || {};
     const ice = h => K[h] && K[h].v != null ? num(K[h].v, 2) + "m km² (" + sgn(K[h].v - K[h].recent, 2) + " vs 2011–20)" : "–";
-    const head = card(null, el("div", { class: "kpis" },
+    const Gp = d.gauges || {}, gk = pre => Object.keys(Gp).find(k => k.startsWith(pre));
+    const head = card(null, followHead([
+      { label: "Global sea level (satellites)", points: d.gmsl || [], fmt: v => sgn(v, 0) + " mm", delta: { lag: "1y", abs: true, fmt: v => sgn(v, 1) + " mm" } },
+      ...["New York", "Hong Kong", "Newlyn"].filter(gk).map(p => ({ label: gk(p) + " tide gauge, vs 1991–2020", points: Gp[gk(p)], fmt: v => sgn(v, 0) + " mm" })),
+      { label: "Arctic yearly minimum", points: (I.north || {}).min || [], fmt: v => num(v, 2) + "m km²" },
+      { label: "Antarctic yearly minimum", points: (I.south || {}).min || [], fmt: v => num(v, 2) + "m km²" }],
+      { latest: "Latest: " + (K.gmsl_date || "–") }), fixed(
       kpi("Global sea level since 1993", K.since1993 == null ? "–" : "+" + num(K.since1993, 0) + " mm"),
       kpi("Rise a year, last 10 years", K.rate10 == null ? "–" : num(K.rate10, 1) + " mm", K.rate10 > K.rate_prev10 ? "down" : ""),
       kpi("Rise a year, 10 years before", K.rate_prev10 == null ? "–" : num(K.rate_prev10, 1) + " mm"),
@@ -133,7 +149,10 @@ const VIEWS = {
 
   async heat() {
     const d = await api("heat"), C = ["Hong Kong", "London", "New York"].filter(c => d[c]);
-    const head = card(null, el("div", { class: "kpis" },
+    const head = card(null, followHead([
+      ...C.map(c => ({ label: c + ": hot days that year (≥" + d[c].threshold + " °C)", points: d[c].hot || [], fmt: v => num(v, 0), delta: { lag: "1y", abs: true, fmt: v => sgn(v, 0), text: "on the year before" } })),
+      ...C.map(c => ({ label: c + ": share of daily records that were highs, 10 years", points: d[c].ratio || [], fmt: v => num(v, 0) + "%", cls: v => v > 50 ? "down" : v < 50 ? "up" : "" }))],
+      { latest: "Latest: this year to date" }), fixed(
       ...C.map(c => kpi(c + ": hot days in " + (d[c].upto || "").slice(0, 4) + " to " + (d[c].upto || "–").slice(5) + " (≥" + d[c].threshold + " °C)", d[c].ytd == null ? "–" : d[c].ytd + (d[c].ytd_normal == null ? "" : " vs " + num(d[c].ytd_normal, 0) + " normal"),
         d[c].ytd_normal == null ? "" : d[c].ytd > d[c].ytd_normal ? "down" : d[c].ytd < d[c].ytd_normal ? "up" : "")),
       ...C.map(c => kpi(c + ": record highs : lows, last 365 days", d[c].rec365 && d[c].rec365[0] != null ? d[c].rec365[0] + " : " + (d[c].rec365[1] == null ? "–" : d[c].rec365[1]) : "–")),
@@ -166,7 +185,11 @@ const VIEWS = {
 
   async costs() {
     const d = await api("costs"), K = d.kpis || {}, S = d.insured || {}, B = d.billions || {};
-    const head = card(null, el("div", { class: "kpis" },
+    const head = card(null, followHead([
+      { label: "Insured nat-cat losses (Swiss Re), $bn", points: S["nat cat"] || [], fmt: v => usd(v, 0), delta: { lag: "1y" } },
+      { label: "US billion-dollar disasters", points: B.count || [], fmt: v => num(v, 0), delta: { lag: "1y", abs: true, fmt: v => sgn(v, 0), text: "on the year before" } },
+      { label: "China direct disaster losses, CN¥bn", points: d.china || [], fmt: v => num(v, 0), delta: { lag: "1y" } }],
+      { latest: "Latest year" }), fixed(
       K.insured ? kpi("Insured nat-cat losses " + K.insured.year + " (Swiss Re)", usd(K.insured.v) + "bn", K.insured.v > K.insured.trend ? "down" : "up") : null,
       d.insured_growth != null ? kpi("Trend growth of insured losses", sgn(d.insured_growth, 1) + "% a year") : null,
       K.billions ? kpi("US billion-dollar disasters " + K.billions.year, K.billions.n + " (10-yr avg " + num(K.billions.avg10, 1) + ")", K.billions.n > K.billions.avg10 ? "down" : "up") : null,
