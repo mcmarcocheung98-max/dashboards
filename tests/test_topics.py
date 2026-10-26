@@ -261,6 +261,34 @@ def test_btos_workbook_parser():
     assert s.tolist() == [5.1, 5.3, 5.4] and s.index[-1] == pd.Timestamp("2024-02-11")
 
 
+def btos_national_xlsx() -> bytes:
+    """The live National workbook layout (Oct 2026): period codes as columns, '%' strings, '.' for no estimate, and a dates sheet."""
+    import io
+    q7 = "In the last two weeks, did this business use Super Intelligence or SI (formerly referred to as Artificial Intelligence or AI) in any of its business functions?"
+    q24 = "During the next six months, do you think this business will be using Super Intelligence or SI (formerly referred to as Artificial Intelligence or AI) in any of its business functions?"
+    est = pd.DataFrame([["Question ID", "Question", "Answer ID", "Answer", "202621", "202620", "202319"],
+                        ["3", "Overall, how would you describe this business's current performance?", "1", "Excellent", "14.6%", "14.7%", "9.8%"],
+                        ["7", q7, "1", "Yes", "24.6%", "23.8%", "3.7%"], ["7", q7, "2", "No", "65.8%", "66.4%", "90.0%"],
+                        ["24", q24, "1", "Yes", "28.6%", "27.7%", "."]])
+    dates = pd.DataFrame({"Sample Year": [2, None, 4], "Smpdt": ["202319", "202620", "202621"],
+                          "Ref End": ["2023-09-10", "2026-09-27", "2026-10-11"]})
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf) as w:
+        est.to_excel(w, sheet_name="Response Estimates", index=False, header=False)
+        dates.to_excel(w, sheet_name="Collection and Reference Dates", index=False)
+    return buf.getvalue()
+
+
+def test_btos_parser_reads_the_live_layout():
+    from app.topics.ai_adoption import parse_btos
+    pytest.importorskip("openpyxl")
+    x = btos_national_xlsx()
+    s = parse_btos(x)
+    assert s.tolist() == [3.7, 23.8, 24.6] and s.index[0] == pd.Timestamp("2023-09-10") and s.index[-1] == pd.Timestamp("2026-10-11")
+    e = parse_btos(x, "six months")
+    assert e.tolist() == [27.7, 28.6]
+
+
 SGO = "Report ID,Report Version,Reporting Entity,Incident Date,Incident Time (24:00)\n" + "\n".join(
     f"R{i},1,{'Waymo LLC' if i % 3 else 'Cruise LLC'},{m.strftime('%b-%Y').upper()},12:00" for i, m in enumerate(pd.date_range("2021-07-01", periods=40, freq="MS").repeat(3))) + "\nR0,2,Cruise LLC,JUL-2021,12:00\n"
 
@@ -584,7 +612,7 @@ def test_ai_layout_probe_reports_errors_instead_of_failing(monkeypatch):
     monkeypatch.setattr(requests, "get", down)
     out = ai._layout_now()
     B.json_safe(out)
-    assert set(out) == {"pages", "csd", "files"} and len(out["csd"]) == len(ai.CSD_TABLES) and len(out["files"]) == 4
+    assert set(out) == {"pages", "csd", "files"} and len(out["csd"]) == 1 and len(out["files"]) == 1
     assert all("error" in v for g in out.values() for v in g.values())
 
 

@@ -30,11 +30,36 @@ TTL = DAY
 
 
 # ------------------------------------------------------------------ BTOS workbook (best effort: layout may change, then the hand-entered file carries the chart)
+def _pct(x) -> float:
+    try:
+        return float(str(x).strip().rstrip("%"))
+    except ValueError:
+        return float("nan")
+
+
 def parse_btos(content: bytes, needle: str = "two weeks") -> pd.Series:
-    """Find a national AI question ('two weeks' = used AI recently, 'six months' = expects to use AI) and its 'Yes' share by period in
-    the BTOS National workbook."""
+    """The 'Yes' share by reference period for a national AI question in the BTOS National workbook ('two weeks' = used AI recently,
+    'six months' = expects to use AI). Census calls it "Super Intelligence or SI (formerly referred to as Artificial Intelligence or
+    AI)" since 2026. Layout (Oct 2026): sheet 'Response Estimates' with Question ID | Question | Answer ID | Answer | 202621 | ...
+    (period codes, newest first, values like '24.6%' or '.'), and sheet 'Collection and Reference Dates' mapping each code (Smpdt)
+    to its reference period end (Ref End), which is the date used here."""
     xl = pd.ExcelFile(BytesIO(content))
-    for sheet in xl.sheet_names:
+    if "Response Estimates" in xl.sheet_names and "Collection and Reference Dates" in xl.sheet_names:
+        d = xl.parse("Response Estimates", header=None, dtype=str)
+        head = d.iloc[0].tolist()
+        q, a = d[1].fillna("").str.lower(), d[3].fillna("").str.strip().str.lower()
+        hit = d[(q.str.contains("artificial intelligence") | q.str.contains("super intelligence")) & q.str.contains(needle) & a.eq("yes")]
+        if hit.empty:
+            raise ValueError(f"BTOS AI question ({needle}) not found")
+        dates = xl.parse("Collection and Reference Dates", dtype=str)
+        dates.columns = [str(c).strip() for c in dates.columns]
+        ref = dict(zip(dates["Smpdt"].str.strip(), pd.to_datetime(dates["Ref End"], errors="coerce")))
+        pts = {ref[str(c).strip()]: _pct(v) for c, v in zip(head[4:], hit.iloc[0].tolist()[4:]) if str(c).strip() in ref}
+        s = pd.Series(pts, dtype=float).dropna().sort_index()
+        if s.empty:
+            raise ValueError("BTOS AI question has no values")
+        return s[s.index.notna()]
+    for sheet in xl.sheet_names:                                       # older layout: dates in a header row, question and answer text in the rows
         d = xl.parse(sheet, header=None, dtype=str)
         text = d.astype(str).apply(lambda c: c.str.lower())
         mask = text.apply(lambda c: c.str.contains("artificial intelligence", na=False) & c.str.contains(needle, na=False)).any(axis=1)
