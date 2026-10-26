@@ -732,6 +732,35 @@ def test_pay_and_headcount_open_when_bls_is_down(snapdir, monkeypatch):
     assert h["US"] is None and h["HK"]
 
 
+def test_ai_readings_from_cached_payloads(snapdir, monkeypatch):
+    pytest.importorskip("openpyxl")
+    from app.topics import ai, ai_adoption as A, ai_jobs as J
+    from app.topics._daily import _clean
+    assert ai.READINGS() == []                                             # nothing cached yet: nothing read, nothing fetched
+    monkeypatch.setattr(J, "fetch", jobs_fetch)
+    def fake(url, ttl, **k):
+        if url == A.BTOS_XLSX:
+            return btos_national_xlsx().decode("latin-1")
+        if url == A.RAMP_PAGE:
+            return ramp_page()
+        if url == A.BICS_PAGE:
+            return BICS_PAGE_HTML
+        return bics_wave_xlsx().decode("latin-1")
+    monkeypatch.setattr(A, "fetch", fake)
+    for name in ("openings", "headcount", "wages", "ratio", "firms", "users", "agents", "skills"):
+        ai.ENDPOINTS[name]()
+    r = ai.READINGS()
+    keys = {x["key"]: x for x in r}
+    assert {"ai_share_us", "ai_share_gb", "ai_over_prof_us", "us_legal_yoy", "us_finance_yoy", "hk_finance_yoy", "pay_tech_minus_legal",
+            "btos_us", "ramp_us", "uk_firms", "chatgpt_wau", "launches_12m", "countries_rising"} <= set(keys)
+    from app import topics
+    assert {x["tab"] for x in r} == {t for t, _ in topics.REGISTRY["ai"].tabs}          # every tab reads, and only real tab keys
+    assert keys["ramp_us"]["value"] == 55.86 and keys["ramp_us"]["lean"] == 1 and keys["uk_firms"]["value"] == 29.7
+    assert keys["ai_share_us"]["lean"] == 1 and keys["chatgpt_wau"]["value"] == 800000000
+    assert all(x["lean"] in (-1, 0, 1) for x in r) and len(_clean(r)) == len(r)
+    B.json_safe(r)
+
+
 def test_ramp_ai_index_parser():
     from app.topics.ai_adoption import parse_ramp
     s = parse_ramp(ramp_page())

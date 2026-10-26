@@ -160,6 +160,23 @@ Local preview: `python -m app.server`, then open `/ai`.
 - Usage surveys with a consistent series (Stanford AI Index, McKinsey's annual survey) are not included; they would fit `users.csv` or a new file with the same format.
 - "Agent adoption" has no public time series yet; the timeline is a list of launches, not a measure of use.
 
+# What changed since yesterday (`READINGS()` in `app/topics/ai.py`)
+
+The server saves the readings once a day; the Overview lists the ones whose lean flipped, and each tab shows its own row of squares. Readings come from cached payloads only, so they never trigger a download.
+
+**+1 = the balance is moving towards AI**: more postings mention AI, AI-sector postings gain on law and finance, tech pay outgrows legal pay, the professions' headcount shrinks, more firms use or pay for AI, a new user high, more agent launches. **-1 = the reverse. 0 = steady** (inside the threshold).
+
+| Tab | Key | Reading | Lean |
+|---|---|---|---|
+| Openings | `ai_share_us`, `ai_share_gb` | Share of postings mentioning AI | ±0.2 points on a year |
+| AI vs the professions | `ai_over_prof_us` | AI-sector ÷ law & finance postings index | ±0.02 on 13 weeks |
+| Headcount | `us_legal_yoy`, `us_finance_yoy`, `hk_finance_yoy` | Jobs, change on a year | +1 if down 0.5% or more, -1 if up 0.5% or more |
+| Pay | `pay_tech_minus_legal` | Computer systems design minus legal services pay growth | ±0.5 points |
+| Firms adopting | `btos_us`, `ramp_us`, `uk_firms` | Share of firms using / paying for AI | ±0.5 points on about 12–13 weeks |
+| Users | `chatgpt_wau` | ChatGPT weekly users, latest announced | +1 on a new high |
+| Agents | `launches_12m` | Launches in the 12 months to the latest | vs the 12 months before |
+| Skills demand | `countries_rising` | Countries where the AI share rose on a year | +1 if more than half, -1 if fewer than half |
+
 # Requests for shared code
 
 - **`app/topics/_base.py` `fetch()`: let a caller validate a reply before it replaces the snapshot.** Today any 200 reply over `min_bytes` overwrites the disk copy. BLS answers an over-limit request with HTTP 200 and `{"status": "REQUEST_NOT_PROCESSED", ...}`, so on 26 Oct 2026 the good BLS data was replaced by an error body and the Headcount and Pay tabs lost their US data. A `validate=callable` argument (raise to reject: keep the old snapshot, mark it stale) would cover this for every dashboard. Until then `ai_jobs._bls_query` keeps its own last-good copy (`bls-good-*.json` beside the snapshots). The same check would also stop a restart from re-downloading when the snapshot is less than `ttl` old, which matters for rate-limited APIs.
