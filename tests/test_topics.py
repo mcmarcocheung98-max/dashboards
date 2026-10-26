@@ -21,8 +21,19 @@ def snapdir(tmp_path, monkeypatch):
     B.STALE.clear()
 
 
+def test_registry_discovers_modules(monkeypatch):
+    import sys, types
+    mod = types.ModuleType("app.topics.zz_example")
+    mod.TOPIC = topics.Topic("zz-example", "Example", "x", "zz_example", (("a", "A"),), order=5)
+    mod.DASHBOARD = None
+    monkeypatch.setitem(sys.modules, "app.topics.zz_example", mod)
+    monkeypatch.setattr(topics.pkgutil, "iter_modules", lambda path: [types.SimpleNamespace(name="zz_example"), types.SimpleNamespace(name="housing")])
+    found = topics._discover()
+    assert [t.slug for t in found] == ["zz-example"]
+
+
 def test_registry_is_complete():
-    assert set(topics.REGISTRY) == {"housing", "ai", "robotaxi", "btc-cycles"}
+    assert {"housing", "ai", "robotaxi", "btc-cycles"} <= set(topics.REGISTRY)
     for slug, t in topics.REGISTRY.items():
         m = topics.meta(slug)
         eps = topics.endpoints(slug)

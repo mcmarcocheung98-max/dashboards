@@ -93,6 +93,21 @@ SYNC_CHECK = """async () => {
 }"""
 
 
+def mock_discovered() -> None:
+    """Dashboards added as their own module bring their own fixtures: smoke_patch() in tests/test_<module>.py."""
+    import importlib
+    from app import topics
+    for t in topics.REGISTRY.values():
+        if t.module in {b.module for b in topics.BUILTIN}:
+            continue
+        try:
+            tm = importlib.import_module(f"tests.test_{t.module}")
+        except ModuleNotFoundError:
+            continue
+        if hasattr(tm, "smoke_patch"):
+            tm.smoke_patch()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--live"); ap.add_argument("--out", default=str(ROOT / "smoke-shots")); ap.add_argument("--only"); ap.add_argument("--lwc")
@@ -100,7 +115,7 @@ def main() -> int:
     if a.live:
         base = a.live.rstrip("/")
     else:
-        mock_sources(); base = serve_local()
+        mock_sources(); mock_discovered(); base = serve_local()
     from playwright.sync_api import sync_playwright
     from app import topics
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)

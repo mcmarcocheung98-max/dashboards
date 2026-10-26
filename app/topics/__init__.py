@@ -4,11 +4,14 @@ Each dashboard is one module here (ENDPOINTS = {name: fn}, SOURCES = [...] for t
 (its tabs and cards) and, where a source has no free API, hand-entered CSVs in data/<slug>/. The shared page shell is
 static/topic.html. See _base.py for fetching, snapshots and manual series.
 
-To add a dashboard: write topics/<name>.py and static/topics/<slug>.js, add a Topic below and a data/<slug>/ folder. Nothing else changes.
+To add a dashboard: write topics/<name>.py with TOPIC = Topic(...), static/topics/<slug>.js, data/<slug>/ and tests/test_<slug>.py
+(optionally with smoke_patch(), which points the module's fetchers at fixtures for scripts/smoke.py). The module is found on its own:
+nothing shared changes. A helper module that only feeds a dashboard sets DASHBOARD = "<slug>" so /api/health files it there.
 """
 from __future__ import annotations
 
 import importlib
+import pkgutil
 from dataclasses import dataclass, field
 
 
@@ -21,9 +24,10 @@ class Topic:
     tabs: tuple = ()                  # (key, label) pairs, first is the default
     slow: tuple = ()                  # endpoints the background warmer keeps computed
     icon: str = "chart"
+    order: int = 100                  # position on the index page
 
 
-REGISTRY: dict[str, Topic] = {t.slug: t for t in (
+BUILTIN = (
     Topic("housing", "Housing: London, US & Hong Kong", "London house prices, boroughs, sales, rents and affordability, against the UK, the US and Hong Kong.",
           "housing", (("prices", "Prices"), ("market", "Types & volume"), ("boroughs", "Boroughs"), ("afford", "Rates & affordability"), ("global", "London vs US vs HK")),
           ("prices", "market", "afford", "boroughs", "global")),
@@ -36,7 +40,34 @@ REGISTRY: dict[str, Topic] = {t.slug: t for t in (
           "btc_cycles", (("cycles", "Cycles"), ("sectors", "Sectors"), ("metrics", "Winner metrics"), ("candidates", "Candidates 2026-27"), ("etf", "ETFs"),
                          ("mstr", "Strategy (MSTR)"), ("signals", "Signals")),
           ("cycles", "metrics", "candidates", "signals", "etf", "mstr")),
-)}
+)
+
+
+def _discover() -> list[Topic]:
+    """Topics declared by modules in this package (TOPIC = Topic(...)), so a new dashboard needs no edit here."""
+    found = []
+    for m in pkgutil.iter_modules(__path__):
+        if m.name.startswith("_") or m.name in {t.module for t in BUILTIN}:
+            continue
+        mod = importlib.import_module(f".{m.name}", __name__)
+        t = getattr(mod, "TOPIC", None)
+        if isinstance(t, Topic):
+            found.append(t)
+    return found
+
+
+def helpers() -> dict[str, str]:
+    """module name -> dashboard slug, for helper modules that declare DASHBOARD = "<slug>"."""
+    out = {}
+    for m in pkgutil.iter_modules(__path__):
+        if not m.name.startswith("_"):
+            slug = getattr(importlib.import_module(f".{m.name}", __name__), "DASHBOARD", None)
+            if slug:
+                out[m.name] = slug
+    return out
+
+
+REGISTRY: dict[str, Topic] = {t.slug: t for t in sorted((*BUILTIN, *_discover()), key=lambda t: t.order)}
 
 
 def module(slug: str):
@@ -65,7 +96,7 @@ def health() -> dict:
     """Source health for /api/health, grouped by dashboard slug (helper modules map to the dashboard that uses them)."""
     from ._base import health as h
     m2s = {t.module: t.slug for t in REGISTRY.values()}
-    m2s.update({"ai_jobs": "ai", "ai_adoption": "ai", "btc_flows": "btc-cycles"})
+    m2s.update({"ai_jobs": "ai", "ai_adoption": "ai", "btc_flows": "btc-cycles", **helpers()})
     out = h(m2s)
     for t in REGISTRY.values():
         out["dashboards"].setdefault(t.slug, {"fresh": 0, "stale": 0, "failing": 0, "alerts": 0, "sources": []})
