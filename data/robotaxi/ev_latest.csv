@@ -1,0 +1,7 @@
+date,market,measure,value,source,note
+# The latest month or quarter per market (date = start of the period): electric share of new cars, %. Not on the yearly lines because a single month swings with seasons and incentives.
+2026-09-01,UK,Battery-electric share of new car registrations (September),28.3,https://www.smmt.co.uk/record-electric-car-market-powers-bumper-september/,"SMMT; 99,201 of 350,536"
+2026-09-01,UK,Plug-in hybrid share (September),17.0,https://www.smmt.co.uk/record-electric-car-market-powers-bumper-september/,SMMT; 59571
+2026-09-01,China,New energy vehicle share of passenger car retail (September),67.0,https://cnevpost.com/2026/10/12/china-sept-2026-nev-retail-cpca/,CPCA final (a record); press report
+2026-07-01,US,Battery-electric share of new light vehicles (Q3),6.4,https://www.coxautoinc.com/insights/q3-2026-ev-sales-report-commentary/,"Cox Automotive / KBB, 13 Oct 2026 version; 262,649 BEVs; Q2 was 5.8"
+2026-04-01,US,Plug-in share of light-duty sales (April),6.08,https://www.anl.gov/esia/light-duty-electric-drive-vehicles-monthly-sales-updates,Argonne; 64517 BEV + 18309 PHEV

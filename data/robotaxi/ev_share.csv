@@ -1,0 +1,39 @@
+date,series,value,source,note
+# Electric share of new passenger cars, % of the year's sales or registrations (date = the year). Definitions differ by market: read the series name. "press report" = a news report quoting the official figure; check against the publisher. Latest months are in ev_latest.csv.
+2019-01-01,UK: battery-electric,1.6,https://www.smmt.co.uk/record-year-for-zero-emission-cars-fails-to-reboot-uk-market-as-sector-calls-for-supportive-policies-to-boost-uptake/,SMMT; 37850 BEVs
+2020-01-01,UK: battery-electric,6.6,https://www.spglobal.com/platts/en/market-insights/latest-news/metals/010622-uk-2021-auto-sales-remain-below-pre-pandemic-levels-record-ev-sales-achieved-smmt,press report of SMMT figures
+2021-01-01,UK: battery-electric,11.6,https://www.spglobal.com/platts/en/market-insights/latest-news/metals/010622-uk-2021-auto-sales-remain-below-pre-pandemic-levels-record-ev-sales-achieved-smmt,press report of SMMT figures; 190727 BEVs
+2022-01-01,UK: battery-electric,16.6,https://www.fleetnews.co.uk/news/manufacturer-news/2023/01/05/2022-s-new-car-market-ends-2-down,press report of SMMT figures; 267203 BEVs
+2023-01-01,UK: battery-electric,16.5,https://www.smmt.co.uk/two-straight-years-of-growth-for-new-car-market/,SMMT; 314687 BEVs
+2024-01-01,UK: battery-electric,19.6,https://www.spglobal.com/energy/en/news-research/latest-news/metals/010625-uk-data-ev-sales-reach-record-high-of-381970-units-in-2024,press report of SMMT figures; 381970 BEVs
+2025-01-01,UK: battery-electric,23.4,https://www.smmt.co.uk/uk-new-car-market-breaches-two-million-as-almost-one-in-four-buyers-go-electric/,SMMT; 473348 of 2020520
+2026-01-01,UK: battery-electric,26.2,https://www.smmt.co.uk/record-electric-car-market-powers-bumper-september/,SMMT; January to September 2026 only (ZEV mandate target 33%)
+2019-01-01,UK: plug-in (battery + plug-in hybrid),3.1,https://www.greenfleet.net/node/17471,BEV 1.6 (SMMT) + PHEV 1.5 (press report)
+2020-01-01,UK: plug-in (battery + plug-in hybrid),10.7,https://www.spglobal.com/platts/en/market-insights/latest-news/metals/010622-uk-2021-auto-sales-remain-below-pre-pandemic-levels-record-ev-sales-achieved-smmt,BEV 6.6 + PHEV 4.1; press report of SMMT figures
+2021-01-01,UK: plug-in (battery + plug-in hybrid),18.6,https://www.spglobal.com/platts/en/market-insights/latest-news/metals/010622-uk-2021-auto-sales-remain-below-pre-pandemic-levels-record-ev-sales-achieved-smmt,BEV 11.6 + PHEV 7.0; press report of SMMT figures
+2022-01-01,UK: plug-in (battery + plug-in hybrid),22.9,https://www.fleetnews.co.uk/news/manufacturer-news/2023/01/05/2022-s-new-car-market-ends-2-down,BEV 16.6 + PHEV 6.3; press report of SMMT figures
+2023-01-01,UK: plug-in (battery + plug-in hybrid),23.9,https://www.smmt.co.uk/two-straight-years-of-growth-for-new-car-market/,BEV 16.5 (SMMT) + PHEV 7.4 (press report)
+2024-01-01,UK: plug-in (battery + plug-in hybrid),28.2,https://www.spglobal.com/energy/en/news-research/latest-news/metals/010625-uk-data-ev-sales-reach-record-high-of-381970-units-in-2024,BEV 19.6 + PHEV 8.6; press report of SMMT figures
+2025-01-01,UK: plug-in (battery + plug-in hybrid),34.5,https://www.smmt.co.uk/uk-new-car-market-breaches-two-million-as-almost-one-in-four-buyers-go-electric/,BEV 23.4 + PHEV 11.1 (SMMT)
+2020-01-01,China: new energy vehicles (battery + plug-in hybrid + range-extender),5.8,https://news.metal.com/newscontent/101723715-nev-passenger-car-penetration-rate-is-estimated-at-25-in-2022,CPCA retail penetration; press report
+2021-01-01,China: new energy vehicles (battery + plug-in hybrid + range-extender),14.8,https://news.metal.com/newscontent/101723715-nev-passenger-car-penetration-rate-is-estimated-at-25-in-2022,CPCA retail penetration; press report
+2022-01-01,China: new energy vehicles (battery + plug-in hybrid + range-extender),27.6,https://cnevpost.com/2024/01/09/china-nev-retail-reaches-945000-in-dec,CPCA retail penetration; press report
+2023-01-01,China: new energy vehicles (battery + plug-in hybrid + range-extender),35.7,https://cnevpost.com/2024/01/09/china-nev-retail-reaches-945000-in-dec,CPCA retail penetration; press report
+2024-01-01,China: new energy vehicles (battery + plug-in hybrid + range-extender),48.0,https://cnevpost.com/2025/01/08/china-nev-retail-dec-2024-preliminary-cpca-data/,CPCA preliminary 47.97; press report - verify final
+2025-01-01,China: new energy vehicles (battery + plug-in hybrid + range-extender),54.1,https://cnevpost.com/2026/01/07/china-nev-retail-1-387-million-dec-2025-preliminary-cpca/,CPCA preliminary 54.07; press report - verify final
+2019-01-01,US: plug-in (battery + plug-in hybrid),1.9,https://www.energy.gov/eere/vehicles/articles/fotw-1136-june-1-2020-plug-vehicle-sales-accounted-about-2-all-light-duty,DOE Fact of the Week (Argonne); light-duty vehicles
+2020-01-01,US: plug-in (battery + plug-in hybrid),2.1,https://www.energy.gov/eere/vehicles/articles/fotw-1216-december-13-2021-plug-vehicles-share-new-light-duty-vehicle-sales,DOE Fact of the Week (Argonne); light-duty vehicles
+2023-01-01,US: plug-in (battery + plug-in hybrid),9.1,https://www.coxautoinc.com/market-insights/q4-2024-ev-sales/,DOE/Argonne figure as quoted - verify on anl.gov
+2021-01-01,US: battery-electric,3.2,https://www.coxautoinc.com/insights/ev-sales-growth-was-a-highlight-of-2022/,Cox Automotive / Kelley Blue Book; light vehicles
+2022-01-01,US: battery-electric,5.8,https://www.coxautoinc.com/insights/ev-sales-growth-was-a-highlight-of-2022/,Cox Automotive / Kelley Blue Book
+2023-01-01,US: battery-electric,7.8,https://www.coxautoinc.com/market-insights/q4-2024-ev-sales/,Cox Automotive / Kelley Blue Book (revised)
+2024-01-01,US: battery-electric,8.1,https://www.coxautoinc.com/market-insights/q4-2024-ev-sales/,Cox Automotive / Kelley Blue Book; 1301411 BEVs (another Cox page says about 7.5)
+2025-01-01,US: battery-electric,7.8,https://www.kbb.com/car-news/ev-sales-crashed-as-2025-ended/,Kelley Blue Book; just under 1.30m - verify on the Q4 2025 Cox report
+2019-01-01,Hong Kong: electric share of new private cars,6.3,https://www.legco.gov.hk/yr2023/english/panels/ea/papers/ea20230421cb1-333-3-e.pdf,Environment and Ecology Bureau paper to LegCo
+2020-01-01,Hong Kong: electric share of new private cars,12.4,https://www.legco.gov.hk/yr2023/english/panels/ea/papers/ea20230421cb1-333-3-e.pdf,Environment and Ecology Bureau paper to LegCo
+2021-01-01,Hong Kong: electric share of new private cars,24.4,https://www.legco.gov.hk/yr2023/english/panels/ea/papers/ea20230421cb1-333-3-e.pdf,Environment and Ecology Bureau paper to LegCo
+2022-01-01,Hong Kong: electric share of new private cars,52.8,https://www.legco.gov.hk/yr2023/english/panels/ea/papers/ea20230421cb1-333-3-e.pdf,Environment and Ecology Bureau paper to LegCo
+2023-01-01,Hong Kong: electric share of new private cars,64.6,https://www.info.gov.hk/gia/general/202405/22/P2024052200366p.htm,HK government press release
+2024-01-01,Hong Kong: electric share of new private cars,70,https://www.legco.gov.hk/yr2025/english/panels/ea/papers/ea20250630cb1-1057-4-e.pdf,"""about 70%"" (rounded) in a LegCo paper"
+2025-01-01,Hong Kong: electric share of new private cars,71.0,https://www.thestandard.com.hk/news/article/319010/EVs-make-up-71pc-of-HK-new-car-sales-BYD-leads,January to September 2025 (71.04); the updated EV roadmap says over 70% - press report
+# Hong Kong 2026 left out: the first-registration tax concession for private EVs ended on 31 Mar 2026 and the monthly figures reported since conflict (Sep 2026: 48.78 vs 71.9). Add them from the Transport Department's monthly first-registration statistics.
