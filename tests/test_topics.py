@@ -765,3 +765,40 @@ def test_robotaxi_cpuc_links():
             '<a href="https://www.cpuc.ca.gov/report.pdf">PDF</a><a href="https://example.org/t.csv">CSV</a>')
     assert R.cpuc_links(html) == [{"text": "Waymo Q1 2026", "url": "https://www.cpuc.ca.gov/-/media/cpuc-website/q1-2026-waymo.xlsx?rev=ab&hash=1"},
                                   {"text": "CSV", "url": "https://example.org/t.csv"}]
+
+
+def _cpuc_zip(folder, months):
+    import io
+    import zipfile
+    rows = "TCPID,Year,Month,TotalTrips,TotalWaiting\n" + "".join(f'PSG0038152,{y},{m},"{t:,}","1,000"\n' for y, m, t in months)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr(f"{folder}/PSG0038152_2026_08_AV_Month_Part0-Deployment.csv", rows)
+        z.writestr(f"{folder}/PSG0038152_2026_08_AV_Monthly_Tract_Part0-Deployment-Public.csv", "TCPID,Year,Month,Tract,TripsStart\nPSG0038152,2026,4,1,99\n")
+        z.writestr(f"{folder}/PSG0038152_2026_08_AV_Trips_Part0-Deployment-Public.csv", "RideID\n1\n")
+    return buf.getvalue()
+
+
+def test_robotaxi_cpuc_trips_from_deployment_zips(snapdir, monkeypatch):
+    from app.topics import robotaxi as R
+    base = "/-/media/cpuc-website/divisions/consumer-protection-and-enforcement-division/documents/tlab/av-programs/"
+    page = (f'<a href="{base}waymo-deployment-2026q2.zip">Waymo</a><a href="{base}waymo-driverless-deployment-2025-q1.zip">Waymo</a>'
+            f'<a href="{base}av-pilot-2026q2.zip">Download all reports</a>' + " " * 1000)
+    zips = {"2026q2": _cpuc_zip("Waymo Deployment 2026Q2", [(2026, 4, 1416158), (2026, 5, 1454991), (2026, 6, 1348926)]),
+            "2025-q1": _cpuc_zip("Waymo Driverless Deployment 2025 Q1", [(2025, 1, 550457), (2025, 2, 559569)])}     # a quarter short of a month
+    got = []
+
+    def zip_for(url):
+        got.append(url)
+        assert "pilot" not in url                                     # pilot (safety driver) files are not driverless trips
+        return next(v for k, v in zips.items() if k in url)
+    monkeypatch.setattr(R, "fetch", lambda url, ttl, **k: page if url == R.CPUC_PAGE else SGO)
+    monkeypatch.setattr(R, "_cpuc_zip", zip_for)
+    t = R.cpuc_trips()
+    assert list(t) == ["Waymo"] and t["Waymo"].to_dict() == {pd.Timestamp("2026-04-01"): 4220075}
+    f = R._footprint_now()
+    assert f["cpuc"]["Waymo"] == [[int(pd.Timestamp("2026-04-01").timestamp()), 4220075]] and "cpuc_error" not in f
+    assert len(got) == 2                                              # each zip is read once, then served from the snapshot volume
+    assert R.parse_cpuc_month('TCPID,Year,Month,TotalTrips\nPSG0039080,2023,7,"12,345"\n') == [{"carrier": "Cruise", "month": "2023-07-01", "trips": 12345}]
+    with pytest.raises(ValueError):
+        R.parse_cpuc_month("TCPID,Year,Trips\nX,2026,1\n")

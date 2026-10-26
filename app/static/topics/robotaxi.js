@@ -27,8 +27,9 @@ const VIEWS = {
       ...(d.regulation || []).map(r => el("tr", {}, el("td", {}, dateOf(r.date)), el("td", {}, r.market), el("td", { class: "wrap" }, r.event), el("td", { class: "wrap" }, link(host(r.source), r.source), r.note ? " · " + r.note : ""))))),
       note("Kept in data/robotaxi/regulation.csv."));
     const cp = Object.entries(d.cpuc || {});
-    const cpuc = cp.length ? card("California: driverless passenger trips per quarter (CPUC)", ...linesChart(cp.map(([k, pts]) => ({ name: k, points: pts })), v => big(v), { small: true }))
-      : card("California CPUC trips", el("div", { class: "muted" }, "No quarters entered yet: the CPUC publishes these as spreadsheets at changing addresses; add them to data/robotaxi/cpuc_trips.csv."));
+    const cpuc = cp.length ? card("California: completed driverless passenger trips per quarter (CPUC)", ...linesChart(cp.map(([k, pts]) => ({ name: k, points: pts })), v => big(v), { small: true }),
+      note("Sum of the monthly TotalTrips each carrier files with the CPUC (driverless deployment programme), complete quarters only. Filed about five weeks after each quarter."), stale(d))
+      : card("California CPUC trips", el("div", { class: "muted" }, d.cpuc_error ? "Not available right now (" + d.cpuc_error + ")." : "No quarters yet: the CPUC deployment files are read a few at a time, so the first quarters appear within the hour."), stale(d));
     return [head, cum, table, reg, cpuc];
   },
   async safety() {

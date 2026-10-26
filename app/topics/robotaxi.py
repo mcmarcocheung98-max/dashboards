@@ -2,7 +2,8 @@
 
 rides      paid driverless rides per week by operator (announcements, hand-entered: data/robotaxi/rides.csv) and quarterly ride
            counts where that is what the operator reports (Baidu Apollo Go)
-footprint  where each operator offers public driverless rides and since when (data/robotaxi/cities.csv)
+footprint  where each operator offers public driverless rides and since when (data/robotaxi/cities.csv), rules and pilots
+           (regulation.csv), and California driverless trips per quarter from the CPUC deployment files (automated)
 safety     crash reports filed by automated-driving-system operators under NHTSA's Standing General Order (CSV, monthly, automated),
            counted per month and per reporting entity (current file plus the pre-June-2025 archive), and per million driverless miles for
            operators that publish miles (data/robotaxi/miles.csv)
@@ -15,7 +16,8 @@ from io import StringIO
 
 import pandas as pd
 
-from ._base import DAY, _pts, _r, fetch, fetch_json, manual, manual_rows, manual_sources, payload
+from . import _base as B
+from ._base import DAY, _part, _pts, _r, fetch, fetch_json, manual, manual_rows, manual_sources, payload, stale_info
 
 SGO = "https://static.nhtsa.gov/odi/ffdd/sgo-2021-01/SGO-2021-01_Incident_Reports_ADS.csv"
 SGO_ARCHIVE = "https://static.nhtsa.gov/odi/ffdd/sgo-2021-01/Archive-2021-2025/SGO-2021-01_Incident_Reports_ADS.csv"   # Jul 2021 to Jun 2025
@@ -91,8 +93,8 @@ def _footprint_now() -> dict:
                    "by_operator": lambda: {op: sum(r["operator"] == op for r in rows) for op in ops}})
     out["as_of"] = rows[-1]["date"] if rows else None
     out["regulation"] = sorted(manual_rows(SLUG, "regulation"), key=lambda r: r["date"], reverse=True)
-    cp = manual(SLUG, "cpuc_trips")
-    out["cpuc"] = {k: _pts(v, 0) for k, v in cp.items()} if isinstance(cp, dict) else {}
+    _part(out, "cpuc", lambda: {k: _pts(v, 0) for k, v in cpuc_trips().items()})
+    out["stale"] = stale_info([CPUC_PAGE])
     return out
 
 
@@ -161,34 +163,82 @@ def cpuc_links(html: str) -> list[dict]:
     return out
 
 
-def _cpuc_probe() -> dict:
-    """Not a tab: what the server sees at the CPUC quarterly-reporting page and inside its deployment zips, to write the trips parser
-    against the real layout (/api/robotaxi/cpuc)."""
+CARRIERS = {"PSG0038152": "Waymo", "PSG0039080": "Cruise"}     # CPUC carrier (TCP) ids
+
+
+def parse_cpuc_month(text: str) -> list[dict]:
+    """A deployment zip's month-level file (TCPID,Year,Month,TotalTrips,...; numbers with thousands commas) -> rows."""
+    d = pd.read_csv(StringIO(text), dtype=str)
+    d.columns = [c.strip() for c in d.columns]
+    if not {"TCPID", "Year", "Month", "TotalTrips"} <= set(d.columns):
+        raise ValueError("CPUC month-level layout changed")
+    trips = pd.to_numeric(d["TotalTrips"].str.replace(",", "", regex=False), errors="coerce")
+    return [{"carrier": CARRIERS.get(t.strip().upper(), t.strip()), "month": f"{int(y):04d}-{int(m):02d}-01", "trips": int(v)}
+            for t, y, m, v in zip(d["TCPID"], d["Year"], d["Month"], trips) if pd.notna(v) and str(y).strip().isdigit()]
+
+
+def _cpuc_zip(url: str) -> bytes:
     import requests
+    r = requests.get(url, headers=UA, timeout=300)
+    r.raise_for_status()
+    return r.content
+
+
+def cpuc_zip_months(url: str) -> list[dict]:
+    """Month rows of one deployment zip, read once and kept on the snapshot volume (the zips are ~60 MB; only the month file is kept)."""
+    import hashlib
+    import json
     import zipfile
     from io import BytesIO
-    r = requests.get(CPUC_PAGE, headers=UA, timeout=30)
-    links = cpuc_links(r.text)
-    dep = [ln["url"] for ln in links if "deploy" in ln["url"].lower() and ln["url"].lower().endswith(".zip")]
-    out = {"status": r.status_code, "n_links": len(links), "deployment_zips": dep, "zips": {}}
+    snap = B.SNAP_DIR / f"cpuc-{hashlib.sha1(url.encode()).hexdigest()[:16]}.json"
+    if snap.exists():
+        return json.loads(snap.read_text())
+    z = zipfile.ZipFile(BytesIO(_cpuc_zip(url)))
+    rows = []
+    for m in z.infolist():
+        name = m.filename.lower()
+        if "_av_month" in name.replace(" ", "_").replace("-", "_") and "tract" not in name and name.endswith(".csv"):
+            rows += parse_cpuc_month(z.read(m).decode("utf-8-sig", "replace"))
+    B.SNAP_DIR.mkdir(parents=True, exist_ok=True)
+    snap.write_text(json.dumps(rows))                       # an empty list too: a zip without a month file is not fetched again
+    return rows
 
-    def head(name, raw):
-        if name.lower().endswith(".csv"):
-            return [ln[:300] for ln in raw.decode("utf-8", "replace").splitlines()[:6]]
-        if name.lower().endswith((".xlsx", ".xls")):
-            xl = pd.ExcelFile(BytesIO(raw))
-            return {sh: [" | ".join(str(c)[:30] for c in rw) for rw in xl.parse(sh, header=None, nrows=6).fillna("").values.tolist()] for sh in xl.sheet_names[:4]}
-        return None
-    for url in [u for u in dep if "2026q2" in u or "2025-q1" in u or "dec-2024" in u][:3]:
+
+def cpuc_trips(max_new: int = 3) -> dict[str, pd.Series]:
+    """Completed driverless passenger trips per quarter per carrier (date = quarter start), from the CPUC deployment zips; quarters
+    with all three months only. At most `max_new` zips are downloaded per call, so the first run fills in over a few warm cycles.
+    Hand-entered rows in cpuc_trips.csv are kept for quarters the files do not cover."""
+    try:
+        page = fetch(CPUC_PAGE, TTL, headers=UA, min_bytes=1000)
+    except Exception:
+        page = ""                                           # never reached and no snapshot: the hand-entered rows only
+    links = [ln["url"] for ln in cpuc_links(page) if "deploy" in ln["url"].lower() and ln["url"].lower().split("?")[0].endswith(".zip")]
+    import hashlib
+    seen, new = {}, 0
+    for url in dict.fromkeys(links):                       # page order: newest first, so a later revision wins over an older file
+        cached = (B.SNAP_DIR / f"cpuc-{hashlib.sha1(url.encode()).hexdigest()[:16]}.json").exists()
+        if not cached:
+            if new >= max_new:
+                continue
+            new += 1
         try:
-            z = zipfile.ZipFile(BytesIO(requests.get(url, headers=UA, timeout=120).content))
-            info = {"members": [[m.filename, m.file_size] for m in z.infolist()][:40], "heads": {}}
-            for m in z.infolist():
-                if "month" in m.filename.lower() and not "tract" in m.filename.lower() and m.file_size < 5_000_000:
-                    info["heads"][m.filename] = head(m.filename, z.read(m))
-            out["zips"][url] = info
-        except Exception as e:
-            out["zips"][url] = {"error": f"{type(e).__name__}: {str(e)[:160]}"}
+            for r in cpuc_zip_months(url):
+                seen.setdefault((r["carrier"], r["month"]), r["trips"])
+        except Exception:
+            continue                                        # one unreadable zip does not blank the card
+    out: dict[str, pd.Series] = {}
+    if seen:
+        m = pd.Series(seen)
+        for carrier in sorted({k[0] for k in seen}):
+            s = m[carrier]
+            s.index = pd.to_datetime(s.index)
+            q = s.groupby(s.index.to_period("Q"))
+            full = q.sum()[q.size() == 3]
+            out[carrier] = pd.Series(full.values, index=full.index.to_timestamp(), dtype=float)
+    hand = manual(SLUG, "cpuc_trips")
+    for k, v in (hand.items() if isinstance(hand, dict) else []):
+        cur = out.get(k, pd.Series(dtype=float))
+        out[k] = pd.concat([cur, v[~v.index.isin(cur.index)]]).sort_index()
     return out
 
 
@@ -198,4 +248,4 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 
 
 ENDPOINTS = {"rides": _cached_ep("rides", _rides_now, 600), "footprint": _cached_ep("footprint", _footprint_now, 600), "safety": _cached_ep("safety", _safety_now),
-             "tesla": _cached_ep("tesla", _tesla_now), "cpuc": _cached_ep("cpuc", _cpuc_probe, 3600)}
+             "tesla": _cached_ep("tesla", _tesla_now)}
