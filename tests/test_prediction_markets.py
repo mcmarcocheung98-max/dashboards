@@ -70,10 +70,11 @@ def poly_events() -> list:
     ]
 
 
-def clob_json(token: str, a: int | None = None, b: int | None = None) -> dict:
-    if a is not None:
-        days = pd.date_range(pd.Timestamp(a, unit="s"), pd.Timestamp(b, unit="s"), freq="1D")
-        k = int(token.replace("ctok", "")) if token.startswith("ctok") else 0
+def clob_json(token: str) -> dict:
+    if token.startswith("ctok"):                       # a resolved market (closed_markets): daily prices up to its close
+        k = int(token.replace("ctok", ""))
+        b = NOW - pd.Timedelta(days=5 + 4 * k)
+        days = pd.date_range(b - pd.Timedelta(days=60), b, freq="1D")
         final = 1.0 if k % 3 else 0.0
         return {"history": [{"t": int(t.timestamp()), "p": round((0.35 + 0.4 * final) + (final - 0.5) * 0.4 * i / len(days), 3)} for i, t in enumerate(days)]}
     days = pd.date_range(NOW - pd.Timedelta(days=150), NOW, freq="1D")
@@ -151,10 +152,8 @@ def fake_fetch_json(url, ttl=0, **k):
     if "gamma-api.polymarket.com/markets" in url:
         return closed_markets() if "offset=0" in url else []
     if "prices-history" in url:
-        tok = url.split("market=")[1].split("&")[0]
-        if "startTs=" in url:
-            return clob_json(tok, int(url.split("startTs=")[1].split("&")[0]), int(url.split("endTs=")[1].split("&")[0]))
-        return clob_json(tok)
+        assert "startTs=" not in url                   # Polymarket answers 400 to a 40-day window
+        return clob_json(url.split("market=")[1].split("&")[0])
     if "kalshi.com" in url:
         return kalshi_json(url.split("series_ticker=")[1].split("&")[0])
     if "manifold.markets" in url:

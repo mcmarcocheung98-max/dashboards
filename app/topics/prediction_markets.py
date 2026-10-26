@@ -46,7 +46,6 @@ POLY_TAGS = ("fed-rates", "economy", "inflation", "uk", "china", "hong-kong", "t
 POLY_CLOSED = GAMMA + "/markets?closed=true&order=volumeNum&ascending=false&limit=100&offset={offset}&end_date_min={since}"
 CLOB = "https://clob.polymarket.com"
 CLOB_HIST = CLOB + "/prices-history?market={token}&interval=max&fidelity=1440"
-CLOB_WINDOW = CLOB + "/prices-history?market={token}&startTs={a}&endTs={b}&fidelity=720"
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
 KALSHI_SERIES = KALSHI + "/markets?series_ticker={series}&status=open&limit=200"
 MANIFOLD = "https://api.manifold.markets/v0/search-markets?term={term}&filter=open&sort=liquidity&limit=20"
@@ -482,12 +481,8 @@ def fill_accuracy(max_new: int = ACC_PER_RUN) -> dict:
     todo = [c for c in cands if c["id"] not in have and c["vol"] >= ACC_MIN_VOLUME][:max_new]
     added = 0
     for c in todo:
-        try:
-            j = get_json(CLOB_WINDOW.format(token=c["token"], a=c["closed"] - 40 * 86400, b=c["closed"]), 30 * DAY, min_bytes=10, timeout=30)
-            h = (j or {}).get("history") or []
-            if not h:
-                j = get_json(CLOB_HIST.format(token=c["token"]), 30 * DAY, min_bytes=10, timeout=30)
-                h = (j or {}).get("history") or []
+        try:      # the whole daily history (interval=max): Polymarket answers 400 to a 40-day startTs/endTs window
+            h = (get_json(CLOB_HIST.format(token=c["token"]), 30 * DAY, min_bytes=10, timeout=30) or {}).get("history") or []
         except Exception:
             continue
         rec = {k: c[k] for k in ("id", "q", "closed", "outcome", "vol", "cat")} | {"p30": price_before(h, c["closed"], 30), "p7": price_before(h, c["closed"], 7)}
