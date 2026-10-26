@@ -26,7 +26,8 @@ A dashboard built on the research doc "BTC Cycles & Sector Rotation: 2013–2026
 | | By issuer | Cumulative flows per fund and a table: since launch, last 30 trading days, last day, best and worst day |
 | | Hong Kong and UK | BTC held by Hong Kong spot ETFs and UK ETNs (hand-entered) and a milestones table |
 | Strategy (MSTR) | Headline figures | BTC held, share of supply, value, approximate average cost, mNAV, 90-day correlation and beta with BTC, purchases |
-| | Charts | BTC held, mNAV, MSTR vs BTC rebased, correlation and beta, BTC per 1,000 shares |
+| | Premium and discount | MSTR price against the value of its bitcoin per share (the price at mNAV 1, log scale), with mNAV shaded about 1 below: red = premium (overvalued against its bitcoin), green = discount (undervalued); today's mNAV and where it ranks since 2020 |
+| | Charts | BTC held, MSTR vs BTC rebased, correlation and beta, BTC per 1,000 shares |
 | | Every purchase | Date, BTC added, holdings after, BTC price that day, approximate dollars |
 | | UK and HK treasury companies | The Smarter Web Company and Boyaa Interactive: price, correlation with BTC, holdings (hand-entered) |
 | Signals | Status table | The doc's six signals, each with a mechanical status on today's data, or "hand-entered" |

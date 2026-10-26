@@ -10,6 +10,60 @@ const md = s => {   // the doc's inline links [text](url) -> anchors; everything
   if (i < s.length) out.push(s.slice(i)); return out;
 };
 const para = (s, cls = "muted") => el("div", { class: cls, style: "margin-top:6px" }, ...md(s));
+// MSTR's price against the value of its bitcoin per share (the price at mNAV 1), with mNAV shaded about 1 in the lower part of the same
+// chart: red above 1 = the market pays a premium for each bitcoin (rich), green below = a discount (cheap). Price on the right (log); mNAV on an
+// unlabelled overlay scale (its value is in the legend and the line above), with mNAV 1 dashed.
+function premiumChart(d) {
+  const host = el("div", { class: "chart", style: "height:420px" }), legend = el("div", { class: "legend" });
+  const ok = a => (a || []).filter(p => p[1] != null);
+  const mn = ok(d.mnav), money = v => v == null ? "–" : "$" + num(v, v >= 100 ? 0 : 2);
+  const gap = v => v == null ? "–" : v.toFixed(2) + "× (" + (v >= 1 ? "premium " : "discount ") + Math.abs((v - 1) * 100).toFixed(0) + "%)";
+  setTimeout(() => {
+    const c = newChart(host, { rightPriceScale: { borderVisible: false, mode: 1 } });
+    const up = css("--up"), dn = css("--down"), a = (hex, x) => hex + Math.round(x * 255).toString(16).padStart(2, "0");
+    const band = c.addBaselineSeries({ priceScaleId: "mnav", baseValue: { type: "price", price: 1 }, lineWidth: 1, priceLineVisible: false, lastValueVisible: false,
+      topLineColor: dn, topFillColor1: a(dn, 0.4), topFillColor2: a(dn, 0.08), bottomLineColor: up, bottomFillColor1: a(up, 0.08), bottomFillColor2: a(up, 0.4),
+      priceFormat: { type: "custom", formatter: v => v.toFixed(v >= 10 ? 0 : 1) + "×", minMove: 0.01 } });
+    band.setData(dedupe(mn));
+    band.createPriceLine({ price: 1, color: css("--muted"), lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
+    const line = (color, dashed) => c.addLineSeries({ color, lineWidth: 2, lineStyle: dashed ? 2 : 0, priceLineVisible: false, lastValueVisible: false,
+      priceFormat: { type: "custom", formatter: money, minMove: 0.01 } });
+    const nav = line(css("--hold"), true), px = line(css("--s1"), false);
+    nav.setData(dedupe(ok(d.nav_per_share)));
+    px.setData(dedupe(ok(d.mstr)));
+    const rows = [[px, "MSTR", "background:" + css("--s1"), ok(d.mstr), money], [nav, "Its bitcoin per share (price at mNAV 1)", "background:" + css("--hold"), ok(d.nav_per_share), money],
+      [band, "mNAV", "background:linear-gradient(90deg," + dn + " 50%," + up + " 50%)", mn, gap]].filter(r => r[3].length);
+    const made = rows.map(([s, name, sw, pts, f]) => {
+      const val = el("b", {}, f(pts[pts.length - 1][1]));
+      const btn = el("button", { onclick: () => s.applyOptions({ visible: !btn.classList.toggle("off") }) }, el("span", { class: "sw" + (s === nav ? " dash" : ""), style: sw }), name, " ", val);
+      legend.append(btn);
+      return { s, val, pts, f };
+    });
+    c.subscribeCrosshairMove(p => made.forEach(m => { const v = p && p.seriesData ? p.seriesData.get(m.s) : null; m.val.textContent = m.f(v ? v.value : m.pts[m.pts.length - 1][1]); }));
+    c.priceScale("right").applyOptions({ mode: 1, scaleMargins: { top: 0.04, bottom: 0.36 } });     // prices in the top two thirds
+    c.priceScale("mnav").applyOptions({ scaleMargins: { top: 0.7, bottom: 0.02 } });                  // the mNAV band below them, on an overlay scale
+    // name the band where it is drawn, since the dollar axis runs past it: "premium" just above the mNAV 1 line, "discount" just below
+    const tag = (txt, color) => el("div", { style: "position:absolute;font-size:11px;font-weight:600;pointer-events:none;color:" + color }, txt);
+    const above = tag("▲ premium · mNAV above 1", dn), under = tag("▼ discount · mNAV below 1", up);
+    host.style.position = "relative"; host.append(above, under);
+    const place = () => { const y = band.priceToCoordinate(1); [above, under].forEach(t => { t.style.display = y == null ? "none" : ""; });
+      const r = (c.priceScale("right").width() + 8) + "px";              // right-aligned beside the price axis, clear of the chart logo
+      if (y != null) { above.style.top = (y - 16) + "px"; under.style.top = (y + 3) + "px"; above.style.right = under.style.right = r; } };
+    c.timeScale().subscribeVisibleLogicalRangeChange(() => requestAnimationFrame(place));
+    requestAnimationFrame(() => requestAnimationFrame(place));
+    if (ok(d.mstr).length) syncAdd(c, px, dedupe(ok(d.mstr))); else fit(c);
+  });
+  // where today sits against its own history
+  let now = null;
+  if (mn.length) {
+    const last = mn[mn.length - 1][1], vals = mn.map(p => p[1]).sort((x, y) => x - y), med = vals[Math.floor(vals.length / 2)];
+    const below = Math.round(100 * vals.filter(v => v < last).length / vals.length);
+    now = el("div", { class: "muted", style: "margin:2px 0 6px" }, el("b", { class: last >= 1 ? "down" : "up" }, "Now " + gap(last)),
+      ": MSTR trades " + (last >= 1 ? "above" : "below") + " the value of its bitcoin. mNAV was lower than today in " + below + "% of weeks since " +
+      new Date(mn[0][0] * 1000).getUTCFullYear() + " (median " + med.toFixed(2) + "×).");
+  }
+  return [now, legend, host];
+}
 const table = (cols, rows, opts = {}) => el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...cols.map(h => el("th", {}, h))),
   ...rows.map(r => el("tr", {}, ...cols.map((c, i) => { const v = Array.isArray(r) ? r[i] : r[c]; return el("td", { class: i === 0 ? "" : "wrap" }, ...md(String(v ?? ""))); })))));
 const docLink = r => el("div", { class: "src", style: "margin-top:6px" }, "From the research doc, as of " + r.as_of + ": ", link("open it", r.doc_url), ".");
@@ -133,8 +187,9 @@ const VIEWS = {
       note(d.note || ""), note("Prices: " + (d.price_source || "–") + "."), asOf(d), stale(d));
     const held = card("BTC held", ...linesChart([{ name: "BTC held", points: d.held }], v => num(v), { small: true }));
     const px = card("MSTR vs BTC, both rebased to Aug 2020 (log)", ...linesChart([{ name: "MSTR", points: d.mstr_rebased }, { name: "BTC", points: d.btc_rebased, color: css("--hold"), dashed: true }], v => xf(v), { log: true }));
-    const mn = card("mNAV: share market value ÷ value of its bitcoin", ...linesChart([{ name: "mNAV", points: d.mnav }], v => v == null ? "–" : v.toFixed(2) + "×", { small: true, hlines: [1] }),
-      note("Above 1 the market pays a premium for each bitcoin it holds, which lets it issue shares to buy more; below 1 that engine stalls (the doc: the treasury trade is over once the premium compresses)."));
+    const mn = card("MSTR vs the value of its bitcoin: premium (overvalued) and discount (undervalued)", ...premiumChart(d),
+      note("mNAV = share market value ÷ value of its bitcoin (basic shares). Red above 1: the market pays a premium for each bitcoin, which lets Strategy issue shares to buy more; " +
+        "green below 1: a discount, and that engine stalls (the doc: the treasury trade is over once the premium compresses). Where the blue line sits above the grey dashed line is the premium in dollars."));
     const cb = card("Correlation and beta of daily returns with BTC (rolling 90 trading days)", ...linesChart([{ name: "Correlation", points: d.corr90 }, { name: "Beta", points: d.beta90, axis: "left", dashed: true }], v => v == null ? "–" : v.toFixed(2), { small: true }));
     const bps = card("BTC per 1,000 MSTR shares", ...linesChart([{ name: "BTC per 1,000 shares", points: d.btc_per_1000_shares }], v => v == null ? "–" : v.toFixed(3), { small: true }),
       note("Rising = purchases added more bitcoin than new shares diluted; falling = dilution outran buying."));
@@ -146,7 +201,7 @@ const VIEWS = {
         : el("div", { class: "muted", title: (t.price_tried || []).join("\n") }, "Holdings only: no share-price feed answers from the server (Yahoo refuses it; CNBC tried). The holdings below are from the company's own announcements."),
       t.price ? note("Daily closes in local currency from " + (t.price_source || "Yahoo") + (t.corr90 != null ? "; 90-day correlation with BTC: " + t.corr90.toFixed(2) : "") + ".") : null,
       table(["Date", "BTC held", "Source"], t.rows.map(r => [r.date, num(+r.btc_held), "[" + host(r.source) + "](" + r.source + ")" + (r.note ? " · " + r.note : "")]))));
-    return [head, el("div", { class: "grid2" }, held, mn), px, el("div", { class: "grid2" }, cb, bps), buys,
+    return [head, mn, el("div", { class: "grid2" }, held, bps), px, cb, buys,
       tre.length ? card("UK and Hong Kong bitcoin treasury companies", el("div", { class: "muted" }, "Holdings hand-entered in data/btc-cycles/treasuries.csv from each company's announcements; share prices from Yahoo, else CNBC, else holdings only.")) : null, ...tre];
   },
   async signals() {

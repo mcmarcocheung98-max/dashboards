@@ -278,6 +278,7 @@ def _mstr_now() -> dict:
     w = lambda s: s.resample("W").last().dropna()
     out.update({
         "held": _pts(w(hold), 0), "btc_per_1000_shares": _pts(w(hold / shares * 1000), 4), "mnav": _pts(w(mnav), 3),
+        "nav_per_share": _pts(w((btc * hold / shares).dropna()), 2),     # MSTR price at mNAV 1: its bitcoin per share, in US$
         "mstr": _pts(w(mstr), 2), "btc": _pts(w(btc), 0), "corr90": _pts(w(corr), 3), "beta90": _pts(w(beta), 3),
         "mstr_rebased": _pts(w(mstr / mstr.dropna().iloc[0]), 4), "btc_rebased": _pts(w(btc / btc.dropna().iloc[0]), 4),
         "purchases": buys[::-1],

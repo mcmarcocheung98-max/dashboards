@@ -602,6 +602,9 @@ def test_btc_etf_and_mstr(snapdir, monkeypatch):
     B.json_safe(m)
     assert m["kpi"]["purchases"] > 50 and m["purchases"][0]["date"] > m["purchases"][-1]["date"] and m["kpi"]["approx_avg_cost"] > 0
     assert m["price_source"].startswith("daily closes") and -1 <= m["kpi"]["corr90"] <= 1 and m["mnav"][-1][1] > 0
+    nav, px = dict(m["nav_per_share"]), dict(m["mstr"])                 # price at mNAV 1: price / NAV per share is mNAV
+    t = m["mnav"][-1][0]
+    assert nav[t] > 0 and px[t] / nav[t] == pytest.approx(m["mnav"][-1][1], rel=0.01)
     assert {t["country"] for t in m["treasuries"]} == {"UK", "HK"} and all("price" in t for t in m["treasuries"])
 
 
