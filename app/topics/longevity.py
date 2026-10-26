@@ -514,7 +514,14 @@ def _layout_now() -> dict:
     urls = {"worldbank": WB_LE, "gho hale": GHO.format(code=GHO_HALE), "gho ncd": GHO.format(code=GHO_NCD), "cdc slim": CDC_Q_SLIM.replace("50000", "3"),
             "openprescribing search": OP_SEARCH.format(q="tirzepatide"), "openprescribing spend": OP_SPEND.format(code=OP_FALLBACK["semaglutide"]),
             "sec lilly": CONCEPT.format(cik=59478, tax="us-gaap", tag="Revenues"), "sec novo": CONCEPT.format(cik=353278, tax="ifrs-full", tag="Revenue"),
-            "nasdaq XBI": NASDAQ_ETF.format(sym="XBI", cls="etf", a="2026-09-01", b=b)}
+            "nasdaq XBI": NASDAQ_ETF.format(sym="XBI", cls="etf", a="2026-09-01", b=b),
+            "gho one country": "https://ghoapi.azureedge.net/api/WHOSIS_000002?$filter=SpatialDim%20eq%20%27GBR%27",
+            "gho no filter": "https://ghoapi.azureedge.net/api/WHOSIS_000002?$top=3",
+            "gho indicator list": "https://ghoapi.azureedge.net/api/Indicator?$top=2",
+            "who xmart": "https://xmart-api-public.who.int/DATA_/RELAY_WHS?$top=3",
+            "nhsbsa epd package": "https://opendata.nhsbsa.net/api/3/action/package_show?id=english-prescribing-data-epd",
+            "nhsbsa pca package": "https://opendata.nhsbsa.net/api/3/action/package_show?id=prescription-cost-analysis-pca-monthly-data",
+            "nhsbsa package list": "https://opendata.nhsbsa.net/api/3/action/package_list"}
 
     def one(item):
         k, u = item
@@ -524,7 +531,7 @@ def _layout_now() -> dict:
             return k, {"status": r.status_code, "bytes": len(r.content), "type": r.headers.get("content-type", ""), "start": r.text[:400]}
         except Exception as e:
             return k, {"error": f"{type(e).__name__}: {str(e)[:160]}"}
-    with ThreadPoolExecutor(max_workers=9) as ex:
+    with ThreadPoolExecutor(max_workers=16) as ex:
         return dict(ex.map(one, urls.items()))
 
 
