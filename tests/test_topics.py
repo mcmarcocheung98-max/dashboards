@@ -807,3 +807,23 @@ def test_robotaxi_cpuc_trips_from_deployment_zips(snapdir, monkeypatch):
     assert R.parse_cpuc_month('TCPID,Year,Month,TotalTrips\nPSG0039080,2023,7,"12,345"\n') == [{"carrier": "Cruise", "month": "2023-07-01", "trips": 12345}]
     with pytest.raises(ValueError):
         R.parse_cpuc_month("TCPID,Year,Trips\nX,2026,1\n")
+
+
+def test_robotaxi_tesla_vs_price():
+    from app.topics import robotaxi as R
+    qs = pd.date_range("2023-01-01", "2026-07-01", freq="QS")
+    deliv = pd.Series([400 + 10 * i + (30 if i % 3 == 0 else 0) for i in range(len(qs))], index=qs, dtype=float)
+    days = pd.bdate_range("2022-12-01", "2026-10-20")
+    level = pd.Series(deliv.reindex(days.to_period("Q").to_timestamp()).ffill().bfill().values, index=days)   # price = the quarter's deliveries
+    c = R.tesla_vs_price(level, {"Deliveries": deliv})
+    assert {(x["basis"], x["r"]) for x in c["rows"]} >= {("level vs quarter-end close", 1.0)}
+    jump = pd.Series(100.0, index=days)                                                   # flat, with a jump on each release day by the growth on the quarter
+    for q, g in deliv.pct_change().dropna().items():
+        jump[days[days.searchsorted(q + pd.DateOffset(months=3) + pd.Timedelta(days=1))]:] *= 1 + g
+    c = R.tesla_vs_price(jump, {"Deliveries": deliv, "Free cash flow ($M)": pd.Series(range(len(qs)), index=qs, dtype=float)})
+    r = {(x["metric"], x["basis"]): x for x in c["rows"]}
+    assert r[("Deliveries", "change on the quarter vs TSLA move on release day")]["r"] == 1.0
+    assert r[("Deliveries", "change on the quarter vs TSLA move on release day")]["n"] == len(qs) - 1
+    assert not [k for k in r if k[0] == "Free cash flow ($M)" and "release" in k[1]]      # only the deliveries release is timed
+    assert len(c["quarters"]["quarter"]) == len(qs) and c["quarters"]["close"][-1] > 100
+    assert R.tesla_vs_price(pd.Series(dtype=float), {}) == {"rows": [], "quarters": []}

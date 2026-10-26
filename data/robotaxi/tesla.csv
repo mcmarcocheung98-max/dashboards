@@ -1,5 +1,5 @@
 date,series,value,source,note
-# Tesla quarterly figures (date = quarter start) and FSD miles. series: "Deliveries", "Production", "FSD (Supervised) cumulative miles". Deliveries and production are the totals in Tesla's quarterly production and deliveries release, cited as the copy Tesla files with the SEC (Form 8-K, exhibit 99.1); ir.tesla.com/press carries the same release.
+# Tesla quarterly figures (date = quarter start) and FSD miles. series: "Deliveries", "Production", "Energy storage deployed (GWh)", the quarterly financials ("Revenue ($M)" etc., from the quarterly Update), "FSD (Supervised) cumulative miles". Deliveries and production are the totals in Tesla's quarterly production and deliveries release, cited as the copy Tesla files with the SEC (Form 8-K, exhibit 99.1); ir.tesla.com/press carries the same release.
 2023-01-01,Deliveries,422875,https://www.sec.gov/Archives/edgar/data/1318605/000156459023005126/tsla-ex991_7.htm,Q1 2023 production and deliveries release
 2023-04-01,Deliveries,466140,https://www.sec.gov/Archives/edgar/data/1318605/000095017023031241/tsla-ex99_1.htm,Q2 2023 production and deliveries release
 2023-07-01,Deliveries,435059,https://www.sec.gov/Archives/edgar/data/1318605/000095017023050938/tsla-ex99_1.htm,Q3 2023 production and deliveries release
@@ -30,5 +30,20 @@ date,series,value,source,note
 2026-01-01,Production,408386,https://www.sec.gov/Archives/edgar/data/1318605/000162828026022956/exhibit9911111.htm,Q1 2026 production and deliveries release
 2026-04-01,Production,451758,https://www.sec.gov/Archives/edgar/data/1318605/000162828026046717/exhibit99111111.htm,Q2 2026 production and deliveries release
 2026-07-01,Production,464391,https://www.sec.gov/Archives/edgar/data/1318605/000162828026064366/exhibit991111111.htm,Q3 2026 production and deliveries release
+2023-01-01,Energy storage deployed (GWh),3.889,https://www.sec.gov/Archives/edgar/data/1318605/000156459023005126/tsla-ex991_7.htm,3,889 MWh; 2023 quarters in MWh from the Q4 2023 Update table
+2023-04-01,Energy storage deployed (GWh),3.653,https://www.sec.gov/Archives/edgar/data/1318605/000095017023031241/tsla-ex99_1.htm,3,653 MWh
+2023-07-01,Energy storage deployed (GWh),3.98,https://www.sec.gov/Archives/edgar/data/1318605/000095017023050938/tsla-ex99_1.htm,3,980 MWh
+2023-10-01,Energy storage deployed (GWh),3.202,https://www.sec.gov/Archives/edgar/data/1318605/000095017024000282/tsla-ex99_1.htm,3,202 MWh
+2024-01-01,Energy storage deployed (GWh),4.053,https://www.sec.gov/Archives/edgar/data/1318605/000095017024040274/tsla-ex99_1.htm,4,053 MWh
+2024-04-01,Energy storage deployed (GWh),9.4,https://www.sec.gov/Archives/edgar/data/1318605/000162828024030714/exhibit991.htm,production deliveries and deployments release
+2024-07-01,Energy storage deployed (GWh),6.9,https://www.sec.gov/Archives/edgar/data/1318605/000162828024041816/ex991.htm,production deliveries and deployments release
+2024-10-01,Energy storage deployed (GWh),11.0,https://www.sec.gov/Archives/edgar/data/1318605/000162828025000007/exhibit991.htm,production deliveries and deployments release
+2025-01-01,Energy storage deployed (GWh),10.4,https://www.sec.gov/Archives/edgar/data/1318605/000162828025016070/exhibit9911.htm,production deliveries and deployments release
+2025-04-01,Energy storage deployed (GWh),9.6,https://www.sec.gov/Archives/edgar/data/1318605/000162828025033842/exhibit99111.htm,production deliveries and deployments release
+2025-07-01,Energy storage deployed (GWh),12.5,https://www.sec.gov/Archives/edgar/data/1318605/000162828025043530/exhibit991111.htm,production deliveries and deployments release
+2025-10-01,Energy storage deployed (GWh),14.2,https://www.sec.gov/Archives/edgar/data/1318605/000162828026000016/exhibit9914.htm,production deliveries and deployments release
+2026-01-01,Energy storage deployed (GWh),8.8,https://www.sec.gov/Archives/edgar/data/1318605/000162828026022956/exhibit9911111.htm,production deliveries and deployments release
+2026-04-01,Energy storage deployed (GWh),13.5,https://www.sec.gov/Archives/edgar/data/1318605/000162828026046717/exhibit99111111.htm,production deliveries and deployments release
+2026-07-01,Energy storage deployed (GWh),13.7,https://www.sec.gov/Archives/edgar/data/1318605/000162828026064366/exhibit991111111.htm,production deliveries and deployments release
 2026-02-18,FSD (Supervised) cumulative miles,8000000000,https://x.com/Tesla/status/2024177015570767920,@Tesla: owners have driven >8 billion miles on FSD (Supervised); a lower bound
 2026-05-03,FSD (Supervised) cumulative miles,10000000000,https://x.com/Tesla/status/2050991662076477504,@Tesla: over 10 billion miles on FSD (Supervised); a lower bound

@@ -2,6 +2,7 @@
 (() => {
 const dateOf = s => new Date(s).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 const q = ts => { const d = new Date(ts * 1000); return "Q" + (Math.floor(d.getUTCMonth() / 3) + 1) + " " + d.getUTCFullYear(); };
+const qLabel = iso => q(Date.parse(iso) / 1000);
 const VIEWS = {
   async rides() {
     const d = await api("rides"), L = d.latest || {};
@@ -62,7 +63,12 @@ const VIEWS = {
     const ms = card("Autonomy milestones: Robotaxi, Cybercab, FSD by country (incl. UK and Hong Kong status)", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Date", "Area", "Market", "What happened", "Source"].map(h => el("th", {}, h))),
       ...(d.milestones || []).map(r => el("tr", {}, el("td", {}, dateOf(r.date)), el("td", {}, r.area), el("td", {}, r.market), el("td", { class: "wrap" }, r.event), el("td", { class: "wrap" }, link(host(r.source), r.source), r.note ? " · " + r.note : ""))))),
       note("Rows marked 'verify' were written from memory: check them against Tesla's own posts. Kept in data/robotaxi/tesla_milestones.csv."));
-    return [head, px, el("div", { class: "grid2" }, qc, fsd), ms];
+    const C = d.correlation, cr = C && C.rows ? C.rows.filter(x => x.r != null).sort((a, b) => Math.abs(b.r) - Math.abs(a.r)) : [];
+    const corr = cr.length ? card("Which Tesla figures move with the share price", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Figure", "Compared as", "r", "Quarters"].map(h => el("th", {}, h))),
+      ...cr.map(x => el("tr", {}, el("td", {}, x.metric), el("td", { class: "wrap" }, x.basis), el("td", {}, x.r.toFixed(2)), el("td", {}, x.n + " (" + qLabel(x.from) + " to " + qLabel(x.to) + ")"))))),
+      note("Pearson correlation, −1 to 1, between each quarterly figure (data/robotaxi/tesla.csv, from Tesla's releases) and TSLA's close at the quarter's end, its change on a year or on the quarter, or its move on the day of the production and deliveries release (the 2nd of the following month, or the next trading day). With 10 to 15 quarters, an r below about 0.5 in size is indistinguishable from chance, and levels of two rising series correlate whether or not one drives the other. The figures come out after the quarter's last close, so this shows what moved together, not what predicts the price."))
+      : d.correlation_error ? card("Which Tesla figures move with the share price", el("div", { class: "err" }, "Not available right now (" + d.correlation_error + ").")) : null;
+    return [head, px, el("div", { class: "grid2" }, qc, fsd), corr, ms];
   },
 };
 window.TOPIC = { VIEWS };

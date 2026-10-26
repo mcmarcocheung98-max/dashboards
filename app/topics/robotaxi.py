@@ -126,6 +126,65 @@ def yahoo(sym: str, start: str = "2019-01-01") -> pd.Series:
     return yahoo_daily(sym, start, lambda *a, **k: fetch_json(*a, **k))
 
 
+# Quarterly series in tesla.csv set against the TSLA price; "pct" metrics compare by % change, "diff" ones (margins, EPS, cash flow,
+# which can be negative) by change in level. "release" = published in the production and deliveries release, about the 2nd of
+# the month after the quarter.
+CORR_METRICS = [("Deliveries", "pct", True), ("Production", "pct", True), ("Energy storage deployed (GWh)", "pct", True),
+                ("Revenue ($M)", "pct", False), ("GAAP gross margin (%)", "diff", False), ("Operating margin (%)", "diff", False),
+                ("Non-GAAP EPS ($)", "diff", False), ("Free cash flow ($M)", "diff", False)]
+
+
+def tesla_vs_price(px: pd.Series, t: dict[str, pd.Series], min_n: int = 6) -> dict:
+    """Pearson correlations between Tesla's quarterly figures and TSLA: level vs quarter-end close, change on a year vs the
+    share price's change on a year, change on the quarter vs the quarter's return, and (for the deliveries release) the
+    change vs the share price's move on the release day. Contemporaneous, not predictive: a quarter's figures come out after
+    its last close."""
+    px = px.dropna().sort_index()
+    qs = t.get("Deliveries", pd.Series(dtype=float)).index
+    if not len(px) or not len(qs):
+        return {"rows": [], "quarters": []}
+
+    def close_by(d):
+        s = px[:d]
+        return float(s.iloc[-1]) if len(s) else float("nan")
+
+    def release_move(q):
+        day = q + pd.DateOffset(months=3) + pd.Timedelta(days=1)                   # the 2nd of the month after the quarter
+        i = px.index.searchsorted(day)
+        if i == 0 or i >= len(px) or px.index[i] - day > pd.Timedelta(days=5):
+            return float("nan")
+        return float(px.iloc[i] / px.iloc[i - 1] - 1)
+    end = pd.Series([close_by(q + pd.DateOffset(months=3) - pd.Timedelta(days=1)) for q in qs], index=qs)
+    prev = pd.Series([close_by(q - pd.Timedelta(days=1)) for q in qs], index=qs)
+    ret = end / prev - 1
+    yoy = end / end.shift(4) - 1
+    move = pd.Series([release_move(q) for q in qs], index=qs)
+    rows = []
+
+    def add(metric, basis, a, b):
+        ok = pd.concat([a, b], axis=1).dropna()
+        if len(ok) >= min_n:
+            rows.append({"metric": metric, "basis": basis, "n": int(len(ok)), "r": _r(ok.iloc[:, 0].corr(ok.iloc[:, 1]), 2),
+                         "from": str(ok.index[0].date()), "to": str(ok.index[-1].date())})
+    table = {"quarter": [str(q.date()) for q in qs], "close": [_r(x, 2) for x in end], "quarter_return": [_r(x, 4) for x in ret],
+             "release_move": [_r(x, 4) for x in move]}
+    for name, how, release in CORR_METRICS:
+        m = t.get(name)
+        if m is None or not len(m):
+            continue
+        m = m.reindex(qs)
+        y = m.pct_change(4, fill_method=None) if how == "pct" else m.diff(4)
+        qq = m.pct_change(1, fill_method=None) if how == "pct" else m.diff(1)
+        add(name, "level vs quarter-end close", m, end)
+        add(name, "change on a year vs TSLA change on a year", y, yoy)
+        add(name, "change on the quarter vs TSLA return that quarter", qq, ret)
+        if release:
+            add(name, "change on a year vs TSLA move on release day", y, move)
+            add(name, "change on the quarter vs TSLA move on release day", qq, move)
+        table[name] = [None if pd.isna(x) else _r(x, 2) for x in m]
+    return {"rows": rows, "quarters": table}
+
+
 def _tesla_now() -> dict:
     t = manual(SLUG, "tesla")
     t = t if isinstance(t, dict) else {}
@@ -145,6 +204,9 @@ def _tesla_now() -> dict:
         out.setdefault("kpi", {})["tsla"] = px[-1][1]
         out["kpi"]["tsla_1y"] = _r(px[-1][1] / next((v for t0, v in reversed(px) if t0 <= px[-1][0] - 365 * 86400), px[0][1]) - 1, 4)
     out["as_of"] = max([r["date"] for r in out["rows"]] + ([pd.Timestamp(out["tsla"][-1][0], unit="s").strftime("%Y-%m-%d")] if out.get("tsla") else []), default=None)
+    if out.get("tsla"):                                                             # last, so a log tail of /api/robotaxi/tesla shows it
+        px = pd.Series([v for _, v in out["tsla"]], index=pd.to_datetime([ts for ts, _ in out["tsla"]], unit="s"))
+        _part(out, "correlation", lambda: tesla_vs_price(px, t))
     return out
 
 
