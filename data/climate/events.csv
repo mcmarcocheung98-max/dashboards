@@ -1,0 +1,15 @@
+date,place,event,source,note
+# Notable heat, flood and storm events in the US, UK, Hong Kong and China. Numbers in the event text are from memory unless the note says checked.
+2005-08-29,US,Hurricane Katrina: the costliest US disaster in NOAA's billion-dollar series,https://www.ncei.noaa.gov/access/billions/events,verify: about $200bn CPI-adjusted
+2012-10-29,New York,Hurricane Sandy: record water level at the Battery (about 14 ft above MLLW),https://tidesandcurrents.noaa.gov/stationhome.html?id=8518750,verify
+2017-08-22,Hong Kong,Hong Kong Observatory's highest temperature on record: 36.6 °C,https://www.hko.gov.hk/en/cis/extremes.htm,verify
+2017-08-23,Hong Kong,Typhoon Hato: No. 10 signal,https://www.hko.gov.hk/en/informtc/hato17/report.htm,verify
+2017-09-20,US,"Hurricanes Harvey, Irma and Maria: 2017 the costliest year in Swiss Re and NOAA records",https://www.ncei.noaa.gov/access/billions/,verify
+2018-09-16,Hong Kong,Super Typhoon Mangkhut: No. 10 signal and a storm surge of about 2.35 m at Quarry Bay,https://www.hko.gov.hk/en/informtc/mangkhut18/report.htm,verify
+2021-07-20,China,"Zhengzhou, Henan: 201.9 mm of rain in one hour; the State Council inquiry counted 398 dead or missing",https://www.mem.gov.cn/,verify
+2021-09-01,New York,Remnants of Ida: 3.15 inches of rain in an hour in Central Park,https://www.weather.gov/okx/,verify
+2022-07-19,UK,"First reading above 40 °C in the UK: 40.3 °C at Coningsby, Lincolnshire; Heathrow 40.2 °C",https://www.metoffice.gov.uk/binaries/content/assets/metofficegovuk/pdf/weather/learn-about/uk-past-events/interesting/2022/2022_03_july_heatwave_v1.pdf,verify
+2022-08-15,China,Yangtze basin heatwave and drought: the longest and most intense on China's record,https://www.cma.gov.cn/,verify
+2023-09-08,Hong Kong,"Black rainstorm: 158.1 mm in an hour at the Observatory, the most since records began in 1884",https://www.hko.gov.hk/en/,verify
+2024-12-31,World,2024 the first calendar year more than 1.5 °C above pre-industrial (Copernicus ERA5: 1.60 °C),https://climate.copernicus.eu/global-climate-highlights-2024,verify
+2025-01-07,US,Los Angeles wildfires: among the costliest insured wildfire losses on record (about $40bn),https://www.swissre.com/institute/research/sigma-research.html,verify

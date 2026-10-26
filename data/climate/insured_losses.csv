@@ -1,0 +1,42 @@
+date,series,value,source,note
+# Swiss Re Institute sigma, global insured losses, USD bn, nominal as first reported in the sigma 'Natural catastrophes' issue for that year.
+# 'nat cat' = natural catastrophes; 'total' = natural plus man-made. Swiss Re later restates in today's prices, which raises older years.
+2005-12-31,nat cat,78,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2006
+2005-12-31,total,83,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2006
+2006-12-31,nat cat,12,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2007
+2006-12-31,total,16,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2007
+2007-12-31,nat cat,23,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2008
+2007-12-31,total,28,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2008
+2008-12-31,nat cat,45,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2009
+2008-12-31,total,53,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2009
+2009-12-31,nat cat,22,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2010
+2009-12-31,total,26,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2010
+2010-12-31,nat cat,37,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2011
+2010-12-31,total,43,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2011
+2011-12-31,nat cat,110,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2012
+2011-12-31,total,116,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2012
+2012-12-31,nat cat,71,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2013
+2012-12-31,total,77,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2013
+2013-12-31,nat cat,37,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2014
+2013-12-31,total,45,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2014
+2014-12-31,nat cat,28,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2015
+2014-12-31,total,35,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2015
+2015-12-31,nat cat,28,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2016
+2015-12-31,total,37,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2016
+2016-12-31,nat cat,46,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2017
+2016-12-31,total,54,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2017
+2017-12-31,nat cat,138,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2018
+2017-12-31,total,144,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2018
+2018-12-31,nat cat,76,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2019
+2018-12-31,total,85,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2019
+2019-12-31,nat cat,52,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2020
+2019-12-31,total,60,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2020
+2020-12-31,nat cat,81,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2021
+2020-12-31,total,89,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2021
+2021-12-31,nat cat,111,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2022
+2021-12-31,total,119,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2022
+2022-12-31,nat cat,125,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2023
+2022-12-31,total,132,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2023
+2023-12-31,nat cat,108,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2024
+2023-12-31,total,114,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2024
+2024-12-31,nat cat,137,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2025
