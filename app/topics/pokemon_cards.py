@@ -9,11 +9,11 @@ overheat   30- and 90-day momentum, breadth (share above the 200-day average), s
 cooldown   the same market read for signs of a turn: momentum and breadth rolling over, sealed premium compressing, listings rising
            faster than sales, the PSA 10 premium shrinking, search fading, reprint announcements
 grading    PSA 10 / raw price ratio over time (PriceCharting), population counts for key cards and PSA volumes (hand-entered)
-regions    US (TCGplayer, USD) vs UK/EU (Cardmarket, EUR and GBP) for the same cards (pokemontcg.io), Japan (hand-entered JPY set
+regions    US (TCGplayer, USD) vs UK/EU (Cardmarket, EUR and GBP) for the same cards (TCGdex, else pokemontcg.io), Japan (hand-entered JPY set
            prices) and Hong Kong shop notes: where the market is hottest
 
 Downloads are slow and paced (BACKGROUND fill(), like btc_cycles): PriceCharting and TCGplayer pages one at a time, PACE seconds apart,
-each at most once per MAX_AGE. Pages only read what the fill already has. A daily log of current prices and listings (pokemontcg.io,
+each at most once per MAX_AGE. Pages only read what the fill already has. A daily log of current prices and listings (TCGdex,
 TCGplayer) is kept on the snapshot volume so day-by-day history builds up from launch.
 
 Leans in READINGS(): +1 means the signal is heating (above its own history), -1 cooling, 0 neutral (data/pokemon-cards/README.md).
@@ -42,6 +42,7 @@ TOPIC = Topic(SLUG, "Pokémon Card Market",
 
 PC_BASE = "https://www.pricecharting.com"
 PC_SEARCH = PC_BASE + "/search-products?type=prices&q={q}"
+TCGDEX = "https://api.tcgdex.net/v2/en/cards/{id}"
 PTCG = "https://api.pokemontcg.io/v2/cards?q={q}&select=id,name,number,rarity,set,tcgplayer,cardmarket&pageSize=250"
 TCG_HISTORY = "https://infinite-api.tcgplayer.com/price/history/{pid}/detailed?range=annual"
 TCG_DETAILS = "https://mp-search-api.tcgplayer.com/v2/product/{pid}/details"
@@ -52,14 +53,14 @@ PC_HEADERS = {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*
 TCG_HEADERS = {"Accept": "application/json, text/plain, */*", "Origin": "https://www.tcgplayer.com", "Referer": "https://www.tcgplayer.com/"}
 
 PACE = 8.0                       # seconds between downloads from the same shop site in the background fill
-MAX_AGE = {"pc": 3 * DAY, "tcg": 20 * 3600, "ptcg": 20 * 3600, "fx": 20 * 3600}
+MAX_AGE = {"pc": 3 * DAY, "tcg": 20 * 3600, "ptcg": 20 * 3600, "tcgdex": 20 * 3600, "fx": 20 * 3600}
 WINDOW_DAYS = 3 * 365            # z-scores against the last 3 years ...
 MIN_N = {"M": 12, "W": 52, "E": 4}   # ... with at least a year of monthly (M) or weekly (W) points, or 4 earlier sets (E)
 MIN_N_SIGNAL = {"search": 8, "psa_volume": 8, "sales": 26}   # hand-entered series may be quarterly; TCGplayer gives one year of weeks
 SEGMENTS = (("vintage", "Vintage WotC holos"), ("modern", "Modern chase / alt-art"), ("sealed", "Sealed products"))
 
 SOURCES = [{"name": "PriceCharting: monthly price history per card and product, ungraded and PSA 10", "url": "https://www.pricecharting.com/category/pokemon-cards", "cadence": "every 3 days"},
-           {"name": "Pokémon TCG API (pokemontcg.io): TCGplayer market and Cardmarket trend prices", "url": "https://pokemontcg.io/", "cadence": "daily"},
+           {"name": "TCGdex API: TCGplayer market and Cardmarket trend prices per card (pokemontcg.io when TCGdex misses)", "url": "https://tcgdex.dev/", "cadence": "daily"},
            {"name": "TCGplayer: sales history (units sold) and current listings", "url": "https://www.tcgplayer.com/", "cadence": "daily"},
            {"name": "Frankfurter (ECB reference rates): USD to EUR, GBP, JPY, HKD", "url": "https://www.frankfurter.app/", "cadence": "daily"},
            {"name": "Hand-entered, cited per row: Google Trends, PSA / GemRate grading volumes and populations, Japanese prices (Yuyutei, Snkrdunk), "
@@ -173,6 +174,34 @@ def parse_ptcg(j: dict, variants: dict | None = None) -> dict[str, dict]:
     return out
 
 
+TCGDEX_VARIANTS = ("holofoil", "unlimited-holofoil", "unlimitedHolofoil", "normal", "1st-edition-holofoil", "1stEditionHolofoil", "reverse-holofoil")
+
+
+def parse_tcgdex(j: dict, want: str | None = None) -> dict:
+    """TCGdex /v2/en/cards/<id>: pricing.cardmarket {trend, avg1, avg7, avg30, low} in EUR and pricing.tcgplayer.<variant>
+    {productId, marketPrice, midPrice} in USD; the same fields as parse_ptcg plus the TCGplayer product id."""
+    pr = (j or {}).get("pricing") or {}
+    cm, tp = pr.get("cardmarket") or {}, pr.get("tcgplayer") or {}
+    order = ([want] if want else []) + [v for v in TCGDEX_VARIANTS if v != want] + [v for v in tp if v not in TCGDEX_VARIANTS]
+    var = next((v for v in order if isinstance(tp.get(v), dict) and (_f(tp[v].get("marketPrice")) or _f(tp[v].get("midPrice")))), None)
+    pid = (tp.get(var) or {}).get("productId") if var else None
+    if not pid:
+        pid = next((v.get("thirdParty", {}).get("tcgplayer") for v in (j or {}).get("variants_detailed") or [] if (v.get("thirdParty") or {}).get("tcgplayer")), None)
+    if not cm and not var:
+        raise ValueError("TCGdex: no pricing for " + str((j or {}).get("id")))
+    return {"name": (j or {}).get("name"), "set": ((j or {}).get("set") or {}).get("name"), "tcg_variant": var,
+            "tcg": (_f(tp[var].get("marketPrice")) or _f(tp[var].get("midPrice"))) if var else None, "tcg_pid": str(int(pid)) if _f(pid) else None,
+            "tcg_url": f"https://www.tcgplayer.com/product/{int(pid)}" if _f(pid) else None, "tcg_updated": str(tp.get("updated") or "")[:10] or None,
+            "cm_trend": _f(cm.get("trend")), "cm_avg1": _f(cm.get("avg1")), "cm_avg7": _f(cm.get("avg7")), "cm_avg30": _f(cm.get("avg30")), "cm_low": _f(cm.get("low")),
+            "cm_url": f"https://www.cardmarket.com/en/Pokemon/Products?idProduct={cm['idProduct']}" if cm.get("idProduct") else None,
+            "cm_updated": str(cm.get("updated") or "")[:10] or None, "from": "TCGdex"}
+
+
+def tcgdex_url(item: dict) -> str | None:
+    i = (item.get("tcgdex_id") or item.get("ptcg_id") or "").strip()
+    return TCGDEX.format(id=i) if i else None
+
+
 def parse_tcg_history(j: dict) -> pd.DataFrame:
     """TCGplayer price history (range=annual): one result per SKU with weekly buckets {bucketStartDate, marketPrice, quantitySold,
     transactionCount}. Returns weekly rows: price (of the SKU that sold most) and units sold (all SKUs)."""
@@ -261,7 +290,7 @@ def read(url: str) -> str:
 
 
 # ------------------------------------------------------------------ the background fill (slow, paced; the only place that downloads)
-_last = {"pc": 0.0, "tcg": 0.0}
+_last = {"pc": 0.0, "tcg": 0.0, "tcgdex": 0.0}
 
 
 def _pace(site: str) -> None:
@@ -315,7 +344,11 @@ def _resolve_tcg(item: dict, ptcg: dict, res: dict) -> str | None:
     if tcg_id(item):
         return tcg_id(item)
     r = res.setdefault(item["key"], {})
-    link = (ptcg.get(item.get("ptcg_id")) or {}).get("tcg_url") or (f"https://prices.pokemontcg.io/tcgplayer/{item['ptcg_id']}" if item.get("ptcg_id") else None)
+    p = ptcg.get(item.get("ptcg_id")) or {}
+    if p.get("tcg_pid"):
+        r["tcg"] = p["tcg_pid"]
+        return r["tcg"]
+    link = p.get("tcg_url") or (f"https://prices.pokemontcg.io/tcgplayer/{item['ptcg_id']}" if item.get("ptcg_id") else None)
     if not link or r.get("tcg_tried", 0) > time.time() - 7 * DAY:
         return None
     r["tcg_tried"] = time.time()
@@ -363,7 +396,7 @@ def daily_log() -> dict[str, pd.DataFrame]:
 
 
 def fill() -> dict:
-    """Background job: FX, pokemontcg.io (one call for every card), then each item's PriceCharting page and TCGplayer history and
+    """Background job: FX, TCGdex (one call per card; pokemontcg.io in one call when TCGdex misses most), then each item's PriceCharting page and TCGplayer history and
     listings, one at a time. Logs today's prices and listings. Returns {what: 'ok' | error}."""
     done, items, res = {}, basket(), _resolved()
 
@@ -376,11 +409,20 @@ def fill() -> dict:
     step("fx", lambda: _fx(live=True))
     ptcg: dict = {}
 
+    cards = [i for i in items if i.get("ptcg_id")]
+    for i in cards:            # TCGdex first (pokemontcg.io answered 500/502 from Railway in October 2026)
+        def dex(i=i):
+            ptcg[i["ptcg_id"]] = parse_tcgdex(json.loads(polite(tcgdex_url(i), "tcgdex", MAX_AGE["tcgdex"], min_bytes=200)), i.get("variant") or None)
+        step(f"tcgdex {i['key']}", dex)
+
     def get_ptcg():
-        u = ptcg_url(items)
+        missing = [i for i in cards if i["ptcg_id"] not in ptcg]
+        u = ptcg_url(missing)
         if u:
-            ptcg.update(parse_ptcg(json.loads(polite(u, None, MAX_AGE["ptcg"], min_bytes=200)), {i["ptcg_id"]: i.get("variant") for i in items if i.get("ptcg_id")}))
-    step("pokemontcg.io", get_ptcg)
+            got = parse_ptcg(json.loads(polite(u, None, MAX_AGE["ptcg"], min_bytes=200)), {i["ptcg_id"]: i.get("variant") for i in missing})
+            ptcg.update({k: v for k, v in got.items() if k not in ptcg})
+    if len([i for i in cards if i["ptcg_id"] not in ptcg]) * 2 > len(cards):     # only when TCGdex missed most cards
+        step("pokemontcg.io", get_ptcg)
     log = []
     for i in items:
         p = ptcg.get(i.get("ptcg_id")) or {}
@@ -459,14 +501,22 @@ def tcg_weekly(item: dict) -> pd.DataFrame | None:
 
 
 def ptcg_now() -> dict:
-    items = basket()
-    u = ptcg_url(items)
-    if not u:
-        return {}
-    try:
-        return parse_ptcg(json.loads(read(u)), {i["ptcg_id"]: i.get("variant") for i in items if i.get("ptcg_id")})
-    except (LookupError, ValueError):
-        return {}
+    """Current TCGplayer and Cardmarket prices per pokemontcg.io id: TCGdex, else pokemontcg.io (whatever the fill has)."""
+    items = [i for i in basket() if i.get("ptcg_id")]
+    out = {}
+    for i in items:
+        try:
+            out[i["ptcg_id"]] = parse_tcgdex(json.loads(read(tcgdex_url(i))), i.get("variant") or None)
+        except (LookupError, ValueError):
+            pass
+    u = ptcg_url([i for i in items if i["ptcg_id"] not in out])
+    if u:
+        try:
+            got = parse_ptcg(json.loads(read(u)), {i["ptcg_id"]: i.get("variant") for i in items})
+            out.update({k: v for k, v in got.items() if k not in out})
+        except (LookupError, ValueError):
+            pass
+    return out
 
 
 def panel(field: str = "raw", start: str = "2014-01-01") -> tuple[pd.DataFrame, list[dict]]:
@@ -821,7 +871,7 @@ def _regions_now() -> dict:
     cards = []
     for i in items:
         p = dict(P.get(i.get("ptcg_id")) or {})
-        if not p.get("tcg") and _f(logged.get(i["key"])):         # pokemontcg.io down: TCGplayer's own market price from the daily log
+        if not p.get("tcg") and _f(logged.get(i["key"])):         # no TCGdex / pokemontcg.io price: TCGplayer's own market price from the daily log
             p["tcg"] = _f(logged[i["key"]])
         if not p.get("tcg") and not p.get("cm_trend"):
             continue
@@ -867,7 +917,7 @@ def _regions_now() -> dict:
 
 
 def _basket_now() -> dict:
-    return {"items": [{k: i.get(k) for k in ("key", "name", "set", "segment", "kind", "date", "msrp_usd", "pricecharting", "ptcg_id", "tcgplayer_id", "source", "note")}
+    return {"items": [{k: i.get(k) for k in ("key", "name", "set", "segment", "kind", "date", "msrp_usd", "pricecharting", "ptcg_id", "tcgdex_id", "tcgplayer_id", "source", "note")}
                       for i in basket()], "resolved": _resolved()}
 
 
@@ -930,7 +980,7 @@ def _layout_now() -> dict:
             "pricecharting search": PC_SEARCH.format(q="charizard+base+set"),
             "pokemontcg.io tcgplayer link": "https://prices.pokemontcg.io/tcgplayer/base1-4",
             "pokemontcg.io one card": "https://api.pokemontcg.io/v2/cards/base1-4", "pokemontcg.io simple query": PTCG.format(q="id:base1-4"),
-            "tcgdex card": "https://api.tcgdex.net/v2/en/cards/base1-4", "tcgdex modern card": "https://api.tcgdex.net/v2/en/cards/swsh7-215",
+            "tcgdex card": TCGDEX.format(id="base1-4"), "tcgdex modern card": TCGDEX.format(id="swsh7-215"), "tcgdex sv card": TCGDEX.format(id="sv03.5-199"),
             "tcgplayer history": TCG_HISTORY.format(pid="42382"), "tcgplayer details": TCG_DETAILS.format(pid="42382"),
             "tcgcsv groups": "https://tcgcsv.com/tcgplayer/3/groups", "frankfurter": FX, "er-api": FX_FALLBACK,
             "cardmarket": "https://www.cardmarket.com/en/Pokemon/Products/Singles/Base-Set/Charizard-V1-BS4",

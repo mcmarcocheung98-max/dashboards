@@ -51,6 +51,16 @@ def ptcg_json():
     return {"data": data, "page": 1, "count": len(data)}
 
 
+def tcgdex_json(item, k):
+    usd = _path(TODAY, item["segment"], k)
+    pid = 2000 + k
+    return {"id": item.get("tcgdex_id") or item["ptcg_id"], "name": item["name"], "set": {"name": item["set"]},
+            "variants_detailed": [{"type": "holo", "thirdParty": {"tcgplayer": pid, "cardmarket": 9000 + k}}],
+            "pricing": {"cardmarket": {"updated": "2026-10-25T22:54:32.728Z", "unit": "EUR", "idProduct": 9000 + k, "avg": usd * 0.9, "low": usd * 0.5,
+                                       "trend": usd * 0.9, "avg1": usd * 0.92, "avg7": usd * 0.91, "avg30": usd * 0.86, "trend-holo": 0},
+                        "tcgplayer": {"unit": "USD", "updated": "2026-10-14T22:54:33.803Z", "holofoil": {"productId": pid, "lowPrice": usd * 0.8, "midPrice": usd, "marketPrice": usd}}}}
+
+
 def tcg_history(pid: int):
     weeks = pd.date_range(TODAY - pd.Timedelta(days=364), TODAY, freq="7D")
     skus = []
@@ -69,6 +79,10 @@ def fake_fetch(url, ttl=0, **k):
         items = M.basket()
         n = next((n for n, i in enumerate(items) if url.endswith(i["pricecharting"])), 0)
         return pc_html(items[n], n)
+    if "api.tcgdex.net" in url:
+        items = M.basket()
+        n, item = next((n, i) for n, i in enumerate(items) if url.endswith("/" + (i.get("tcgdex_id") or i.get("ptcg_id") or "\0")))
+        return json.dumps(tcgdex_json(item, n))
     if "api.pokemontcg.io" in url:
         return json.dumps(ptcg_json())
     if "price/history" in url:
@@ -162,6 +176,18 @@ def test_ptcg_parser_picks_the_variant():
     assert p["x-1"]["tcg"] is None and p["x-1"]["cm_trend"] is None
 
 
+def test_tcgdex_parser():
+    item = M.basket()[0]
+    p = M.parse_tcgdex(tcgdex_json(item, 0))
+    assert p["tcg_pid"] == "2000" and p["cm_trend"] == pytest.approx(p["tcg"] * 0.9) and p["tcg_variant"] == "holofoil"
+    j = {"id": "x", "variants_detailed": [{"thirdParty": {"tcgplayer": 42382}}], "pricing": {"cardmarket": {"trend": 421.88, "avg7": 694.73, "idProduct": 273699}, "tcgplayer": None}}
+    q = M.parse_tcgdex(j)
+    assert q["tcg"] is None and q["tcg_pid"] == "42382" and q["cm_trend"] == 421.88 and "273699" in q["cm_url"]
+    with pytest.raises(ValueError):
+        M.parse_tcgdex({"id": "y", "pricing": {}})
+    assert M.tcgdex_url({"ptcg_id": "sv3pt5-199", "tcgdex_id": "sv03.5-199"}).endswith("/sv03.5-199")
+
+
 def test_tcgplayer_parsers():
     h = M.parse_tcg_history(tcg_history(42382))
     assert len(h) == 53 and h["qty"].iloc[0] == 3 + 2 and h["price"].iloc[0] == pytest.approx((50 + 42382 % 7))      # NM sold most
@@ -209,10 +235,10 @@ def test_daily_log_once_a_day(mocked):
 # ------------------------------------------------------------------ the fill and every payload
 def test_fill_resolves_and_logs(mocked):
     done = M.fill()
-    assert done["fx"] == "ok" and done["pokemontcg.io"] == "ok"
+    assert done["fx"] == "ok" and "pokemontcg.io" not in done and all(v == "ok" for k, v in done.items() if k.startswith("tcgdex"))
     assert all(v == "ok" for k, v in done.items() if k.startswith(("pc ", "tcg ")))
     res = M._resolved()
-    assert res["base-charizard"]["pc_how"] == "basket path" and res["base-charizard"]["tcg"]
+    assert res["base-charizard"]["pc_how"] == "basket path" and res["base-charizard"]["tcg"] == "2000"         # TCGplayer id from TCGdex
     assert "tcg listings base-charizard" in done and not any(k.startswith("tcg") and "box" in k for k in done)     # sealed has no ptcg id
     assert "listings" in M.daily_log()
 
@@ -243,6 +269,16 @@ def test_payloads(mocked):
     assert R["cards"] and R["fx"]["EUR"] == 0.92 and R["hottest"] and R["kpi"]["eu_vs_us"] is not None
     c = R["cards"][0]
     assert c["gbp"] == pytest.approx(c["eur"] / 0.92 * 0.79, rel=1e-3)
+
+
+def test_pokemontcg_io_when_tcgdex_is_down(mocked, monkeypatch):
+    real = fake_fetch
+    monkeypatch.setattr(M, "fetch", lambda url, ttl=0, **k: (_ for _ in ()).throw(ConnectionError("down")) if "tcgdex" in url else real(url, ttl, **k))
+    done = M.fill()
+    assert done["pokemontcg.io"] == "ok" and done["tcgdex base-charizard"].startswith("ConnectionError")
+    assert M._resolved()["base-charizard"]["tcg"]                    # from the prices.pokemontcg.io redirect
+    monkeypatch.setattr(M, "cached_only", lambda url: (_ for _ in ()).throw(LookupError("x")) if "tcgdex" in url else fake_read(url))
+    assert M.ptcg_now()["base1-4"]["tcg"] > 0
 
 
 def test_pricecharting_missing_falls_back_to_tcgplayer(mocked, monkeypatch):

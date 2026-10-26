@@ -71,14 +71,14 @@ const VIEWS = {
         "as in 2020-21, the market is broad and hot; when modern and sealed fall while vintage holds, money is retreating to quality.")) : card("Price indices", el("div", { class: "muted" }, "No price history yet: the background download fills it within a few minutes of a deploy."), stale(d));
     const daily = Object.keys(d.daily || {}).length ? card("Daily since launch: TCGplayer (US) and Cardmarket (EU), basket median, first day = 100",
       ...linesChart(Object.entries(d.daily).map(([k, p], i) => ({ name: k, points: p, color: css(SERIES[i]) })), f2, { small: true }),
-      note("Logged once a day from pokemontcg.io since this dashboard started, so it fills in over time. It shows moves within the month that the monthly indices smooth over.")) : null;
+      note("Logged once a day from TCGdex since this dashboard started, so it fills in over time. It shows moves within the month that the monthly indices smooth over.")) : null;
     const T = d.table || [];
     const rows = T.map(r => el("tr", {}, el("td", {}, link(r.name, r.url)), el("td", {}, r.set), el("td", {}, r.segment), el("td", {}, usd(r.price, r.price < 100 ? 2 : 0)),
       el("td", { class: cls(r.m1) }, pct(r.m1, 0)), el("td", { class: cls(r.m3) }, pct(r.m3, 0)), el("td", { class: cls(r.m12) }, pct(r.m12, 0)),
       el("td", { class: cls(r.vs200) }, pct(r.vs200, 0)), el("td", {}, r.x_msrp != null ? xm(r.x_msrp) : r.psa10 != null ? usd(r.psa10) + " PSA 10" : "–"), el("td", {}, r.src || "–"),
       el("td", { class: "muted" }, [r.ptcg_id, r.tcgplayer_id ? "tcg " + r.tcgplayer_id : null].filter(Boolean).join(" · "))));
     const tbl = card("The basket", table(["Card / product", "Set", "Basket", "Price (USD)", "1m", "3m", "12m", "vs 200-day", "x MSRP / PSA 10", "From", "Ids"], rows),
-      note("Kept in data/pokemon-cards/basket.csv with each item's PriceCharting page, pokemontcg.io id and (found automatically) TCGplayer product id. 'vs 200-day' is the price against its average of the last 7 months."));
+      note("Kept in data/pokemon-cards/basket.csv with each item's PriceCharting page, pokemontcg.io / TCGdex id and (found automatically) TCGplayer product id. 'vs 200-day' is the price against its average of the last 7 months."));
     return [head, seg, daily, tbl];
   },
   async overheat() {
@@ -154,13 +154,13 @@ const VIEWS = {
       table(["Region", "Momentum", "Measured as"], (d.regions || []).map(r => el("tr", {}, el("td", {}, r.region + (r.region === d.hottest ? " 🔥" : "")), el("td", { class: cls(r.mom) }, pct(r.mom)), el("td", { class: "wrap" }, r.basis)))),
       el("div", { class: "kpis", style: "margin-top:10px" }, kpi("EU price vs US, same cards (median)", pct(K.eu_vs_us, 0), cls(K.eu_vs_us)), kpi("Cardmarket 7-day vs 30-day avg", pct(K.eu_7v30), cls(K.eu_7v30)),
         kpi("TCGplayer 4-week change", pct(K.us_30d), cls(K.us_30d)), kpi("USD in EUR / GBP / JPY / HKD", FX.EUR ? [f2(FX.EUR), f2(FX.GBP), f0(FX.JPY), f2(FX.HKD)].join(" / ") : "–")),
-      note("Same cards, both markets, from pokemontcg.io (TCGplayer market price in USD, Cardmarket trend price in EUR, converted at ECB rates). EU cheaper than the US is normal (VAT aside, " +
+      note("Same cards, both markets, from TCGdex (TCGplayer market price in USD, Cardmarket trend price in EUR, converted at ECB rates). EU cheaper than the US is normal (VAT aside, " +
         "vintage supply is deeper there); the EU premium rising means European demand is catching up. Updated " + (d.as_of || "–") + "."));
     const C = d.cards || [];
     const tbl = C.length ? card("US vs UK/EU, card by card", table(["Card", "US (TCGplayer)", "EU (Cardmarket)", "In GBP", "EU vs US", "EU 7d vs 30d", "US 4 weeks"], C.map(c => el("tr", {},
       el("td", {}, c.name), el("td", {}, link(usd(c.usd, 2), c.tcg_url)), el("td", {}, link(c.eur == null ? "–" : "€" + num(c.eur, 2), c.cm_url)), el("td", {}, gbp(c.gbp, 2)),
       el("td", { class: cls(c.eu_vs_us) }, pct(c.eu_vs_us, 0)), el("td", { class: cls(c.eu_7v30) }, pct(c.eu_7v30)), el("td", { class: cls(c.us_30d) }, pct(c.us_30d))))),
-      note("Sealed products are not in pokemontcg.io, so this table is cards only.")) : card("US vs UK/EU", el("div", { class: "muted" }, "No pokemontcg.io prices yet."));
+      note("Sealed products are not in TCGdex, so this table is cards only.")) : card("US vs UK/EU", el("div", { class: "muted" }, "No TCGdex prices yet."));
     const jp = Object.keys(d.japan || {}).length ? card("Japan: Japanese set prices (JPY, hand-entered)", ...linesChart(Object.entries(d.japan).map(([k, p], i) => ({ name: k, points: p, color: css(SERIES[i % 6]) })), v => "¥" + num(v, 0)),
       note("From Yuyutei and Snkrdunk listings (japan.csv). Japanese sets release first and are where Asian demand shows earliest; they also lead English prices for shared artwork.")) :
       card("Japan: Japanese set prices", el("div", { class: "muted" }, "No rows yet. Yuyutei and Snkrdunk are checked from the server (/api/pokemon-cards/layout); until a feed answers, add rows to data/pokemon-cards/japan.csv: date, series (product, JPY), value, source."));

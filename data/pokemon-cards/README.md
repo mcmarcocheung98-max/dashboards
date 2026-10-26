@@ -11,9 +11,9 @@ Not investment advice.
 | Tab | What | Source | Automated? | Cadence |
 |---|---|---|---|---|
 | Prices, signals, grading | Monthly price history per card and product: ungraded (`used`) and PSA 10 (`manualonly`) | PriceCharting product page, `VGPC.chart_data` (cents, one point a month) | yes, from the path in `basket.csv`; if that page has no chart, the first PriceCharting search result | every 3 days per page, 8 s apart |
-| Prices (fallback), overheat, regions | Weekly market price and units sold per card, one year | TCGplayer `infinite-api.tcgplayer.com/price/history/<id>/detailed?range=annual` | yes; product id from `basket.csv` or found by following pokemontcg.io's TCGplayer link | daily, 8 s apart |
-| Cooldown | Current listings and sellers per card | TCGplayer `mp-search-api.tcgplayer.com/v2/product/<id>/details` | yes, logged once a day | daily |
-| Regions, daily chart | TCGplayer market (USD) and Cardmarket trend, 1/7/30-day averages (EUR) for every card in one call | pokemontcg.io `/v2/cards?q=(id:… OR id:…)` | yes, logged once a day | daily |
+| Prices (fallback), overheat, regions | Market price and units sold per card, one year of buckets per condition | TCGplayer `infinite-api.tcgplayer.com/price/history/<id>/detailed?range=annual` | yes; product id from `basket.csv`, else TCGdex, else the redirect of `prices.pokemontcg.io/tcgplayer/<id>` | daily, 8 s apart |
+| Cooldown | Current listings and sellers per card | TCGplayer `mp-search-api.tcgplayer.com/v2/product/<id>/details` (`listings`, `sellers`, `marketPrice`) | yes, logged once a day | daily |
+| Regions, daily chart | TCGplayer market (USD), TCGplayer product id, and Cardmarket trend and 1/7/30-day averages (EUR) per card | TCGdex `api.tcgdex.net/v2/en/cards/<id>` (`pricing.tcgplayer`, `pricing.cardmarket`); pokemontcg.io `/v2/cards?q=(id:… OR id:…)` only when TCGdex misses most cards | yes, logged once a day | daily, one card per request, 8 s apart |
 | Regions | USD to EUR, GBP, JPY, HKD | Frankfurter (ECB reference rates); open.er-api.com if it fails | yes | daily |
 | Overheat, cooldown | Google Trends, US, "pokemon cards" (0–100) | trends.google.com | hand-entered: `trends.csv` (`date,value,source,note`) | monthly |
 | Overheat, grading | PSA Pokémon cards graded per month; PSA turnaround days | GemRate, PSA | hand-entered: `psa.csv` (`date,series,value,source,note`; a series name containing "graded" feeds the signal) | monthly |
@@ -27,13 +27,29 @@ Every download happens in the background job `fill()` (every 6 hours, like `btc_
 
 eBay sold listings, Cardmarket's own pages, Google Trends, PSA and Snkrdunk usually refuse cloud servers; `/layout` checks them from Railway, and the hand-entered files stand in. FRED and Yahoo are not used (they time out or return 429 from Railway).
 
-**Checked on the server:** not yet. The container this dashboard was written in could not reach any of the sources, so the parsers follow the documented layouts and are tested on fixtures. After the first deploy, read `/api/pokemon-cards/layout` and note here what answered.
+**Checked on the server** (`/api/pokemon-cards/layout` from Railway, 2026-10-26):
+
+| Source | Answer | Used? |
+|---|---|---|
+| PriceCharting product page | 200 with `VGPC.chart_data` (monthly, cents; keys `used`, `cib`, `new`, `graded`, `boxonly`, `manualonly`) **only with an HTML `Accept` header**: the shared UA's `text/csv,application/json` gets 400 `{"error":"unauthorized request"}` | yes (`PC_HEADERS`) |
+| PriceCharting search | 200 (HTML with `/game/...` links; JSON when asked for JSON) | fallback for a wrong path |
+| TCGplayer price history, product details | 200 JSON as parsed (`result[].buckets[]`; `listings`, `sellers`, `marketPrice`) | yes |
+| prices.pokemontcg.io TCGplayer link | 200 after redirects to `tcgplayer.com/product/<id>` | fallback for TCGplayer ids |
+| TCGdex | 200 JSON with `pricing.cardmarket` and `pricing.tcgplayer` | yes, primary for current prices |
+| pokemontcg.io API | 500 / 502 (Cloudflare: origin bad gateway), batch and single card | only when TCGdex misses |
+| Frankfurter, open.er-api.com | 200 | yes |
+| Cardmarket, PSA, GemRate | 403 Cloudflare challenge | no: hand-entered / via TCGdex |
+| eBay sold listings | 403 | no |
+| Google Trends | 429 | no: hand-entered |
+| Yuyutei | 200, but no prices found in the HTML by a simple yen pattern | not yet: hand-entered `japan.csv` |
+| Snkrdunk | 200 for the English home page; no price feed found | no |
+| tcgcsv.com | 200 (TCGplayer groups) | not used; a possible source for sealed TCGplayer prices |
 
 ## The basket (`basket.csv`)
 
 30 bellwethers: 8 vintage WotC holos (Base Set Charizard, Blastoise, Venusaur, Mewtwo; Fossil Gengar; Team Rocket Dark Charizard; Neo Genesis Lugia; Neo Destiny Shining Charizard), 11 modern chase and alt-art cards (Evolving Skies Umbreon and Rayquaza VMAX, Fusion Strike Gengar VMAX, Brilliant Stars Charizard V, Lost Origin Giratina V, Obsidian Flames and 151 Charizard ex, 151 Mew ex, Twilight Masquerade Greninja ex, Surging Sparks Pikachu ex, Prismatic Evolutions Umbreon ex) and 11 sealed products (booster boxes and elite trainer boxes from Base Set to Mega Evolution, each with its MSRP).
 
-Columns: `date` (release), `key`, `name`, `set`, `segment` (`vintage`, `modern`, `sealed`), `kind`, `msrp_usd` (sealed), `pricecharting` (path after `/game/`), `pc_field` (`used` = ungraded or the sealed price), `ptcg_id` (pokemontcg.io), `variant` (pokemontcg.io TCGplayer price key, blank = first of holofoil, unlimitedHolofoil, 1stEditionHolofoil, normal), `tcgplayer_id` (blank = found automatically), `source`, `note`. To add an item, add a row; to drop one, delete it: the indices are chain-linked, so neither moves them.
+Columns: `date` (release), `key`, `name`, `set`, `segment` (`vintage`, `modern`, `sealed`), `kind`, `msrp_usd` (sealed), `pricecharting` (path after `/game/`), `pc_field` (`used` = ungraded or the sealed price), `ptcg_id` (pokemontcg.io id, also the TCGdex id unless `tcgdex_id` says otherwise: Scarlet & Violet sets are `sv03.5-199` there), `tcgdex_id`, `variant` (TCGplayer price key, blank = first of holofoil, unlimited, normal, 1st edition), `tcgplayer_id` (blank = found automatically), `source`, `note`. To add an item, add a row; to drop one, delete it: the indices are chain-linked, so neither moves them.
 
 ## The heat score
 
@@ -60,6 +76,8 @@ Columns: `date` (release), `key`, `name`, `set`, `segment` (`vintage`, `modern`,
 The **index** is equal-weight and chain-linked: each month's change is the mean log change of the items priced in both months (single moves capped at ±150 log points), so a card joining or leaving does not jump it. A month with no PriceCharting sale keeps the last price for up to two months. When PriceCharting cannot be read for an item, its monthly series comes from TCGplayer's weekly history instead (one year only).
 
 The **cooldown checklist** (Cooldown tab): 90-day momentum 5+ points below its 6-month peak with a negative last month; breadth down 15+ points in 3 months; sealed / MSRP down more than 0.1x in 3 months; listings growing 10+ points faster than sales over 30 days; PSA 10 / raw down more than 0.5x in 6 months; search down 10+ points in 3 months; at least one reprint or restock announcement in 90 days.
+
+GBP and EUR come from TCGdex's Cardmarket prices; Cardmarket itself refuses the server.
 
 **Where is it hottest** (US / UK / HK tab): the region with the highest momentum. US: 30-day change of the TCGplayer price, basket median (from the daily log once it has 30 days, else TCGplayer's 4-week change). UK/EU: the same for Cardmarket's trend price (until then the 7-day vs 30-day average). Japan: 3-month change of the hand-entered set prices, median. GBP is the EUR price converted at ECB rates.
 
