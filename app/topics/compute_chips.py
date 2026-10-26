@@ -33,7 +33,7 @@ TOPIC = Topic(SLUG, "AI Compute, Power & Chips",
               "where leading-edge chips are made, for the US, UK, Hong Kong and China.",
               "compute_chips", (("overview", "Overview"), ("power", "Power"), ("capex", "Capex"), ("compute", "Compute"), ("chips", "Chips"),
                                 ("supply", "Supply chain")),
-              ("overview", "power", "capex", "compute", "chips"), icon="chip", order=60)
+              ("overview", "power", "capex", "compute", "chips"), icon="chip")
 
 EMBER = "https://storage.googleapis.com/emb-prod-bkt-publicdata/public-downloads/yearly_full_release_long_format.csv"
 EPOCH = "https://epoch.ai/data/notable_ai_models.csv"
