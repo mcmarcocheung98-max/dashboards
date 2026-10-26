@@ -1,0 +1,10 @@
+date,series,value,source,note
+2024-05-01,US adults who have ever taken a GLP-1 (%),12,https://www.kff.org/health-costs/poll-finding/kff-health-tracking-poll-may-2024-the-publics-use-and-views-of-glp-1-drugs/,KFF Health Tracking Poll; from memory; verify
+2025-11-01,US adults who have ever taken a GLP-1 (%),18,https://www.kff.org/health-costs/,KFF Health Tracking Poll November 2025; from memory; verify
+2024-05-01,US adults currently taking a GLP-1 (%),6,https://www.kff.org/health-costs/poll-finding/kff-health-tracking-poll-may-2024-the-publics-use-and-views-of-glp-1-drugs/,KFF Health Tracking Poll; from memory; verify
+2025-11-01,US adults currently taking a GLP-1 (%),12,https://www.kff.org/health-costs/,KFF Health Tracking Poll November 2025; from memory; verify
+2024-09-01,US adults taking a GLP-1 for weight loss (%),5.8,https://news.gallup.com/poll/645512/obesity-rate-declines-glp-1-use-soars.aspx,Gallup National Health and Well-Being Index; from memory; verify
+2025-09-01,US adults taking a GLP-1 for weight loss (%),12.4,https://news.gallup.com/poll/645512/obesity-rate-declines-glp-1-use-soars.aspx,Gallup National Health and Well-Being Index; from memory; verify
+2022-09-01,US adult obesity rate (Gallup self-report %),39.9,https://news.gallup.com/poll/645512/obesity-rate-declines-glp-1-use-soars.aspx,Gallup National Health and Well-Being Index; from memory; verify
+2025-09-01,US adult obesity rate (Gallup self-report %),37.0,https://news.gallup.com/poll/645512/obesity-rate-declines-glp-1-use-soars.aspx,Gallup National Health and Well-Being Index; from memory; verify
+2025-06-01,UK adults using weight-loss injections (millions),1.5,https://www.ucl.ac.uk/news/,estimate mostly from private online pharmacies (not in NHS data); from memory of press reports; verify

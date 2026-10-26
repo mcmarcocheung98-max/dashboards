@@ -1,0 +1,4 @@
+date,series,value,source,note
+# Hong Kong deaths by leading cause: to fill from the Centre for Health Protection table (registered deaths and age-standardised death rates per 100000 by cause). Empty values are placeholders and are not drawn.
+2023-07-01,Hong Kong cancer deaths per 100000 (age-standardised),,https://www.chp.gov.hk/en/statistics/data/10/27/380.html,placeholder: add from CHP
+2023-07-01,Hong Kong pneumonia deaths per 100000 (age-standardised),,https://www.chp.gov.hk/en/statistics/data/10/27/380.html,placeholder: add from CHP

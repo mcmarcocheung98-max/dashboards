@@ -1,0 +1,39 @@
+date,series,value,source,note
+2010-07-01,US,78.7,https://www.cdc.gov/nchs/products/databriefs.htm,"CDC NCHS final mortality data brief, both sexes; from memory; verify"
+2014-07-01,US,78.9,https://www.cdc.gov/nchs/products/databriefs.htm,"CDC NCHS final mortality data brief, both sexes; from memory; verify"
+2015-07-01,US,78.7,https://www.cdc.gov/nchs/products/databriefs.htm,"CDC NCHS final mortality data brief, both sexes; from memory; verify"
+2016-07-01,US,78.7,https://www.cdc.gov/nchs/products/databriefs.htm,"CDC NCHS final mortality data brief, both sexes; from memory; verify"
+2017-07-01,US,78.6,https://www.cdc.gov/nchs/products/databriefs.htm,"CDC NCHS final mortality data brief, both sexes; from memory; verify"
+2018-07-01,US,78.7,https://www.cdc.gov/nchs/products/databriefs.htm,"CDC NCHS final mortality data brief, both sexes; from memory; verify"
+2019-07-01,US,78.8,https://www.cdc.gov/nchs/products/databriefs.htm,"CDC NCHS final mortality data brief, both sexes; from memory; verify"
+2020-07-01,US,77.0,https://www.cdc.gov/nchs/products/databriefs.htm,"CDC NCHS final mortality data brief, both sexes; from memory; verify"
+2021-07-01,US,76.4,https://www.cdc.gov/nchs/products/databriefs.htm,"CDC NCHS final mortality data brief, both sexes; from memory; verify"
+2022-07-01,US,77.5,https://www.cdc.gov/nchs/products/databriefs.htm,"CDC NCHS final mortality data brief, both sexes; from memory; verify"
+2023-07-01,US,78.4,https://www.cdc.gov/nchs/products/databriefs.htm,"CDC NCHS final mortality data brief, both sexes; from memory; verify"
+2024-07-01,US,79.0,https://www.cdc.gov/nchs/products/databriefs.htm,"CDC NCHS, both sexes; from memory of the 2024 data brief; verify"
+2016-07-01,UK male,79.2,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/bulletins/nationallifetablesunitedkingdom/previousReleases,ONS national life tables three-year period centred on this year (2015-2017); from memory; verify
+2018-07-01,UK male,79.4,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/bulletins/nationallifetablesunitedkingdom/previousReleases,ONS national life tables three-year period centred on this year (2017-2019); from memory; verify
+2019-07-01,UK male,79.0,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/bulletins/nationallifetablesunitedkingdom/previousReleases,ONS national life tables three-year period centred on this year (2018-2020); from memory; verify
+2021-07-01,UK male,78.6,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/bulletins/nationallifetablesunitedkingdom/previousReleases,ONS national life tables three-year period centred on this year (2020-2022); from memory; verify
+2022-07-01,UK male,78.8,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/bulletins/nationallifetablesunitedkingdom/previousReleases,ONS national life tables three-year period centred on this year (2021-2023); from memory; verify
+2016-07-01,UK female,82.9,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/bulletins/nationallifetablesunitedkingdom/previousReleases,ONS national life tables three-year period centred on this year (2015-2017); from memory; verify
+2018-07-01,UK female,83.1,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/bulletins/nationallifetablesunitedkingdom/previousReleases,ONS national life tables three-year period centred on this year (2017-2019); from memory; verify
+2019-07-01,UK female,82.9,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/bulletins/nationallifetablesunitedkingdom/previousReleases,ONS national life tables three-year period centred on this year (2018-2020); from memory; verify
+2021-07-01,UK female,82.6,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/bulletins/nationallifetablesunitedkingdom/previousReleases,ONS national life tables three-year period centred on this year (2020-2022); from memory; verify
+2022-07-01,UK female,82.8,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/bulletins/nationallifetablesunitedkingdom/previousReleases,ONS national life tables three-year period centred on this year (2021-2023); from memory; verify
+2015-07-01,Hong Kong male,81.4,https://www.healthyhk.gov.hk/phisweb/en/healthy_facts/health_indicators/life_exp/,C&SD life tables via DH Healthy HK; from memory; verify
+2019-07-01,Hong Kong male,82.2,https://www.healthyhk.gov.hk/phisweb/en/healthy_facts/health_indicators/life_exp/,C&SD life tables via DH Healthy HK; from memory; verify
+2020-07-01,Hong Kong male,83.0,https://www.healthyhk.gov.hk/phisweb/en/healthy_facts/health_indicators/life_exp/,C&SD life tables via DH Healthy HK; from memory; verify
+2021-07-01,Hong Kong male,83.2,https://www.healthyhk.gov.hk/phisweb/en/healthy_facts/health_indicators/life_exp/,C&SD life tables via DH Healthy HK; from memory; verify
+2022-07-01,Hong Kong male,81.3,https://www.healthyhk.gov.hk/phisweb/en/healthy_facts/health_indicators/life_exp/,C&SD life tables via DH Healthy HK; from memory; verify
+2015-07-01,Hong Kong female,87.3,https://www.healthyhk.gov.hk/phisweb/en/healthy_facts/health_indicators/life_exp/,C&SD life tables via DH Healthy HK; from memory; verify
+2019-07-01,Hong Kong female,88.1,https://www.healthyhk.gov.hk/phisweb/en/healthy_facts/health_indicators/life_exp/,C&SD life tables via DH Healthy HK; from memory; verify
+2020-07-01,Hong Kong female,87.7,https://www.healthyhk.gov.hk/phisweb/en/healthy_facts/health_indicators/life_exp/,C&SD life tables via DH Healthy HK; from memory; verify
+2021-07-01,Hong Kong female,87.9,https://www.healthyhk.gov.hk/phisweb/en/healthy_facts/health_indicators/life_exp/,C&SD life tables via DH Healthy HK; from memory; verify
+2022-07-01,Hong Kong female,87.2,https://www.healthyhk.gov.hk/phisweb/en/healthy_facts/health_indicators/life_exp/,C&SD life tables via DH Healthy HK; from memory; verify
+2015-07-01,China,76.34,https://www.nhc.gov.cn/guihuaxxs/s3585u/new_list.shtml,NHC statistical bulletin on health development; from memory; verify
+2019-07-01,China,77.3,https://www.nhc.gov.cn/guihuaxxs/s3585u/new_list.shtml,NHC statistical bulletin on health development; from memory; verify
+2020-07-01,China,77.93,https://www.nhc.gov.cn/guihuaxxs/s3585u/new_list.shtml,NHC statistical bulletin on health development; from memory; verify
+2021-07-01,China,78.2,https://www.nhc.gov.cn/guihuaxxs/s3585u/new_list.shtml,NHC statistical bulletin on health development; from memory; verify
+2023-07-01,China,78.6,https://www.nhc.gov.cn/guihuaxxs/s3585u/new_list.shtml,NHC statistical bulletin on health development; from memory; verify
+2024-07-01,China,79.0,https://www.nhc.gov.cn/guihuaxxs/s3585u/new_list.shtml,NHC statistical bulletin on health development; from memory; verify
