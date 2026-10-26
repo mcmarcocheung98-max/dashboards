@@ -182,6 +182,94 @@ function statusCard(R) {
       Math.round(R.months_now) + " months after the 2024 halving; past bursts mostly ran 6-18 months after one."));
 }
 
+// ---------- every candidate in one table: thesis, price cases, market cap against the sector's largest token
+function candidatesTable(k, rot, px, jump) {
+  const coins = (k.coins || []).filter(c => c.kpi), L = k.leaders || {};
+  const status = {}; ((rot && rot.status) || []).forEach(s => { status[s.rank] = s.status; });
+  const stCol = { Undervalued: "--up", "Awaiting rotation": "--accent", Neutral: "--muted", "Priced in": "--s2", Overvalued: "--down" };
+  const rows = coins.map(c => {
+    const K = c.kpi, ld = L[c.rank] || null;
+    return { c, K, ld, sector: c.sector, rank: c.rank, status: status[c.rank] || "–", mcap: K.market_cap, price: K.price,
+      share: ld && K.market_cap ? K.market_cap / ld.market_cap : null, toLeader: ld && K.market_cap ? ld.market_cap / K.market_cap : null,
+      up27: K.base_2027 && K.price ? K.base_2027 / K.price - 1 : null, up28: K.base_2028 && K.price ? K.base_2028 / K.price - 1 : null,
+      vsLeader28: ld && K.mcap_base_2028 ? K.mcap_base_2028 / ld.market_cap : null };
+  });
+  const COLS = [
+    ["Coin", r => r.c.name.toLowerCase()], ["Sector", r => r.rank], ["Status", r => r.status], ["Price", r => r.price], ["90 days", r => r.K.vs_btc_90d],
+    ["Market cap", r => r.mcap], ["vs sector leader", r => r.share], ["RSI vs BTC", r => r.K.rsi_vs_btc],
+    ["End-2027 bear / base / bull", r => r.up27], ["End-2028 bear / base / bull", r => r.up28], ["Base 2028 cap vs leader today", r => r.vsLeader28]];
+  let sortI = 1, dir = 1, sector = "all", q = "";
+  const open = new Set();
+  const tbody = el("tbody"), count = el("span", { class: "muted" });
+  const head = el("tr", {});
+  const spark = (pts, w = 70, h = 20) => {                      // 90 days of price, as a tiny line coloured by its direction
+    const svg = svgEl("svg", { width: w, height: h, style: "display:block" });
+    const v = (pts || []).map(p => p[1]).filter(x => x != null);
+    if (v.length < 2) return svg;
+    const lo = Math.min(...v), hi = Math.max(...v), X = i => i / (v.length - 1) * (w - 2) + 1, Y = x => h - 2 - (x - lo) / (hi - lo || 1) * (h - 4);
+    svgEl("polyline", { points: v.map((x, i) => X(i) + "," + Y(x)).join(" "), fill: "none", stroke: css(v[v.length - 1] >= v[0] ? "--up" : "--down"), "stroke-width": 1.4 }, svg);
+    return svg;
+  };
+  const cases = (K, y) => el("span", { style: "white-space:nowrap" }, el("span", { class: "down" }, px(K["bear_" + y])), " / ", el("b", {}, px(K["base_" + y])), " / ", el("span", { class: "up" }, px(K["bull_" + y])));
+  const draw = () => {
+    head.replaceChildren(...COLS.map(([n], i) => el("th", { style: "cursor:pointer;user-select:none;white-space:nowrap;position:sticky;top:0;background:var(--card, var(--bg));z-index:1" + (i ? "" : ";left:0;z-index:2"),
+      onclick: () => { if (sortI === i) dir = -dir; else { sortI = i; dir = i <= 2 ? 1 : -1; } draw(); } }, n + (sortI === i ? (dir > 0 ? " ▲" : " ▼") : ""))));
+    const get = COLS[sortI][1];
+    const list = rows.filter(r => (sector === "all" || String(r.rank) === sector) && (!q || (r.c.name + " " + r.c.ticker).toLowerCase().includes(q)))
+      .sort((a, b) => { const x = get(a), y = get(b); if (x == null) return y == null ? 0 : 1; if (y == null) return -1; return (x < y ? -1 : x > y ? 1 : 0) * dir || a.rank - b.rank || b.mcap - a.mcap; });
+    count.textContent = list.length + " of " + rows.length + " coins";
+    tbody.replaceChildren(...list.flatMap(r => {
+      const K = r.K, isOpen = open.has(r.c.ticker), N = r.c.notes || {};
+      const tr = el("tr", { style: "cursor:pointer", title: "Click for the thesis", onclick: () => { isOpen ? open.delete(r.c.ticker) : open.add(r.c.ticker); draw(); } },
+        el("td", { style: "position:sticky;left:0;background:var(--card, var(--bg));white-space:nowrap" }, el("span", { class: "muted" }, isOpen ? "▾ " : "▸ "), el("b", {}, r.c.ticker), " ", el("span", { class: "muted" }, r.c.name)),
+        el("td", { class: "muted", style: "white-space:nowrap" }, r.rank + " · " + r.sector.split(" (")[0].split(" / ")[0]),
+        el("td", {}, el("span", { class: "pill", style: "white-space:nowrap;color:" + css(stCol[r.status] || "--muted") }, r.status)),
+        el("td", { style: "text-align:right;white-space:nowrap" }, px(K.price)),
+        el("td", {}, el("div", { style: "display:flex;gap:6px;align-items:center" }, spark(r.c.spark), el("span", { class: cls(K.vs_btc_90d), style: "white-space:nowrap", title: "against BTC over 90 days" }, pct(K.vs_btc_90d, 0)))),
+        el("td", { style: "text-align:right;white-space:nowrap" }, usdBig(r.mcap)),
+        el("td", { style: "white-space:nowrap" }, r.ld ? (r.share >= 0.999 ? el("b", {}, "the leader") : el("span", {},
+          el("span", { style: "display:inline-block;vertical-align:middle;width:48px;height:6px;background:var(--line);border-radius:3px;margin-right:6px;position:relative" },
+            el("span", { style: "position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:" + css("--s1") + ";width:" + Math.max(2, Math.min(100, Math.sqrt(r.share) * 100)) + "%" })),
+          (r.share * 100 < 1 ? (r.share * 100).toFixed(2) : (r.share * 100).toFixed(1)) + "% of " + r.ld.symbol)) : "–"),
+        el("td", { style: "text-align:right", class: K.rsi_vs_btc >= 70 ? "down" : K.rsi_vs_btc <= 30 ? "up" : "" }, K.rsi_vs_btc == null ? "–" : K.rsi_vs_btc.toFixed(0)),
+        el("td", {}, cases(K, "2027"), el("div", { class: cls(r.up27), style: "font-size:12px" }, r.up27 == null ? "" : "base " + pct(r.up27, 0))),
+        el("td", {}, cases(K, "2028"), el("div", { class: cls(r.up28), style: "font-size:12px" }, r.up28 == null ? "" : "base " + pct(r.up28, 0) + (K.factor_2028 != null && Math.abs(K.factor_2028 - 1) > 0.005 ? " · fundamentals ×" + K.factor_2028.toFixed(2) : ""))),
+        el("td", { style: "white-space:nowrap" }, r.vsLeader28 == null ? "–" : (r.vsLeader28 >= 1 ? el("b", { class: "up" }, "×" + r.vsLeader28.toFixed(1) + " the leader") : (r.vsLeader28 * 100).toFixed(0) + "% of " + r.ld.symbol)));
+      if (!isOpen) return [tr];
+      return [tr, el("tr", {}, el("td", { colspan: COLS.length, style: "background:var(--chip);font-size:13px;white-space:normal;padding:0" },
+        el("div", { style: "position:sticky;left:0;max-width:min(900px, 86vw);padding:8px 10px" },
+        N.narrative ? el("div", {}, el("b", {}, "Why it fits: "), N.narrative) : null, N.standout ? el("div", { style: "margin-top:3px" }, el("b", {}, "What stands out: "), N.standout) : null,
+        N.thesis ? el("div", { style: "margin-top:3px" }, el("b", {}, "Thesis: "), N.thesis) : null,
+        el("div", { style: "margin-top:4px" }, el("button", { class: "pill", style: "cursor:pointer;border:0;font:inherit", onclick: e => { e.stopPropagation(); jump(r.c.ticker); } }, "Open " + r.c.ticker + "'s card and charts ↓"),
+          r.ld && r.share < 0.999 ? el("span", { class: "muted", style: "margin-left:8px" }, "To reach " + r.ld.name + "'s market cap (" + usdBig(r.ld.market_cap) + "): ×" + (r.toLeader >= 100 ? num(r.toLeader, 0) : r.toLeader.toFixed(1)) + ".") : null))))];
+    }));
+  };
+  const secs = [...new Map(rows.map(r => [r.rank, r.sector])).entries()].sort((a, b) => a[0] - b[0]);
+  const filt = el("div", { class: "seg", style: "flex-wrap:wrap" });
+  const drawFilt = () => filt.replaceChildren(...[["all", "All"], ...secs.map(([n, s]) => [String(n), n + " · " + s.split(" (")[0].split(" / ")[0]])].map(([k2, l2]) =>
+    el("button", { class: k2 === sector ? "on" : "", onclick: () => { sector = k2; drawFilt(); draw(); } }, l2)));
+  drawFilt();
+  const search = el("input", { type: "search", placeholder: "Find a coin", style: "font:inherit;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:inherit;min-width:140px",
+    oninput: e => { q = e.target.value.trim().toLowerCase(); draw(); } });
+  const csv = el("button", { class: "pill", style: "cursor:pointer;border:0;font:inherit", onclick: () => {
+    const hd = ["ticker", "name", "sector", "status", "price", "vs_btc_90d", "market_cap", "sector_leader", "leader_market_cap", "share_of_leader", "rsi_vs_btc",
+      "bear_2027", "base_2027", "bull_2027", "bear_2028", "base_2028", "bull_2028", "base_2028_mcap", "thesis"];
+    const esc = v => v == null ? "" : /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
+    const lines = [hd.join(",")].concat(rows.map(r => [r.c.ticker, r.c.name, r.sector, r.status, r.price, r.K.vs_btc_90d, r.mcap, r.ld && r.ld.symbol, r.ld && r.ld.market_cap, r.share, r.K.rsi_vs_btc,
+      r.K.bear_2027, r.K.base_2027, r.K.bull_2027, r.K.bear_2028, r.K.base_2028, r.K.bull_2028, r.K.mcap_base_2028, (r.c.notes || {}).thesis].map(esc).join(",")));
+    const a = el("a", { href: URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" })), download: "btc-cycles-candidates-" + (k.as_of || "") + ".csv" });
+    document.body.append(a); a.click(); a.remove();
+  } }, "Download CSV");
+  draw();
+  const lead = Object.entries(L).map(([n, l]) => n + " " + l.symbol + " " + usdBig(l.market_cap) + (l.candidate ? "" : "*")).join(" · ");
+  return card("All candidates at a glance",
+    el("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px" }, search, count, csv),
+    filt, el("div", { class: "scroll", style: "max-height:72vh;overflow:auto;margin-top:8px" }, el("table", {}, el("thead", {}, head), tbody)),
+    note("Click a column to sort, a row for the thesis. Price cases are the projection (BTC scenario × beta × unlock dilution × valuation; see a coin's chart for the method); " +
+      "the status is its sector's (Sectors tab). \"vs sector leader\" = the coin's market cap ÷ the largest in its sector, the bar on a square-root scale so small caps stay visible. " +
+      "Sector leaders: " + (lead || "–") + " (* not a candidate)."));
+}
+
 // mNAV strategies and the exit window: today's checklist, the rule backtests (recomputed from the live data), and how people value MSTR
 function strategiesCards(S) {
   if (!S) return [];
@@ -277,7 +365,7 @@ const VIEWS = {
     return [head, grid, top, tbl];
   },
   async candidates() {
-    const [d, k] = await Promise.all([api("candidates"), api("coins")]);
+    const [d, k, rot] = await Promise.all([api("candidates"), api("coins"), api("rotation").catch(() => null)]);
     const R = d.research, sc = k.scenarios || { scenarios: [] };
     const px = (v) => v == null ? "–" : v >= 1000 ? "$" + num(v, 0) : v >= 1 ? "$" + v.toFixed(2) : "$" + v.toPrecision(3);
     const r1 = v => v == null ? "–" : v.toFixed(0);
@@ -326,7 +414,9 @@ const VIEWS = {
       ["5 · x402 cumulative payment volume", ev["x402 cumulative payment volume (USD)"], usdBig], ["1 · Perp-DEX share of global futures", ev["Perp-DEX share of global futures (%)"], v => v == null ? "–" : v.toFixed(1) + "%"]]
       .map(([t, pts, f]) => pts && pts.length ? card(t, ...linesChart([{ name: t.slice(4), points: pts }], f, { small: true })) : null).filter(Boolean);
     const evidence = fold("Sector evidence without a liquid token (hand-entered; sources in data/btc-cycles/evidence.csv)", false, el("div", { class: "grid2" }, ...evCards));
-    return [index, docCard, method, ...sections, evidence];
+    const jump = t => { if (rows[t]) rows[t].scrollIntoView({ behavior: "smooth", block: "start" }); };
+    const glance = coins.length ? candidatesTable(k, rot, px, jump) : null;
+    return [glance, index, docCard, method, ...sections, evidence];
   },
   async etf() {
     const d = await api("etf"), K = d.kpi || {};

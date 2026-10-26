@@ -254,6 +254,38 @@ def coin_chart(cg_id: str, live: bool = False) -> tuple[pd.Series, pd.Series]:
     return parse_chart(fetch_json(url, TTL, min_bytes=1000))
 
 
+# ------------------------------------------------------------------ sector leaders: the largest token of each sector, candidate or not
+CG_MARKETS = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids={ids}&per_page=100&page=1"
+
+
+def leader_ids() -> list[str]:
+    cfg = json.loads((DATA_DIR / SLUG / "sector_status.json").read_text(encoding="utf-8"))
+    return sorted({i for s in cfg["sectors"] for i in s.get("benchmarks", [])})
+
+
+def sector_leaders(coins: list[dict]) -> dict:
+    """{rank: {name, symbol, market_cap, candidate}}: the largest market cap among a sector's candidates and its benchmark tokens.
+    Benchmarks come from one CoinGecko markets call made by the background fill; without it, the largest candidate."""
+    from ._base import cached_only
+    cfg = json.loads((DATA_DIR / SLUG / "sector_status.json").read_text(encoding="utf-8"))
+    try:
+        mk = {m["id"]: m for m in json.loads(cached_only(CG_MARKETS.format(ids=",".join(leader_ids()))))}
+    except Exception:
+        mk = {}
+    out = {}
+    for s in cfg["sectors"]:
+        pool = [{"name": c["name"], "symbol": c["ticker"], "market_cap": c["kpi"]["market_cap"], "candidate": True}
+                for c in coins if c.get("rank") == s["rank"] and c.get("kpi", {}).get("market_cap")]
+        tick = {c["symbol"] for c in pool}
+        for i in s.get("benchmarks", []):
+            m = mk.get(i)
+            if m and m.get("market_cap") and m["symbol"].upper() not in tick:
+                pool.append({"name": m["name"], "symbol": m["symbol"].upper(), "market_cap": float(m["market_cap"]), "candidate": False})
+        if pool:
+            out[s["rank"]] = max(pool, key=lambda x: x["market_cap"])
+    return out
+
+
 # ------------------------------------------------------------------ per-coin fundamentals: TVL, fees, unlock schedule, supply
 LLAMA_PROTO = "https://api.llama.fi/protocol/{slug}"
 LLAMA_FEES = "https://api.llama.fi/summary/fees/{slug}?dataType=dailyFees"
@@ -458,6 +490,12 @@ def fill_coins(pause_on_limit: float = 75.0) -> dict:
             try:
                 if cid == "bitcoin":
                     fetch_json(CG_VOLUME, TTL, min_bytes=1000)
+                    try:                                  # the sector leaders' market caps: one call for all of them
+                        time.sleep(max(0.0, PACE - (time.time() - _last_download[0])))
+                        _last_download[0] = time.time()
+                        fetch_json(CG_MARKETS.format(ids=",".join(leader_ids())), TTL, min_bytes=100)
+                    except Exception as e:
+                        done["leaders"] = f"{type(e).__name__}: {str(e)[:80]}"
                 else:
                     coin_chart(cid, live=True)
                 done[tick] = "ok"
@@ -543,7 +581,10 @@ def _coin_full(c: dict, btc: pd.Series) -> dict:
                     "rsi": _r(float(r_coin.dropna().iloc[-1]), 1) if r_coin.notna().any() else None,
                     "rsi_vs_btc": _r(float(r_ratio.dropna().iloc[-1]), 1) if r_ratio.notna().any() else None,
                     "beta": _r(beta, 2) if beta is not None else None, "vs_btc_90d": vs_btc_90,
-                    "base_2027": proj[0]["base"] if proj else None, "base_2028": proj[1]["base"] if len(proj) > 1 else None},
+                    "base_2027": proj[0]["base"] if proj else None, "base_2028": proj[1]["base"] if len(proj) > 1 else None,
+                    **{f"{k}_{p['date'][:4]}": p[k] for p in proj for k in ("bear", "bull")},
+                    **{f"mcap_base_{p['date'][:4]}": _r(p["base"] * supply / p["dilution"], 0) for p in proj if supply and p.get("dilution")},
+                    "factor_2028": proj[1].get("factor") if len(proj) > 1 else None},
             "spark": _pts(coin_px.iloc[-90:], 6),
             "series": {"price": _pts(coin_px, 6), "btc_indexed": _pts(btc_px / btc_px.iloc[0] * coin_px.iloc[0], 6), "ratio": _pts(ratio, 10),
                        "rsi": _pts(r_coin, 1), "rsi_vs_btc": _pts(r_ratio, 1), "market_cap": _pts(mc, 0)},
@@ -585,6 +626,7 @@ def _coins_now() -> dict:
             c["now"] = stands_out(c["kpi"], peers)
         else:
             c["notes"] = coin_notes()["coins"].get(c["ticker"], {})
+    out["leaders"] = sector_leaders(out["coins"])
     out["notes_about"] = coin_notes().get("about", "")
     out["btc_now"] = _r(float(btc.iloc[-1]), 0)
     out["as_of"] = max((c["kpi"]["date"] for c in out["coins"] if "kpi" in c), default=None)

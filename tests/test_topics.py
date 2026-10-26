@@ -1172,3 +1172,25 @@ def test_btc_schedule_adds_tokens_to_circulating_supply():
     F = C.fund_factors({"schedule": sched, "supply": {"max_supply": 15e9}}, px, mc, ["2027-12-31", "2028-12-31"])
     assert F["kpi"]["unlock_12m"] == pytest.approx(1.6 / 13.4, rel=0.02)            # capped at 15bn: +1.6bn, not +3bn or +50%
     assert F["factors"]["dilution"]["2028-12-31"] == pytest.approx(13.4 / 15, rel=1e-3)
+
+
+def test_btc_sector_leaders_and_case_fields(snapdir, monkeypatch):
+    from app.topics import btc_cycles as C
+    monkeypatch.setattr(C, "FUND_DIR", snapdir / "btc_fundamentals")
+    import json as _json
+    charts = _chart(mult=2.0)
+    markets = [{"id": "ethereum", "symbol": "eth", "name": "Ethereum", "market_cap": 4e11}, {"id": "uniswap", "symbol": "uni", "name": "Uniswap", "market_cap": 1}]
+    def dl(url, *a, **k):
+        if "coins/markets" in url:
+            assert "ethereum" in url and "uniswap" in url
+            return _json.dumps(markets)
+        return _json.dumps(charts["btc"] if "coins/bitcoin/" in url else charts["coin"])
+    monkeypatch.setattr(B, "_download", dl)
+    monkeypatch.setattr(C, "PACE", 0)
+    C.fill_coins()
+    k = C._coins_now()
+    L = k["leaders"]
+    assert L[6]["symbol"] == "ETH" and L[6]["candidate"] is False and L[6]["market_cap"] == 4e11       # a non-candidate leads L1s
+    assert L[1]["candidate"] is True                                     # Uniswap's tiny cap loses to the candidates
+    K = next(c for c in k["coins"] if c["ticker"] == "SOL")["kpi"]
+    assert K["bear_2027"] < K["base_2027"] < K["bull_2027"] and K["bear_2028"] < K["base_2028"] < K["bull_2028"] and K["mcap_base_2028"] > 0
