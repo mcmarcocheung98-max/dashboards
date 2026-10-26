@@ -262,11 +262,12 @@ def test_fed_range_with_a_point_target_from_the_api(fixtures, monkeypatch):
 
 def test_readings_come_from_the_cached_payloads(fixtures):
     assert D.READINGS() == []                                             # nothing computed yet: nothing to report, nothing fetched
-    for name in ("interest", "yields", "policy", "stress"):
+    for name in ("debt", "interest", "yields", "policy", "stress"):
         D.ENDPOINTS[name]()
     rows = D.READINGS()
     keys = {r["key"] for r in rows}
-    assert {"us_int_share", "us_int_vs_def", "y10_US", "gap_US", "spread_US"} <= keys
+    assert {r["tab"] for r in rows} == {"debt", "interest", "yields", "policy", "stress"}
+    assert {"debt_US", "us_per_day", "us_int_share", "us_int_vs_def", "y10_US", "gap_US", "spread_US"} <= keys
     assert all(r["lean"] in (-1, 0, 1) and r["tab"] in {"debt", "interest", "yields", "policy", "stress"} for r in rows)
     B.json_safe(rows)
 

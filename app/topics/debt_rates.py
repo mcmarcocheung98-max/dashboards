@@ -588,6 +588,12 @@ def READINGS() -> list[dict]:
     def add(tab, key, label, value, lean, note=None):
         if value is not None:
             out.append({"tab": tab, "key": key, "label": label, "value": value, "lean": lean or 0, **({"note": note} if note else {})})
+    d = got("debt")
+    for row in d.get("table") or []:
+        add("debt", f"debt_{row['country']}", f"{row['country']}: debt, % of GDP (IMF, latest year)", row.get("now"),
+            band(row.get("now"), 100, 60) if row["country"] in ("US", "UK") else 0)
+    add("debt", "us_per_day", "US federal debt added a day, last 12 months ($bn)", (d.get("us_now") or {}).get("per_day_bn"),
+        band((d.get("us_now") or {}).get("per_day_bn"), 6, 3))
     us = got("interest").get("us") or {}
     share, r = last(us.get("share")), us.get("rolling") or {}
     add("interest", "us_int_share", "US net interest, % of federal receipts", share, band(share, 15, 10), "+1 at 15% or more, -1 at 10% or less")

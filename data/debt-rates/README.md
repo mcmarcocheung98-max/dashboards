@@ -54,7 +54,7 @@ All rows carry a `source` URL. Rows whose `note` says **verify** were written fr
 
 ## What changed since yesterday (READINGS)
 
-`READINGS()` reports the headline readings from the cached tab payloads. **lean +1 means more fiscal stress, -1 less**: US interest
+`READINGS()` reports the headline readings from the cached tab payloads. **lean +1 means more fiscal stress, -1 less**: US and UK debt % of GDP (+1 at 100% or more, -1 at 60% or less; China and HK lean 0), US debt added a day (+1 at $6bn or more, -1 at $3bn or less), US interest
 share of receipts (+1 at 15% or more, -1 at 10% or less), US interest above defence (+1), UK interest share (+1 at 10%, -1 at 7%),
 US and UK 10-year yields (+1 at 4.5% or more, -1 at 3% or less), each country's stress gap (+1 above +0.5 points of GDP, -1 below
 -0.5) and the US and UK 10-year minus policy spread (+1 at 1.5 points or more, -1 at zero or below). Policy rates and the HK and China
