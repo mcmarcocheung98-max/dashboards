@@ -15,11 +15,14 @@ free API, so a few points copied by hand with their source). Indeed data: CC BY 
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import time
 from io import StringIO
 
 import pandas as pd
 
+from . import _base
 from ._base import DAY, _pts, _r, fetch, fetch_csv, latest_date, manual, manual_rows, monthly, payload, weekly, yoy
 
 IND = "https://raw.githubusercontent.com/hiring-lab/job_postings_tracker/master/{cc}/job_postings_by_sector_{cc}.csv"
@@ -110,12 +113,32 @@ def parse_bls(j: dict) -> dict[str, pd.Series]:
     return out
 
 
+def _bls_query(body: dict) -> dict[str, pd.Series]:
+    """One BLS query, keeping the last reply that parsed. BLS answers an over-limit request with HTTP 200 and an error body, which
+    the shared snapshot would keep in place of good data, and every restart re-asks (25 queries a day for the whole server). So a
+    good reply younger than a day is used without asking, and an error falls back to the last good reply, marked stale."""
+    good = _base.SNAP_DIR / ("bls-good-" + hashlib.sha1(json.dumps(body, sort_keys=True).encode()).hexdigest()[:16] + ".json")
+    if good.exists() and time.time() - good.stat().st_mtime < TTL:
+        return parse_bls(json.loads(good.read_text(encoding="utf-8")))
+    try:
+        text = fetch(BLS, TTL, post=body)
+        out = parse_bls(json.loads(text))
+    except Exception:
+        if not good.exists():
+            raise
+        _base.STALE[BLS] = good.stat().st_mtime
+        return parse_bls(json.loads(good.read_text(encoding="utf-8")))
+    good.parent.mkdir(parents=True, exist_ok=True)
+    good.write_text(text, encoding="utf-8")
+    _base.STALE.pop(BLS, None)
+    return out
+
+
 def bls_all() -> dict[str, pd.Series]:
     """Every employment and pay series in two queries (2010-19 and 2020-now), cached a day: well inside the 25-a-day limit."""
     ids = sorted(set(US_SERIES.values()) | set(US_WAGES.values()))
     now = pd.Timestamp.now().year
-    parts = [parse_bls(json.loads(fetch(BLS, TTL, post={"seriesid": ids, "startyear": str(a), "endyear": str(b)})))
-             for a, b in ((2010, 2019), (2020, now))]
+    parts = [_bls_query({"seriesid": ids, "startyear": str(a), "endyear": str(b)}) for a, b in ((2010, 2019), (2020, now))]
     return {i: pd.concat([p[i] for p in parts if i in p]).sort_index() for i in ids if any(i in p for p in parts)}
 
 

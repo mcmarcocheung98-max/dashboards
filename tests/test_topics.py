@@ -692,6 +692,28 @@ def ramp_page(months: int = 39) -> str:
     return '<html><meta name="description" content="In September 2026, 55.9% of U.S. businesses on Ramp paid for AI"/><script>self.__next_f.push([1,"' + payload + '"])</script>' + " " * 50000
 
 
+def test_bls_over_the_daily_limit_keeps_the_last_good_reply(snapdir, monkeypatch):
+    import os
+    from app.topics import ai_jobs as J
+    calls = []
+    def fetch(url, ttl, **k):
+        calls.append(url)
+        return jobs_fetch(url, ttl, **k)
+    monkeypatch.setattr(J, "fetch", fetch)
+    assert J._wages_now()["as_of"] and len([c for c in calls if "bls" in c]) == 2
+    J._wages_now()
+    assert len([c for c in calls if "bls" in c]) == 2                    # a good reply under a day old: no new request (restarts are free)
+    for f in snapdir.glob("bls-good-*"):
+        os.utime(f, (time.time() - 2 * 86400,) * 2)
+    from app import cache
+    cache._cache.clear()
+    over = json.dumps({"status": "REQUEST_NOT_PROCESSED", "message": ["Daily threshold for total number of requests allocated is reached."], "Results": {}})
+    monkeypatch.setattr(J, "fetch", lambda url, ttl, **k: over if "bls" in url else jobs_fetch(url, ttl, **k))
+    w = J._wages_now()
+    assert w["as_of"] and set(w["levels"]) == set(J.US_WAGES) and J.BLS in w["stale"]
+    h = J._headcount_now()
+    assert h["US"] and not h.get("US_error")
+
 def test_ramp_ai_index_parser():
     from app.topics.ai_adoption import parse_ramp
     s = parse_ramp(ramp_page())
