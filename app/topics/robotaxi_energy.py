@@ -1,6 +1,7 @@
 """Energy tab of /robotaxi: how fast the US, UK, Hong Kong and mainland China move to electric cars and to wind and solar power.
 
-ev     electric share of new cars per market and year (hand-entered from SMMT, CPCA, Cox/KBB, DOE/Argonne and HK government papers:
+ev     electric (BEV + PHEV) share of new car registrations per market and month, rolling 12 months, from Ember's EV sales data
+       (CSV, automated; Hong Kong included); the official yearly figures per market and definition (hand-entered from SMMT, CPCA, Cox/KBB, DOE/Argonne and HK government papers:
        data/robotaxi/ev_share.csv), and the latest month or quarter (ev_latest.csv)
 power  solar and wind share of electricity generation per market and year, and per month, from Ember's yearly and monthly
        electricity data (CSV, CC BY 4.0, automated); official cross-checks hand-entered in power_checks.csv
@@ -19,6 +20,8 @@ DASHBOARD = "robotaxi"
 SLUG = "robotaxi"
 EMBER_YEARLY = "https://files.ember-energy.org/public-downloads/generation/outputs/release_generation_yearly_global.csv"
 EMBER_MONTHLY = "https://files.ember-energy.org/public-downloads/generation/outputs/release_generation_monthly_global.csv"
+EMBER_EV = "https://storage.googleapis.com/emb-prod-bkt-publicdata/public-downloads/transport/outputs/monthly_ev_sales.csv"
+EV_DRIVETRAIN = "Electric vehicle (BEV+PHEV)"
 MARKETS = {"United States": "US", "United Kingdom": "UK", "China": "China", "Hong Kong": "Hong Kong"}   # Ember area -> label
 SOURCES_SW = ("Solar", "Wind")
 
@@ -78,6 +81,41 @@ def _power() -> dict:
     return out
 
 
+def parse_ember_ev(text: str) -> dict[str, pd.DataFrame]:
+    """Ember's monthly EV sales CSV -> per market, a monthly frame with share (%) and rolling 12-month share (%) of registrations that
+    are battery-electric or plug-in hybrid."""
+    d = pd.read_csv(StringIO(text), dtype=str)
+    need = {"Area", "Date", "Drivetrain", "Share of registrations (%)", "Rolling 12-month share of registrations (%)"}
+    if not need <= set(d.columns):
+        raise ValueError("Ember EV layout changed")
+    if "Data frequency" in d.columns:
+        d = d[d["Data frequency"].str.strip().str.lower() == "monthly"]
+    d = d[d["Drivetrain"].str.strip() == EV_DRIVETRAIN].copy()
+    d["market"] = d["Area"].map(_market)
+    d = d.dropna(subset=["market"])
+    out = {}
+    for m, g in d.groupby("market"):
+        f = pd.DataFrame({"share": pd.to_numeric(g["Share of registrations (%)"], errors="coerce").values,
+                          "r12": pd.to_numeric(g["Rolling 12-month share of registrations (%)"], errors="coerce").values},
+                         index=pd.to_datetime(g["Date"], errors="coerce")).sort_index()
+        f = f[f.index.notna()]
+        if len(f):
+            out[m] = f
+    return out
+
+
+def _ev_ember() -> dict:
+    ev = parse_ember_ev(fetch(EMBER_EV, DAY, min_bytes=100000))
+
+    def year_ago(s, t):
+        v = s.get(t - pd.DateOffset(years=1))
+        return None if v is None or pd.isna(v) else _r(v, 2)
+    return {"r12": {m: _pts(f["r12"].dropna(), 2) for m, f in ev.items()},
+            "monthly": {m: _pts(f["share"].dropna(), 2) for m, f in ev.items()},
+            "latest": {m: {"month": str(f.index[-1].date()), "share": _r(f["share"].iloc[-1], 2), "r12": _r(f["r12"].iloc[-1], 2),
+                           "r12_year_ago": year_ago(f["r12"], f.index[-1])} for m, f in ev.items()}}
+
+
 def _ev() -> dict:
     ev = manual(SLUG, "ev_share")
     ev = ev if isinstance(ev, dict) else {}
@@ -89,9 +127,9 @@ def _ev() -> dict:
 
 
 def energy_now() -> dict:
-    out = payload({"ev": _ev, "power": _power}, sources=[EMBER_YEARLY, EMBER_MONTHLY])
+    out = payload({"ev": _ev, "ev_ember": _ev_ember, "power": _power}, sources=[EMBER_YEARLY, EMBER_MONTHLY, EMBER_EV])
     out["checks"] = sorted(manual_rows(SLUG, "power_checks"), key=lambda r: (r["market"], r["date"]))
-    dates = [r["date"] for r in (out.get("ev") or {}).get("months", [])]
+    dates = [r["date"] for r in (out.get("ev") or {}).get("months", [])] + [x["month"] for x in ((out.get("ev_ember") or {}).get("latest") or {}).values()]
     out["as_of"] = max(dates, default=None)
     return out
 

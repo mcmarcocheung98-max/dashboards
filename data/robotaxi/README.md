@@ -67,15 +67,17 @@ Code in `app/topics/robotaxi_energy.py` (a helper module of this dashboard; `END
 
 | Card | Source | How |
 |---|---|---|
-| Electric share of new cars, by year | SMMT (UK), CPCA (China), Cox Automotive / Kelley Blue Book and DOE / Argonne (US), HK government papers to LegCo and press releases | Hand-entered: `ev_share.csv`, one series per market and definition |
+| Electric share of new cars, rolling 12 months (and the headline) | [Ember EV sales data](https://ember-energy.org/data/monthly-ev-sales-data/), CSV, CC BY 4.0: `monthly_ev_sales.csv`, drivetrain "Electric vehicle (BEV+PHEV)", columns `Share of registrations (%)` and `Rolling 12-month share of registrations (%)`; covers all four markets including Hong Kong | Automated, daily |
+| Electric share of new cars, by year (each country's official measure) | SMMT (UK), CPCA (China), Cox Automotive / Kelley Blue Book and DOE / Argonne (US), HK government papers to LegCo and press releases | Hand-entered: `ev_share.csv`, one series per market and definition |
 | Latest month or quarter | Same publishers | Hand-entered: `ev_latest.csv` |
 | Wind and solar share of electricity, by year and by month | [Ember yearly](https://ember-energy.org/data/yearly-electricity-data/) and [monthly](https://ember-energy.org/data/monthly-electricity-data/) electricity data, CSV, CC BY 4.0 | Automated: `release_generation_yearly_global.csv` and `release_generation_monthly_global.csv`, daily |
 | Cross-checks | EIA (US), DESNZ Energy Trends (UK), Ember's Global Electricity Review (China), HK government | Hand-entered: `power_checks.csv` |
 
+- **Ember's Hong Kong** is "Hong Kong (SAR of China)": in the yearly power file and the EV file, not in the monthly power file. Macao and Taiwan are not matched.
 - **Ember layout** (July 2026): one row per area, period (`Year` or `Date`) and `Electricity source`, with `Share of generation (%)` as a column. The parser keeps the rows for United States, United Kingdom, China and any area named Hong Kong, and adds Solar and Wind. If Ember renames a column, the card says "not available right now (ValueError)".
 - **EV shares are not like for like:** the UK counts registrations, China counts retail sales including plug-in hybrids and range-extenders, the US counts light vehicles (Cox: battery-electric only), and Hong Kong counts private cars only. The series names say which.
 - **Batteries** store electricity rather than generate it, so they are not in the generation shares. EIA's Electric Power Annual table 3.27 has US battery net generation (negative: charging losses) if a storage card is wanted later.
-- **To update:** SMMT publishes on about the 5th of each month, CPCA in the second week, and Cox each quarter. Add the latest to `ev_latest.csv`, and in January add the full year to `ev_share.csv`. Hong Kong's 2026 figures should come from the Transport Department's monthly first-registration tables; the press figures since the tax concession ended on 31 Mar 2026 conflict.
+- **To update:** SMMT publishes on about the 5th of each month, CPCA in the second week, and Cox each quarter. Add the latest to `ev_latest.csv`, and in January add the full year to `ev_share.csv`. Hong Kong's 2026 figures are on the Ember chart (which compiles the Transport Department's registrations); the press figures since the tax concession ended on 31 Mar 2026 conflict, so the yearly hand-entered series stops at 2025.
 - **Energy readings:** `ev_uk_bev`, `ev_china_nev`, `ws_china` and `ws_us` are +1 when the latest year's share is above the year before, and −1 when below.
 
 ## What changed since yesterday (READINGS)

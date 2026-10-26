@@ -385,36 +385,6 @@ def cpuc_trips(max_new: int = 3) -> dict[str, pd.Series]:
     return out
 
 
-ENERGY_PROBES = {
-    "ember yearly": "https://files.ember-energy.org/public-downloads/generation/outputs/release_generation_yearly_global.csv",
-    "ember monthly": "https://files.ember-energy.org/public-downloads/generation/outputs/release_generation_monthly_global.csv",
-    "ember ev sales": "https://storage.googleapis.com/emb-prod-bkt-publicdata/public-downloads/transport/outputs/monthly_ev_sales.csv",
-}
-
-
-def _energy_probe() -> dict:
-    """Not a tab: for each candidate Energy CSV, its header, size, the areas it covers, the latest period and sample rows for the four
-    markets, as this server sees them (/api/robotaxi/energy_probe)."""
-    import csv
-    import requests
-    out = {}
-    for k, u in ENERGY_PROBES.items():
-        try:
-            r = requests.get(u, headers=UA, timeout=120)
-            rows = list(csv.reader(StringIO(r.text)))
-            head, body = rows[0], rows[1:]
-            area = head.index("Area") if "Area" in head else 0
-            when = next((i for i, h in enumerate(head) if h.lower() in ("year", "date", "month")), 2)
-            areas = sorted({x[area] for x in body if len(x) > area})
-            want = [a for a in areas if any(w in a.lower() for w in ("united kingdom", "united states", "china", "hong kong"))]
-            out[k] = {"status": r.status_code, "bytes": len(r.content), "rows": len(body), "header": head, "n_areas": len(areas), "areas_wanted": want,
-                      "latest": max((x[when] for x in body if len(x) > when), default=None),
-                      "sample": [x for x in body if len(x) > area and x[area] in want][-12:]}
-        except Exception as e:
-            out[k] = {"error": f"{type(e).__name__}: {str(e)[:160]}"}
-    return out
-
-
 # ------------------------------------------------------------------ READINGS
 def _cached_payload(name: str) -> dict:
     from ..cache import _cache
@@ -491,5 +461,5 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 
 
 ENDPOINTS = {"rides": _cached_ep("rides", _rides_now, 600), "footprint": _cached_ep("footprint", _footprint_now, 600), "safety": _cached_ep("safety", _safety_now),
-             "tesla": _cached_ep("tesla", _tesla_now), "energy_probe": _cached_ep("energy_probe", _energy_probe, 3600),
+             "tesla": _cached_ep("tesla", _tesla_now),
              "energy": _cached_ep("energy", lambda: E.energy_now())}

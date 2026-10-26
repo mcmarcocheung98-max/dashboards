@@ -86,16 +86,21 @@ const VIEWS = {
     return [head, px, el("div", { class: "grid2" }, qc, fsd), sig, corr, ms];
   },
   async energy() {
-    const d = await api("energy"), E = d.ev || {}, P = d.power || {};
+    const d = await api("energy"), E = d.ev || {}, P = d.power || {}, M = d.ev_ember || {};
     const short = k => k.split(" (")[0];
     const head = card(null, el("div", { class: "kpis" },
-      ...Object.entries(E.latest || {}).filter(([k]) => !k.includes("plug-in (")).map(([k, v]) => kpi(short(k) + " share of new cars, " + v.year + (k.startsWith("UK: battery") && v.year === 2026 ? " (Jan–Sep)" : ""), v.share.toFixed(1) + "%")),
+      ...Object.entries(M.latest || {}).map(([m, v]) => kpi(m + ": electric share of new cars, 12 months to " + dateOf(v.month).replace(/^\d+ /, ""), v.r12.toFixed(1) + "%",
+        v.r12_year_ago == null ? "" : cls(v.r12 - v.r12_year_ago))),
       ...Object.entries(P.latest || {}).map(([m, v]) => kpi(m + ": wind + solar share of electricity, " + v.year, v.share.toFixed(1) + "%"))), asOf(d), stale(d));
-    const ev = card("Electric share of new cars, by year", ...linesChart(Object.entries(E.yearly || {}).map(([k, pts]) => ({ name: short(k), points: pts })), v => v.toFixed(1) + "%", { sync: false }),
+    const ev = card("Electric share of new cars, by year: each country's official measure", ...linesChart(Object.entries(E.yearly || {}).map(([k, pts]) => ({ name: short(k), points: pts })), v => v.toFixed(1) + "%", { sync: false }),
       note("Definitions differ: UK battery-electric and plug-in (SMMT registrations); China new energy vehicles including plug-in hybrids and range-extenders (CPCA retail); US battery-electric (Cox Automotive / Kelley Blue Book) and plug-in (DOE / Argonne); Hong Kong electric share of newly registered private cars (government papers). UK 2026 is January to September. Hong Kong 2026 is left out: the figures since its EV tax concession ended on 31 March conflict."),
       el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Latest", "Market", "Measure", "Share", "Source"].map(h => el("th", {}, h))),
         ...(E.months || []).map(r => el("tr", {}, el("td", {}, dateOf(r.date)), el("td", {}, r.market), el("td", { class: "wrap" }, r.measure), el("td", {}, (+r.value).toFixed(1) + "%"),
           el("td", { class: "wrap" }, link(host(r.source), r.source), r.note ? " · " + r.note : ""))))));
+    const mr = Object.entries(M.r12 || {});
+    const evm = mr.length ? card("Electric share of new cars, rolling 12 months (Ember)", ...linesChart(mr.map(([m, pts]) => ({ name: m, points: pts })), v => v.toFixed(1) + "%"),
+      note("Battery-electric plus plug-in hybrid cars as a share of new car registrations, the last 12 months at each month, from Ember's EV sales data (CC BY 4.0), which compiles SMMT, CPCA, Hong Kong's Transport Department and US sources into one definition. The yearly chart below keeps each country's own official measure."), stale(d))
+      : d.ev_ember_error ? card("Electric share of new cars, by month", el("div", { class: "err" }, "Not available right now (" + d.ev_ember_error + ").")) : null;
     const py = Object.entries(P.yearly || {});
     const pw = py.length ? card("Wind and solar share of electricity generation, by year (Ember)", ...linesChart(py.map(([m, pts]) => ({ name: m, points: pts })), v => v.toFixed(1) + "%", { sync: false }),
       note("Ember's yearly electricity data (CC BY 4.0): solar + wind generation as a share of all generation. Batteries store rather than generate, so they are not in it. The yearly charts show every year whatever the date buttons say."), stale(d))
@@ -107,7 +112,7 @@ const VIEWS = {
       ...(d.checks || []).map(r => el("tr", {}, el("td", {}, r.date.slice(0, 4)), el("td", {}, r.market), el("td", { class: "wrap" }, r.measure), el("td", {}, r.value + "%"),
         el("td", { class: "wrap" }, link(host(r.source), r.source), r.note ? " · " + r.note : ""))))),
       note("EIA (US), DESNZ Energy Trends (UK), Ember's Global Electricity Review (China) and the Hong Kong government, which publishes a zero-carbon share rather than wind and solar. Kept in data/robotaxi/power_checks.csv."));
-    return [head, ev, pw, monthly, checks];
+    return [head, evm, ev, pw, monthly, checks];
   },
 };
 window.TOPIC = { VIEWS };

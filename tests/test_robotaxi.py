@@ -27,12 +27,33 @@ def _ember(periods, when="Year", per=1.0):
 YEARLY = _ember(range(2015, 2026))
 MONTHLY = _ember([d.strftime("%Y-%m-01") for d in pd.date_range("2021-01-01", "2026-08-01", freq="MS")], when="Date", per=1 / 12)
 
+EV_HEAD = ("Area,ISO 3 code,Area type,Date,Data frequency,Drivetrain,Is aggregate drivetrain,Registrations,Registrations YoY change,"
+           "Registrations YoY change (%),Share of registrations (%),Year-to-date registrations,Year-to-date share of registrations (%),"
+           "Rolling 3-month registrations,Rolling 3-month share of registrations (%),Rolling 12-month registrations,Rolling 12-month share of registrations (%)\n")
+EV_AREAS = {"United States": 7.0, "United Kingdom": 25.0, "China": 45.0, "Hong Kong (SAR of China)": 70.0, "Germany": 20.0}
+
+
+def _ember_ev():
+    rows = []
+    for area, base in EV_AREAS.items():
+        for i, d in enumerate(pd.date_range("2022-01-01", "2026-09-01", freq="MS")):
+            share = round(base + 0.2 * i + (2 if d.month == 3 else 0), 2)
+            for dt, sh, agg in (("Electric vehicle (BEV+PHEV)", share, "True"), ("Combustion (unspecified)", round(100 - share, 2), "False"),
+                                ("All drivetrains", 100.0, "True")):
+                rows.append(f"{area},X,Country or economy,{d.date()},Monthly,{dt},{agg},100,,,{sh},,,,,,{round(sh - 0.5, 2)}")
+    return EV_HEAD + "\n".join(rows) + "\n"
+
+
+EV = _ember_ev()
+
 
 def fake_fetch(url, ttl=0, **k):
     if url == E.EMBER_YEARLY:
         return YEARLY
     if url == E.EMBER_MONTHLY:
         return MONTHLY
+    if url == E.EMBER_EV:
+        return EV
     raise OSError(f"no fixture for {url}")
 
 
@@ -84,3 +105,14 @@ def test_robotaxi_registers_itself_with_the_energy_tab():
     t = topics.REGISTRY["robotaxi"]
     assert t is R.TOPIC and ("energy", "Energy") in t.tabs and "energy" in R.ENDPOINTS
     assert "robotaxi" not in {b.slug for b in topics.BUILTIN} and topics.helpers().get("robotaxi_energy") == "robotaxi"
+
+
+def test_ember_ev_shares_for_the_four_markets(mocked):
+    ev = E.parse_ember_ev(EV)
+    assert set(ev) == {"US", "UK", "China", "Hong Kong"} and ev["UK"].index[-1] == pd.Timestamp("2026-09-01")   # Germany and other drivetrains dropped
+    p = E.energy_now()
+    x = p["ev_ember"]["latest"]["Hong Kong"]
+    assert x["month"] == "2026-09-01" and x["share"] == pytest.approx(70 + 0.2 * 56) and x["r12_year_ago"] == pytest.approx(70 + 0.2 * 44 - 0.5)
+    assert len(p["ev_ember"]["r12"]["China"]) == 57 and p["as_of"] == "2026-09-01"
+    with pytest.raises(ValueError):
+        E.parse_ember_ev("Area,Date,Value\nX,2026-01-01,1\n")
