@@ -30,11 +30,11 @@ date,series,value,source,note
 2026-01-01,Production,408386,https://www.sec.gov/Archives/edgar/data/1318605/000162828026022956/exhibit9911111.htm,Q1 2026 production and deliveries release
 2026-04-01,Production,451758,https://www.sec.gov/Archives/edgar/data/1318605/000162828026046717/exhibit99111111.htm,Q2 2026 production and deliveries release
 2026-07-01,Production,464391,https://www.sec.gov/Archives/edgar/data/1318605/000162828026064366/exhibit991111111.htm,Q3 2026 production and deliveries release
-2023-01-01,Energy storage deployed (GWh),3.889,https://www.sec.gov/Archives/edgar/data/1318605/000156459023005126/tsla-ex991_7.htm,3,889 MWh; 2023 quarters in MWh from the Q4 2023 Update table
-2023-04-01,Energy storage deployed (GWh),3.653,https://www.sec.gov/Archives/edgar/data/1318605/000095017023031241/tsla-ex99_1.htm,3,653 MWh
-2023-07-01,Energy storage deployed (GWh),3.98,https://www.sec.gov/Archives/edgar/data/1318605/000095017023050938/tsla-ex99_1.htm,3,980 MWh
-2023-10-01,Energy storage deployed (GWh),3.202,https://www.sec.gov/Archives/edgar/data/1318605/000095017024000282/tsla-ex99_1.htm,3,202 MWh
-2024-01-01,Energy storage deployed (GWh),4.053,https://www.sec.gov/Archives/edgar/data/1318605/000095017024040274/tsla-ex99_1.htm,4,053 MWh
+2023-01-01,Energy storage deployed (GWh),3.889,https://www.sec.gov/Archives/edgar/data/1318605/000156459023005126/tsla-ex991_7.htm,"3,889 MWh; 2023 quarters in MWh from the Q4 2023 Update table"
+2023-04-01,Energy storage deployed (GWh),3.653,https://www.sec.gov/Archives/edgar/data/1318605/000095017023031241/tsla-ex99_1.htm,"3,653 MWh"
+2023-07-01,Energy storage deployed (GWh),3.98,https://www.sec.gov/Archives/edgar/data/1318605/000095017023050938/tsla-ex99_1.htm,"3,980 MWh"
+2023-10-01,Energy storage deployed (GWh),3.202,https://www.sec.gov/Archives/edgar/data/1318605/000095017024000282/tsla-ex99_1.htm,"3,202 MWh"
+2024-01-01,Energy storage deployed (GWh),4.053,https://www.sec.gov/Archives/edgar/data/1318605/000095017024040274/tsla-ex99_1.htm,"4,053 MWh"
 2024-04-01,Energy storage deployed (GWh),9.4,https://www.sec.gov/Archives/edgar/data/1318605/000162828024030714/exhibit991.htm,production deliveries and deployments release
 2024-07-01,Energy storage deployed (GWh),6.9,https://www.sec.gov/Archives/edgar/data/1318605/000162828024041816/ex991.htm,production deliveries and deployments release
 2024-10-01,Energy storage deployed (GWh),11.0,https://www.sec.gov/Archives/edgar/data/1318605/000162828025000007/exhibit991.htm,production deliveries and deployments release
