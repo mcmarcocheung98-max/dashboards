@@ -185,6 +185,78 @@ def tesla_vs_price(px: pd.Series, t: dict[str, pd.Series], min_n: int = 6) -> di
     return {"rows": rows, "quarters": table}
 
 
+FIN_LAG = pd.Timedelta(days=35)      # financials count as known 35 days after the quarter: after Tesla's earnings call (about day 20-29)
+COST = 0.001                         # per switch between TSLA and cash
+
+
+def _known(q: pd.Timestamp, release: bool) -> pd.Timestamp:
+    """When a quarter's figure became public: the deliveries release on the 2nd of the following month, else the earnings lag."""
+    end = q + pd.DateOffset(months=3)
+    return end + pd.Timedelta(days=1) if release else end - pd.Timedelta(days=1) + FIN_LAG
+
+
+def tesla_signal(px: pd.Series, t: dict[str, pd.Series], threshold: float = 0.0) -> dict:
+    """A composite of every quarterly figure in CORR_METRICS, rebuilt on each day a figure came out using only what was public then:
+    each metric votes +1 if better than a year earlier, -1 if worse (volumes and revenue by % change, margins/EPS/cash flow/FSD by
+    level), and the signal is the mean vote. Backtest: hold TSLA from the next trading day while the signal is above `threshold`,
+    otherwise cash (no interest), COST per switch; against buy-and-hold over the same days."""
+    px = px.dropna().sort_index()
+    known: list[tuple[pd.Timestamp, str, int]] = []           # (date public, metric, vote)
+    for name, how, release in CORR_METRICS:
+        m = t.get(name)
+        if m is None or len(m) < 5:
+            continue
+        m = m.sort_index()
+        chg = m.pct_change(4, fill_method=None) if how == "pct" else m.diff(4)
+        for q, c in chg.dropna().items():
+            if q - pd.DateOffset(years=1) in m.index:                 # four rows back really is the same quarter a year earlier
+                known.append((_known(q, release), name, 1 if c > 0 else -1 if c < 0 else 0))
+    if not known or len(px) < 30:
+        return {"events": [], "stats": None}
+    known.sort()
+    dates = sorted({d for d, _, _ in known if px.index[0] <= d <= px.index[-1]})
+    events, latest = [], {}
+    for d in dates:
+        for k_d, name, v in known:
+            if k_d <= d:
+                latest[name] = v
+        sig = sum(latest.values()) / len(latest)
+        events.append({"date": str(d.date()), "signal": _r(sig, 3), "votes": dict(latest), "long": bool(sig > threshold)})
+    if not events:
+        return {"events": [], "stats": None}
+    # position from the trading day after each event (the release lands that morning or after the close)
+    start = pd.Timestamp(events[0]["date"])
+    days = px[px.index > start]
+    ret = px.pct_change().reindex(days.index).fillna(0.0)
+    pos = pd.Series(0.0, index=days.index)
+    sig_daily = pd.Series(float("nan"), index=days.index)
+    for e in events:
+        after = days.index > pd.Timestamp(e["date"])
+        pos[after] = 1.0 if e["long"] else 0.0
+        sig_daily[after] = e["signal"]
+    switches = pos.diff().abs().fillna(pos.iloc[0])
+    strat = (1 + pos * ret - switches * COST).cumprod()
+    hold = (1 + ret).cumprod()
+    years = max((days.index[-1] - days.index[0]).days / 365.25, 1e-9)
+
+    def stats(eq):
+        dd = eq / eq.cummax() - 1
+        return {"total": _r(eq.iloc[-1] - 1, 4), "cagr": _r(eq.iloc[-1] ** (1 / years) - 1, 4), "max_drawdown": _r(dd.min(), 4)}
+    for i, e in enumerate(events):                        # what TSLA did until the next event: did the signal call it?
+        a = px[px.index > pd.Timestamp(e["date"])]
+        b_date = pd.Timestamp(events[i + 1]["date"]) if i + 1 < len(events) else px.index[-1]
+        b = px[px.index <= b_date]
+        e["tsla_next"] = _r(float(b.iloc[-1] / a.iloc[0] - 1), 4) if len(a) and len(b) and b.index[-1] >= a.index[0] else None
+    called = [e for e in events if e["tsla_next"] is not None and e["tsla_next"] != 0]
+    hits = sum((e["long"] and e["tsla_next"] > 0) or (not e["long"] and e["tsla_next"] < 0) for e in called)
+    first = float(px[px.index <= start].iloc[-1]) if len(px[px.index <= start]) else float(days.iloc[0])
+    return {"events": events, "threshold": threshold, "cost": COST,
+            "stats": {"from": str(days.index[0].date()), "to": str(days.index[-1].date()), "years": _r(years, 2),
+                      "strategy": stats(strat), "buy_hold": stats(hold), "invested": _r(float(pos.mean()), 3),
+                      "switches": int(switches.sum()), "periods": len(called), "hits": int(hits), "metrics": len(latest)},
+            "equity": _pts(strat * first, 2), "hold": _pts(hold * first, 2), "signal": _pts(sig_daily.dropna(), 3)}
+
+
 def _tesla_now() -> dict:
     t = manual(SLUG, "tesla")
     t = t if isinstance(t, dict) else {}
@@ -207,6 +279,7 @@ def _tesla_now() -> dict:
     if out.get("tsla"):                                                             # last, so a log tail of /api/robotaxi/tesla shows it
         px = pd.Series([v for _, v in out["tsla"]], index=pd.to_datetime([ts for ts, _ in out["tsla"]], unit="s"))
         _part(out, "correlation", lambda: tesla_vs_price(px, t))
+        _part(out, "signal", lambda: tesla_signal(px, t))
     return out
 
 
@@ -302,6 +375,72 @@ def cpuc_trips(max_new: int = 3) -> dict[str, pd.Series]:
         cur = out.get(k, pd.Series(dtype=float))
         out[k] = pd.concat([cur, v[~v.index.isin(cur.index)]]).sort_index()
     return out
+
+
+# ------------------------------------------------------------------ READINGS
+def _cached_payload(name: str) -> dict:
+    from ..cache import _cache
+    return (_cache.get(f"topic:{SLUG}:{name}") or (0, {}))[1] or {}
+
+
+def _cmp(a, b, better_up: bool = True) -> int:
+    if a is None or b is None or a == b:
+        return 0
+    return (1 if a > b else -1) * (1 if better_up else -1)
+
+
+def readings(got) -> list[dict]:
+    """Headline indicators per tab from the tab payloads. +1 = adoption speeding up, safety improving or TSLA leaning up; -1 the
+    opposite; 0 flat or unknown."""
+    out: list[dict] = []
+    now = pd.Timestamp.now().normalize()
+    r = got("rides")
+    for key, op, src in (("waymo_weekly", "Waymo", "weekly"), ("baidu_quarterly", "Baidu Apollo Go", "quarterly")):
+        pts = (r.get(src) or {}).get(op) or []
+        if pts:
+            prev = pts[-2][1] if len(pts) > 1 else None
+            out.append({"tab": "rides", "key": key, "label": f"{op}: rides a {'week' if src == 'weekly' else 'quarter'}", "value": pts[-1][1],
+                        "lean": _cmp(pts[-1][1], prev), "note": f"as announced {pd.Timestamp(pts[-1][0], unit='s').date()}; previous {prev}"})
+    f = got("footprint")
+    rows = f.get("rows") or []
+    if rows:
+        recent = [x for x in rows if pd.Timestamp(x["date"]) >= now - pd.Timedelta(days=180)]
+        out.append({"tab": "footprint", "key": "cities", "label": "Cities with public driverless rides", "value": len(rows),
+                    "lean": 1 if recent else 0, "note": f"{len(recent)} opened in the last 180 days"})
+    cp = (f.get("cpuc") or {}).get("Waymo") or []
+    if cp:
+        out.append({"tab": "footprint", "key": "cpuc_waymo", "label": "California driverless trips, latest quarter (CPUC)", "value": cp[-1][1],
+                    "lean": _cmp(cp[-1][1], cp[-2][1] if len(cp) > 1 else None), "note": f"quarter from {pd.Timestamp(cp[-1][0], unit='s').date()}"})
+    reg = f.get("regulation") or []
+    if reg:
+        new = [x for x in reg if pd.Timestamp(x["date"]) >= now - pd.Timedelta(days=90)]
+        out.append({"tab": "footprint", "key": "rules_90d", "label": "New rules, licences and pilots, last 90 days", "value": len(new),
+                    "lean": 1 if new else 0})
+    rate = [x for x in ((got("safety").get("reports") or {}).get("rate") or []) if x.get("operator") == "Waymo"]
+    if rate:
+        prev = rate[-2]["per_million"] if len(rate) > 1 else None
+        out.append({"tab": "safety", "key": "waymo_per_million", "label": "Waymo crash reports per million driverless miles", "value": rate[-1]["per_million"],
+                    "lean": _cmp(rate[-1]["per_million"], prev, better_up=False), "note": f"to {rate[-1]['date']}; previous {prev} (lower is better)"})
+    t = got("tesla")
+    px = t.get("tsla") or []
+    if len(px) >= 200:
+        avg = sum(v for _, v in px[-200:]) / 200
+        out.append({"tab": "tesla", "key": "tsla_vs_200d", "label": "TSLA vs its 200-day average", "value": _r(px[-1][1] / avg - 1, 4),
+                    "lean": _cmp(px[-1][1], avg), "note": f"close {px[-1][1]}, 200-day average {_r(avg, 2)}"})
+    k = t.get("kpi") or {}
+    if k.get("yoy") is not None:
+        out.append({"tab": "tesla", "key": "deliveries_yoy", "label": "Tesla deliveries vs a year earlier", "value": k["yoy"], "lean": _cmp(k["yoy"], 0),
+                    "note": f"quarter from {k.get('quarter')}"})
+    ev = (t.get("signal") or {}).get("events") or []
+    if ev:
+        out.append({"tab": "tesla", "key": "fundamentals_signal", "label": "Tesla fundamentals signal (mean of yearly votes)", "value": ev[-1]["signal"],
+                    "lean": 1 if ev[-1]["long"] else -1 if ev[-1]["signal"] < 0 else 0, "note": f"as of {ev[-1]['date']}"})
+    return out
+
+
+def READINGS() -> list[dict]:
+    """Each tab's indicators as they read now, from the cached tab payloads only (nothing is fetched)."""
+    return readings(_cached_payload)
 
 
 def _cached_ep(name, fn, ttl=6 * 3600):

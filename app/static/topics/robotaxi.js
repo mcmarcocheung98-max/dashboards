@@ -68,7 +68,22 @@ const VIEWS = {
       ...cr.map(x => el("tr", {}, el("td", {}, x.metric), el("td", { class: "wrap" }, x.basis), el("td", {}, x.r.toFixed(2)), el("td", {}, x.n + " (" + qLabel(x.from) + " to " + qLabel(x.to) + ")"))))),
       note("Pearson correlation, −1 to 1, between each quarterly figure (data/robotaxi/tesla.csv, from Tesla's releases) and TSLA's close at the quarter's end, its change on a year or on the quarter, or its move on the day of the production and deliveries release (the 2nd of the following month, or the next trading day). With 10 to 15 quarters, an r below about 0.5 in size is indistinguishable from chance, and levels of two rising series correlate whether or not one drives the other. The figures come out after the quarter's last close, so this shows what moved together, not what predicts the price."))
       : d.correlation_error ? card("Which Tesla figures move with the share price", el("div", { class: "err" }, "Not available right now (" + d.correlation_error + ").")) : null;
-    return [head, px, el("div", { class: "grid2" }, qc, fsd), corr, ms];
+    const S = d.signal, st = S && S.stats;
+    const sig = st ? card("Fundamentals signal against the share price, backtested",
+      el("div", { class: "kpis" }, kpi("Signal now", S.events[S.events.length - 1].signal.toFixed(2) + (S.events[S.events.length - 1].long ? " · hold TSLA" : " · cash")),
+        kpi("Signal strategy, total", pct(st.strategy.total, 0), cls(st.strategy.total)), kpi("Buy and hold, total", pct(st.buy_hold.total, 0), cls(st.buy_hold.total)),
+        kpi("Strategy a year / buy and hold", pct(st.strategy.cagr, 0) + " / " + pct(st.buy_hold.cagr, 0)),
+        kpi("Worst fall: strategy / buy and hold", pct(st.strategy.max_drawdown, 0) + " / " + pct(st.buy_hold.max_drawdown, 0)),
+        kpi("Calls right", st.hits + " of " + st.periods), kpi("Time in TSLA", pct(st.invested, 0))),
+      ...linesChart([{ name: "TSLA", points: d.tsla.filter(p => p[0] >= S.hold[0][0]) }, { name: "$ in the signal strategy (starts at the TSLA price)", points: S.equity, color: css("--s2") },
+        { name: "Signal (left axis, −1 to 1)", points: S.signal, axis: "left", bar: true, fmt: v => v.toFixed(2) }], v => usd(v, 0), { log: true }),
+      el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Figures out", "Signal", "Position", "TSLA to the next date"].map(h => el("th", {}, h))),
+        ...S.events.slice().reverse().map(e => el("tr", {}, el("td", {}, dateOf(e.date)), el("td", {}, e.signal.toFixed(2)), el("td", {}, e.long ? "TSLA" : "cash"),
+          el("td", { class: cls(e.tsla_next) }, e.tsla_next == null ? "–" : pct(e.tsla_next, 1)))))),
+      note("Each Tesla figure in the table above votes +1 if better than a year earlier and −1 if worse (deliveries, production, storage, revenue and FSD subscriptions by % change; margins, EPS and cash flow by level). The signal is the mean vote, recomputed on each day a figure becomes public: deliveries, production and storage on the 2nd of the month after the quarter, the financials 35 days after the quarter (after Tesla's results). Strategy: hold TSLA from the next trading day while the signal is above " + S.threshold + ", otherwise cash earning nothing, 0.1% per switch. " +
+        st.years + " years and " + st.periods + " calls: too few to tell skill from luck, and the rule was chosen after seeing the data, so read it as a description, not a forecast."))
+      : d.signal_error ? card("Fundamentals signal", el("div", { class: "err" }, "Not available right now (" + d.signal_error + ").")) : null;
+    return [head, px, el("div", { class: "grid2" }, qc, fsd), sig, corr, ms];
   },
 };
 window.TOPIC = { VIEWS };

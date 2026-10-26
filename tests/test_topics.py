@@ -1009,3 +1009,57 @@ def test_mnav_backtest_engine():
     assert F.backtest(w, pm, 1 - pm, cost=0)["multiple"] == pytest.approx(1.1 * 1.1 * 1.1, abs=0.006)
     h = F._hysteresis(pd.Series([False, True, False, False, False]), pd.Series([False, False, False, True, False]))
     assert h.tolist() == [1, 0, 0, 1, 1]
+
+
+def _tesla_quarters(n=15, start="2023-01-01"):
+    qs = pd.date_range(start, periods=n, freq="QS")
+    up = pd.Series([100.0 + 5 * i for i in range(n)], index=qs)
+    return qs, {"Deliveries": up, "Revenue ($M)": up * 50, "GAAP gross margin (%)": pd.Series([20.0 - 0.1 * i for i in range(n)], index=qs)}
+
+
+def test_robotaxi_tesla_signal_uses_only_published_figures():
+    from app.topics import robotaxi as R
+    qs, t = _tesla_quarters()
+    px = pd.Series(100.0, index=pd.bdate_range("2023-01-01", "2026-10-20"))
+    s = R.tesla_signal(px, t)
+    ev = {e["date"]: e for e in s["events"]}
+    assert s["events"][0]["date"] == "2024-04-02"                      # Q1 2024 deliveries (first with a year-earlier quarter), out on 2 Apr
+    assert ev["2024-04-02"]["votes"] == {"Deliveries": 1}              # the Q1 financials are not public yet...
+    assert ev["2024-05-05"]["votes"] == {"Deliveries": 1, "Revenue ($M)": 1, "GAAP gross margin (%)": -1}   # ...until 35 days after the quarter
+    assert ev["2024-05-05"]["signal"] == round(1 / 3, 3) and ev["2024-05-05"]["long"]
+    t2 = {k: v.copy() for k, v in t.items()}
+    t2["Deliveries"].iloc[-1] = 1.0                                     # a collapse in the last quarter...
+    s2 = R.tesla_signal(px, t2)
+    assert [e for e in s2["events"] if e["date"] < "2026-10-02"] == [e for e in s["events"] if e["date"] < "2026-10-02"]   # ...changes nothing before it is published
+    assert s2["events"][-1]["votes"]["Deliveries"] == -1
+
+
+def test_robotaxi_tesla_signal_backtest():
+    from app.topics import robotaxi as R
+    qs, t = _tesla_quarters()
+    days = pd.bdate_range("2023-01-01", "2026-10-20")
+    px = pd.Series(100 * 1.001 ** np.arange(len(days)), index=days)     # rises 0.1% a day
+    s = R.tesla_signal(px, t)
+    st = s["stats"]
+    assert st["invested"] > 0.9 and st["switches"] == 1                 # long from the first figures with signal > 0, never out
+    first_long = pd.Timestamp(next(e["date"] for e in s["events"] if e["long"]))
+    held = px[px.index > first_long]
+    assert abs(st["strategy"]["total"] - ((held.iloc[-1] / held.iloc[0]) * (1 - R.COST) * 1.001 - 1)) < 0.01   # in from the next trading day
+    assert st["buy_hold"]["max_drawdown"] == 0 and st["hits"] == st["periods"]
+    flat = R.tesla_signal(px, {"Deliveries": pd.Series(100.0, index=qs)})
+    assert flat["stats"]["invested"] == 0 and flat["stats"]["strategy"]["total"] == 0      # a zero signal stays in cash
+    assert R.tesla_signal(px, {}) == {"events": [], "stats": None}
+
+
+def test_robotaxi_readings(snapdir, monkeypatch):
+    from app.topics import robotaxi as R
+    monkeypatch.setattr(R, "fetch", lambda url, ttl, **k: SGO)
+    monkeypatch.setattr(R, "fetch_json", lambda url, ttl, **k: _yahoo(250, n=1000))
+    pay = {n: R.ENDPOINTS[n]() for n in ("rides", "footprint", "safety", "tesla")}
+    rows = R.readings(lambda n: pay[n])
+    keys = {r["key"]: r for r in rows}
+    assert {"waymo_weekly", "cities", "rules_90d", "waymo_per_million", "tsla_vs_200d", "deliveries_yoy", "fundamentals_signal"} <= set(keys)
+    assert {r["tab"] for r in rows} == {"rides", "footprint", "safety", "tesla"} and all(r["lean"] in (-1, 0, 1) for r in rows)
+    assert keys["waymo_weekly"]["lean"] == 1 and keys["deliveries_yoy"]["lean"] == -1      # 500K after 250K; Q3 2026 below Q3 2025
+    assert keys["waymo_per_million"]["note"].endswith("(lower is better)")
+    assert R.readings(lambda n: {}) == [] and R.READINGS() is not None

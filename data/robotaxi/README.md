@@ -59,6 +59,23 @@ Checked on 25 Oct 2026: Waymo's 50,000 is dated to its 9 May 2024 post. The 175,
 
 **Tesla vs the share price** (Tesla tab, last card): Pearson correlations between each quarterly series in `tesla.csv` and TSLA, computed by `tesla_vs_price` in `robotaxi.py`. Four comparisons: level against the quarter-end close; change on a year against TSLA's change on a year; change on the quarter against that quarter's return; and, for figures in the production and deliveries release (deliveries, production, storage), the change against TSLA's close-to-close move on release day (the 2nd of the following month, or the next trading day). Volumes and revenue are compared by % change; margins, EPS and cash flow, which can be negative, by change in level. A comparison needs 6 quarters. Add a metric by adding its rows to `tesla.csv` and a line to `CORR_METRICS`.
 
+**Fundamentals signal and backtest** (Tesla tab): `tesla_signal` in `robotaxi.py`. Every series in `CORR_METRICS` votes +1 when its latest quarter beats the same quarter a year earlier and −1 when it is worse (deliveries, production, storage, revenue and FSD subscriptions by % change; margins, EPS and free cash flow by level). The signal is the mean of the votes, rebuilt on each day a figure becomes public, using only what was public that day: deliveries, production and storage on the 2nd of the month after the quarter, the financials 35 days after the quarter (`FIN_LAG`, later than Tesla's results, which come about 20–29 days after). Backtest: hold TSLA from the next trading day while the signal is above 0, otherwise cash earning nothing, 0.1% per switch (`COST`); against buy-and-hold from the same day. "Calls right" counts the periods where holding was followed by a rise, or cash by a fall. With about ten quarters of signal this describes what happened; it cannot show that the rule works, and the rule was picked after seeing the data.
+
+## What changed since yesterday (READINGS)
+
+`READINGS()` gives the shared "what changed" card these headline readings, from the cached tab payloads only. +1 means adoption is speeding up, safety is improving or TSLA is leaning up; −1 the opposite; 0 flat or unknown.
+
+| Tab | Key | +1 when | −1 when |
+|---|---|---|---|
+| Rides | `waymo_weekly`, `baidu_quarterly` | latest figure above the previous one | below it |
+| Footprint | `cities` | a city opened in the last 180 days | (never) |
+| Footprint | `cpuc_waymo` | Waymo's latest CPUC quarter above the previous | below it |
+| Footprint | `rules_90d` | a rule, licence or pilot in the last 90 days | (never) |
+| Safety | `waymo_per_million` | reports per million miles lower than at the previous cut-off | higher |
+| Tesla | `tsla_vs_200d` | TSLA above its 200-day average | below it |
+| Tesla | `deliveries_yoy` | latest quarter's deliveries above a year earlier | below |
+| Tesla | `fundamentals_signal` | the signal says hold TSLA | the signal is below 0 |
+
 ## Checking it
 
 ```
