@@ -39,7 +39,7 @@ def launch_tsv(until="2026-10-20"):
     head = "#Launch_Tag\tLaunch_JD\tLaunch_Date\tLV_Type\tVariant\tFlight_ID\tFlight\tMission\tFlightCode\tPlatform\tLaunch_Site\tLaunch_Pad\tAgency\tLaunch_Code\tGroup\tCategory"
     body, end = [], pd.Timestamp(until)
     mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    for y in range(1995, end.year + 1):
+    for y in range(1957, end.year + 1):
         for a, _, _ in AGENCIES:
             n = per_year(a, y)
             for i in range(n):
@@ -56,7 +56,7 @@ def launch_tsv(until="2026-10-20"):
 def satcat_tsv():
     head = "#JCAT\tSatcat\tLaunch_Tag\tPiece\tType\tName\tPLName\tLDate\tParent\tSDate\tPrimary\tDDate\tStatus\tDest\tOwner\tState\tManufacturer\tBus\tMotor\tMass\tMassFlag"
     body = []
-    for y in range(2000, 2027):
+    for y in range(1957, 2027):
         for i in range(10):
             star = y >= 2019 and i < 6
             name = f"Starlink-{y}{i}" if star else f"Sat {y}-{i}"

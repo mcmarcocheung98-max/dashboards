@@ -21,7 +21,7 @@ Five tabs. Data at `/api/space/<launches|cost|satellites|industry|ukhk>`. `/api/
 
 FRED, Yahoo and Stooq are not used: from Railway they time out, return 429 or are blocked.
 
-**Checked on the server?** The machine that built this dashboard could not reach planet4589.org, celestrak.org or api.nasdaq.com, so the GCAT and CelesTrak parsers follow the published column names and are tested on fixtures only. The parsers look columns up by name, ignoring case. If a tab says "not available", open `/api/space/layout` and compare the header line with `parse_tsv` / `parse_celestrak` in `app/topics/space.py`.
+**Checked on the server.** `/api/space/layout` from Railway on 2026-10-26: GCAT `launch.tsv` (13.8 MB, launch code column `LaunchCode`), `orgs.tsv` (0.7 MB) and `satcat.tsv` (19.3 MB), CelesTrak `satcat.csv` (6.8 MB) and the Nasdaq API (stocks and ETF) all answered 200 with the layouts the parsers expect, and every tab drew from live data in the live-check run. The parsers look columns up by name, ignoring case, and read only the columns they use. If a tab says "not available", open `/api/space/layout` and compare the header line with `parse_tsv` / `parse_celestrak` in `app/topics/space.py`.
 
 ## Hand-entered rows: all marked `verify`
 

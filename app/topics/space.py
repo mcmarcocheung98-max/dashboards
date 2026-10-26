@@ -84,14 +84,18 @@ def _year(y: int) -> pd.Timestamp:
 
 
 # ------------------------------------------------------------------ GCAT (planet4589.org)
-def parse_tsv(text: str) -> pd.DataFrame:
-    """A GCAT TSV: the first line is the header (starting with #), later # lines are comments; every value is a stripped string."""
-    lines = [ln for ln in text.splitlines() if ln.strip()]
-    if not lines:
+def parse_tsv(text: str, keep: tuple = ()) -> pd.DataFrame:
+    """A GCAT TSV: the first line is the header (starting with #), later # lines are comments; every value is a stripped string.
+    keep: the column names to read (any case), so a 20 MB catalog is not held as 40 string columns."""
+    nl = text.find("\n")
+    if nl < 0:
         raise ValueError("GCAT: empty file")
-    head, body = lines[0].lstrip("#").rstrip("\n"), [ln for ln in lines[1:] if not ln.startswith("#")]
-    d = pd.read_csv(StringIO("\n".join([head, *body])), sep="\t", dtype=str, keep_default_na=False, quoting=3, on_bad_lines="skip")
-    d.columns = [c.strip() for c in d.columns]
+    names = [c.strip() for c in text[:nl].lstrip("#").rstrip("\r").split("\t")]
+    want = {k.lower() for k in keep}
+    use = [i for i, c in enumerate(names) if not want or c.lower() in want or i == 0]
+    d = pd.read_csv(StringIO(text[nl + 1:]), sep="\t", header=None, names=names, usecols=use, dtype=str, keep_default_na=False, quoting=3,
+                    on_bad_lines="skip", engine="c")
+    d = d[~d[names[0]].str.startswith("#")]
     return d.apply(lambda c: c.str.strip())
 
 
@@ -122,7 +126,7 @@ def gcat_date(s: str):
 
 def parse_orgs(text: str) -> dict[str, tuple[str, str]]:
     """orgs.tsv -> {code: (short name, state code)}."""
-    d = parse_tsv(text)
+    d = parse_tsv(text, ("Code", "StateCode", "State", "ShortEName", "ShortName", "EName", "Name"))
     code, state = _col(d, "Code"), _col(d, "StateCode", "State")
     name = next((c for c in ("ShortEName", "ShortName", "EName", "Name") if c in d.columns), code)
     return {r[code]: (r[name] or r[code], r[state]) for _, r in d.iterrows() if r[code]}
@@ -135,7 +139,7 @@ def group_of(state: str) -> str:
 
 def parse_launches(text: str, orgs: dict) -> pd.DataFrame:
     """launch.tsv -> one row per orbital or deep-space attempt: date, year, agency, provider, state, country, success, vehicle."""
-    d = parse_tsv(text)
+    d = parse_tsv(text, ("Launch_Code", "LaunchCode", "Launch_Date", "LDate", "Agency", "LV_Agency", "LV_Type", "LVType"))
     code, date, agency = _col(d, "Launch_Code", "LaunchCode"), _col(d, "Launch_Date", "LDate"), _col(d, "Agency", "LV_Agency")
     lv = next((c for c in ("LV_Type", "LVType") if c in d.columns), None)
     d = d[d[code].str[:1].isin(["O", "D"])].copy()
@@ -155,7 +159,7 @@ def parse_launches(text: str, orgs: dict) -> pd.DataFrame:
 
 def parse_payload_mass(text: str) -> pd.DataFrame:
     """GCAT satcat.tsv -> payload launch mass (tonnes) per launch year: total and Starlink."""
-    d = parse_tsv(text)
+    d = parse_tsv(text, ("Type", "Mass", "LDate", "Launch_Date", "Name", "PLName"))
     typ, mass, ld = _col(d, "Type"), _col(d, "Mass"), _col(d, "LDate", "Launch_Date")
     name = [c for c in ("Name", "PLName") if c in d.columns]
     d = d[d[typ].str.startswith("P")]
@@ -181,7 +185,9 @@ def orgs() -> dict:
 
 
 def launches() -> pd.DataFrame:
-    return parse_launches(fetch(GCAT_LAUNCH, DAY, timeout=120, min_bytes=10000), orgs())
+    """The parsed launch list, cached so the Launches and China tabs parse the 14 MB file once."""
+    from ..cache import _cached
+    return _cached(f"topic:{SLUG}:launch-list", 6 * 3600, lambda: parse_launches(fetch(GCAT_LAUNCH, DAY, timeout=120, min_bytes=10000), orgs()))
 
 
 def payload_mass() -> pd.DataFrame:
@@ -327,6 +333,7 @@ def _launches_now() -> dict:
     def mass():
         m = payload_mass()
         m = m[m.index < today.year]
+        m = m.reindex(range(int(m.index.min()), int(m.index.max()) + 1), fill_value=0)       # no gap years: every yearly chart shares one axis
         idx = [_year(y) for y in m.index]
         last = int(m.index[-1])
         prev = m["total"].get(last - 1)
