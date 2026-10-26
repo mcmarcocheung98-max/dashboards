@@ -17,12 +17,22 @@ const byPlace = (obj, fmt, opts = {}) => linesChart(PLACES.filter(k => obj && (o
 const table = (head, rows) => el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...head.map(h => el("th", {}, h))), ...rows));
 const srcCell = r => el("td", { class: "wrap" }, link(host(r.source), r.source), r.note ? " · " + r.note : "");
 const rowsTable = (rs, valFmt = v => num(+v, 3)) => table(["Date", "Series", "Value", "Source"], rs.map(r => el("tr", {}, el("td", {}, dateOf(r.date)), el("td", {}, r.series), el("td", {}, valFmt(r.value, r)), srcCell(r))));
+// Top cards follow the date hovered or clicked on any chart (datedHead from topic.html). Each figure is the series its chart draws, read at
+// that date; at rest a projection reads this year (not 2100) and a series of actual figures its latest point.
+const NOW = Date.now() / 1000;
+const full = o => o ? [...(o.est || []), ...(o.proj || []).slice(1)] : [];        // the projection repeats the last estimate year
+const ptAt = (pts, t) => { if (!pts || !pts.length) return null; let r = null; for (const p of pts) { if (p[0] <= t) r = p; else break; } return r; };
+const fig = (label, pts, fmt, o = {}) => {
+  const at = t => ptAt(pts, t != null ? t : o.proj ? NOW : Infinity);
+  return { label: t => { const p = at(t); return label + (p ? " (" + yr(p[0]) + ")" : ""); }, value: t => { const p = at(t); return [p ? fmt(p[1]) : "–", p && o.cls ? o.cls(p[1]) : ""]; } };
+};
+const figs = (obj, label, fmt, o = {}) => PLACES.filter(k => obj && (o.proj ? full(obj[k]) : obj[k] || []).length).map(k => fig(k + " · " + label, o.proj ? full(obj[k]) : obj[k], fmt, o));
 const projNote = "Solid: UN estimates to 2023. Dashed: the UN's medium projection (World Population Prospects 2024).";
 const VIEWS = {
   async births() {
-    const d = await api("births"), L = d.latest || {}, T = d.latest_tfr || {};
-    const head = card(null, el("div", { class: "kpis" }, ...PLACES.filter(k => T[k]).map(k => kpi(k + " · fertility rate (" + yr(new Date(T[k].date) / 1000) + ")", num(T[k].value, 2))),
-      ...PLACES.filter(k => L[k]).map(k => kpi(k + " · births " + yr(new Date(L[k].date) / 1000) + " vs 2019", pc0(L[k].vs_2019), cls(L[k].vs_2019)))), asOf(d), stale(d),
+    const d = await api("births");
+    const head = card(null, datedHead([...figs(d.national_tfr, "fertility rate, official", f2), ...figs(d.national_index, "births, 2019 = 100", f1, { cls: v => cls(v - 100) })],
+      { latest: "Latest official figures" }), asOf(d), stale(d),
       note("2.1 children per woman keeps a population steady without migration. UK figures are England and Wales (ONS)."));
     const tfr = d.tfr ? card("Total fertility rate, 1950–2100: children per woman", ...projChart(d.tfr, f2, { hlines: [2.1] }),
       note(projNote + " The grey line is replacement (2.1). 5 years: is the post-2015 fall levelling off or still going? 10 years: does any of the four get back above 1.5? " +
@@ -44,8 +54,9 @@ const VIEWS = {
   },
   async ageing() {
     const d = await api("ageing"), K = d.kpi || {}, dep = d.dependency;
-    const head = card(null, el("div", { class: "kpis" }, ...PLACES.filter(k => K[k] && K[k].oadr_2025 != null).map(k => kpi(k + " · 65+ per 100 aged 15–64: 2025 → 2045", f1(K[k].oadr_2025) + " → " + f1(K[k].oadr_2045)))),
-      el("div", { class: "kpis" }, ...PLACES.filter(k => K[k] && K[k].median_2025 != null).map(k => kpi(k + " · median age 2025 → 2050", f1(K[k].median_2025) + " → " + f1(K[k].median_2050)))), stale(d));
+    const head = card(null, datedHead([...figs(dep && dep.series, "65+ per 100 aged 15–64", f1, { proj: true }), ...figs(d.median_age, "median age", f1, { proj: true })],
+      { latest: "This year (UN projection)" }),
+      el("div", { class: "kpis" }, ...PLACES.filter(k => K[k] && K[k].oadr_2045 != null).map(k => kpi(k + " · 65+ per 100 aged 15–64 in 2045", f1(K[k].oadr_2045)))), stale(d));
     const oadr = dep ? card("Old-age dependency: people 65+ per 100 aged 15–64, 1950–2100", ...projChart(dep.series, f1),
       note((dep.source === "wpp" ? projNote + " Computed from the UN's population by five-year age group." : "The UN age file could not be read, so this is the World Bank's projection (from the UN's), which stops in 2050.") +
         " 5 years: how fast the ratio climbs as the baby boomers (China: the 1960s cohort) pass 65. 10 years: whether Hong Kong and China overtake the UK. 20 years: the ratio in 2045 is the pension question: fewer than 2.5 workers per person 65+ means taxes, contributions or the pension age have to change."))
@@ -59,6 +70,7 @@ const VIEWS = {
   },
   async migration() {
     const d = await api("migration");
+    const head = card(null, datedHead(figs(d.rate, "net migration per 1,000", f1, { proj: true, cls }), { latest: "This year (UN projection)" }), stale(d));
     const rate = d.rate ? card("Net migration per 1,000 people, 1950–2100", ...projChart(d.rate, f1, { hlines: [0] }),
       note(projNote + " Arrivals minus departures, per 1,000 residents. 5 years: the UK's post-2021 surge unwinding and Hong Kong's 2020–22 outflow reversing. 10 years: whether migration offsets low births. " +
         "20 years: the UN assumes steady inflows to the US and UK and a small outflow from China; whether that holds decides most of the 2045 workforce gap."), stale(d))
@@ -69,11 +81,13 @@ const VIEWS = {
       note("ONS long-term international migration (UK), Census Bureau net international migration (US), C&SD net movement and one-way permit holders (Hong Kong). Definitions differ, so read each line on its own. " +
         "Hong Kong's one-way permits (up to 150 a day from the mainland) are its steady inflow: 32,000 in the year to mid-2025 against a natural decrease of 14,800."), cite(d.cited)) : null;
     const rows = card("National figures", rowsTable(d.rows || [], v => num(+v)), note("Kept in data/demographics/migration.csv."));
-    return [rate, el("div", { class: "grid2" }, net, nat), rows];
+    return [head, rate, el("div", { class: "grid2" }, net, nat), rows];
   },
   async workforce() {
     const d = await api("workforce"), w = d.working_age || {}, ch = w.change || {};
-    const head = card(null, el("div", { class: "kpis" }, ...PLACES.filter(k => ch[k]).map(k => kpi(k + " · aged 15–64, 2025 → 2045 (" + num(ch[k].now_m, 1) + "m now)", pc0(ch[k].to_2045), cls(ch[k].to_2045)))),
+    const head = card(null, datedHead([...figs(w.index, "aged 15–64, 2025 = 100", f1, { proj: true, cls: v => cls(v - 100) }), ...figs(d.lfpr, "labour force participation", v => f1(v) + "%")],
+      { latest: "This year (UN projection) and the latest participation rate" }),
+      el("div", { class: "kpis" }, ...PLACES.filter(k => ch[k]).map(k => kpi(k + " · aged 15–64, 2025 → 2045 (" + num(ch[k].now_m, 1) + "m now)", pc0(ch[k].to_2045), cls(ch[k].to_2045)))),
       asOf(d), stale(d));
     const idx = w.index ? card("People aged 15–64, index 2025 = 100, 1950–2100", ...projChart(w.index, f1, { hlines: [100] }),
       note((w.source === "wpp" ? projNote : "World Bank projection (from the UN's), to 2050.") + " The traditional working-age population. 5 years: who has already peaked (China and Hong Kong in the 2010s, by the UN estimates). " +
