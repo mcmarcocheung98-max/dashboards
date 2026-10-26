@@ -63,7 +63,7 @@ def pca_sql(table: str):
     for d, k in (("Semaglutide", 3.0), ("Tirzepatide", 0.5), ("Liraglutide", 1.0), ("Dulaglutide", 1.5)):
         if d == "Tirzepatide" and i < 36:
             continue
-        recs.append({"chem": d, "items": str(int(k * 10000 * (1 + i / 30))), "nic": k * 1e6 * (1 + i / 25)})
+        recs.append({"CHEM": d, "items": str(int(k * 10000 * (1 + i / 30))), "nic": k * 1e6 * (1 + i / 25)})
     return {"success": True, "result": {"records": recs, "fields": [{"id": "chem"}, {"id": "items"}, {"id": "nic"}]}}
 
 
@@ -101,7 +101,8 @@ def fake_fetch_json(url, ttl=0, **k):
         return pca_package()
     if "datastore_search_sql" in url:
         from urllib.parse import unquote
-        t = unquote(url).split('FROM "')[1].split('"')[0]
+        t = unquote(url).split("FROM `")[1].split("`")[0]
+        assert "resource_id=" + t in url
         if t == "PCA_202203":
             raise ConnectionError("one month down")
         return pca_sql(t)

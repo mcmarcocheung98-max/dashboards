@@ -46,8 +46,8 @@ CAUSES = {"Heart disease": "heart", "Cancer": "cancer", "Alzheimer disease": "al
 NHSBSA = "https://opendata.nhsbsa.net/api/3/action/"
 PCA_PKG = NHSBSA + "package_show?id=prescription-cost-analysis-pca-monthly-data"
 GLP1 = ("semaglutide", "tirzepatide", "liraglutide", "dulaglutide")
-PCA_SQL = ('SELECT "BNF_CHEMICAL_SUBSTANCE" AS chem, SUM("ITEMS") AS items, SUM("NIC") AS nic FROM "{res}" WHERE lower("BNF_CHEMICAL_SUBSTANCE") IN ('
-           + ",".join(f"'{d}'" for d in GLP1) + ') GROUP BY "BNF_CHEMICAL_SUBSTANCE"')
+PCA_SQL = ("SELECT BNF_CHEMICAL_SUBSTANCE AS chem, SUM(ITEMS) AS items, SUM(NIC) AS nic FROM `{res}` WHERE BNF_CHEMICAL_SUBSTANCE IN ("
+           + ",".join(f"'{d.capitalize()}'" for d in GLP1) + ") GROUP BY BNF_CHEMICAL_SUBSTANCE")   # NHSBSA's SQL wants resource_id too, and backticks
 CONCEPT = "https://data.sec.gov/api/xbrl/companyconcept/CIK{cik:010d}/{tax}/{tag}.json"
 # The SEC answers 403 unless the User-Agent reads "Name email" (see data/compute-chips/README.md); SEC_UA overrides it on the server
 SEC_HEADERS = {"User-Agent": os.environ.get("SEC_UA", "Dashboards admin@dashboards-production-bde6.up.railway.app"), "Accept": "application/json"}
@@ -201,7 +201,7 @@ def pca_months(j) -> list[str]:
 
 
 def pca_url(table: str) -> str:
-    return NHSBSA + "datastore_search_sql?sql=" + quote(PCA_SQL.format(res=table))
+    return NHSBSA + "datastore_search_sql?resource_id=" + table + "&sql=" + quote(PCA_SQL.format(res=table))
 
 
 def parse_pca(j) -> dict[str, tuple[float, float]]:
@@ -210,6 +210,7 @@ def parse_pca(j) -> dict[str, tuple[float, float]]:
         raise ValueError("NHSBSA: " + str((j or {}).get("error"))[:120])
     out = {}
     for r in ((j or {}).get("result") or {}).get("records") or []:
+        r = {str(k).lower(): v for k, v in r.items()}
         d = str(r.get("chem") or "").lower()
         if d in GLP1:
             out[d] = (float(pd.to_numeric(r.get("items"), errors="coerce") or 0), float(pd.to_numeric(r.get("nic"), errors="coerce") or 0))
@@ -547,7 +548,8 @@ def _layout_now() -> dict:
     import requests
     b = pd.Timestamp.now().strftime("%Y-%m-%d")
     urls = {"worldbank": WB_LE, "xmart hale UK": xmart_url(WHO_HALE, "826"), "xmart le HK": xmart_url(WHO_LE, "344"), "cdc slim": CDC_Q_SLIM.replace("50000", "3"),
-            "nhsbsa pca 202601": pca_url("PCA_202601"), "sec lilly": CONCEPT.format(cik=59478, tax="us-gaap", tag="Revenues"),
+            "nhsbsa pca 202601": pca_url("PCA_202601"),
+            "nhsbsa pca sample": NHSBSA + "datastore_search_sql?resource_id=PCA_202601&sql=" + quote("SELECT BNF_CHEMICAL_SUBSTANCE, ITEMS FROM `PCA_202601` WHERE BNF_CHEMICAL_SUBSTANCE LIKE 'Sema%' LIMIT 3"), "sec lilly": CONCEPT.format(cik=59478, tax="us-gaap", tag="Revenues"),
             "sec novo": CONCEPT.format(cik=353278, tax="ifrs-full", tag="Revenue"), "nasdaq XBI": NASDAQ_ETF.format(sym="XBI", cls="etf", a="2026-09-01", b=b)}
 
     def one(item):
