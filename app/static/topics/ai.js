@@ -6,6 +6,11 @@ const COL = { "Software Development": "--s1", "Data & Analytics": "--s6", "Legal
 const seg = rerender => el("div", { class: "seg" }, ...[["US", "United States"], ["GB", "United Kingdom"]].map(([k, l]) => el("button", { class: k === cc ? "on" : "", onclick: () => { cc = k; rerender(); } }, l)));
 const i1 = v => v == null ? "–" : v.toFixed(0);
 const sh = v => v == null ? "–" : v.toFixed(1) + "%";
+// Top cards follow the date hovered or clicked on any chart (followHead from topic.html); a delta is the change on a year in points
+const ppY = { lag: "1y", abs: true, fmt: v => pp(v) };
+// followHead when any figure has a series to follow; otherwise the latest figures as plain kpis (nothing on the charts to hover)
+const followOr = (items, opts) => items.some(it => (it.points || []).length) ? followHead(items, opts)
+  : el("div", { class: "kpis" }, ...items.map(it => kpi(it.label, "–")));
 // Columns of figures stay right-aligned (the page default); columns of text are left-aligned, header included.
 const isFig = v => v == null || /^\s*([–-]|[$£+−-]*\s*[\d.,]+\s*(%|[mkb]n?|pts?)?)\s*$/i.test(String(v));
 const table = (cols, rows) => {
@@ -18,9 +23,8 @@ const VIEWS = {
   async openings() {
     const d = await api("openings"), c = d[cc] || {};
     if (!d[cc]) return [card(null, seg(render)), card("Openings", el("div", { class: "err" }, "Not available right now (" + (d[cc + "_error"] || "no data") + ")."), stale(d))];
-    const rows = [...AI, ...PRO].filter(n => c.latest[n]).map(n => el("tr", {}, el("td", {}, el("span", { class: "sw", style: "background:" + css(COL[n]) + ";margin-right:8px" }), n),
-      el("td", {}, i1(c.latest[n].index)), el("td", { class: cls(c.latest[n].index - 100) }, pct(c.latest[n].index / 100 - 1, 0)), el("td", { class: cls(c.latest[n].yoy) }, pct(c.latest[n].yoy, 1))));
-    const head = card(null, seg(render), el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Sector", "Postings index", "vs Feb 2020", "vs a year ago"].map(h => el("th", {}, h))), ...rows)), asOf(d), stale(d));
+    const head = card(null, seg(render), followOr([...AI, ...PRO].filter(n => c.sectors[n]).map(n => ({ label: n, points: c.sectors[n], fmt: i1, cls: v => cls(v - 100), delta: { lag: "1y" } })),
+      { latest: "Postings index, 1 Feb 2020 = 100" }), asOf(d), stale(d));
     const lines = card("Job postings by sector (1 February 2020 = 100)",
       ...linesChart([...AI, ...PRO].filter(n => c.sectors[n]).map(n => ({ name: n, points: c.sectors[n], color: css(COL[n]) })).concat([{ name: "All postings", points: c.all || [], dashed: true, color: css("--hold") }]), i1),
       note("Indeed Hiring Lab: seasonally adjusted postings on Indeed relative to 1 Feb 2020, weekly averages. Software and data roles are where AI jobs sit; the four professions are the comparison."));
@@ -36,8 +40,7 @@ const VIEWS = {
     const d = await api("headcount"), u = d.US;
     const us = u ? (() => {
       const names = Object.keys(u.levels);
-      const rows = names.map(n => el("tr", {}, el("td", {}, n), el("td", {}, num(u.latest[n].level * 1000)), el("td", { class: cls(u.latest[n].yoy) }, pct(u.latest[n].yoy / 100, 1)), el("td", { class: cls(u.latest[n].since_2020) }, pct(u.latest[n].since_2020 / 100, 1))));
-      const head = card("US payroll employment", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Industry", "Jobs", "vs a year ago", "vs Feb 2020"].map(h => el("th", {}, h))), ...rows)), asOf(d), stale(d),
+      const head = card("US payroll employment", followOr(names.map(n => ({ label: n, points: u.levels[n], fmt: v => num(v * 1000), delta: { lag: "1y" } })), { latest: "Jobs" }), asOf(d), stale(d),
         note("BLS Current Employment Statistics (public API), seasonally adjusted. 'Computer systems design' is the closest industry to AI and software work."));
       const idx = card("Headcount since February 2020 (= 100)", ...linesChart(names.map(n => ({ name: n, points: u.indexed[n], dashed: n === "All private", color: n === "All private" ? css("--hold") : undefined })), v => v == null ? "–" : v.toFixed(1)));
       const yoy = card("Change on a year earlier", ...linesChart(names.map(n => ({ name: n, points: u.yoy[n], dashed: n === "All private", color: n === "All private" ? css("--hold") : undefined })), v => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(1) + "%", { small: true }));
@@ -55,9 +58,12 @@ const VIEWS = {
   async ratio() {
     const d = await api("ratio"), c = d[cc];
     if (!c) return [card(null, seg(render)), card("AI vs the professions", el("div", { class: "err" }, "Not available right now (" + (d[cc + "_error"] || "no data") + ")."), stale(d))];
-    const head = card(null, seg(render), asOf(d), stale(d));
-    const tog = el("div", { class: "seg" }, ...[[false, "Software + data"], [true, "+ IT systems & solutions"]].map(([k, l]) => el("button", { class: k === wide ? "on" : "", onclick: () => { wide = k; render(); } }, l)));
     const aiPts = wide ? c.ai_wide_index : c.ai_index, rPts = wide ? c.ai_wide_over_professions : c.ai_over_professions, aiName = wide ? "Software + data + IT systems" : "Software + data";
+    const head = card(null, seg(render), followOr([{ label: aiName + " postings", points: aiPts, fmt: i1, delta: { lag: "1y" } },
+      { label: "Law & finance postings", points: c.professions_index, fmt: i1, delta: { lag: "1y" } },
+      { label: "Ratio", points: rPts, fmt: v => v.toFixed(2) + "×", delta: { lag: "1y" } },
+      { label: "Postings mentioning AI", points: c.ai_share, fmt: sh, delta: ppY }], { latest: "Postings indexes, 1 Feb 2020 = 100" }), asOf(d), stale(d));
+    const tog = el("div", { class: "seg" }, ...[[false, "Software + data"], [true, "+ IT systems & solutions"]].map(([k, l]) => el("button", { class: k === wide ? "on" : "", onclick: () => { wide = k; render(); } }, l)));
     const both = card("AI-related postings vs law & finance postings (1 Feb 2020 = 100)", tog,
       ...linesChart([{ name: aiName + " (AI roles)", points: aiPts }, { name: "Legal + finance + accounting + insurance", points: c.professions_index, color: css("--s2") }], i1),
       note("Averages of the sector indexes on the Openings tab. The toggle widens the AI group to Indeed's IT Systems & Solutions sector."));
@@ -70,8 +76,7 @@ const VIEWS = {
   async wages() {
     const d = await api("wages"), L = d.latest || {};
     const names = Object.keys(L);
-    const head = card("US average hourly earnings, all employees", table(["Industry", "Hourly pay", "vs a year ago", "vs all private-sector pay"],
-      names.map(n => [n, "$" + (L[n].level == null ? "–" : L[n].level.toFixed(2)), L[n].yoy == null ? "–" : (L[n].yoy > 0 ? "+" : "") + L[n].yoy.toFixed(1) + "%", n === "All private" ? "–" : (L[n].premium > 0 ? "+" : "") + L[n].premium.toFixed(0) + "%"])),
+    const head = card("US average hourly earnings, all employees", names.length ? followOr(names.map(n => ({ label: n, points: (d.levels || {})[n], fmt: v => "$" + v.toFixed(2), delta: { lag: "1y" } })), { latest: "Hourly pay" }) : null,
       missing(d, "levels", "US pay"), d.bls_error ? note("BLS said: " + d.bls_error + " (its public API allows 25 queries a day; the page retries after a day).") : null, (d.missing || []).length ? note("BLS publishes no hourly pay series for: " + d.missing.join(", ") + ".") : null, asOf(d), stale(d),
       note("BLS Current Employment Statistics (series ending 03), seasonally adjusted, from the BLS public API."));
     const lv = d.levels ? card("Hourly pay ($)", ...linesChart(Object.entries(d.levels).map(([k, pts]) => ({ name: k, points: pts, dashed: k === "All private", color: k === "All private" ? css("--hold") : undefined })), v => v == null ? "–" : "$" + v.toFixed(2))) : null;
@@ -83,10 +88,12 @@ const VIEWS = {
     return [head, lv, pr, yy, intl];
   },
   async firms() {
-    const d = await api("firms"), n = d.now || {};
-    const head = card(null, el("div", { class: "kpis" }, kpi("US businesses using AI", sh(n.btos)), kpi("A year earlier", sh(n.btos_year_ago)),
-      kpi("Change", n.btos != null && n.btos_year_ago != null ? pp(n.btos - n.btos_year_ago) : "–", cls(n.btos - n.btos_year_ago)), kpi("Paying for AI tools (Ramp)", sh(n.ramp)),
-      kpi("UK businesses using AI (ONS)", sh((d.uk_hk_latest || {})["UK: all businesses (ONS BICS)"]?.value))), asOf(d), stale(d));
+    const d = await api("firms");
+    const head = card(null, followOr([{ label: "US businesses using AI (Census)", points: d.btos_us || [], fmt: sh, delta: ppY },
+      { label: "Expect to use AI within 6 months (Census)", points: d.btos_expect || [], fmt: sh, delta: ppY },
+      { label: "Paying for AI tools (Ramp)", points: d.ramp || [], fmt: sh, delta: ppY },
+      { label: "UK businesses using AI (ONS)", points: (d.uk_hk || {})["UK: all businesses (ONS BICS)"] || [], fmt: sh, delta: ppY }],
+      { latest: "Latest readings" }), asOf(d), stale(d));
     const btos = card("Share of US businesses that used AI in the last two weeks",
       ...linesChart([{ name: "All businesses (Census BTOS)", points: d.btos_us || [] }, { name: "Paying for AI tools (Ramp AI Index)", points: d.ramp || [], color: css("--s2") }], sh),
       note("US Census Bureau Business Trends and Outlook Survey, asked every two weeks of about 1.2 million businesses: 'use Super Intelligence or SI (formerly AI) in any of its business functions', the wording since the period ending 16 Nov 2025, where the line starts. Ramp's index counts businesses on its card platform that paid for an AI product that month."), cite(d.cited));
@@ -125,9 +132,11 @@ const VIEWS = {
     const d = await api("skills"), L = d.latest || {};
     const chart = card("Share of job postings mentioning AI, by country", ...linesChart(Object.entries(d.share || {}).map(([k, pts]) => ({ name: k, points: pts, width: k === "US" || k === "GB" ? 2.5 : 1.2 })), sh), asOf(d), stale(d),
       note("Indeed AI Tracker (Indeed Hiring Lab, CC BY 4.0): postings whose text includes AI terms, as % of all postings, monthly average."));
+    const head = card(null, followOr(["US", "GB", "DE", "FR", "CA"].filter(k => (d.share || {})[k]).map(k => ({ label: k, points: d.share[k], fmt: sh, delta: ppY })),
+      { latest: "Share of postings mentioning AI" }));
     const table = card("Latest", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Country", "Now", "A year ago", "Two years ago"].map(h => el("th", {}, h))),
       ...Object.entries(L).sort((a, b) => b[1].share - a[1].share).map(([k, v]) => el("tr", {}, el("td", {}, k), el("td", {}, sh(v.share)), el("td", {}, sh(v.year_ago)), el("td", {}, sh(v.two_years_ago)))))));
-    return [chart, table];
+    return [head, chart, table];
   },
 };
 window.TOPIC = { VIEWS };
