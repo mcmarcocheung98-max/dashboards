@@ -1,10 +1,7 @@
 name: archive
-# Month-end archive of every dashboard to OneDrive: on the last day of each month (UTC) it downloads /api/archive.zip from the live site
-# (every endpoint's data, the daily "what changed" snapshots and the hand-entered files) and copies it to
-# OneDrive:Dashboards/Archive/<YYYY-MM>/ with rclone. The zip is also kept on the run as an artifact for 90 days.
-#
-# One-time setup (see docs/ARCHIVE.md): on your own computer run `rclone config`, add a OneDrive remote named "onedrive",
-# then paste the contents of `rclone config file` into the repository secret RCLONE_CONFIG.
+# A second copy of the month-end archive, kept on GitHub for 90 days: on the last day of each month (UTC) it downloads
+# /api/archive.zip from the live site and attaches it to the run. The OneDrive copy is made by the server itself (app/archive.py,
+# app/cloud.py, Railway variable ONEDRIVE_RCLONE_CONF; see docs/ARCHIVE.md).
 on:
   schedule:
     - cron: "41 22 28-31 * *"          # every possible month end; the first step skips days that are not the last one
@@ -16,7 +13,6 @@ on:
         default: true
 env:
   SITE: https://dashboards-production-bde6.up.railway.app
-  DEST: onedrive:Dashboards/Archive
 jobs:
   archive:
     runs-on: ubuntu-latest
@@ -46,20 +42,3 @@ jobs:
           name: dashboards-${{ steps.when.outputs.day }}
           path: dashboards-*.zip
           retention-days: 90
-      - name: Copy to OneDrive
-        if: steps.when.outputs.go == '1'
-        env:
-          RCLONE_CONFIG_TEXT: ${{ secrets.RCLONE_CONFIG }}
-        run: |
-          if [ -z "$RCLONE_CONFIG_TEXT" ]; then
-            echo "::error::The RCLONE_CONFIG secret is not set, so the archive was not copied to OneDrive (it is attached to this run). See docs/ARCHIVE.md."
-            exit 1
-          fi
-          if ! printf '%s\n' "$RCLONE_CONFIG_TEXT" | grep -q '^\[onedrive\]' || ! printf '%s\n' "$RCLONE_CONFIG_TEXT" | grep -q 'type *= *onedrive'; then
-            echo "::error::RCLONE_CONFIG is not an rclone config file with a remote named onedrive. It must be the whole file, several lines starting with [onedrive] and including 'type = onedrive', 'token = {...}', 'drive_id = ...' and 'drive_type = ...'. On your computer run: cat \"\$(rclone config file | tail -1)\" and paste everything it prints. See docs/ARCHIVE.md."
-            exit 1
-          fi
-          curl -fsS https://rclone.org/install.sh | sudo bash > /dev/null
-          mkdir -p ~/.config/rclone && printf '%s\n' "$RCLONE_CONFIG_TEXT" > ~/.config/rclone/rclone.conf
-          rclone copy dashboards-*.zip "$DEST/${{ steps.when.outputs.month }}/" -v
-          rclone lsl "$DEST/${{ steps.when.outputs.month }}/"

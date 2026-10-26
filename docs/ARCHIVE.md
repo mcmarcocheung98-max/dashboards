@@ -1,33 +1,32 @@
 # Month-end archive to OneDrive
 
-On the last day of every month (22:41 UTC) the `archive` workflow downloads `/api/archive.zip` from the live site and copies it to
-**OneDrive › Dashboards › Archive › YYYY-MM › dashboards-YYYY-MM-DD.zip**. Each zip holds, for every dashboard:
+On the last day of every month (UTC) the server builds one zip of every dashboard and copies it to
+**OneDrive › Dashboards › Archive › YYYY-MM › dashboards-YYYY-MM-DD.zip**. It works the same way as the trading bot's backups:
+rclone in the Docker image, the OneDrive login in one Railway variable (`app/cloud.py`, ported from the bot's `src/hl/cloud.py`).
 
+Each zip holds, for every dashboard:
 - every endpoint's data as the page shows it (`<slug>/<endpoint>.json`; `<endpoint>.error.txt` if a source was down that day)
 - the daily "what changed since yesterday" snapshots and the comparison (`<slug>/daily/`, `<slug>/changes.json`)
 - the dashboard's title, tabs and sources (`<slug>/meta.json`), the source health, and every hand-entered file in `data/`
 
-New dashboards are included automatically. The zip is also attached to the workflow run for 90 days.
+New dashboards are included automatically. If the server was down on the last day, the missed month is copied the next time it
+runs. A second copy is attached to the GitHub `archive` workflow run for 90 days.
 
-## One-time setup (about 5 minutes)
+## Set-up (once)
 
-1. Install rclone on your own computer: <https://rclone.org/install/> (on a Mac: `brew install rclone`).
-2. Run `rclone config` → `n` (new remote) → name it **`onedrive`** → storage type **Microsoft OneDrive** → leave client id and
-   secret blank → region **Microsoft Cloud Global** → answer **y** to "use web browser" and sign in to your Microsoft account →
-   choose **OneDrive Personal or Business** → pick your drive → confirm.
-3. Copy the whole config file, not its path: run `cat "$(rclone config file | tail -1)"` (Windows: `type` followed by the path
-   that `rclone config file` prints) and copy everything it prints. It is several lines and looks like:
-   ```
-   [onedrive]
-   type = onedrive
-   token = {"access_token":"...","token_type":"Bearer","refresh_token":"...","expiry":"..."}
-   drive_id = ...
-   drive_type = personal
-   ```
-4. On GitHub: repository **Settings › Secrets and variables › Actions › New repository secret**, name **`RCLONE_CONFIG`**, paste, save.
-5. Test it: **Actions › archive › Run workflow**. The zip appears in OneDrive under `Dashboards/Archive/<this month>/`.
+Use the same OneDrive login as the trading bot:
 
-rclone refreshes the OneDrive sign-in by itself. If OneDrive ever revokes it (a password change, or months without a run), the
-workflow fails with an rclone authentication error: repeat steps 2–4.
+1. In Railway, open the **trading bot** service › **Variables** and copy the value of `ONEDRIVE_RCLONE_CONF`.
+2. Open the **dashboards** service › **Variables** › **New variable**: name `ONEDRIVE_RCLONE_CONF`, paste the value, save.
+   (If both services are in the same Railway project you can instead set the value to a reference,
+   `${{<bot service name>.ONEDRIVE_RCLONE_CONF}}`, so there is one copy to update.)
+3. Optional: `ONEDRIVE_FOLDER` (default `Dashboards`).
 
-To use another folder, change `DEST` at the top of `.github/workflows/archive.yml`.
+Railway redeploys. Within about ten minutes the first zip appears in `Dashboards/Archive/<this month>/`, and `/api/health` shows
+it under `archive` (path, size, any error; never the token). After that, one zip per month end.
+
+The paste can be any shape (one line, quoted, `\n` instead of line breaks): it is repaired before use. Each service keeps its own
+refreshed token on its own volume. If Microsoft ever revokes the login (password change, "sign out everywhere"), both the bot and
+this page report it: run `rclone config` on the Mac again, then `rclone config show onedrive`, and paste the new block into both.
+
+The GitHub secret `RCLONE_CONFIG` is no longer used and can be deleted.

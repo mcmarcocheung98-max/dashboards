@@ -43,8 +43,9 @@ pytest -m network tests/test_sources.py     # fetches every live source: run by 
 
 ## Month-end archive
 
-On the last day of every month the `archive` workflow copies one zip of every dashboard (all data, the daily snapshots, the
-hand-entered files) to OneDrive under `Dashboards/Archive/YYYY-MM/`. Setup and contents: [docs/ARCHIVE.md](docs/ARCHIVE.md).
+On the last day of every month the server copies one zip of every dashboard (all data, the daily snapshots, the hand-entered
+files) to OneDrive under `Dashboards/Archive/YYYY-MM/`, with the same rclone set-up as the trading bot (Railway variable
+`ONEDRIVE_RCLONE_CONF`). Setup and contents: [docs/ARCHIVE.md](docs/ARCHIVE.md).
 The same zip is at `/api/archive.zip` on the live site.
 
 ## Deploy on Railway

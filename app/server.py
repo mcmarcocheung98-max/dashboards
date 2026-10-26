@@ -59,7 +59,13 @@ def make_app() -> web.Application:
         return _json(topics.index())
 
     async def api_health(request):
-        return _json(topics.health())
+        from . import archive
+        h = topics.health()
+        try:
+            h["archive"] = await asyncio.to_thread(archive.health)
+        except Exception as e:
+            h["archive"] = {"error": type(e).__name__}
+        return _json(h)
 
     async def api_probe(request):
         from .cache import _cached                           # at most one probe run per 10 minutes, whoever asks
@@ -137,6 +143,13 @@ async def _warm(app) -> None:
                         log.info("daily snapshot saved for %s", t.slug)
                 except Exception as e:
                     log.warning("daily snapshot %s failed (%s: %s)", t.slug, type(e).__name__, e)
+            try:                                                  # month-end archive to OneDrive (app/archive.py)
+                from . import archive, cloud
+                if cloud.configured() and archive.due():
+                    st = await asyncio.to_thread(archive.run)
+                    log.info("archive: %s", st.get("path") if st.get("ok") else "failed: " + st.get("error", ""))
+            except Exception as e:
+                log.warning("archive failed (%s)", type(e).__name__)
             await asyncio.sleep(WARM_EVERY)
     app["warmer"] = asyncio.create_task(loop())
 
