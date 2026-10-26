@@ -16,9 +16,9 @@ Data for each tab: `/api/climate/<temperature|co2|sea|heat|costs>`. `/api/climat
 | CO₂ | Yearly growth (bars) and the last 12 months | NOAA GML `co2_gr_mlo.csv`; 12-month change of the seasonally adjusted series | yes | yearly / monthly |
 | CO₂ | Global methane | NOAA GML `ch4_mm_gl.csv` | yes | monthly, ~3-month lag |
 | CO₂ | Fossil CO₂ emissions and per person: China, US, UK, Hong Kong, world | Global Carbon Budget through Our World in Data's `owid-co2-data.csv` (GitHub) | yes | yearly, after each Global Carbon Budget (November) |
-| Sea level & ice | Global mean sea level | NOAA STAR Laboratory for Satellite Altimetry `slr_sla_gbl_free_txj1j2_90.csv` (falls back to the `keep` file) | yes | about monthly |
-| Sea level & ice | Tide gauges vs 1991–2020: New York (Battery, PSMSL 12), Newlyn (202), Hong Kong (Quarry Bay 333, else North Point 1799) | PSMSL monthly RLR files | yes | yearly |
-| Sea level & ice | Yearly minimum extent, Arctic and Antarctic; daily extent this year against 1981–2010 and 2011–2020 | NSIDC Sea Ice Index v3 (G02135) daily CSVs | yes | daily |
+| Sea level & ice | Global mean sea level | NOAA STAR Laboratory for Satellite Altimetry `slr_sla_gbl_free_ref_90.csv` (falls back to `keep` and the older `txj1j2` names) | yes | about monthly |
+| Sea level & ice | Tide gauges vs 1991–2020: New York (Battery, PSMSL 12), Newlyn (202), Hong Kong (North Point, 333) | PSMSL monthly RLR files | yes | yearly |
+| Sea level & ice | Yearly minimum extent, Arctic and Antarctic; daily extent this year against 1981–2010 and 2011–2020 | NSIDC Sea Ice Index (G02135) daily CSVs, v4.0 (v3.0 as fallback) | yes | daily |
 | Local heat | Hot days a year: Hong Kong ≥33 °C (HKO "very hot day"), London ≥30 °C, New York ≥32.2 °C (90 °F); hot nights (HK ≥28 °C, NY ≥24 °C, London ≥20 °C) | HKO open data `CLMMAXT` / `CLMMINT` (Observatory HQ since 1884); NOAA NCEI Access Data Service, GHCN-Daily `USW00094728` (Central Park, from 1869) and `UKM00003772` (Heathrow) | yes | daily |
 | Local heat | Calendar-day record highs and lows a year; share of records that were highs, 10 years summed | computed from the daily series, counted from 30 years after each station starts | yes | |
 | Local heat | Average daily maximum, yearly; Heathrow since 1948 | the above; Met Office historic station data `heathrowdata.txt` | yes | monthly |

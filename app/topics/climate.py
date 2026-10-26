@@ -7,7 +7,7 @@ temperature  global surface temperature anomaly against 1850-1900: NASA GISTEMP 
 co2          Mauna Loa CO2, monthly and its yearly growth, and global methane (NOAA GML CSVs); fossil CO2 emissions for China, the US,
              the UK, Hong Kong and the world (Global Carbon Budget, through Our World in Data's CSV on GitHub)
 sea          global mean sea level from satellite altimetry (NOAA STAR), tide gauges at New York (the Battery), Newlyn and Hong Kong
-             (PSMSL monthly RLR files), Arctic and Antarctic sea-ice extent (NSIDC Sea Ice Index v3, daily)
+             (PSMSL monthly RLR files), Arctic and Antarctic sea-ice extent (NSIDC Sea Ice Index v4, falling back to v3, daily)
 heat         hot days, hot nights and calendar-day record highs and lows: Hong Kong Observatory (HKO open data, daily max/min since
              1884), London Heathrow and New York Central Park (NOAA NCEI GHCN-Daily via the Access Data Service), and Heathrow monthly
              mean maximum since 1948 (Met Office historic station data)
@@ -46,11 +46,13 @@ GML = "https://gml.noaa.gov/webdata/ccgg/trends/"
 CO2_MM, CO2_GR, CH4_MM = GML + "co2/co2_mm_mlo.csv", GML + "co2/co2_gr_mlo.csv", GML + "ch4/ch4_mm_gl.csv"
 OWID = "https://raw.githubusercontent.com/owid/co2-data/master/owid-co2-data.csv"
 EMITTERS = ("China", "United States", "United Kingdom", "Hong Kong", "World")
-NSIDC = "https://noaadata.apps.nsidc.org/NOAA/G02135/{h}/daily/data/{H}_seaice_extent_daily_v3.0.csv"
-STAR = ["https://www.star.nesdis.noaa.gov/socd/lsa/SeaLevelRise/slr/slr_sla_gbl_free_txj1j2_90.csv",
-        "https://www.star.nesdis.noaa.gov/socd/lsa/SeaLevelRise/slr/slr_sla_gbl_keep_txj1j2_90.csv"]
+NSIDC_DIR = "https://noaadata.apps.nsidc.org/NOAA/G02135/{h}/daily/data/"
+NSIDC_FILES = ["{H}_seaice_extent_daily_v4.0.csv", "{H}_seaice_extent_daily_v3.0.csv"]          # v4 replaced v3 in 2025
+STAR_DIR = "https://www.star.nesdis.noaa.gov/socd/lsa/SeaLevelRise/"
+STAR = [STAR_DIR + "slr/slr_sla_gbl_free_ref_90.csv", STAR_DIR + "slr/slr_sla_gbl_keep_ref_90.csv",
+        STAR_DIR + "slr/slr_sla_gbl_free_txj1j2_90.csv", STAR_DIR + "slr/slr_sla_gbl_keep_txj1j2_90.csv"]
 PSMSL = "https://psmsl.org/data/obtaining/rlr.monthly.data/{id}.rlrdata"
-GAUGES = {"New York (Battery)": [12], "Newlyn (UK)": [202], "Hong Kong (Quarry Bay / North Point)": [333, 1799]}   # first with recent data wins
+GAUGES = {"New York (Battery)": [12], "Newlyn (UK)": [202], "Hong Kong (North Point)": [333]}   # first with recent data wins
 HKO = "https://data.weather.gov.hk/weatherAPI/opendata/opendata.php?dataType={t}&rformat=csv&station=HKO"
 NCEI = ("https://www.ncei.noaa.gov/access/services/data/v1?dataset=daily-summaries&stations={st}&dataTypes=TMAX,TMIN"
         "&startDate={a}-01-01&endDate={b}&format=csv&units=metric")
@@ -70,7 +72,7 @@ SOURCES = [{"name": "NASA GISS Surface Temperature Analysis (GISTEMP v4)", "url"
            {"name": "Global Carbon Budget fossil CO₂ (Our World in Data CSV)", "url": "https://github.com/owid/co2-data", "cadence": "yearly, November"},
            {"name": "NOAA STAR Laboratory for Satellite Altimetry: global mean sea level", "url": "https://www.star.nesdis.noaa.gov/socd/lsa/SeaLevelRise/", "cadence": "about monthly"},
            {"name": "PSMSL tide gauges (monthly RLR)", "url": "https://psmsl.org/", "cadence": "yearly"},
-           {"name": "NSIDC Sea Ice Index v3 (G02135)", "url": "https://nsidc.org/data/g02135", "cadence": "daily"},
+           {"name": "NSIDC Sea Ice Index (G02135)", "url": "https://nsidc.org/data/g02135", "cadence": "daily"},
            {"name": "Hong Kong Observatory climatological data (open data API)", "url": "https://data.weather.gov.hk/weatherAPI/doc/HKO_Open_Data_API_Documentation.pdf", "cadence": "daily"},
            {"name": "NOAA NCEI GHCN-Daily (Access Data Service): Central Park, Heathrow", "url": "https://www.ncei.noaa.gov/access/services/data/v1", "cadence": "daily"},
            {"name": "Met Office historic station data: Heathrow", "url": "https://www.metoffice.gov.uk/research/climate/maps-and-data/historic-station-data", "cadence": "monthly"},
@@ -295,8 +297,18 @@ def emissions() -> dict[str, pd.DataFrame]:
     return _cached(f"topic:{SLUG}:owid", DAY, lambda: parse_owid(fetch(OWID, WEEK, timeout=120, min_bytes=100000)))
 
 
+def nsidc_urls(h: str) -> list[str]:
+    return [NSIDC_DIR.format(h=h) + f.format(H=h[0].upper()) for f in NSIDC_FILES]
+
+
 def sea_ice(h: str) -> pd.Series:
-    return parse_nsidc(fetch(NSIDC.format(h=h, H=h[0].upper()), TTL, timeout=90, min_bytes=1000))
+    last = None
+    for u in nsidc_urls(h):
+        try:
+            return parse_nsidc(fetch(u, TTL, timeout=90, min_bytes=1000))
+        except Exception as e:
+            last = e
+    raise last
 
 
 def gmsl() -> pd.Series:
@@ -656,7 +668,7 @@ def _sea_now() -> dict:
             raise ValueError("PSMSL unreachable")
         return {k: _pts(v, 0) for k, v in gauges.items()}
     out = payload({"gmsl": lambda: _pts(gmsl(), 1), "ice": ice_part, "gauges": gauge_part},
-                  sources=[*STAR, NSIDC.format(h="north", H="N"), NSIDC.format(h="south", H="S"), PSMSL.format(id=12)])
+                  sources=[*STAR, *nsidc_urls("north"), *nsidc_urls("south"), PSMSL.format(id=12)])
     out["missing"] = why
     k, rows = {}, []
     try:
@@ -802,14 +814,40 @@ def _layout_now() -> dict:
     from ._base import UA
     y = pd.Timestamp.now().year
     urls = {"gistemp": GISTEMP, "era5": ERA5, "hadcrut": HADCRUT, "co2": CO2_MM, "co2 growth": CO2_GR, "ch4": CH4_MM, "owid": OWID,
-            "nsidc north": NSIDC.format(h="north", H="N"), "heathrow monthly": HEATHROW, "hko max": HKO.format(t="CLMMAXT"), "hko min": HKO.format(t="CLMMINT")}
+            **{f"nsidc {u.rsplit('/', 1)[1]}": u for u in nsidc_urls("north")}, "heathrow monthly": HEATHROW, "hko max": HKO.format(t="CLMMAXT"), "hko min": HKO.format(t="CLMMINT")}
     urls.update({f"star {i}": u for i, u in enumerate(STAR)})
     urls.update({f"psmsl {sid}": PSMSL.format(id=sid) for ids in GAUGES.values() for sid in ids})
     urls.update({f"psmsl page {sid}": f"https://psmsl.org/data/obtaining/stations/{sid}.php" for ids in GAUGES.values() for sid in ids})
     urls.update({f"ncei {st}": NCEI.format(st=st, a=y, b=f"{y}-12-31") for ids, _ in STATIONS.values() for st in ids})
     urls.update({f"billions {i}": u for i, u in enumerate(BILLIONS)})
+    urls.update({"nsidc listing": "#nsidc", "star links": "#star", "london stations": "#london"})
+
+    def links(u, pat):
+        """A directory or index page -> the file links on it that match pat."""
+        try:
+            r = requests.get(u, headers=UA, timeout=40)
+            return {"status": r.status_code, "links": sorted(set(re.findall(pat, r.text)))[:60]}
+        except Exception as e:
+            return {"error": f"{type(e).__name__}: {str(e)[:160]}"}
+
+    def stations():
+        """NCEI's station search around Heathrow and central London: ids with TMAX and their date ranges."""
+        u = ("https://www.ncei.noaa.gov/access/services/search/v1/data?dataset=daily-summaries&bbox=51.75,-0.70,51.30,0.10"
+             "&dataTypes=TMAX&limit=30")
+        try:
+            j = requests.get(u, headers=UA, timeout=40).json()
+            return [{"id": [x.get("id") for x in (r.get("stations") or [])], "name": (r.get("stations") or [{}])[0].get("name"),
+                     "start": (r.get("startDate") or "")[:10], "end": (r.get("endDate") or "")[:10]} for r in j.get("results") or []]
+        except Exception as e:
+            return {"error": f"{type(e).__name__}: {str(e)[:160]}"}
 
     def one(u):
+        if u == "#nsidc":
+            return links(NSIDC_DIR.format(h="north"), r'href="([^"]+\.csv)"')
+        if u == "#star":
+            return links(STAR_DIR + "LSA_SLR_timeseries.php", r'href="([^"]+\.(?:csv|txt))"')
+        if u == "#london":
+            return stations()
         try:
             r = requests.get(u, headers=UA, timeout=40, stream=True)
             body = next(r.iter_content(4000), b"").decode("utf-8", "replace")
