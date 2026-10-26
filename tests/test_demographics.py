@@ -181,3 +181,20 @@ def test_live_sources():
     assert set(d["ISO3_code"]) == set(D.PLACES) and d["Time"].max() == 2100
     a = D.reduce_ages(D._read(D.WPP_AGE, ["AgeGrpStart", "PopTotal"]))
     assert set(a["ISO3_code"]) == set(D.PLACES)
+
+
+def test_readings(demo):
+    from app.topics import _daily
+    from app import cache
+    assert D.READINGS() == []                                    # nothing cached yet: nothing is downloaded
+    for fn in D.ENDPOINTS.values():
+        fn()
+    rows = _daily._clean(D.READINGS())
+    by = {r["key"]: r for r in rows}
+    assert {r["tab"] for r in rows} == {"births", "ageing", "migration", "workforce", "pensions"}
+    assert len(by) == len(rows) and all(r["lean"] in (-1, 0, 1) for r in rows)
+    assert by["tfr:UK"]["value"] == 1.41 and by["tfr:UK"]["lean"] == -1           # 1.42 -> 1.41
+    assert by["fastest_shrinking"]["value"] == "China"
+    assert by["wa2045:China"]["lean"] == -1
+    assert "net:Hong Kong natural change (C&SD)" not in by
+    cache._cache.clear()

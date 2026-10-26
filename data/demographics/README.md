@@ -64,6 +64,20 @@ UN and World Bank data are CC BY 3.0 IGO / CC BY 4.0. ONS and OBR data are under
 
 **Rows to verify.** `verify` in a row's note means it was written from memory or copied from a press report. The page shows the note next to the row, and each one needs checking against the agency's own table. On 26 Oct 2026 these rows were checked against the agency's release or an official reply: US births and TFR 2023–24 (NCHS Data Brief 535, NVSR 75-2), England and Wales births and TFR 2023–24 (ONS 2024 refreshed populations), Hong Kong TFR 2024 (LegCo reply, 16 Jul 2025), C&SD mid-2025 migration rows, ONS LTIM YE June 2024 and June 2025, OBR state pension (about 5% now, 7.7% early 2070s), and CBO Social Security 5.2% (2025) and 6.1% (2055). China births for 2024 and 2025 (9.54m and 7.92m) come from Caixin's report of the NBS release. Everything else is still marked `verify`. Several C&SD and NBS rows cite the agency's home page rather than the exact table, because the table address could not be checked from here; replace each with the table page when you verify the row.
 
+## What changed since yesterday (`READINGS()`)
+
+`READINGS()` reads only the tab payloads the warmer has already cached and never downloads. **+1 means easier to pay for pensions (more births, workers or inflows; fewer pensioners per worker; a smaller pension bill), −1 harder, 0 in between.**
+
+| Tab | Reading (one per place or series) | Lean |
+|---|---|---|
+| Births | Latest official fertility rate | Direction since the previous official figure |
+| Ageing | People 65+ per 100 aged 15–64 in 2045 (UN) | +1 at 35 or below, −1 at 50 or above (fewer than two workers per pensioner) |
+| Migration | Latest national net migration count (natural change left out) | Direction since the previous figure |
+| Workforce | Change in people aged 15–64, 2025 to 2045 (UN) | +1 above +2%, −1 below −2% |
+| Pensions | The place shrinking fastest (0); public pension spend in 2045, % GDP | +1 at 5% or below, −1 at 7% or above |
+
+Most of these move only when a row is added or the UN publishes a new round, so a flip usually means new data, not a new day.
+
 ## Checking it
 
 ```

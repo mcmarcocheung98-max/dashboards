@@ -335,3 +335,62 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 
 ENDPOINTS = {"births": _cached_ep("births", _births_now), "ageing": _cached_ep("ageing", _ageing_now), "migration": _cached_ep("migration", _migration_now),
              "workforce": _cached_ep("workforce", _workforce_now), "pensions": _cached_ep("pensions", _pensions_now)}
+
+
+# ------------------------------------------------------------------ what changed since yesterday
+def _band(v, good, bad, higher_is_good=True):
+    """+1 past `good`, -1 past `bad`, 0 between."""
+    if v is None:
+        return 0
+    if higher_is_good:
+        return 1 if v >= good else -1 if v <= bad else 0
+    return 1 if v <= good else -1 if v >= bad else 0
+
+
+def _step(pts):
+    """+1 / -1 / 0: the direction of the last move in a [[ts, v], ...] series."""
+    vals = [p[1] for p in pts or [] if p[1] is not None]
+    return 0 if len(vals) < 2 or vals[-1] == vals[-2] else 1 if vals[-1] > vals[-2] else -1
+
+
+def readings_for(tab: str, d: dict) -> list[dict]:
+    """Headline readings of one tab's payload. Lean: +1 easier to pay for pensions (more births, workers, inflows; fewer pensioners per
+    worker; a smaller pension bill), -1 harder, 0 in between (thresholds in data/demographics/README.md)."""
+    out = []
+
+    def add(key, label, value, lean, note=None):
+        if value is not None:
+            out.append({"tab": tab, "key": key, "label": label, "value": value, "lean": lean, **({"note": note} if note else {})})
+    if tab == "births":
+        for k, pts in (d.get("national_tfr") or {}).items():
+            if pts:
+                add(f"tfr:{k}", f"{k}: fertility rate, official ({pd.Timestamp(pts[-1][0], unit='s').year})", pts[-1][1], _step(pts), "lean: direction since the previous official figure")
+    elif tab == "ageing":
+        for k, v in (d.get("kpi") or {}).items():
+            add(f"oadr2045:{k}", f"{k}: people 65+ per 100 aged 15–64 in 2045", v.get("oadr_2045"), _band(v.get("oadr_2045"), 35, 50, higher_is_good=False))
+    elif tab == "migration":
+        for k, pts in (d.get("national") or {}).items():
+            if pts and "natural change" not in k:
+                add(f"net:{k}", f"{k}, 12 months to {pd.Timestamp(pts[-1][0], unit='s').date()}", pts[-1][1], _step(pts), "lean: direction since the previous figure")
+    elif tab == "workforce":
+        for k, v in ((d.get("working_age") or {}).get("change") or {}).items():
+            add(f"wa2045:{k}", f"{k}: change in people aged 15–64, 2025 to 2045", v.get("to_2045"), _band(v.get("to_2045"), 0.02, -0.02))
+    elif tab == "pensions":
+        rows = (d.get("answer") or {}).get("rows") or []
+        known = [r for r in rows if r.get("working_age_change") is not None]
+        if known:
+            add("fastest_shrinking", "Working-age population shrinking fastest to 2045", known[0]["place"], 0)
+        for r in rows:
+            add(f"pension2045:{r['place']}", f"{r['place']}: public pension spend in 2045, % GDP", r.get("pension_2045"), _band(r.get("pension_2045"), 5, 7, higher_is_good=False))
+    return out
+
+
+def READINGS() -> list[dict]:
+    """Each tab's readings from the payloads the endpoints already cached; a tab not computed yet is left out, never downloaded here."""
+    from ..cache import _cache
+    rows = []
+    for t, _ in TOPIC.tabs:
+        hit = _cache.get(f"topic:{SLUG}:{t}")
+        if hit and isinstance(hit[1], dict):
+            rows += readings_for(t, hit[1])
+    return rows
