@@ -250,11 +250,11 @@ def tesla_signal(px: pd.Series, t: dict[str, pd.Series], threshold: float = 0.0)
     called = [e for e in events if e["tsla_next"] is not None and e["tsla_next"] != 0]
     hits = sum((e["long"] and e["tsla_next"] > 0) or (not e["long"] and e["tsla_next"] < 0) for e in called)
     first = float(px[px.index <= start].iloc[-1]) if len(px[px.index <= start]) else float(days.iloc[0])
-    return {"events": events, "threshold": threshold, "cost": COST,
+    return {"equity": _pts(strat * first, 2), "hold": _pts(hold * first, 2), "signal": _pts(sig_daily.dropna(), 3),   # arrays first, so a
+            "events": events, "threshold": threshold, "cost": COST,                                                    # log tail shows the stats
             "stats": {"from": str(days.index[0].date()), "to": str(days.index[-1].date()), "years": _r(years, 2),
                       "strategy": stats(strat), "buy_hold": stats(hold), "invested": _r(float(pos.mean()), 3),
-                      "switches": int(switches.sum()), "periods": len(called), "hits": int(hits), "metrics": len(latest)},
-            "equity": _pts(strat * first, 2), "hold": _pts(hold * first, 2), "signal": _pts(sig_daily.dropna(), 3)}
+                      "switches": int(switches.sum()), "periods": len(called), "hits": int(hits), "metrics": len(latest)}}
 
 
 def _tesla_now() -> dict:
@@ -379,27 +379,29 @@ def cpuc_trips(max_new: int = 3) -> dict[str, pd.Series]:
 
 ENERGY_PROBES = {
     "ember yearly": "https://files.ember-energy.org/public-downloads/generation/outputs/release_generation_yearly_global.csv",
-    "ember yearly page": "https://ember-energy.org/data/yearly-electricity-data/",
-    "ember monthly page": "https://ember-energy.org/data/monthly-electricity-data/",
-    "ember ev page": "https://ember-energy.org/data/monthly-ev-sales-data/",
-    "iea gevo page": "https://www.iea.org/data-and-statistics/data-product/global-ev-outlook-2026",
+    "ember monthly": "https://files.ember-energy.org/public-downloads/generation/outputs/release_generation_monthly_global.csv",
+    "ember ev sales": "https://storage.googleapis.com/emb-prod-bkt-publicdata/public-downloads/transport/outputs/monthly_ev_sales.csv",
 }
 
 
 def _energy_probe() -> dict:
-    """Not a tab: status, type, size and the first bytes of each candidate Energy source as this server sees them
-    (/api/robotaxi/energy_probe), to write the parsers against the real layouts."""
-    import re
+    """Not a tab: for each candidate Energy CSV, its header, size, the areas it covers, the latest period and sample rows for the four
+    markets, as this server sees them (/api/robotaxi/energy_probe)."""
+    import csv
     import requests
     out = {}
     for k, u in ENERGY_PROBES.items():
         try:
-            r = requests.get(u, headers=UA, timeout=40, stream=True)
-            body = r.raw.read(400000 if "page" in k else 4000, decode_content=True).decode("utf-8", "replace")
-            head = body[:1500]
-            r.close()
-            out[k] = {"status": r.status_code, "type": r.headers.get("content-type", ""), "length": r.headers.get("content-length"),
-                      "start": head[:1200], "csv_links": sorted(set(re.findall(r'https?://[^"\' <>]+\.(?:csv|xlsx|zip)', body)))[:30]}
+            r = requests.get(u, headers=UA, timeout=120)
+            rows = list(csv.reader(StringIO(r.text)))
+            head, body = rows[0], rows[1:]
+            area = head.index("Area") if "Area" in head else 0
+            when = next((i for i, h in enumerate(head) if h.lower() in ("year", "date", "month")), 2)
+            areas = sorted({x[area] for x in body if len(x) > area})
+            want = [a for a in areas if any(w in a.lower() for w in ("united kingdom", "united states", "china", "hong kong"))]
+            out[k] = {"status": r.status_code, "bytes": len(r.content), "rows": len(body), "header": head, "n_areas": len(areas), "areas_wanted": want,
+                      "latest": max((x[when] for x in body if len(x) > when), default=None),
+                      "sample": [x for x in body if len(x) > area and x[area] in want][-12:]}
         except Exception as e:
             out[k] = {"error": f"{type(e).__name__}: {str(e)[:160]}"}
     return out
