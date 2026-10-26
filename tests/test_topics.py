@@ -443,6 +443,8 @@ def _llama(url):
 
 
 def test_btc_cycles_payloads(snapdir, monkeypatch):
+    from app.topics import btc_cycles as _C
+    monkeypatch.setattr(_C, "FUND_DIR", snapdir / "btc_fundamentals")          # per-coin fundamentals files stay in the test's folder
     from app.topics import btc_cycles as C
     monkeypatch.setattr(C, "fetch_json", lambda url, ttl, **k: _cm() if "coinmetrics" in url else _llama(url))
     monkeypatch.setattr(C, "DOM_LOG", snapdir / "dom.csv")
@@ -505,6 +507,8 @@ def _chart(mult=1.0, start=60000.0, n=365, seed=1):
 
 
 def test_btc_cycles_coins(snapdir, monkeypatch):
+    from app.topics import btc_cycles as _C
+    monkeypatch.setattr(_C, "FUND_DIR", snapdir / "btc_fundamentals")          # per-coin fundamentals files stay in the test's folder
     from app.topics import btc_cycles as C
     charts = _chart(mult=2.0)
     import json as _json
@@ -555,6 +559,8 @@ def test_btc_cycles_rsi_and_beta_edges():
 
 
 def test_btc_cycles_coin_notes(snapdir, monkeypatch):
+    from app.topics import btc_cycles as _C
+    monkeypatch.setattr(_C, "FUND_DIR", snapdir / "btc_fundamentals")          # per-coin fundamentals files stay in the test's folder
     from app.topics import btc_cycles as C
     notes = C.coin_notes()["coins"]
     assert {c["ticker"] for c in C.coins_list()} == set(notes)
@@ -1103,6 +1109,8 @@ def test_btc_readings(snapdir, monkeypatch):
 
 
 def test_btc_fundamentals_parse_and_factors(snapdir, monkeypatch):
+    from app.topics import btc_cycles as _C
+    monkeypatch.setattr(_C, "FUND_DIR", snapdir / "btc_fundamentals")          # per-coin fundamentals files stay in the test's folder
     from app.topics import btc_cycles as C
     day = 86400
     t0 = int(pd.Timestamp("2025-10-20").timestamp())
