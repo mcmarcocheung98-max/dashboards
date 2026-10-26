@@ -1,0 +1,2 @@
+date,series,value,source,note
+# date = month,series = "PSA Pokémon cards graded" (cards per month) or "PSA turnaround days (value tier)",value,source (GemRate or PSA page),note

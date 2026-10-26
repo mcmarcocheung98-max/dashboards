@@ -1,0 +1,2 @@
+date,series,value,source,note
+# date = set release,series = set name,value = booster box price / MSRP two to ten weeks after release,source,note (sets outside basket.csv only)
