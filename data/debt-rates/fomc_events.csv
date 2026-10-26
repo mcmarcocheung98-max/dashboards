@@ -1,0 +1,33 @@
+date,event,source,note,emergency
+# Events around FOMC decisions: the shock or data the Fed was reacting to. emergency = yes for a move between scheduled meetings.
+# Decisions themselves are computed from the target range; add the context of any new decision here (the 2026 hike has none yet).
+2006-06-29,"Last hike of the 2004-06 cycle, to 5.25%; US house prices peaking.",https://www.federalreserve.gov/monetarypolicy/fomchistorical2006.htm,,
+2007-08-09,BNP Paribas freezes three funds exposed to US subprime mortgages; money markets seize up.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20070810a.htm,verify: date from memory,
+2007-09-18,"First cut, 50 bp, as subprime losses spread to banks.",https://www.federalreserve.gov/monetarypolicy/fomchistorical2007.htm,,
+2008-01-22,Emergency 75 bp cut between meetings after a global stock sell-off.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20080122b.htm,,yes
+2008-03-16,Bear Stearns rescued by JPMorgan with Fed support; 75 bp cut two days later.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20080316a.htm,,
+2008-09-15,Lehman Brothers files for bankruptcy; AIG rescued the next day.,https://www.federalreserve.gov/newsevents/pressreleases/other20080916a.htm,,
+2008-10-08,"Coordinated 50 bp cut with the ECB, BoE and others, between meetings.",https://www.federalreserve.gov/newsevents/pressreleases/monetary20081008a.htm,,yes
+2008-11-25,QE1 announced: purchases of agency debt and mortgage-backed securities.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20081125b.htm,,
+2008-12-16,Target cut to a 0-0.25% range: the zero lower bound.,https://www.federalreserve.gov/monetarypolicy/fomchistorical2008.htm,,
+2010-11-03,QE2: $600bn of longer-term Treasuries.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20101103a.htm,,
+2011-08-05,S&P downgrades the US from AAA to AA+ after the debt-ceiling standoff.,https://www.spglobal.com/ratings/,verify: date from memory,
+2011-09-21,"Operation Twist: sell short Treasuries, buy long ones.",https://www.federalreserve.gov/newsevents/pressreleases/monetary20110921a.htm,,
+2012-09-13,"QE3: open-ended MBS purchases, later Treasuries too.",https://www.federalreserve.gov/newsevents/pressreleases/monetary20120913a.htm,,
+2013-05-22,Bernanke hints at slowing purchases: the 'taper tantrum' lifts the 10-year by about 1 point by September.,https://www.federalreserve.gov/newsevents/testimony/bernanke20130522a.htm,,
+2015-12-16,"Lift-off: first hike since 2006, to 0.25-0.5%.",https://www.federalreserve.gov/monetarypolicy/fomchistorical2015.htm,,
+2017-10-01,Balance-sheet runoff (QT1) begins.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20170920a.htm,,
+2018-12-19,Fourth hike of 2018 into a falling stock market; the Fed turns 'patient' a month later.,https://www.federalreserve.gov/monetarypolicy/fomchistorical2018.htm,,
+2019-07-31,First cut since 2008: 'insurance' against the trade war and slowing growth.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20190731a.htm,,
+2019-09-17,Repo-market rates spike to 10%: reserves had become scarce; the Fed starts buying bills.,https://www.newyorkfed.org/markets/opolicy/operating_policy_190917,verify: date from memory,
+2020-03-03,Emergency 50 bp cut as Covid spreads.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20200303a.htm,,yes
+2020-03-15,Emergency cut to 0-0.25% and $700bn of purchases (a Sunday).,https://www.federalreserve.gov/newsevents/pressreleases/monetary20200315a.htm,,yes
+2021-11-03,Taper of Covid-era purchases announced; inflation above 6%.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20211103a.htm,,
+2022-03-16,Lift-off with CPI near 8% after Russia invades Ukraine.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20220316a.htm,,
+2022-06-15,"75 bp hike, the largest since 1994, after an 8.6% CPI print.",https://www.federalreserve.gov/newsevents/pressreleases/monetary20220615a.htm,,
+2023-03-10,Silicon Valley Bank fails; the Fed still hikes 25 bp on 22 March.,https://www.federalreserve.gov/newsevents/pressreleases/monetary20230312a.htm,,
+2023-07-26,"Last hike of the cycle, to 5.25-5.5%, a 22-year high.",https://www.federalreserve.gov/newsevents/pressreleases/monetary20230726a.htm,,
+2024-09-18,"First cut of the cycle, 50 bp, as unemployment rises.",https://www.federalreserve.gov/newsevents/pressreleases/monetary20240918a.htm,,
+2025-04-02,Broad US tariffs announced; markets sell off and Treasury yields jump.,https://www.whitehouse.gov/presidential-actions/,verify: date and wording from memory,
+2025-09-17,Cut resumes after a nine-month pause as job growth slows.,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,verify: context from memory,
+2025-10-29,"Cut, and the end of balance-sheet runoff announced for 1 December.",https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,verify: context from memory,

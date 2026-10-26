@@ -141,6 +141,43 @@ def clob_json(token: str) -> dict:
     return {"history": [{"t": int(t.timestamp()), "p": round(0.5 + 0.3 * i / len(days), 3)} for i, t in enumerate(days)]}
 
 
+def kalshi_json() -> dict:
+    def ev(tag, close, above):
+        return {"event_ticker": f"KXFED-{tag}", "title": f"Fed funds rate after {tag} meeting?", "markets": [
+            {"floor_strike": k, "strike_type": "greater", "last_price_dollars": f"{p:.4f}", "yes_bid_dollars": "0", "yes_ask_dollars": "0",
+             "volume_fp": "1000.5", "close_time": close} for k, p in above]}
+    return {"events": [ev("26DEC", "2026-12-09T18:55:00Z", [(3.5, 0.99), (3.75, 0.97), (4.0, 0.75), (4.25, 0.05)]),
+                       ev("26OCT", (NOW + pd.Timedelta(days=2)).strftime("%Y-%m-%dT18:55:00Z"), [(3.5, 0.99), (3.75, 0.98), (4.0, 0.07), (4.25, 0.01)])]}
+
+
+def soma_json() -> dict:
+    weeks = pd.date_range("2008-01-02", NOW, freq="7D")
+    rows = []
+    for i, t in enumerate(weeks):
+        nb = 0.5e12 + i * 3e9 if t < pd.Timestamp("2022-06-01") else 3.5e12
+        rows.append({"asOfDate": str(t.date()), "mbs": str(1e12 if t > pd.Timestamp("2009-06-01") else 0), "cmbs": "0", "tips": "1e11", "frn": "0",
+                     "tipsInflationCompensation": "0", "notesbonds": str(nb), "bills": "2e11", "agencies": "0", "total": str(nb + 1.3e12)})
+    return {"soma": {"summary": rows}}
+
+
+def mspd_json() -> dict:
+    rows = []
+    for i, t in enumerate(pd.date_range("2001-01-31", NOW - pd.DateOffset(months=1), freq="ME")):
+        vals = {"Bills": 1e6 + i * 2e4, "Notes": 2e6 + i * 4e4, "Bonds": 5e5 + i * 1e4, "Treasury Inflation-Protected Securities": 1e5, "Floating Rate Notes": 0}
+        for k, v in vals.items():
+            rows.append({"record_date": str(t.date()), "security_type_desc": "Marketable", "security_class_desc": k, "total_mil_amt": str(v)})
+        rows.append({"record_date": str(t.date()), "security_type_desc": "Total Marketable", "security_class_desc": "_", "total_mil_amt": str(sum(vals.values()))})
+    return {"data": rows}
+
+
+def buybacks_json() -> dict:
+    rows = [{"operation_date": str(t.date()), "operation_type": "Liquidity Support" if i % 3 else "Cash Management", "security_type": "Nominal Coupons",
+             "maturity_bucket": "10Y to 20Y", "total_par_amt_accepted": "2000000000.00"} for i, t in enumerate(pd.date_range("2024-05-29", NOW - pd.Timedelta(days=3), freq="14D"))]
+    rows.append({"operation_date": str((NOW + pd.Timedelta(days=1)).date()), "operation_type": "Liquidity Support", "security_type": "TIPS",
+                 "maturity_bucket": "1Y to 10Y", "total_par_amt_accepted": "null"})
+    return {"data": rows}
+
+
 def fake_fetch(url, ttl=0, **k):
     if "treasury.gov/resource-center" in url:
         y = int(url.split("daily-treasury-rates.csv/")[1][:4])
@@ -171,6 +208,14 @@ def fake_fetch_json(url, ttl=0, **k):
         return hkma_json(url, int(url.split("offset=")[1]))
     if "censtatd" in url:
         return csd_json()
+    if "kalshi" in url:
+        return kalshi_json()
+    if "soma/summary" in url:
+        return soma_json()
+    if "mspd_table_1" in url:
+        return mspd_json()
+    if "buybacks_operations" in url:
+        return buybacks_json()
     if "gamma-api.polymarket" in url:
         return poly_json()
     if "clob.polymarket" in url:
@@ -255,7 +300,7 @@ def test_hkma_parser_reads_every_page():
 
 # ------------------------------------------------------------------ payloads
 def test_every_endpoint_on_fixtures(fixtures):
-    for name in ("debt", "interest", "yields", "policy", "odds", "stress"):
+    for name in ("debt", "interest", "yields", "policy", "odds", "qe", "stress"):
         p = D.ENDPOINTS[name]()
         B.json_safe(p)
         errs = {k: v for k, v in p.items() if k.endswith("_error")}
@@ -360,16 +405,49 @@ def test_policy_and_odds_payloads(fixtures):
     B.json_safe(p), B.json_safe(o)
 
 
+def test_kalshi_ladder_becomes_level_probabilities():
+    ev = D.parse_kalshi(kalshi_json())
+    assert [e["ticker"] for e in ev] == ["KXFED-26OCT", "KXFED-26DEC"]                  # next meeting first
+    lv = {x["upper"]: x["p"] for x in ev[0]["levels"]}
+    assert lv[4.0] == pytest.approx(0.91, abs=0.01) and lv[4.25] == pytest.approx(0.06, abs=0.01)   # P(above 3.75) - P(above 4.0) = 0.98 - 0.07
+    assert sum(lv.values()) == pytest.approx(1.0, abs=0.001)
+
+
+def test_fomc_history_cycles_and_insights(fixtures):
+    h = D.fomc_history(years=30)
+    assert h == sorted(h, key=lambda d: d["date"]) and all("events" in d and "y10" in d for d in h)
+    leh = next(d for d in h if d["date"] == "2008-10-08")
+    assert leh["emergency"] and any("Lehman" in e["event"] for e in leh["events"])       # context from fomc_events.csv, flagged off-meeting
+    c = D.fomc_cycles(h)
+    assert {x["direction"] for x in c} == {"hiking", "cutting"} and all(x["moves"] >= 1 and x["months"] >= 0 for x in c)
+    ins = D.fomc_insights(h, c)
+    assert ins and ins[0].startswith("Since 20") and any("cutting cycles opened" in t for t in ins)
+    o = D.ENDPOINTS["odds"]()
+    assert o["fomc"]["insights"] and o["fomc"]["decisions"][0]["date"] >= o["fomc"]["decisions"][-1]["date"] and o["kalshi"]
+
+
+def test_qe_and_maturity(fixtures):
+    q = D.ENDPOINTS["qe"]()
+    assert not {k for k in q if k.endswith("_error")}, q
+    assert q["share"] and 0 < q["share"][-1][1] < 100
+    assert q["buybacks"]["ops"] > 10 and q["buybacks"]["next"] and set(q["buybacks"]["monthly"]) == {"Liquidity Support", "Cash Management"}
+    covid = next(r for r in q["programmes"] if r["name"] == "Covid QE")
+    assert covid["fed_change_tn"] is not None and covid["fed_change_tn"] > 0
+    d = D.ENDPOINTS["debt"]()
+    m = d["maturity"]["now"]
+    assert 0 < m["bills_share"] < 100 and d["maturity_avg"]
+
+
 def test_readings_come_from_the_cached_payloads(fixtures):
     assert D.READINGS() == []                                             # nothing computed yet: nothing to report, nothing fetched
-    for name in ("debt", "interest", "yields", "policy", "odds", "stress"):
+    for name in ("debt", "interest", "yields", "policy", "odds", "qe", "stress"):
         D.ENDPOINTS[name]()
     rows = D.READINGS()
     keys = {r["key"] for r in rows}
-    assert {r["tab"] for r in rows} == {"debt", "interest", "yields", "policy", "odds", "stress"}
-    assert {"cpi_US", "next_25 bps decrease"} <= keys
+    assert {r["tab"] for r in rows} == {"debt", "interest", "yields", "policy", "odds", "qe", "stress"}
+    assert {"cpi_US", "next_25 bps decrease", "kalshi_hold", "fed_share", "us_bills_share"} <= keys
     assert {"debt_US", "us_per_day", "us_int_share", "us_int_vs_def", "y10_US", "gap_US", "spread_US"} <= keys
-    assert all(r["lean"] in (-1, 0, 1) and r["tab"] in {"debt", "interest", "yields", "policy", "odds", "stress"} for r in rows)
+    assert all(r["lean"] in (-1, 0, 1) and r["tab"] in {"debt", "interest", "yields", "policy", "odds", "qe", "stress"} for r in rows)
     B.json_safe(rows)
 
 

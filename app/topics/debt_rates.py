@@ -32,9 +32,9 @@ SLUG = "debt-rates"
 TOPIC = Topic(SLUG, "Global Debt & Rates",
               "Government debt, interest bills, 10-year yields and policy rates in the US, UK, Hong Kong and China: which hits fiscal stress first, "
               "and when interest overtakes defence or education.",
-              "debt_rates", (("debt", "Debt"), ("interest", "Interest cost"), ("yields", "Yields"), ("policy", "Policy & CPI"), ("odds", "FOMC & odds"),
-                             ("stress", "Stress")),
-              ("debt", "interest", "yields", "policy", "odds", "stress"), icon="chart", order=60)
+              "debt_rates", (("policy", "Interest rates & CPI"), ("odds", "FOMC history & odds"), ("debt", "Debt"), ("interest", "Interest cost"),
+                             ("yields", "Yields"), ("qe", "Fed & Treasury buying"), ("stress", "Stress")),
+              ("policy", "odds", "debt", "interest", "yields", "qe", "stress"), icon="chart", order=60)
 
 TTL = DAY
 COUNTRIES = {"USA": "US", "GBR": "UK", "HKG": "Hong Kong", "CHN": "China"}
@@ -74,6 +74,16 @@ POLY = "https://gamma-api.polymarket.com/events?tag_slug={tag}&closed=false&limi
 POLY_TAGS = ("fed-rates",)
 POLY_MIN_VOLUME = 100_000          # side markets ("Hike flips No change by ...") trade a few thousand dollars; show the ones people bet on
 POLY_HIST = "https://clob.polymarket.com/prices-history?market={token}&interval=max&fidelity=720"
+# Kalshi (a CFTC-regulated exchange): series KXFED, one event per FOMC meeting, one market per strike: "upper bound above X%"
+KALSHI = "https://api.elections.kalshi.com/trade-api/v2/events?series_ticker={series}&status=open&with_nested_markets=true&limit=8"
+KALSHI_SERIES = ("KXFED",)
+# Fed holdings (System Open Market Account, weekly, New York Fed), the Treasury's marketable debt by type (Monthly Statement of the
+# Public Debt, table 1) and Treasury's own buybacks (since May 2024)
+SOMA = "https://markets.newyorkfed.org/api/soma/summary.json"
+MSPD = (FISCAL + "v1/debt/mspd/mspd_table_1?fields=record_date,security_type_desc,security_class_desc,total_mil_amt"
+        "&filter=record_date:gte:2001-01-01,security_type_desc:in:(Marketable,Total%20Marketable)&page%5Bsize%5D=10000")
+BUYBACKS = FISCAL + "v1/accounting/od/buybacks_operations?fields=operation_date,operation_type,security_type,maturity_bucket,total_par_amt_accepted&page%5Bsize%5D=2000"
+FOMC_YEARS = 20                     # the FOMC history and its insights cover the last 20 years
 
 SOURCES = [{"name": "IMF World Economic Outlook (DataMapper API): gross debt, overall and primary balance, revenue, growth, inflation", "url": "https://www.imf.org/external/datamapper/", "cadence": "April and October"},
            {"name": "US Treasury Fiscal Data: debt to the penny, Monthly Treasury Statement table 9, average interest rates", "url": "https://fiscaldata.treasury.gov/", "cadence": "daily / monthly"},
@@ -83,7 +93,9 @@ SOURCES = [{"name": "IMF World Economic Outlook (DataMapper API): gross debt, ov
            {"name": "Public sector finances: net debt, debt interest, receipts (ONS PUSF)", "url": "https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/publicsectorfinance", "cadence": "monthly"},
            {"name": "Exchange Fund Bills and Notes yields, HIBOR (HKMA open API)", "url": "https://apidocs.hkma.gov.hk/", "cadence": "monthly"},
            {"name": "CPI: US (CPI-U from Treasury's TIPS reference CPI, Fiscal Data), UK (ONS D7G7), Hong Kong (C&SD composite CPI)", "url": "https://fiscaldata.treasury.gov/datasets/tips-cpi-data/", "cadence": "monthly"},
-           {"name": "Prediction-market odds (Polymarket Gamma and CLOB APIs)", "url": "https://polymarket.com/", "cadence": "hourly"},
+           {"name": "Prediction-market odds (Polymarket Gamma and CLOB APIs; Kalshi trade API, series KXFED)", "url": "https://kalshi.com/markets/kxfed", "cadence": "hourly"},
+           {"name": "Fed holdings of Treasuries and MBS (New York Fed SOMA summary)", "url": "https://www.newyorkfed.org/markets/soma-holdings", "cadence": "weekly"},
+           {"name": "Marketable Treasury debt by type (Monthly Statement of the Public Debt) and Treasury buybacks (Fiscal Data)", "url": "https://fiscaldata.treasury.gov/datasets/monthly-statement-public-debt/", "cadence": "monthly / per operation"},
            {"name": "Hand-entered: HM Treasury PESA, OBR, CBO, HK Budget, China MoF, ChinaBond, PBoC, HKGB tenders (see data/debt-rates/README.md)", "url": "https://github.com/mcmarcocheung98-max/dashboards/tree/main/data/debt-rates", "cadence": "as published"}]
 NOTES = ("General government figures (IMF) are comparable across countries; national series (US federal, UK central government) are what each "
          "treasury reports. Net interest = primary balance minus overall balance. Projections are the IMF's latest WEO and, for the US, CBO. "
@@ -430,6 +442,100 @@ def fomc_decisions(r: pd.DataFrame | None = None) -> list[dict]:
     return list(reversed(out))
 
 
+def parse_kalshi(j: dict) -> list[dict]:
+    """Kalshi KXFED events -> [{title, ticker, close, volume, levels: [{label, upper, p}]}]. Each market pays if the upper bound is above
+    its strike, so P(upper = X) = P(above X - 0.25) - P(above X); prices are last trades (the bid/ask mid when nothing traded)."""
+    out = []
+    for e in (j or {}).get("events") or []:
+        above = {}
+        vol = 0.0
+        close = None
+        for m in e.get("markets") or []:
+            k = pd.to_numeric(m.get("floor_strike"), errors="coerce")
+            if pd.isna(k) or m.get("strike_type") not in (None, "greater"):
+                continue
+            last = pd.to_numeric(m.get("last_price_dollars"), errors="coerce")
+            bid, ask = pd.to_numeric(m.get("yes_bid_dollars"), errors="coerce"), pd.to_numeric(m.get("yes_ask_dollars"), errors="coerce")
+            p = last if pd.notna(last) and last > 0 else (bid + ask) / 2 if pd.notna(bid) and pd.notna(ask) else None
+            if p is None or pd.isna(p):
+                continue
+            above[round(float(k), 2)] = float(p)
+            vol += float(pd.to_numeric(m.get("volume_fp"), errors="coerce") or 0)
+            close = close or str(m.get("close_time") or "")[:10]
+        if len(above) < 2:
+            continue
+        ks = sorted(above)
+        probs = [{"upper": ks[0], "label": f"{ks[0]:.2f}% or lower", "p": 1 - above[ks[0]]}]
+        for lo, hi in zip(ks, ks[1:]):
+            probs.append({"upper": hi, "label": f"{hi:.2f}%", "p": above[lo] - above[hi]})
+        probs.append({"upper": ks[-1] + 0.25, "label": f"above {ks[-1]:.2f}%", "p": above[ks[-1]]})
+        total = sum(max(0.0, x["p"]) for x in probs) or 1.0       # last trades need not add up to exactly 1: rescale
+        for x in probs:
+            x["p"] = round(max(0.0, x["p"]) / total, 4)
+        out.append({"title": e.get("title") or "", "ticker": e.get("event_ticker") or "", "close": close, "volume": round(vol), "levels": probs})
+    return sorted(out, key=lambda e: e["close"] or "9999")
+
+
+def kalshi_events() -> list[dict]:
+    out = []
+    for s in KALSHI_SERIES:
+        out += parse_kalshi(fetch_json(KALSHI.format(series=s), HOUR, min_bytes=20, timeout=30))
+    return out
+
+
+def parse_soma(j: dict) -> pd.DataFrame:
+    """NY Fed SOMA summary -> weekly frame ($tn): treasuries (bills + notes/bonds + TIPS + FRN), bills, notesbonds, mbs, total."""
+    rows = ((j or {}).get("soma") or {}).get("summary") or []
+    d = pd.DataFrame(rows)
+    if d.empty or "asOfDate" not in d:
+        raise ValueError("SOMA summary: no rows")
+    d.index = pd.to_datetime(d.pop("asOfDate"), errors="coerce")
+    d = d[d.index.notna()].apply(pd.to_numeric, errors="coerce").fillna(0) / 1e12
+    out = pd.DataFrame({"bills": d.get("bills", 0), "notesbonds": d.get("notesbonds", 0), "mbs": d.get("mbs", 0) + d.get("cmbs", 0),
+                        "tips": d.get("tips", 0), "frn": d.get("frn", 0), "total": d.get("total", 0)})
+    out["treasuries"] = out[["bills", "notesbonds", "tips", "frn"]].sum(axis=1)
+    return out.sort_index()
+
+
+def parse_mspd(j: dict) -> pd.DataFrame:
+    """MSPD table 1 -> monthly frame ($tn): bills, notes, bonds, tips, frn, marketable (total marketable)."""
+    d = parse_fiscal(j)
+    d["v"] = pd.to_numeric(d["total_mil_amt"], errors="coerce") / 1e6
+    name = d["security_class_desc"].str.lower()
+    key = pd.Series(None, index=d.index, dtype=object)
+    for k, needle in (("bills", "bills"), ("notes", "notes"), ("bonds", "bonds"), ("tips", "inflation"), ("frn", "floating")):
+        key[name.str.startswith(needle) & key.isna() & (d["security_type_desc"] == "Marketable")] = k
+    key[d["security_type_desc"] == "Total Marketable"] = "marketable"
+    d["k"] = key
+    out = d.dropna(subset=["k"]).pivot_table(index="record_date", columns="k", values="v", aggfunc="sum").sort_index()
+    if "bills" not in out or "marketable" not in out:
+        raise ValueError("MSPD layout changed: no bills or total marketable")
+    out.index = out.index.to_period("M").to_timestamp()
+    return out
+
+
+def parse_buybacks(j: dict) -> pd.DataFrame:
+    rows = (j or {}).get("data") or []
+    d = pd.DataFrame(rows)
+    if d.empty:
+        raise ValueError("Treasury buybacks: no rows")
+    d["t"] = pd.to_datetime(d["operation_date"], errors="coerce")
+    d["amt"] = pd.to_numeric(d["total_par_amt_accepted"], errors="coerce") / 1e9
+    return d[d["t"].notna()].sort_values("t")
+
+
+def soma() -> pd.DataFrame:
+    return parse_soma(fetch_json(SOMA, TTL, min_bytes=1000, timeout=60))
+
+
+def mspd() -> pd.DataFrame:
+    return parse_mspd(fetch_json(MSPD, TTL, min_bytes=1000, timeout=90))
+
+
+def buybacks() -> pd.DataFrame:
+    return parse_buybacks(fetch_json(BUYBACKS, TTL, min_bytes=200, timeout=60))
+
+
 def hand(name: str) -> dict[str, pd.Series]:
     m = manual(SLUG, name)
     return m if isinstance(m, dict) else ({"value": m} if len(m) else {})
@@ -490,8 +596,9 @@ def _debt_now() -> dict:
     out = payload({"imf": lambda: _by_country(lambda: imf("debt"), 1),
                    "us_total": lambda: _pts(month_end(penny()["tot_pub_debt_out_amt"]), 3),
                    "us_public": lambda: _pts(month_end(penny()["debt_held_public_amt"]), 3),
-                   "uk_psnd": lambda: _pts(ons("psnd"), 1)},
-                  sources=[PENNY, ONS.format(sid="hf6x")])
+                   "uk_psnd": lambda: _pts(ons("psnd"), 1), "maturity": maturity_mix},
+                  sources=[PENNY, ONS.format(sid="hf6x"), MSPD])
+    out["maturity_avg"] = manual_rows(SLUG, "maturity")
     try:
         d = imf("debt")
         out["table"] = [{"country": COUNTRIES[iso], "y2007": _at(s, 2007), "y2019": _at(s, 2019), "now": _at(s, yr - 1), "proj5": _at(s, yr + 4),
@@ -696,13 +803,170 @@ def _odds_now() -> dict:
                 if len(s):
                     out[m["label"]] = _pts(s * 100, 1)
         return {"title": ev["title"], "lines": out}
-    out = payload({"events": lambda: poly_events()[:10], "history": history, "decisions": lambda: fomc_decisions()[:12]},
-                  sources=[POLY.format(tag=t) for t in POLY_TAGS])
+    def fomc():
+        h = fomc_history()
+        c = fomc_cycles(h)
+        return {"decisions": list(reversed(h)), "cycles": list(reversed(c)), "insights": fomc_insights(h, c), "since": h[0]["date"] if h else None}
+    out = payload({"events": lambda: poly_events()[:10], "history": history, "decisions": lambda: fomc_decisions()[:12],
+                   "kalshi": lambda: kalshi_events()[:4], "fomc": fomc},
+                  sources=[POLY.format(tag=t) for t in POLY_TAGS] + [KALSHI.format(series=s) for s in KALSHI_SERIES])
     out["meetings"] = next_meetings()
     out["fed_now"] = (out.get("decisions") or [{}])[0].get("to") if out.get("decisions") else None
-    out["cites"] = {"fomc": manual_sources(SLUG, "fomc")}
+    out["cites"] = {n: manual_sources(SLUG, n) for n in ("fomc", "fomc_events")}
     out["as_of"] = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())
     return out
+
+
+def fomc_history(years: int = FOMC_YEARS) -> list[dict]:
+    """Every change in the target over the last `years` years, oldest first, each with the events in data/debt-rates/fomc_events.csv
+    from 45 days before the change to the change itself (the context the FOMC was reacting to), and the US 10-year yield and CPI then."""
+    since = pd.Timestamp.now().normalize() - pd.DateOffset(years=years)
+    dec = [d for d in reversed(fomc_decisions()) if pd.Timestamp(d["date"]) >= since]
+    ev = sorted(manual_rows(SLUG, "fomc_events"), key=lambda r: r["date"])
+    try:
+        y10 = treasury("daily_treasury_yield_curve")["10y"]
+    except Exception:
+        y10 = pd.Series(dtype=float)
+    try:
+        c, _ = cpi()
+        us_cpi = c.get("US", pd.Series(dtype=float))
+    except Exception:
+        us_cpi = pd.Series(dtype=float)
+    asof = lambda s, t: _r(s[s.index <= t].iloc[-1], 2) if len(s) and len(s[s.index <= t]) else None
+    used = set()
+    for d in dec:
+        t = pd.Timestamp(d["date"])
+        d["events"] = [{"date": r["date"], "event": r["event"], "source": r["source"], "note": r.get("note", "")}
+                       for r in ev if t - pd.Timedelta(days=45) <= pd.Timestamp(r["date"]) <= t and r["date"] not in used]
+        used.update(e["date"] for e in d["events"])
+        d["emergency"] = any(r.get("emergency") == "yes" and abs((pd.Timestamp(r["date"]) - t).days) <= 2 for r in ev)
+        d["y10"], d["cpi"] = asof(y10, t), asof(us_cpi, t)
+    return dec
+
+
+def fomc_cycles(hist: list[dict]) -> list[dict]:
+    """Runs of moves in one direction (a pause of more than 18 months also ends a run): start, end, moves, total bp, months, largest
+    move, rate before and after, the 10-year yield change from the day before the first move to the last, and to a year after the first."""
+    try:
+        y10 = treasury("daily_treasury_yield_curve")["10y"]
+    except Exception:
+        y10 = pd.Series(dtype=float)
+    at = lambda t: y10[y10.index <= t].iloc[-1] if len(y10[y10.index <= t]) else None
+    cycles, cur = [], None
+    for d in hist:
+        sign = 1 if d["bp"] > 0 else -1
+        t = pd.Timestamp(d["date"])
+        if cur and cur["sign"] == sign and (t - pd.Timestamp(cur["moves"][-1]["date"])).days <= 548:
+            cur["moves"].append(d)
+        else:
+            cur = {"sign": sign, "moves": [d]}
+            cycles.append(cur)
+    out = []
+    for c in cycles:
+        m = c["moves"]
+        t0, t1 = pd.Timestamp(m[0]["date"]), pd.Timestamp(m[-1]["date"])
+        a, b, c1 = at(t0 - pd.Timedelta(days=1)), at(t1), at(t0 + pd.DateOffset(years=1)) if t0 + pd.DateOffset(years=1) <= pd.Timestamp.now() else None
+        out.append({"direction": "hiking" if c["sign"] > 0 else "cutting", "start": m[0]["date"], "end": m[-1]["date"], "moves": len(m),
+                    "bp": sum(x["bp"] for x in m), "months": round((t1 - t0).days / 30.44, 1), "largest": max((x["bp"] for x in m), key=abs),
+                    "from": m[0]["from"], "to": m[-1]["to"], "emergency": sum(1 for x in m if x.get("emergency")),
+                    "y10_during": _r((b - a) * 100, 0) if None not in (a, b) else None, "y10_year": _r((c1 - a) * 100, 0) if None not in (a, c1) else None,
+                    "context": [e["event"] for x in m for e in x.get("events", [])][:3]})
+    return out
+
+
+def fomc_insights(hist: list[dict], cyc: list[dict]) -> list[str]:
+    """Plain-language observations computed from the decisions and cycles above (nothing here is hand-written except the wording)."""
+    out = []
+    if not hist:
+        return out
+    ups, downs = [d for d in hist if d["bp"] > 0], [d for d in hist if d["bp"] < 0]
+    out.append(f"Since {hist[0]['date'][:4]} the Fed has raised rates {len(ups)} times (+{sum(d['bp'] for d in ups)} bp in all) and cut "
+               f"{len(downs)} times ({sum(d['bp'] for d in downs)} bp).")
+    hk, ct = [c for c in cyc if c["direction"] == "hiking" and c["moves"] > 1], [c for c in cyc if c["direction"] == "cutting" and c["moves"] > 1]
+    if hk and ct:
+        mh, mc = np.mean([c["months"] for c in hk]), np.mean([c["months"] for c in ct])
+        out.append(f"Cutting cycles took {mc:.0f} months on average against {mh:.0f} for hiking cycles: the Fed climbs by stairs and falls by lift "
+                   f"(average step {np.mean([abs(c['bp']) / c['moves'] for c in ct]):.0f} bp cutting vs {np.mean([c['bp'] / c['moves'] for c in hk]):.0f} bp hiking).")
+    first_bp = {d["date"]: d["bp"] for d in hist}
+    allc = [c for c in cyc if c["direction"] == "cutting"]
+    big = [c for c in allc if first_bp.get(c["start"], 0) <= -50]
+    if allc:
+        out.append(f"{len(big)} of {len(allc)} cutting cycles opened with a cut of 50 bp or more: when the Fed starts cutting into a shock, it starts big.")
+    em = [d for d in hist if d.get("emergency")]
+    if em:
+        out.append(f"{len(em)} move{'s' if len(em) > 1 else ''} came between scheduled meetings ({', '.join(d['date'] for d in em)}), every one a cut in a crisis.")
+    ys = [c for c in cyc if c["direction"] == "cutting" and c["y10_year"] is not None]
+    if ys:
+        rose = [c for c in ys if c["y10_year"] > 0]
+        out.append(f"A year after the first cut, the 10-year yield was higher in {len(rose)} of {len(ys)} cutting cycles"
+                   + " (" + ", ".join(f"{c['start'][:4]}: {c['y10_year']:+.0f} bp" for c in ys) + ")"
+                   + ": rate cuts do not guarantee cheaper long-term borrowing for the government.")
+    pauses = []
+    for a, b in zip(cyc, cyc[1:]):
+        if a["direction"] == "hiking" and b["direction"] == "cutting":
+            pauses.append((a["end"], b["start"], (pd.Timestamp(b["start"]) - pd.Timestamp(a["end"])).days / 30.44))
+    if pauses:
+        out.append("From the last hike to the first cut: " + "; ".join(f"{p[0][:7]} to {p[1][:7]}, {p[2]:.0f} months" for p in pauses)
+                   + f". On average the Fed held at the peak for {np.mean([p[2] for p in pauses]):.0f} months.")
+    return out
+
+
+def _qe_now() -> dict:
+    """Fed holdings (QE/QT), the Fed's share of marketable Treasuries, Treasury buybacks, and the programmes in data/debt-rates/qe_programs.csv
+    with the change in Fed holdings and in the 10-year yield over each."""
+    def holdings():
+        s = soma()
+        return {k: _pts(s[k], 3) for k in ("treasuries", "mbs", "bills", "notesbonds")}
+
+    def share():
+        s, m = soma(), mspd()
+        tm = s["treasuries"].resample("MS").last()
+        j = pd.concat([tm, m["marketable"]], axis=1, keys=["fed", "mkt"], sort=True).dropna()
+        return _pts(j["fed"] / j["mkt"] * 100, 2)
+
+    def bb():
+        b = buybacks()
+        done = b[b["amt"].notna()]
+        mon = done.groupby([done["t"].dt.to_period("M").dt.to_timestamp(), "operation_type"])["amt"].sum().unstack(fill_value=0)
+        return {"monthly": {k: _pts(mon[k], 2) for k in mon.columns}, "total": _r(done["amt"].sum(), 1), "ops": int(len(done)),
+                "first": str(done["t"].min().date()) if len(done) else None, "next": [{"date": str(r.t.date()), "type": r.operation_type,
+                "security": r.security_type, "bucket": r.maturity_bucket} for r in b[b["amt"].isna() & (b["t"] >= pd.Timestamp.now().normalize())].itertuples()][:5],
+                "by_type": {k: _r(v, 1) for k, v in done.groupby("operation_type")["amt"].sum().items()}}
+
+    def programmes():
+        rows = sorted(manual_rows(SLUG, "qe_programs"), key=lambda r: r["date"])
+        try:
+            s = soma()["total"]
+        except Exception:
+            s = pd.Series(dtype=float)
+        try:
+            y10 = treasury("daily_treasury_yield_curve")["10y"]
+        except Exception:
+            y10 = pd.Series(dtype=float)
+        at = lambda x, t: x[x.index <= t].iloc[-1] if len(x[x.index <= t]) else None
+        out = []
+        for r in rows:
+            t0 = pd.Timestamp(r["date"])
+            t1 = pd.Timestamp(r["end"]) if r.get("end") else pd.Timestamp.now().normalize()
+            a, b = at(s, t0), at(s, t1)
+            ya, yb = at(y10, t0), at(y10, t1)
+            out.append({**r, "fed_change_tn": _r(b - a, 2) if None not in (a, b) and s.index[0] <= t0 else None,
+                        "y10_change_bp": _r((yb - ya) * 100, 0) if None not in (ya, yb) else None})
+        return out
+    out = payload({"holdings": holdings, "share": share, "buybacks": bb, "programmes": programmes},
+                  sources=[SOMA, MSPD, BUYBACKS])
+    out["cites"] = {"qe_programs": manual_sources(SLUG, "qe_programs")}
+    out["as_of"] = str(pd.Timestamp.now().date())
+    return out
+
+
+def maturity_mix() -> dict:
+    """US marketable debt by type (MSPD): the share in bills (one year or less) against notes, bonds, TIPS and FRNs, monthly."""
+    m = mspd()
+    longer = m[[c for c in ("notes", "bonds", "tips", "frn") if c in m]].sum(axis=1)
+    return {"bills_share": _pts(m["bills"] / m["marketable"] * 100, 2), "bills": _pts(m["bills"], 3), "longer": _pts(longer, 3),
+            "now": {"bills_share": _r(m["bills"].iloc[-1] / m["marketable"].iloc[-1] * 100, 1), "bills": _r(m["bills"].iloc[-1], 2),
+                    "marketable": _r(m["marketable"].iloc[-1], 2), "month": str(m.index[-1].date())[:7]}}
 
 
 def scorecard() -> list[dict]:
@@ -773,6 +1037,8 @@ def _layout_now() -> dict:
     urls.update({"ons d7g7 cpi": ONS_CPI, "csd cpi": CSD_CPI, "polymarket": POLY.format(tag="fed-rates").replace("limit=50", "limit=2"),
                  "polymarket clob": "https://clob.polymarket.com/time"})
     urls["tips cpi"] = TIPS_CPI.format(cusip=TIPS_CUSIPS[0]).replace("10000", "2")
+    urls.update({"kalshi": KALSHI.format(series="KXFED").replace("limit=8", "limit=1"), "soma": SOMA, "mspd": MSPD.replace("10000", "3"),
+                 "buybacks": BUYBACKS.replace("2000", "2")})
     heads = {"bls cpi (bulk file, refused from Railway on 2026-10-26)": ("https://download.bls.gov/pub/time.series/cu/cu.data.1.AllItems", None)}
 
     def one(u):
@@ -827,10 +1093,21 @@ def READINGS() -> list[dict]:
     for k, v in (got("policy").get("cpi_now") or {}).items():
         add("policy", f"cpi_{k}", f"{k} CPI inflation, year on year (%)", v.get("v"), band(v.get("v"), 3, 2) if k in ("US", "UK") else 0,
             "+1 at 3% or more, -1 at 2% or less" if k in ("US", "UK") else None)
+    q = got("qe")
+    sh = last(q.get("share"))
+    add("qe", "fed_share", "Fed share of marketable Treasuries (%)", sh, band(-sh if sh is not None else None, -15, -20),
+        "+1 at 15% or less (private buyers must take more), -1 at 20% or more")
+    add("qe", "fed_treasuries", "Fed holdings of Treasuries ($tn)", last((q.get("holdings") or {}).get("treasuries")), 0)
+    add("debt", "us_bills_share", "US bills as a share of marketable debt (%)", ((d.get("maturity") or {}).get("now") or {}).get("bills_share"),
+        band(((d.get("maturity") or {}).get("now") or {}).get("bills_share"), 22, 15), "+1 at 22% or more (fast repricing), -1 at 15% or less")
     od = got("odds")
     hist = (od.get("history") or {}).get("lines") or {}
     for k, pts in list(hist.items())[:3]:
         add("odds", f"next_{k}", f"Next Fed decision, Polymarket: {k} (%)", pts[-1][1] if pts else None, 0)
+    ks = od.get("kalshi") or []
+    if ks and od.get("fed_now") is not None:
+        hold = sum(x["p"] for x in ks[0]["levels"] if abs(x["upper"] - od["fed_now"]) < 0.01)
+        add("odds", "kalshi_hold", "Next Fed decision, Kalshi: no change (%)", round(hold * 100, 1), 0)
     st = got("stress")
     for row in st.get("score") or []:
         g = row.get("gap")
@@ -848,4 +1125,4 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 
 
 ENDPOINTS = {"debt": _cached_ep("debt", _debt_now), "interest": _cached_ep("interest", _interest_now), "yields": _cached_ep("yields", _yields_now),
-             "policy": _cached_ep("policy", _policy_now), "odds": _cached_ep("odds", _odds_now, 1800), "stress": _cached_ep("stress", _stress_now), "layout": _cached_ep("layout", _layout_now, 1800)}
+             "policy": _cached_ep("policy", _policy_now), "odds": _cached_ep("odds", _odds_now, 1800), "qe": _cached_ep("qe", _qe_now), "stress": _cached_ep("stress", _stress_now), "layout": _cached_ep("layout", _layout_now, 1800)}

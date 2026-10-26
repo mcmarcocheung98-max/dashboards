@@ -29,6 +29,10 @@ Data for each tab: `/api/debt-rates/<debt|interest|yields|policy|stress>`. `/api
 | Policy & CPI | FOMC rate decisions (each change in the target or the top of the range) | computed from the Fed range (NY Fed API from July 2000, `fed_target.csv` before) | derived | on change |
 | FOMC & odds | Next FOMC meetings | `fomc.csv` | **hand-entered** | yearly, when the Fed publishes the calendar |
 | FOMC & odds | Polymarket odds: every open event tagged `fed-rates` (Fed decisions, number of cuts, 10-year yield ranges), each outcome's chance = price of its Yes share; daily price history of the next Fed-decision event's outcomes | Polymarket Gamma API (`gamma-api.polymarket.com/events?tag_slug=fed-rates`; events under $100k traded are left out, the rest sorted by volume; the history is the next 'Fed Decision in …' event) and CLOB API (`clob.polymarket.com/prices-history`) | yes | hourly (payload cached 30 minutes) |
+| FOMC history & odds | Kalshi odds per rate level for the next meetings, and Polymarket vs Kalshi on the next decision | Kalshi trade API v2, series `KXFED` (one market per 'upper bound above X%' strike; level chance = difference of neighbouring strikes, rescaled to sum to 1) | yes | hourly |
+| FOMC history & odds | Every Fed move of the last 20 years with the 10-year yield, US CPI and the events around it; rate cycles (runs of moves in one direction, split by an 18-month pause) with the 10-year's change; computed insights | target history (NY Fed + `fed_target.csv`), Treasury curve, CPI, `fomc_events.csv` | computed + **hand-entered context** | on change |
+| Debt | US marketable debt by maturity: bills share, bills vs notes/bonds/TIPS/FRNs; average maturity by country | Fiscal Data MSPD table 1 (`v1/debt/mspd/mspd_table_1`, monthly from 2001); `maturity.csv` | US yes; averages **hand-entered** | monthly |
+| Fed & Treasury buying | Fed holdings (Treasuries, MBS, bills), Fed share of marketable Treasuries, QE/QT programmes with the change in holdings and in the 10-year over each, Treasury buybacks by type | NY Fed SOMA summary (`markets.newyorkfed.org/api/soma/summary.json`, weekly), MSPD, Fiscal Data `buybacks_operations`; `qe_programs.csv` | yes; programme dates **hand-entered** | weekly / per operation |
 | Stress | Scorecard: debt, interest/revenue, r, g, r − g, debt-stabilising primary balance, IMF primary balance, gap | `imf.csv` (`NGDP_RPCH`, `PCPIPCH`, `GGXONLB_G01_GDP_PT`), latest 10-year yields | partly (IMF copy; China and HK yields from CSV) | |
 | Stress | 10-year minus policy rate (term-premium proxy), US 10y − 2y | from the series above | yes | |
 | Stress | Auction tails, downgrades, market stress | `stress_events.csv` | **hand-entered** notes | as events happen |
@@ -55,16 +59,24 @@ All rows carry a `source` URL. Rows whose `note` says **verify** were written fr
 - `hk_10y.csv`: Exchange Fund Note 10-year month-end yields, Oct 1996 to Feb 2015, **copied from the HKMA API on 2026-10-26** (it refuses Railway with HTTP 405), then HKGB 10-year yields after the notes stopped: tender average yields from HKMA press releases, or year-end secondary yields (**verify**).
 - `pboc.csv`: PBoC 1-year LPR and 7-day reverse repo, one row per change. Changes after May 2025 are not entered yet: check pbc.gov.cn and chinamoney.com.cn. **verify.**
 - `fed_target.csv`: Fed target (to Dec 2008) and upper bound of the range (from Dec 2008), one row per change, for the years before the NY Fed API reports the range. **verify** against the FOMC open market operations history.
+- `fomc_events.csv`: `date,event,source,note,emergency`: what the Fed was reacting to (crises, data, QE announcements), each linked to its source; `emergency = yes` marks a move between scheduled meetings. A decision shows every event from 45 days before it. The September 2026 hike has no context yet: add the FOMC statement's reason.
+- `qe_programs.csv`: `date,end,name,kind,what,source,note`: QE1-3, Twist, QT1-2, reserve-management purchases and Treasury buybacks. Rows marked verify (end of QE1, Covid QE size, end of QT2, the 2025 bill purchases, the buyback start) are from memory.
+- `maturity.csv`: average maturity by country (US, UK, China, HK), all **verify**.
 - `fomc.csv`: `date,meeting,source,note`, one row per scheduled FOMC meeting, dated the decision day (second day). 2026 entered from memory (**verify**); add the next year's dates when the Fed publishes them.
 - `cn_cpi.csv`: China CPI, annual average year-on-year %, NBS (**verify**). Monthly rows can be added (date = the month).
 - `stress_events.csv`: `date,country,event,source,note`, notable auction tails, downgrades and market stress. Add a row when an auction tails noticeably (the TreasuryDirect result against the when-issued yield) or a rating changes.
+
+## Tabs
+
+Interest rates & CPI (first), FOMC history & odds, Debt, Interest cost, Yields, Fed & Treasury buying, Stress. Each tab ends with "What each
+number on this tab means", a folded glossary of every metric on it (in `app/static/topics/debt-rates.js`, `GLOSS`).
 
 ## What changed since yesterday (READINGS)
 
 `READINGS()` reports the headline readings from the cached tab payloads. **lean +1 means more fiscal stress, -1 less**: US and UK debt % of GDP (+1 at 100% or more, -1 at 60% or less; China and HK lean 0), US debt added a day (+1 at $6bn or more, -1 at $3bn or less), US interest
 share of receipts (+1 at 15% or more, -1 at 10% or less), US interest above defence (+1), UK interest share (+1 at 10%, -1 at 7%),
 US and UK 10-year yields (+1 at 4.5% or more, -1 at 3% or less), each country's stress gap (+1 above +0.5 points of GDP, -1 below
--0.5) and the US and UK 10-year minus policy spread (+1 at 1.5 points or more, -1 at zero or below). US and UK CPI inflation (+1 at 3% or more, -1 at 2% or less). Policy rates, the Polymarket odds for the next Fed decision, the HK and China CPI and the HK and China
+-0.5) and the US and UK 10-year minus policy spread (+1 at 1.5 points or more, -1 at zero or below). US and UK CPI inflation (+1 at 3% or more, -1 at 2% or less), the US bills share (+1 at 22% or more, -1 at 15% or less), the Fed's share of marketable Treasuries (+1 at 15% or less, -1 at 20% or more). Policy rates, the Polymarket odds for the next Fed decision, the HK and China CPI and the HK and China
 yields are reported with lean 0.
 
 ## Caveats

@@ -44,7 +44,17 @@ const VIEWS = {
       missing(d, "uk_psnd", "ONS public sector net debt (HF6X)"),
       note("ONS series HF6X. Net debt (debt minus liquid assets) is the UK's headline measure, so it reads lower than the IMF's gross figure above."),
       ask("5 years: does debt peak below 100% of GDP, as the OBR's fiscal rules require? 10 years: how much of the rise since 2015 has been reversed? 20 years: debt was under 40% of GDP before 2008. Can it get back to pre-crisis levels in peacetime?"));
-    return [head, imfCard, tbl, us, uk, card("IMF values entered by hand", ...handNote({ imf: d.imf_cites }))];
+    const mt = d.maturity || {}, mn = mt.now || {};
+    const mat = card("Short-term vs long-term: US marketable debt by maturity",
+      el("div", { class: "kpis" }, kpi("Bills (1 year or less), " + (mn.month || ""), pc(mn.bills_share, 1) + " of marketable debt"), kpi("Bills outstanding", tn(mn.bills)), kpi("All marketable debt", tn(mn.marketable))),
+      ...linesChart([{ name: "Bills share (%)", points: mt.bills_share || [], color: col("US") }], v => pc(v, 1), { small: true, hlines: [20] }),
+      ...linesChart([{ name: "Bills ($tn)", points: mt.bills || [], color: col("US"), bar: false }, { name: "Notes, bonds, TIPS and FRNs ($tn)", points: mt.longer || [], color: css("--hold"), dashed: true }], v => tn(v), { small: true }),
+      missing(d, "maturity", "The maturity mix (MSPD)"),
+      (d.maturity_avg || []).length ? el("div", { class: "scroll", style: "margin-top:8px" }, el("table", {}, el("tr", {}, ...["Country", "Measure", "Value", "As of"].map(x => el("th", {}, x))),
+        ...d.maturity_avg.map(r => el("tr", {}, el("td", {}, r.country), el("td", { class: "wrap" }, link(r.measure, r.source)), el("td", { class: "wrap" }, r.value + (r.note ? " (" + r.note + ")" : "")), el("td", {}, r.date))))) : null,
+      note("Monthly Statement of the Public Debt. Bills mature within a year, so a high bills share means the interest bill reprices quickly when the Fed moves, for better when it cuts, for worse when it hikes. The Treasury's advisers have long suggested keeping bills near 15-20% of the total (the dotted line). The UK borrows for much longer, which is why its interest bill rose more slowly in 2022-23 except for index-linked gilts."),
+      ask("5 years: does the Treasury lean on bills to avoid locking in 5% long rates, and how exposed does that leave it to a hiking Fed? 10 years: the bills share jumped in 2020 and again in 2023-24. 20 years: in 2008 bills rose to over a third of the total; it fell back as the Treasury termed out. Will it again?"));
+    return [head, imfCard, tbl, mat, us, uk, card("IMF values entered by hand", ...handNote({ imf: d.imf_cites }))];
   },
 
   async interest() {
@@ -148,17 +158,37 @@ const VIEWS = {
   },
 
   async odds() {
-    const d = await api("odds"), m = d.meetings || [], next = m[0], ev = d.events || [], h = d.history || {};
+    const d = await api("odds"), m = d.meetings || [], next = m[0], ev = d.events || [], h = d.history || {}, ks = d.kalshi || [], F = d.fomc || {};
     const days = next ? Math.round((new Date(next.date + "T19:00:00Z") - Date.now()) / 86400000) : null;
     const head = card(null, el("div", { class: "kpis" }, kpi("Fed funds, top of range", pc(d.fed_now, 2)),
       kpi("Next FOMC decision", next ? next.date + (days != null && days >= 0 ? " (" + (days === 0 ? "today" : "in " + days + " day" + (days === 1 ? "" : "s")) + ")" : "") : "–"),
       kpi("Meetings left this year", String(m.filter(x => x.date.slice(0, 4) === String(new Date().getUTCFullYear())).length))),
-      el("div", { class: "muted", style: "margin-top:6px" }, "Odds updated " + (d.as_of || "–") + ". Polymarket prices are what traders pay for a $1 'Yes' share, so 0.62 reads as a 62% chance; they are bets, not forecasts from the Fed."), stale(d));
+      el("div", { class: "muted", style: "margin-top:6px" }, "Odds updated " + (d.as_of || "–") + ". Prediction-market prices are what traders pay for a contract that pays $1 if the outcome happens, so 0.62 reads as a 62% chance. They are bets, not forecasts from the Fed."), stale(d));
+    // Polymarket vs Kalshi on the next decision: Kalshi's levels turned into a change from today's rate
+    const pmNext = ev.filter(e => /fed decision/i.test(e.title)).sort((a, b) => (a.end || "").localeCompare(b.end || ""))[0];
+    const kNext = ks[0];
+    const word = bp => bp === 0 ? "No change" : (Math.abs(bp) >= 50 ? "50+ bps " : "25 bps ") + (bp > 0 ? "increase" : "decrease");
+    let cmp = null;
+    if (pmNext && kNext && d.fed_now != null) {
+      const kb = {};
+      kNext.levels.forEach(l => { const bp = Math.round((l.upper - d.fed_now) * 100); const w = word(Math.max(-50, Math.min(50, bp))); kb[w] = (kb[w] || 0) + l.p; });
+      const pb = {}; pmNext.markets.forEach(x => { pb[x.label] = x.yes; });
+      const keys = [...new Set([...Object.keys(pb), ...Object.keys(kb)])].filter(k => (pb[k] || 0) >= 0.005 || (kb[k] || 0) >= 0.005).sort((a, b) => ((pb[b] || 0) + (kb[b] || 0)) - ((pb[a] || 0) + (kb[a] || 0)));
+      cmp = card("Next decision: Polymarket vs Kalshi", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Outcome", "Polymarket", "Kalshi", "Gap"].map(x => el("th", {}, x))),
+        ...keys.map(k => el("tr", {}, el("td", {}, k), el("td", {}, pb[k] == null ? "–" : pc(pb[k] * 100, 1)), el("td", {}, kb[k] == null ? "–" : pc(kb[k] * 100, 1)),
+          el("td", {}, pb[k] == null || kb[k] == null ? "–" : sgn((pb[k] - kb[k]) * 100, 1) + " pts"))))),
+        el("div", { class: "src", style: "margin-top:6px" }, "Polymarket: " + pmNext.title + " ($" + big(pmNext.volume) + " traded). Kalshi: " + kNext.title + " ($" + big(kNext.volume) + " traded)."),
+        note("Two markets pricing the same meeting. Kalshi lists 'upper bound above X%' contracts; the chance of each level is the difference between neighbouring strikes, set against today's " + pc(d.fed_now, 2) + " to read as hold, hike or cut. A gap of more than a few points is rare: traders close it by betting on the cheaper side."));
+    }
     const hist = Object.keys(h.lines || {}).length ? card("Polymarket: " + h.title + " (chance, %)",
       ...linesChart(Object.entries(h.lines).map(([k, pts], i) => ({ name: k, points: pts, color: css(SERIES[i % SERIES.length]) })), v => pc(v, 0), { sync: false, small: true }),
-      note("Daily price of each outcome's Yes share since the market opened. A line jumping after a CPI release or a Fed speech shows what the market learned."),
-      ask("Next meeting: is a cut priced in, or still a coin toss? Watch how the odds move after the CPI print on the Policy & CPI tab.")) : (d.history_error ? card("Polymarket odds history", missing(d, "history", "The odds history")) : null);
-    const evCards = ev.map(e => card(e.title, el("div", { class: "scroll" }, el("table", {}, el("tr", {}, el("th", {}, "Outcome"), el("th", {}, "Chance"), el("th", {}, ""), el("th", {}, "Volume")),
+      note("Daily price of each outcome since the market opened. A line jumping after a CPI release or a Fed speech shows what the market learned."),
+      ask("Next meeting: is the move priced in, or still a coin toss? Watch how the odds move after the CPI print on the Interest rates & CPI tab.")) : (d.history_error ? card("Polymarket odds history", missing(d, "history", "The odds history")) : null);
+    const kCards = ks.map(e => card("Kalshi: " + e.title, ...svgBars(e.levels.map(l => l.label.replace(" or lower", "↓").replace("above ", ">")), [{ name: "Chance", values: e.levels.map(l => l.p * 100), color: css("--s4") }],
+      { yFmt: v => v.toFixed(0) + "%", h: 180, labelW: 48, catName: i => "Upper bound " + e.levels[i].label }),
+      el("div", { class: "src", style: "margin-top:6px" }, "Closes " + (e.close || "–") + " · $" + big(e.volume) + " traded · ", link("kalshi.com/markets/kxfed", "https://kalshi.com/markets/kxfed"))));
+    const kNone = ks.length ? null : card("Kalshi odds", missing(d, "kalshi", "Kalshi") || el("div", { class: "muted" }, "No open Kalshi Fed markets right now."));
+    const evCards = ev.map(e => card("Polymarket: " + e.title, el("div", { class: "scroll" }, el("table", {}, el("tr", {}, el("th", {}, "Outcome"), el("th", {}, "Chance"), el("th", {}, ""), el("th", {}, "Volume")),
       ...e.markets.slice().sort((a, b) => b.yes - a.yes).slice(0, 10).map(x => el("tr", {}, el("td", { class: "wrap" }, x.label || x.question), el("td", {}, pc(x.yes * 100, 0)),
         el("td", { style: "min-width:120px" }, el("div", { class: "bar" }, el("i", { style: "left:0;width:" + Math.round(x.yes * 100) + "%;background:var(--accent)" }))), el("td", {}, x.volume == null ? "–" : "$" + big(x.volume)))))),
       el("div", { class: "src", style: "margin-top:6px" }, "Closes " + (e.end || "–") + " · total volume " + (e.volume == null ? "–" : "$" + big(e.volume)) + " · ", link("polymarket.com/event/" + e.slug, "https://polymarket.com/event/" + e.slug))));
@@ -166,10 +196,64 @@ const VIEWS = {
     const meet = card("FOMC meetings ahead", m.length ? el("div", { class: "tl" }, ...m.flatMap(x => [el("div", { class: "d" }, x.date), el("div", {}, link(x.meeting, x.source), x.note ? el("span", { class: "muted" }, " (" + x.note + ")") : null)]))
       : el("div", { class: "muted" }, "No meetings entered: add next year's dates to data/debt-rates/fomc.csv."),
       note("Meetings marked (projections) publish the dot plot: each official's path for rates, the Fed's own forecast to set against the market's."));
-    const dec = d.decisions || [];
-    const decCard = dec.length ? card("Last FOMC decisions", el("div", { class: "tl" }, ...dec.slice(0, 8).flatMap(r => [el("div", { class: "d" }, r.date),
-      el("div", { class: cls(-r.bp) }, (r.bp > 0 ? "Raised " : "Cut ") + Math.abs(r.bp) + " bp to " + pc(r.to, 2))]))) : null;
-    return [head, hist, ...evCards, evNone, meet, decCard].filter(Boolean);
+    // 20 years of FOMC decisions: insights, cycles, and each decision with what was happening
+    const ins = F.insights || [];
+    const insCard = ins.length ? card("What 20 years of FOMC decisions show" + (F.since ? " (since " + F.since.slice(0, 4) + ")" : ""),
+      el("ul", { style: "margin:0;padding-left:18px;line-height:1.6" }, ...ins.map(t => el("li", {}, t))),
+      note("Computed from the Fed's target history, the Treasury 10-year yield and CPI each time the page refreshes; only the wording is fixed.")) : missing(d, "fomc", "The FOMC history");
+    const cyc = F.cycles || [];
+    const cycCard = cyc.length ? card("Rate cycles", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Cycle", "From", "To", "Moves", "Total", "Months", "Largest", "Off-meeting", "10y during", "10y a year on", "What drove it"].map(x => el("th", {}, x))),
+      ...cyc.map(c => el("tr", {}, el("td", { class: c.direction === "hiking" ? "down" : "up" }, (c.direction === "hiking" ? "Hiking " : "Cutting ") + c.start.slice(0, 7) + " – " + c.end.slice(0, 7)),
+        el("td", {}, pc(c.from, 2)), el("td", {}, pc(c.to, 2)), el("td", {}, String(c.moves)), el("td", {}, (c.bp > 0 ? "+" : "") + c.bp + " bp"), el("td", {}, String(c.months)),
+        el("td", {}, (c.largest > 0 ? "+" : "") + c.largest + " bp"), el("td", {}, c.emergency ? String(c.emergency) : "–"),
+        el("td", {}, c.y10_during == null ? "–" : sgn(c.y10_during, 0) + " bp"), el("td", {}, c.y10_year == null ? "–" : sgn(c.y10_year, 0) + " bp"),
+        el("td", { class: "wrap" }, (c.context || []).join(" ")))))),
+      note("A cycle is a run of moves in one direction; a pause of more than 18 months starts a new one. '10y during' is the change in the 10-year Treasury yield from the day before the first move to the last; '10y a year on' is a year after the first move."),
+      ask("5 years: is the 2026 hike the start of a new hiking cycle or a one-off? 10 years: the 2019 'insurance' cuts were small and short; the 2020 cuts were crisis cuts. 20 years: every cutting cycle since 2007 began with an outside shock. What would the next one be?")) : null;
+    const dec = F.decisions || [];
+    const decCard = dec.length ? card("Every FOMC decision of the last 20 years, and what was happening", el("div", { class: "scroll" }, el("table", {},
+      el("tr", {}, ...["Effective", "Move", "Target (top)", "10y yield", "US CPI", "Context"].map(x => el("th", {}, x))),
+      ...dec.map(r => el("tr", {}, el("td", {}, r.date + (r.emergency ? " ⚡" : "")), el("td", { class: cls(-r.bp) }, (r.bp > 0 ? "+" : "") + r.bp + " bp"), el("td", {}, pc(r.to, 2)),
+        el("td", {}, pc(r.y10, 2)), el("td", {}, pc(r.cpi, 1)),
+        el("td", { class: "wrap" }, ...(r.events || []).flatMap((e, i) => [i ? " " : "", link(e.event, e.source), e.note ? el("span", { class: "muted" }, " (" + e.note + ")") : null])))))),
+      note("⚡ = moved between scheduled meetings. Dates are when the new rate took effect. The 10-year yield and US CPI are the latest readings on that date (CPI from 2009). Context comes from data/debt-rates/fomc_events.csv: events up to 45 days before each decision, each linked to its source."),
+      ...handNote({ fomc_events: (d.cites || {}).fomc_events })) : null;
+    return [head, cmp, hist, ...kCards, kNone, ...evCards, evNone, meet, insCard, cycCard, decCard].filter(Boolean);
+  },
+
+  async qe() {
+    const d = await api("qe"), h = d.holdings || {}, b = d.buybacks || {}, pr = d.programmes || [];
+    const last = p => p && p.length ? p[p.length - 1][1] : null;
+    const head = card(null, el("div", { class: "kpis" }, kpi("Fed holdings of Treasuries", tn(last(h.treasuries))), kpi("Fed holdings of MBS", tn(last(h.mbs))),
+      kpi("Fed share of marketable Treasuries", pc(last(d.share), 1)), kpi("Treasury buybacks since " + (b.first || "2024").slice(0, 7), b.total == null ? "–" : "$" + num(b.total, 0) + "bn")), stale(d));
+    const hold = card("What the Fed owns: Treasuries and mortgage-backed securities ($ trillion, weekly)",
+      ...linesChart([{ name: "Treasuries", points: h.treasuries || [], color: col("US") }, { name: "Mortgage-backed securities", points: h.mbs || [], color: css("--s2") },
+        { name: "of which bills", points: h.bills || [], color: css("--hold"), dashed: true }], v => tn(v)), missing(d, "holdings", "SOMA holdings"),
+      note("New York Fed, System Open Market Account. Holdings rise when the Fed buys bonds (QE) and fall when it lets them mature without replacing them (QT). The bills line shows the 2019 and 2025 'reserve management' purchases, which were short bills, not long bonds."),
+      ask("5 years: does the Fed's bill buying since QT ended grow into another QE if markets wobble? 10 years: holdings went from about $2.5tn to $5.7tn in 2020-22. 20 years: before 2008 the Fed held under $0.8tn. Is a big balance sheet now permanent?"));
+    const sh = card("Fed share of marketable Treasury debt (%)", ...linesChart([{ name: "Fed holdings ÷ marketable Treasuries", points: d.share || [], color: col("US") }], v => pc(v, 1), { small: true }),
+      missing(d, "share", "The Fed's share"),
+      note("SOMA Treasuries ÷ total marketable Treasury debt (Monthly Statement of the Public Debt). When the share falls, private buyers (banks, foreigners, funds) must absorb more of every new bond, one reason long yields rose during QT."),
+      ask("5 years: who replaces the Fed as buyer of a growing debt stock? 10 years: the share peaked near a quarter in 2021-22. 20 years: a Fed that owns a large share keeps interest costs down (it hands its profits back to the Treasury), but only while it is buying."));
+    const avgY = pr.filter(r => r.kind === "Buy" && r.y10_change_bp != null), avgS = pr.filter(r => r.kind === "Shrink" && r.y10_change_bp != null);
+    const progCard = pr.length ? card("Fed buying and shrinking programmes", el("div", { class: "scroll" }, el("table", {},
+      el("tr", {}, ...["Programme", "From", "To", "Kind", "What", "Fed holdings change", "10y change"].map(x => el("th", {}, x))),
+      ...pr.map(r => el("tr", {}, el("td", {}, link(r.name, r.source)), el("td", {}, r.date), el("td", {}, r.end || "running"), el("td", {}, r.kind), el("td", { class: "wrap" }, r.what + (r.note ? " (" + r.note + ")" : "")),
+        el("td", {}, r.fed_change_tn == null ? "–" : sgn(r.fed_change_tn, 2) + " tn"), el("td", {}, r.y10_change_bp == null ? "–" : sgn(r.y10_change_bp, 0) + " bp"))))),
+      el("ul", { style: "margin:8px 0 0;padding-left:18px;line-height:1.6" },
+        avgY.length ? el("li", {}, "The 10-year yield rose during " + avgY.filter(r => r.y10_change_bp > 0).length + " of " + avgY.length + " buying programmes: buying was announced into weak economies and yields often rose as the economy recovered. The effect shows at the announcement, not over the programme.") : null,
+        avgS.length ? el("li", {}, "During " + avgS.length + " shrinking programme" + (avgS.length > 1 ? "s" : "") + " the 10-year moved " + avgS.map(r => r.name + " " + sgn(r.y10_change_bp, 0) + " bp").join(", ") + ".") : null,
+        el("li", {}, "QT ended twice when money markets ran short of reserves (September 2019, late 2025): how far the Fed can shrink is set by the banks' need for cash, not by a target size.")),
+      note("Fed holdings change uses the SOMA data (it starts later than the early programmes, so they show –). Programme dates are hand-entered from Fed statements; rows marked verify are from memory."),
+      ...handNote(d.cites)) : null;
+    const mon = b.monthly || {};
+    const bbCard = Object.keys(mon).length ? card("Treasury buybacks: the Treasury buying back its own bonds ($bn a month)",
+      el("div", { class: "kpis" }, ...Object.entries(b.by_type || {}).map(([k, v]) => kpi(k + ", total", "$" + num(v, 0) + "bn")), kpi("Operations", String(b.ops || "–"))),
+      ...linesChart(Object.entries(mon).map(([k, pts], i) => ({ name: k, points: pts, bar: true, color: css(i ? "--s2" : "--s1") })), v => v == null ? "–" : "$" + num(v, 1) + "bn", { small: true }),
+      (b.next || []).length ? el("div", { class: "muted", style: "margin-top:6px" }, "Next: " + b.next.map(x => x.date + " " + x.type + " (" + x.security + ", " + x.bucket + ")").join("; ") + ".") : null,
+      note("Fiscal Data, Treasury buyback operations. Not the Fed: the Treasury buys old, less-traded bonds and pays with new issues. 'Liquidity support' keeps older bonds tradable; 'cash management' smooths the Treasury's cash around tax dates. Neither shrinks the debt."),
+      ask("5 years: do buybacks grow into a tool to steady the long end when auctions tail? 10 years: the US last ran buybacks in 2000-02, to retire debt from surpluses. 20 years: today's buybacks swap old debt for new, the opposite purpose.")) : card("Treasury buybacks", missing(d, "buybacks", "Treasury buybacks") || el("div", { class: "muted" }, "No buyback data."));
+    return [head, hold, sh, progCard, bbCard];
   },
 
   async stress() {
@@ -199,5 +283,63 @@ const VIEWS = {
     return [answer, spread, slope, ev];
   },
 };
+// "What each number means": one plain-language entry per metric on each tab, folded under its card
+const GLOSS = {
+  policy: [["Fed funds target range", "The range the Fed sets for overnight lending between banks; the top of the range is quoted here. Every US borrowing rate is priced off it."],
+    ["Effective fed funds rate (EFFR)", "The volume-weighted rate banks actually paid overnight, published daily by the New York Fed. It sits inside the target range."],
+    ["Bank Rate", "The Bank of England's policy rate, paid on reserves banks hold at the Bank."],
+    ["HKMA base rate", "The rate for Hong Kong's discount window. Because the Hong Kong dollar is pegged to the US dollar, it follows the Fed: the lower end of the Fed range plus 0.5 points, or a HIBOR average if higher."],
+    ["PBoC 7-day reverse repo; 1-year LPR", "China's main policy rate since 2024 is the 7-day reverse repo rate. The loan prime rate (LPR) is the benchmark most bank loans are priced from."],
+    ["CPI inflation, year on year", "The change in consumer prices from the same month a year earlier. The Fed and the BoE aim for 2%."],
+    ["Real policy rate", "Policy rate minus CPI inflation. Positive means money costs more than prices rise, so policy is restrictive; negative means it is easy."],
+    ["FOMC rate decisions", "Each change in the Fed's target, computed from the target history. 1 basis point (bp) = 0.01 percentage point."]],
+  odds: [["Prediction-market probability", "The price of a contract that pays $1 if something happens: a price of 0.62 means traders as a group put the chance at about 62%."],
+    ["Polymarket", "A crypto-based prediction market; each outcome is a Yes share. Its volume is the dollar value traded since the market opened."],
+    ["Kalshi", "A US exchange regulated by the CFTC. Its Fed markets ask 'will the upper bound be above X% after the meeting?'; the chance of each exact level is the difference between neighbouring strikes."],
+    ["Gap between markets", "The difference between the two markets' chances for the same outcome. Large gaps are rare because traders profit by closing them."],
+    ["Rate cycle", "A run of FOMC moves in one direction; a pause of more than 18 months starts a new cycle."],
+    ["Off-meeting (emergency) move", "A change made between the eight scheduled meetings, so far always a cut in a crisis (2008, 2020)."],
+    ["10y during / a year on", "How much the 10-year Treasury yield moved over the cycle and in the year after its first move: whether long-term borrowing costs followed the Fed."],
+    ["Dot plot", "Each FOMC member's forecast of the rate path, published at four meetings a year (marked 'projections')."]],
+  debt: [["General government gross debt, % of GDP", "Everything every level of government owes (federal, state, local) as a share of a year's output. The IMF's standard cross-country measure."],
+    ["IMF projection", "The IMF's forecast in its latest World Economic Outlook (dashed lines), assuming current policies."],
+    ["Total public debt / held by the public", "US federal debt to the penny. 'Held by the public' leaves out what the government owes its own trust funds (such as Social Security): it is the part markets must buy."],
+    ["Public sector net debt (UK)", "UK public sector debt minus its liquid assets, as a share of GDP: the measure the UK's fiscal rules use."],
+    ["Bills share", "Treasury bills (maturing within a year) as a share of all marketable Treasury debt. A high share means the interest bill reprices quickly."],
+    ["Notes, bonds, TIPS, FRNs", "Longer-term Treasuries: notes (2-10 years), bonds (20-30 years), inflation-protected TIPS and floating-rate notes."],
+    ["Average maturity", "How long, on average, until the debt must be repaid or refinanced. Longer maturity means interest costs adjust more slowly to rate changes."]],
+  interest: [["Net interest", "Interest the government pays on its debt minus interest it earns on its assets."],
+    ["Interest as a share of revenue", "Net interest ÷ tax and other revenue: how much of each dollar or pound collected goes to lenders first. Above about 10% rating agencies take note."],
+    ["Interest as a share of GDP", "Net interest ÷ the economy's annual output: the interest bill's size against the tax base."],
+    ["Monthly Treasury Statement (MTS)", "The US Treasury's monthly receipts and outlays by function (defence, education, net interest...). Shown as rolling 12-month totals."],
+    ["Average rate on marketable debt", "The average coupon the Treasury pays across all its marketable debt. It lags market yields as old debt is refinanced."],
+    ["CBO baseline", "The Congressional Budget Office's 10-year projection, assuming current law."],
+    ["PESA", "HM Treasury's Public Expenditure Statistical Analyses: UK spending by function."]],
+  yields: [["10-year yield", "The annual return on a 10-year government bond bought today and held to maturity: the market's price for lending to the government for a decade."],
+    ["Real yield (TIPS, index-linked gilts)", "The yield on inflation-protected bonds: the return after inflation. It is the true cost of borrowing for a government whose tax base grows with prices."],
+    ["Par yield", "The yield of a bond priced at 100 on the Treasury's fitted curve; the standard published curve."],
+    ["Exchange Fund Notes / HKGB", "Hong Kong's government paper: Exchange Fund Notes to 2015, Government Bonds after."],
+    ["ChinaBond 10-year", "The benchmark yield on Chinese government bonds, from China Central Depository & Clearing."]],
+  qe: [["SOMA", "The System Open Market Account: the bonds the Federal Reserve owns, reported weekly by the New York Fed."],
+    ["QE (quantitative easing)", "The Fed creates reserves to buy Treasuries and mortgage-backed securities, pushing long-term yields down when policy rates are already near zero."],
+    ["QT (quantitative tightening)", "The reverse: the Fed lets bonds mature without reinvesting, shrinking its holdings and draining reserves."],
+    ["Operation Twist", "Selling short-dated Treasuries to buy long-dated ones (2011-12): lower long yields without a bigger balance sheet."],
+    ["Reserve management purchases", "Buying Treasury bills to keep bank reserves ample. A plumbing operation, not QE."],
+    ["Fed share of marketable Treasuries", "Fed Treasury holdings ÷ all marketable Treasury debt: how much of the government's debt the central bank holds."],
+    ["Treasury buybacks", "The Treasury itself (not the Fed) buying back older bonds, paid for with new issues. 'Liquidity support' keeps old bonds tradable; 'cash management' smooths cash around tax dates."],
+    ["MBS", "Mortgage-backed securities guaranteed by Fannie Mae, Freddie Mac or Ginnie Mae."]],
+  stress: [["r", "The interest rate on new borrowing, here today's 10-year yield."],
+    ["g", "Nominal GDP growth: real growth plus inflation (IMF projections, average of the next five years)."],
+    ["r − g", "When positive, interest compounds faster than the economy grows, so debt rises as a share of GDP unless the budget runs a surplus before interest."],
+    ["Primary balance", "The budget balance before interest payments, % of GDP. A surplus means taxes cover everything except interest."],
+    ["Debt-stabilising primary balance", "The primary balance that would hold debt/GDP steady: debt × (r − g) ÷ (1 + g)."],
+    ["Gap", "Debt-stabilising primary balance minus the IMF's projection, in points of GDP. Positive: debt keeps rising on current plans."],
+    ["Term-premium proxy", "10-year yield minus the policy rate: what investors demand to lend for ten years rather than roll short loans."],
+    ["10y − 2y", "The slope of the yield curve. Negative (inverted) curves have preceded US recessions."],
+    ["Auction tail", "How far a Treasury auction's yield clears above the yield traded just before it. A large tail means buyers had to be paid more."]],
+};
+const explain = k => GLOSS[k] ? el("details", { class: "card" }, el("summary", { style: "cursor:pointer;font-weight:650" }, "What each number on this tab means"),
+  el("dl", { style: "margin:10px 0 0" }, ...GLOSS[k].flatMap(([t, x]) => [el("dt", { style: "font-weight:600;margin-top:8px" }, t), el("dd", { style: "margin:2px 0 0;color:var(--ink2)" }, x)]))) : null;
+for (const k of Object.keys(VIEWS)) { const f = VIEWS[k]; VIEWS[k] = async () => [].concat(await f()).concat([explain(k)]).filter(Boolean); }
 window.TOPIC = { VIEWS };
 })();

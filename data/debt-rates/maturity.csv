@@ -1,0 +1,5 @@
+date,country,measure,value,source,note
+2025-12-31,US,Weighted average maturity of marketable debt,about 6 years (71 months),https://home.treasury.gov/policy-issues/financing-the-government/quarterly-refunding,verify: from memory of the refunding charts
+2025-03-31,UK,Average maturity of the gilt portfolio,"about 14 years, the longest in the G7",https://www.dmo.gov.uk/data/gilt-market/,verify: from memory
+2024-12-31,China,Average remaining maturity of central government bonds,about 9 years (verify),https://www.chinabond.com.cn/,verify: from memory
+2025-03-31,Hong Kong,Government bonds outstanding,"mostly 2- to 10-year institutional, green and retail (silver) bonds",https://www.hkgb.gov.hk/en/,verify: description from memory
