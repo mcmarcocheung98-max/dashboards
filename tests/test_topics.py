@@ -345,6 +345,14 @@ def test_uk_firm_adoption_from_the_newest_bics_wave_with_ai_questions(snapdir, m
     assert f["uk_hk"]["UK: all businesses (ONS BICS)"][-1][1] == 29.7 and f["uk_hk_latest"]["UK: all businesses (ONS BICS)"]["year_ago"] is None
 
 
+def test_year_ago_needs_a_point_near_the_date():
+    from app.topics.ai_adoption import _year_ago
+    day = 86400
+    live = [[1763251200, 17.3], [1791072000, 24.6]]                       # 16 Nov 2025 and 4 Oct 2026: 43 days off a year
+    assert _year_ago(live, 21) is None and _year_ago(live) == 17.3
+    assert _year_ago([[0, 5.0], [365 * day + 10 * day, 7.0]], 21) == 5.0 and _year_ago([]) is None
+
+
 def test_btos_parser_reads_the_live_layout():
     from app.topics.ai_adoption import parse_btos
     pytest.importorskip("openpyxl")

@@ -186,13 +186,14 @@ def firm_adoption_intl() -> dict[str, pd.Series]:
 
 
 # ------------------------------------------------------------------ endpoints
-def _year_ago(pts: list) -> float | None:
-    """The value nearest one year before the last point, if one lies within 60 days of it."""
+def _year_ago(pts: list, within_days: int = 60) -> float | None:
+    """The value nearest one year before the last point, if one lies within `within_days` of it (60 suits a quarterly survey,
+    21 a fortnightly one)."""
     if not pts:
         return None
     want = pts[-1][0] - 365 * 86400
     t, v = min(pts, key=lambda p: abs(p[0] - want))
-    return v if abs(t - want) <= 60 * 86400 else None
+    return v if abs(t - want) <= within_days * 86400 else None
 
 
 def _firms_now() -> dict:
@@ -206,7 +207,7 @@ def _firms_now() -> dict:
                   sources=[BTOS_XLSX, BICS_PAGE, RAMP_PAGE])
     b = out.get("btos_us") or []
     out["now"] = {"btos": b[-1][1] if b else None, "btos_date": pd.Timestamp(b[-1][0], unit="s").strftime("%Y-%m-%d") if b else None,
-                  "btos_year_ago": _year_ago(b),
+                  "btos_year_ago": _year_ago(b, 21),
                   "ramp": out["ramp"][-1][1] if out.get("ramp") else None}
     out["as_of"] = out["now"]["btos_date"]
     out["cited"] = manual_sources(SLUG, "btos_ai_use_us")[:3] + manual_sources(SLUG, "ramp_ai_index")[:3]
