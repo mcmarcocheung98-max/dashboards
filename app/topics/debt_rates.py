@@ -456,7 +456,8 @@ def parse_kalshi(j: dict) -> list[dict]:
                 continue
             last = pd.to_numeric(m.get("last_price_dollars"), errors="coerce")
             bid, ask = pd.to_numeric(m.get("yes_bid_dollars"), errors="coerce"), pd.to_numeric(m.get("yes_ask_dollars"), errors="coerce")
-            p = last if pd.notna(last) and last > 0 else (bid + ask) / 2 if pd.notna(bid) and pd.notna(ask) else None
+            # a live quote beats a stale last trade on thinly traded strikes
+            p = (bid + ask) / 2 if pd.notna(bid) and pd.notna(ask) and 0 < bid <= ask else last if pd.notna(last) and last > 0 else None
             if p is None or pd.isna(p):
                 continue
             above[round(float(k), 2)] = float(p)
@@ -465,6 +466,8 @@ def parse_kalshi(j: dict) -> list[dict]:
         if len(above) < 2:
             continue
         ks = sorted(above)
+        for a, b in zip(ks, ks[1:]):              # P(above k) cannot rise with k: clamp stale prices so no level gets a negative chance
+            above[b] = min(above[b], above[a])
         probs = [{"upper": ks[0], "label": f"{ks[0]:.2f}% or lower", "p": 1 - above[ks[0]]}]
         for lo, hi in zip(ks, ks[1:]):
             probs.append({"upper": hi, "label": f"{hi:.2f}%", "p": above[lo] - above[hi]})
@@ -520,6 +523,9 @@ def parse_buybacks(j: dict) -> pd.DataFrame:
     if d.empty:
         raise ValueError("Treasury buybacks: no rows")
     d["t"] = pd.to_datetime(d["operation_date"], errors="coerce")
+    # the 2000-02 buybacks (retiring debt out of surpluses) carry no operation type
+    d["operation_type"] = d["operation_type"].where(~d["operation_type"].isin([None, "null", ""]) & d["operation_type"].notna(),
+                                                    d["t"].dt.year.map(lambda y: "Debt reduction (2000-02)" if y < 2003 else "Other"))
     d["amt"] = pd.to_numeric(d["total_par_amt_accepted"], errors="coerce") / 1e9
     return d[d["t"].notna()].sort_values("t")
 
@@ -808,7 +814,7 @@ def _odds_now() -> dict:
         c = fomc_cycles(h)
         return {"decisions": list(reversed(h)), "cycles": list(reversed(c)), "insights": fomc_insights(h, c), "since": h[0]["date"] if h else None}
     out = payload({"events": lambda: poly_events()[:10], "history": history, "decisions": lambda: fomc_decisions()[:12],
-                   "kalshi": lambda: kalshi_events()[:4], "fomc": fomc},
+                   "kalshi": lambda: kalshi_events()[:2], "fomc": fomc},
                   sources=[POLY.format(tag=t) for t in POLY_TAGS] + [KALSHI.format(series=s) for s in KALSHI_SERIES])
     out["meetings"] = next_meetings()
     out["fed_now"] = (out.get("decisions") or [{}])[0].get("to") if out.get("decisions") else None
@@ -927,11 +933,16 @@ def _qe_now() -> dict:
     def bb():
         b = buybacks()
         done = b[b["amt"].notna()]
-        mon = done.groupby([done["t"].dt.to_period("M").dt.to_timestamp(), "operation_type"])["amt"].sum().unstack(fill_value=0)
-        return {"monthly": {k: _pts(mon[k], 2) for k in mon.columns}, "total": _r(done["amt"].sum(), 1), "ops": int(len(done)),
-                "first": str(done["t"].min().date()) if len(done) else None, "next": [{"date": str(r.t.date()), "type": r.operation_type,
+        now_era = done[done["t"] >= "2024-01-01"]           # the current programme; the 2000-02 buybacks are totalled apart
+        mon = now_era.groupby([now_era["t"].dt.to_period("M").dt.to_timestamp(), "operation_type"])["amt"].sum().unstack(fill_value=0)
+        old = done[done["t"] < "2003-01-01"]
+        return {"monthly": {k: _pts(mon[k], 2) for k in mon.columns}, "total": _r(now_era["amt"].sum(), 1), "ops": int(len(now_era)),
+                "first": str(now_era["t"].min().date()) if len(now_era) else None,
+                "past": {"total": _r(old["amt"].sum(), 1), "ops": int(len(old)), "from": str(old["t"].min().date()) if len(old) else None,
+                         "to": str(old["t"].max().date()) if len(old) else None},
+                "next": [{"date": str(r.t.date()), "type": r.operation_type,
                 "security": r.security_type, "bucket": r.maturity_bucket} for r in b[b["amt"].isna() & (b["t"] >= pd.Timestamp.now().normalize())].itertuples()][:5],
-                "by_type": {k: _r(v, 1) for k, v in done.groupby("operation_type")["amt"].sum().items()}}
+                "by_type": {k: _r(v, 1) for k, v in now_era.groupby("operation_type")["amt"].sum().items()}}
 
     def programmes():
         rows = sorted(manual_rows(SLUG, "qe_programs"), key=lambda r: r["date"])
@@ -950,7 +961,8 @@ def _qe_now() -> dict:
             t1 = pd.Timestamp(r["end"]) if r.get("end") else pd.Timestamp.now().normalize()
             a, b = at(s, t0), at(s, t1)
             ya, yb = at(y10, t0), at(y10, t1)
-            out.append({**r, "fed_change_tn": _r(b - a, 2) if None not in (a, b) and s.index[0] <= t0 else None,
+            fed_ok = r.get("kind") != "Treasury" and None not in (a, b) and len(s) and s.index[0] <= t0
+            out.append({**r, "fed_change_tn": _r(b - a, 2) if fed_ok else None,
                         "y10_change_bp": _r((yb - ya) * 100, 0) if None not in (ya, yb) else None})
         return out
     out = payload({"holdings": holdings, "share": share, "buybacks": bb, "programmes": programmes},

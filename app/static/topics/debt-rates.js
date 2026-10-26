@@ -184,7 +184,7 @@ const VIEWS = {
       ...linesChart(Object.entries(h.lines).map(([k, pts], i) => ({ name: k, points: pts, color: css(SERIES[i % SERIES.length]) })), v => pc(v, 0), { sync: false, small: true }),
       note("Daily price of each outcome since the market opened. A line jumping after a CPI release or a Fed speech shows what the market learned."),
       ask("Next meeting: is the move priced in, or still a coin toss? Watch how the odds move after the CPI print on the Interest rates & CPI tab.")) : (d.history_error ? card("Polymarket odds history", missing(d, "history", "The odds history")) : null);
-    const kCards = ks.map(e => card("Kalshi: " + e.title, ...svgBars(e.levels.map(l => l.label.replace(" or lower", "↓").replace("above ", ">")), [{ name: "Chance", values: e.levels.map(l => l.p * 100), color: css("--s4") }],
+    const kCards = ks.map(e => ({ ...e, levels: e.levels.filter(l => l.p >= 0.01) })).map(e => card("Kalshi: " + e.title, ...svgBars(e.levels.map(l => l.label.replace(" or lower", "↓").replace("above ", ">")), [{ name: "Chance", values: e.levels.map(l => l.p * 100), color: css("--s4") }],
       { yFmt: v => v.toFixed(0) + "%", h: 180, labelW: 48, catName: i => "Upper bound " + e.levels[i].label }),
       el("div", { class: "src", style: "margin-top:6px" }, "Closes " + (e.close || "–") + " · $" + big(e.volume) + " traded · ", link("kalshi.com/markets/kxfed", "https://kalshi.com/markets/kxfed"))));
     const kNone = ks.length ? null : card("Kalshi odds", missing(d, "kalshi", "Kalshi") || el("div", { class: "muted" }, "No open Kalshi Fed markets right now."));
@@ -250,6 +250,7 @@ const VIEWS = {
     const bbCard = Object.keys(mon).length ? card("Treasury buybacks: the Treasury buying back its own bonds ($bn a month)",
       el("div", { class: "kpis" }, ...Object.entries(b.by_type || {}).map(([k, v]) => kpi(k + ", total", "$" + num(v, 0) + "bn")), kpi("Operations", String(b.ops || "–"))),
       ...linesChart(Object.entries(mon).map(([k, pts], i) => ({ name: k, points: pts, bar: true, color: css(i ? "--s2" : "--s1") })), v => v == null ? "–" : "$" + num(v, 1) + "bn", { small: true }),
+      b.past && b.past.ops ? el("div", { class: "muted", style: "margin-top:6px" }, "Earlier: " + b.past.ops + " buybacks from " + b.past.from + " to " + b.past.to + ", $" + num(b.past.total, 0) + "bn, which retired debt out of the budget surpluses of the late 1990s.") : null,
       (b.next || []).length ? el("div", { class: "muted", style: "margin-top:6px" }, "Next: " + b.next.map(x => x.date + " " + x.type + " (" + x.security + ", " + x.bucket + ")").join("; ") + ".") : null,
       note("Fiscal Data, Treasury buyback operations. Not the Fed: the Treasury buys old, less-traded bonds and pays with new issues. 'Liquidity support' keeps older bonds tradable; 'cash management' smooths the Treasury's cash around tax dates. Neither shrinks the debt."),
       ask("5 years: do buybacks grow into a tool to steady the long end when auctions tail? 10 years: the US last ran buybacks in 2000-02, to retire debt from surpluses. 20 years: today's buybacks swap old debt for new, the opposite purpose.")) : card("Treasury buybacks", missing(d, "buybacks", "Treasury buybacks") || el("div", { class: "muted" }, "No buyback data."));

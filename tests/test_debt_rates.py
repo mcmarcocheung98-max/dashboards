@@ -411,6 +411,11 @@ def test_kalshi_ladder_becomes_level_probabilities():
     lv = {x["upper"]: x["p"] for x in ev[0]["levels"]}
     assert lv[4.0] == pytest.approx(0.91, abs=0.01) and lv[4.25] == pytest.approx(0.06, abs=0.01)   # P(above 3.75) - P(above 4.0) = 0.98 - 0.07
     assert sum(lv.values()) == pytest.approx(1.0, abs=0.001)
+    # a stale last trade above a lower strike's price is clamped, so no level goes negative
+    j = kalshi_json()
+    j["events"][1]["markets"][3]["last_price_dollars"] = "0.5000"                       # above 4.25 priced over above 4.0 (0.07)
+    lv = D.parse_kalshi(j)[0]["levels"]
+    assert all(x["p"] >= 0 for x in lv) and sum(x["p"] for x in lv) == pytest.approx(1.0, abs=0.001)
 
 
 def test_fomc_history_cycles_and_insights(fixtures):
@@ -431,6 +436,7 @@ def test_qe_and_maturity(fixtures):
     assert not {k for k in q if k.endswith("_error")}, q
     assert q["share"] and 0 < q["share"][-1][1] < 100
     assert q["buybacks"]["ops"] > 10 and q["buybacks"]["next"] and set(q["buybacks"]["monthly"]) == {"Liquidity Support", "Cash Management"}
+    assert next(r for r in q["programmes"] if r["kind"] == "Treasury")["fed_change_tn"] is None
     covid = next(r for r in q["programmes"] if r["name"] == "Covid QE")
     assert covid["fed_change_tn"] is not None and covid["fed_change_tn"] > 0
     d = D.ENDPOINTS["debt"]()
