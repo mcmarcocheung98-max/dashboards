@@ -27,6 +27,9 @@ A dashboard built on the research doc "BTC Cycles & Sector Rotation: 2013–2026
 | | Hong Kong and UK | BTC held by Hong Kong spot ETFs and UK ETNs (hand-entered) and a milestones table |
 | Strategy (MSTR) | Headline figures | BTC held, share of supply, value, approximate average cost, mNAV, 90-day correlation and beta with BTC, purchases |
 | | Premium and discount | MSTR price against the value of its bitcoin per share (the price at mNAV 1, log scale), with mNAV shaded about 1 below: red = premium (overvalued against its bitcoin), green = discount (undervalued); today's mNAV and where it ranks since 2020 |
+| | Exit window | Checklist on today's data: premium extreme (mNAV ≥ 2.5×), premium divergence (MSTR near its 52-week high while mNAV is ≥ 30% below its own), BTC below its 40-week average, mNAV below 1×, BTC per share down on the year, halving clock; mNAV basic, diluted and enterprise value side by side |
+| | mNAV strategies backtested | Six rules since 2021, weekly, recomputed from the live data: growth, yearly return, worst drawdown, time in MSTR, switches, and their equity curves |
+| | How people value MSTR | `mstr_research.json`: definitions (basic, diluted, EV and Strategy's net mNAV; BTC Yield; days to cover), the bull and bear cases, dated events, each with its source |
 | | Charts | BTC held, MSTR vs BTC rebased, correlation and beta, BTC per 1,000 shares |
 | | Every purchase | Date, BTC added, holdings after, BTC price that day, approximate dollars |
 | | UK and HK treasury companies | The Smarter Web Company and Boyaa Interactive: price, correlation with BTC, holdings (hand-entered) |
@@ -86,6 +89,8 @@ Coin Metrics community data is free for non-commercial use with attribution. Def
 **`etf_holdings.csv`** (`date,series,value,source,note`): BTC held by non-US funds; series `Hong Kong spot ETFs (BTC)` or `UK ETNs (BTC)`. One cited reading so far (HK, 3 May 2024, from the first three days' inflows); the memory seed for mid-2025 had no source and was removed. Trackers (bitcointreasuries.net, bold.report, bitbo) disagree fund by fund, so add later points from the funds' HKEX filings or a dated report. No UK ETN holdings figure is published in one place yet; UK issuers' factsheets give per-product BTC.
 
 **`treasuries.csv`** (`date,company,country,yahoo,btc_held,source,note`): one row per disclosed holding of a UK or HK company; `yahoo` is the Yahoo ticker (`.L` London, `.HK` Hong Kong), from which the CNBC symbol is derived (`SWC-GB`; `434-HK`, CNBC drops the leading zero). Hover the "Holdings only" line on a card to see what each price source answered. Rows cite the company's own RNS (FCA National Storage Mechanism or Investegate) or HKEX announcement.
+
+**`mstr_research.json`**: the "How people value MSTR" card, sections of cited points (`[text](url)`). Gathered from web sources on 26 Oct 2026; keep a link on every point and move `as_of` when revising. The exit checklist and backtests are computed in `btc_flows.mnav_strategies`; their thresholds (2.5×, 1.25×, 40 weeks, 30% below the 52-week mNAV high) are the published ones, not fitted, and the rule texts there name the evidence for each.
 
 **`etf_milestones.csv`** (`date,event,market,source,note`): dated events shown on the ETFs tab, each cited to the regulator's or exchange's own release, or to the report that dates it.
 

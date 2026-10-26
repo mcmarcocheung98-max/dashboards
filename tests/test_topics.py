@@ -611,6 +611,9 @@ def test_btc_etf_and_mstr(snapdir, monkeypatch):
     B.json_safe(m)
     assert m["kpi"]["purchases"] > 50 and m["purchases"][0]["date"] > m["purchases"][-1]["date"] and m["kpi"]["approx_avg_cost"] > 0
     assert m["price_source"].startswith("daily closes") and -1 <= m["kpi"]["corr90"] <= 1 and m["mnav"][-1][1] > 0
+    S = m["strategies"]
+    assert "strategies_error" not in m and {c["rule"] for c in S["checklist"]} >= {"Premium extreme", "BTC trend", "Accretion floor", "Halving clock"}
+    assert all(c["state"] in {"exit", "caution", "watch", "clear"} for c in S["checklist"]) and S["backtests"][0]["rule"] == "Hold MSTR" and S["research"]["sections"]
     nav, px = dict(m["nav_per_share"]), dict(m["mstr"])                 # price at mNAV 1: price / NAV per share is mNAV
     t = m["mnav"][-1][0]
     assert nav[t] > 0 and px[t] / nav[t] == pytest.approx(m["mnav"][-1][1], rel=0.01)
@@ -908,3 +911,17 @@ def test_robotaxi_tesla_vs_price():
     assert not [k for k in r if k[0] == "Free cash flow ($M)" and "release" in k[1]]      # only the deliveries release is timed
     assert len(c["quarters"]["quarter"]) == len(qs) and c["quarters"]["close"][-1] > 100
     assert R.tesla_vs_price(pd.Series(dtype=float), {}) == {"rows": [], "quarters": []}
+
+
+def test_mnav_backtest_engine():
+    from app.topics import btc_flows as F
+    idx = pd.date_range("2022-01-07", periods=5, freq="W-FRI")
+    w = pd.DataFrame({"mstr": [10, 11, 12.1, 12.1, 13.31], "btc": [100, 100, 110, 121, 121]}, index=idx, dtype=float)
+    one, zero = pd.Series(1.0, index=idx), pd.Series(0.0, index=idx)
+    assert F.backtest(w, one, zero, cost=0)["multiple"] == pytest.approx(1.331, abs=0.006)            # MSTR +10% three times
+    assert F.backtest(w, zero, one, cost=0)["multiple"] == pytest.approx(1.21, abs=0.006)
+    # decided at a week's close, earned the next week: in MSTR for weeks 1-2, then BTC
+    pm = pd.Series([1, 1, 0, 0, 0], index=idx, dtype=float)
+    assert F.backtest(w, pm, 1 - pm, cost=0)["multiple"] == pytest.approx(1.1 * 1.1 * 1.1, abs=0.006)
+    h = F._hysteresis(pd.Series([False, True, False, False, False]), pd.Series([False, False, False, True, False]))
+    assert h.tolist() == [1, 0, 0, 1, 1]

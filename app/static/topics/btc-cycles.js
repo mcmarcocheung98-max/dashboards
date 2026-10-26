@@ -69,6 +69,39 @@ const table = (cols, rows, opts = {}) => el("div", { class: "scroll" }, el("tabl
 const docLink = r => el("div", { class: "src", style: "margin-top:6px" }, "From the research doc, as of " + r.as_of + ": ", link("open it", r.doc_url), ".");
 const pill = state => el("span", { class: "pill " + ({ firing: "ok", "not yet": "", watch: "", "no data": "bad" }[state] || "") }, state);
 
+// mNAV strategies and the exit window: today's checklist, the rule backtests (recomputed from the live data), and how people value MSTR
+function strategiesCards(S) {
+  if (!S) return [];
+  const M = S.measures || {}, x = v => v == null ? "–" : v.toFixed(2) + "×";
+  const tone = { exit: "bad", caution: "bad", watch: "", clear: "ok" };
+  const label = { exit: "exit signal", caution: "caution", watch: "in window", clear: "clear" };
+  const rows = (S.checklist || []).map(c => el("tr", {}, el("td", {}, el("b", {}, c.rule)), el("td", { class: "wrap" }, c.test), el("td", { class: "wrap" }, c.now),
+    el("td", {}, el("span", { class: "pill " + (tone[c.state] || "") }, label[c.state] || c.state)), el("td", { class: "wrap muted" }, c.why)));
+  const exits = (S.checklist || []).filter(c => c.state === "exit").length, cautions = (S.checklist || []).filter(c => c.state === "caution").length;
+  const verdict = exits ? exits + " exit signal" + (exits > 1 ? "s" : "") + " on" : cautions ? "No exit signal; " + cautions + " caution flag" + (cautions > 1 ? "s" : "") : "No exit signal";
+  const check = card("Exit window for MSTR: the checklist on today's data",
+    el("div", { class: "kpis" }, kpi("mNAV, basic", x(M.basic)), kpi("mNAV, diluted", x(M.diluted)), kpi("mNAV, enterprise value", x(M.ev)),
+      kpi("Checklist", verdict, exits ? "down" : cautions ? "" : "up")),
+    note("Enterprise value = diluted market cap + debt + preferreds − cash" + (M.ev_inputs_date ? " (balance sheet as of " + M.ev_inputs_date + ")" : "") +
+      ". Strategy's own figure since 23 Jul 2026 is price ÷ net bitcoin per share, which runs higher; the levels below are basic mNAV, the series with history."),
+    el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Rule", "Test", "Now", "Status", "Why it matters"].map(h => el("th", {}, h))), ...rows)));
+  const T = S.backtests || [];
+  const curves = card("mNAV strategies backtested, since " + (S.since || "2021").slice(0, 4) + " (weekly, log)",
+    ...linesChart(T.map((t, i) => ({ name: t.rule, points: t.equity, color: i === 1 ? css("--hold") : undefined, dashed: i === 1 })), xf, { log: true }),
+    el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Rule", "Growth of $1", "Per year", "Worst drawdown", "Time in MSTR", "Switches"].map((h, i) => el("th", { style: i ? "text-align:right" : "" }, h))),
+      ...T.map(t => el("tr", {}, el("td", {}, el("b", {}, t.rule)), ...[xf(t.multiple), pct(t.cagr, 0), pct(t.max_dd, 0), Math.round(t.in_mstr * 100) + "%", String(t.switches)]
+        .map((v, i) => el("td", { style: "text-align:right", class: i === 1 ? cls(t.cagr) : i === 2 ? "down" : "" }, v)))))),
+    el("ul", { class: "muted", style: "margin:6px 0 0;padding-left:18px;font-size:12.5px" }, ...T.map(t => el("li", {}, el("b", {}, t.rule + ": "), t.how || ""))),
+    note("Weekly closes; a decision at one week's close earns the next week; 0.2% per switch; cash earns nothing. Thresholds are the published ones (2.5× where short sellers and Strategy's " +
+      "old issuance tiers sat, 1.25× near where Chanos covered), not fitted to this data. One cycle and a half is a small sample: the BTC-trend filter is the robust result " +
+      "(it cut the worst drawdown from about −86% to about −50% in every variant and out of sample in 2024-26); the divergence rule's edge comes from a single episode (2025). Not advice."));
+  const R = S.research || {};
+  const research = R.sections ? card("How people value MSTR and its bitcoin",
+    ...R.sections.flatMap(s => [el("h3", { style: "margin:10px 0 4px;font-size:14px" }, s.title), el("ul", { style: "margin:0;padding-left:18px" }, ...s.points.map(p => el("li", { class: "muted", style: "margin:3px 0" }, ...md(p))))]),
+    note(R.about || "")) : null;
+  return [check, curves, research];
+}
+
 const VIEWS = {
   async cycles() {
     const d = await api("cycles"), R = d.research, n = d.now;
@@ -201,7 +234,7 @@ const VIEWS = {
         : el("div", { class: "muted", title: (t.price_tried || []).join("\n") }, "Holdings only: no share-price feed answers from the server (Yahoo refuses it; CNBC tried). The holdings below are from the company's own announcements."),
       t.price ? note("Daily closes in local currency from " + (t.price_source || "Yahoo") + (t.corr90 != null ? "; 90-day correlation with BTC: " + t.corr90.toFixed(2) : "") + ".") : null,
       table(["Date", "BTC held", "Source"], t.rows.map(r => [r.date, num(+r.btc_held), "[" + host(r.source) + "](" + r.source + ")" + (r.note ? " · " + r.note : "")]))));
-    return [head, mn, el("div", { class: "grid2" }, held, bps), px, cb, buys,
+    return [head, mn, ...strategiesCards(d.strategies), el("div", { class: "grid2" }, held, bps), px, cb, buys,
       tre.length ? card("UK and Hong Kong bitcoin treasury companies", el("div", { class: "muted" }, "Holdings hand-entered in data/btc-cycles/treasuries.csv from each company's announcements; share prices from Yahoo, else CNBC, else holdings only.")) : null, ...tre];
   },
   async signals() {

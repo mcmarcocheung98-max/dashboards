@@ -1,0 +1,36 @@
+{
+ "as_of": "2026-10-26",
+ "about": "How analysts and investors value Strategy (MSTR) against its bitcoin, gathered from web sources on 26 Oct 2026 (search excerpts; links are to the sources). Not advice. Edit freely; every point should keep its link.",
+ "sections": [
+  {
+   "title": "Ways to measure the premium",
+   "points": [
+    "Basic mNAV = market cap ÷ BTC value; diluted adds options and in-the-money converts; EV mNAV = market cap + debt + preferreds − cash, over BTC value. On 30 Nov 2025 the three read 0.86x / 0.95x / 1.11x ([Yahoo Finance](https://finance.yahoo.com/news/mnav-really-means-bitcoin-treasury-214545571.html); [BitcoinTreasuries](https://bitcointreasuries.net/news/how-bitcointreasuriesnet-calculates-mnav)).",
+    "Strategy's own figure moved to an EV basis, which stayed above 1x long after basic mNAV fell below it, then on 23 Jul 2026 to price ÷ net bitcoin per share (BTC + USD reserve − preferreds − out-of-the-money converts); Strategy says the old and new readings are not comparable ([CoinDesk](https://www.coindesk.com/markets/2026/07/24/saylor-and-team-overhaul-strategy-s-bitcoin-metrics-as-bear-market-persists), [Protos](https://protos.com/strategy-has-lost-two-thirds-of-its-mnav-in-two-years/)). strategy.com showed 1.16x on 23 Oct 2026; this page shows basic, diluted and EV side by side.",
+    "BTC Yield = % change in BTC per diluted share; BTC Gain and BTC $ Gain turn it into coins and dollars ([Strategy](https://www.strategy.com/notes)). 2025 target 30%; quarterly BTC Yield turned about −1% in 2026 once cash went to the USD reserve ([Strategy Q2 2025](https://www.strategy.com/press/strategy-announces-second-quarter-2025-financial-results_07-31-2025), [Decrypt](https://decrypt.co/374281/strategy-overhauls-bitcoin-metrics-debuting-net-bitcoin-per-share)).",
+    "Days to cover mNAV = ln(mNAV) ÷ ln(1 + daily BTC Yield): how long BTC Yield takes to earn the premium back; 626 days at 2.1x was called sluggish ([Yahoo Finance](https://finance.yahoo.com/news/days-cover-mnav-emerges-standard-091043068.html)). BTC Rating (BTC ÷ senior claims) launched at 5.9x with BTC at $74k ([Cointelegraph](https://cointelegraph.com/news/strategy-btc-rating-debt-safe-bitcoin-slumps))."
+   ]
+  },
+  {
+   "title": "Why a premium (the bull case)",
+   "points": [
+    "Accretion: above 1x, selling stock to buy BTC raises BTC per share, so the premium funds its own growth; Strategy now puts the threshold at 1.0x net mNAV, and its Q1 2026 call put the break-even for funding dividends at about 1.22x ([CoinDesk](https://www.coindesk.com/markets/2026/07/24/saylor-and-team-overhaul-strategy-s-bitcoin-metrics-as-bear-market-persists), [BitMEX](https://www.bitmex.com/blog/strategy-earning-recap)).",
+    "Option value: VanEck treats the equity as a leveraged call on BTC whose premium reinforces itself ([VanEck](https://vaneck.com/us/en/insights/blogs/digital-assets/matthew-sigel-deconstructing-strategy-mstr-premium-leverage-and-capital-structure/), May 2025). TD Cowen values MSTR from forecast BTC Yield and BTC price; its $260 target (Oct 2026) cites dilution drag ([Benzinga](https://www.benzinga.com/crypto/cryptocurrency/26/10/62279760/strategy-faces-dilution-drag-as-td-cowen-raises-bitcoin-forecast-to-109000))."
+   ]
+  },
+  {
+   "title": "Why not (the bear case)",
+   "points": [
+    "Kerrisdale shorted MSTR against BTC in Mar 2024, arguing spot ETFs removed the access premium ([The Block](https://www.theblock.co/post/285353/microstrategy-trades-at-unjustifiable-premium-to-bitcoin-says-firm-shorting-companys-stock)); Jim Chanos ran the same pair from about 2.5x in Dec 2024 and closed it at about 1.23x in Nov 2025 ([Morningstar](https://www.morningstar.com/news/marketwatch/2025111031/chanos-declares-victory-in-his-bet-vs-strategys-saylor)).",
+    "Reflexivity: a lower premium buys less BTC per new share, which weakens the yield story, which lowers the premium. Below 1x Strategy built a USD reserve (Dec 2025), allowed BTC sales and buybacks (Jun 2026) and sold 6,948 BTC in 2026, mostly to support its STRC preferred ([Decrypt](https://decrypt.co/350459/bitcoin-giant-strategy-1-44-billion-usd-reserve-still-might-sell-btc), [SEC 8-K](https://www.sec.gov/Archives/edgar/data/0001050446/000119312526286871/mstr-20260629.htm), [AMINA](https://eu.aminagroup.com/research/why-is-strategy-selling-bitcoin-the-digital-credit-pivot-and-the-mnav-redefinition/))."
+   ]
+  },
+  {
+   "title": "Dated events to watch",
+   "points": [
+    "MSCI's screen for non-operating companies: the list of affected companies is due 11 Nov 2026 and changes take effect after the close on 30 Nov 2026; funds tracking MSCI indices hold about 3.1% of MSTR's basic shares ([The Block](https://www.theblock.co/news/business/2026-10-15-msci-rules-could-exclude-strategy-mstr-from-indexes-418729), [Strategy](https://www.strategy.com/msci)).",
+    "Shareholder vote on 28 Oct 2026 to move the four US preferreds to daily dividends ([SEC DEF 14A](https://www.sec.gov/Archives/edgar/data/0001050446/000119312526413159/d503578ddef14a.htm)); buyback authorisation raised to $3bn on 19 Oct 2026 ([SEC 8-K](https://www.sec.gov/Archives/edgar/data/0001050446/000119312526424688/mstr-20261019.htm))."
+   ]
+  }
+ ]
+}

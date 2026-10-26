@@ -246,6 +246,96 @@ def corr_beta(a: pd.Series, b: pd.Series, n: int = 90) -> tuple[pd.Series, pd.Se
     return corr.dropna(), beta.dropna()
 
 
+# ------------------------------------------------------------------ mNAV strategies and the exit window
+HALVINGS = pd.to_datetime(["2016-07-09", "2020-05-11", "2024-04-20", "2028-04-15"])      # the 2028 date is the usual block-time estimate
+
+
+def _weekly(mstr: pd.Series, btc: pd.Series, hold: pd.Series, shares: pd.Series) -> pd.DataFrame:
+    w = pd.DataFrame({"mstr": mstr, "btc": btc, "hold": hold, "shares": shares}).resample("W-FRI").last().dropna()
+    w["mnav"] = w.mstr * w.shares / (w.btc * w.hold)
+    w["bps"] = w.hold / w.shares
+    w["trend"] = (w.btc > w.btc.rolling(40, min_periods=30).mean()).astype(float)      # 40 weeks ~ the 200-day average
+    w["divergence"] = (w.mstr >= 0.9 * w.mstr.rolling(52, min_periods=26).max()) & (w.mnav <= 0.7 * w.mnav.rolling(52, min_periods=26).max())
+    return w
+
+
+def backtest(w: pd.DataFrame, in_mstr: pd.Series, in_btc: pd.Series, cost: float = 0.002) -> dict:
+    """Weekly: the position chosen at a week's close earns the next week's return; `cost` per full switch."""
+    pm, pb = in_mstr.shift(1).fillna(0), in_btc.shift(1).fillna(0)
+    r = pm * w.mstr.pct_change().fillna(0) + pb * w.btc.pct_change().fillna(0) - (pm.diff().abs() + pb.diff().abs()).fillna(0) * cost / 2
+    eq = (1 + r).cumprod()
+    yrs = (w.index[-1] - w.index[0]).days / 365.25
+    return {"multiple": _r(float(eq.iloc[-1]), 2), "cagr": _r(float(eq.iloc[-1] ** (1 / yrs) - 1), 3), "max_dd": _r(float((eq / eq.cummax() - 1).min()), 3),
+            "in_mstr": _r(float(pm.mean()), 2), "switches": int((pm.diff().abs() > 0).sum()), "equity": _pts(eq, 3)}
+
+
+def _hysteresis(out_when: pd.Series, back_when: pd.Series) -> pd.Series:
+    st, s = 1.0, []
+    for o, b in zip(out_when, back_when):
+        st = 0.0 if o else 1.0 if b else st
+        s.append(st)
+    return pd.Series(s, index=out_when.index)
+
+
+def mnav_strategies(mstr: pd.Series, btc: pd.Series, hold: pd.Series, shares: pd.Series, h: pd.DataFrame) -> dict:
+    """Exit checklist on today's data, rule backtests since 2021, and the halving-clock windows. Thresholds come from published practice
+    (2.5x where short sellers and Strategy's old issuance tiers sat, 1.2-1.3x where Chanos covered), not from fitting this history."""
+    w = _weekly(mstr, btc, hold, shares)
+    w = w[w.index >= "2021-01-01"]                       # before 2021 the premium also priced the software business
+    one, zero = pd.Series(1.0, index=w.index), pd.Series(0.0, index=w.index)
+    band = _hysteresis(w.mnav > 2.5, w.mnav < 1.25)
+    div = _hysteresis(w.divergence, w.mnav < 1.25)
+    rules = [("Hold MSTR", "Buy and hold MSTR.", one, zero), ("Hold BTC", "Buy and hold BTC.", zero, one),
+             ("MSTR + BTC trend", "MSTR while BTC is above its 40-week average, else cash.", w.trend, zero),
+             ("mNAV band", "MSTR; switch to BTC when mNAV goes above 2.5x, back to MSTR below 1.25x.", band, 1 - band),
+             ("Band + trend", "The mNAV band, and cash while BTC is below its 40-week average.", band * w.trend, (1 - band) * w.trend),
+             ("Divergence + trend", "Leave MSTR on a premium divergence (checklist), back below 1.25x; cash while BTC is below its 40-week average.", div * w.trend, zero)]
+    tests = [{"rule": n, "how": how, **backtest(w, m, b)} for n, how, m, b in rules]
+    last = w.iloc[-1]
+    hi52, mh52 = w.mstr.tail(52).max(), w.mnav.tail(52).max()
+    bps_yoy = float(last.bps / w.bps.iloc[-53] - 1) if len(w) > 53 else None
+    ma40 = float(w.btc.rolling(40).mean().iloc[-1])
+    nxt = HALVINGS[HALVINGS > w.index[-1]].min()
+    prev = HALVINGS[HALVINGS <= w.index[-1]].max()
+    months = (w.index[-1] - prev).days / 30.44
+    m_add = lambda t, k: (t + pd.DateOffset(months=k)).strftime("%b %Y")
+    in_top_window = 13 <= months <= 19
+    check = [
+        {"rule": "Premium extreme", "test": "basic mNAV at or above 2.5x", "now": f"{last.mnav:.2f}x", "state": "exit" if last.mnav >= 2.5 else "clear",
+         "why": "Where Kerrisdale and Chanos shorted MSTR against BTC, and where Strategy's 2025 guidance started to issue stock to buy BTC."},
+        {"rule": "Premium divergence", "test": "MSTR within 10% of its 52-week high while mNAV is 30% or more below its own 52-week high",
+         "now": f"MSTR {last.mstr / hi52 - 1:+.0%} from its high; mNAV {last.mnav / mh52 - 1:+.0%} from its high", "state": "exit" if last.divergence else "clear",
+         "why": "The premium peaked before the price in both cycles (Feb 2021 vs Nov 2021; Nov 2024 vs Jul 2025). This fired only in 2025 (Jan, May-Aug), before MSTR fell 59% in 26 weeks."},
+        {"rule": "BTC trend", "test": "BTC below its 40-week (about 200-day) average", "now": f"BTC ${last.btc:,.0f} vs ${ma40:,.0f}", "state": "exit" if last.btc < ma40 else "clear",
+         "why": "The one rule that held up in every test: it roughly halved MSTR's worst drawdown in 2021-26 and out of sample in 2024-26."},
+        {"rule": "Accretion floor", "test": "basic mNAV below 1.0x", "now": f"{last.mnav:.2f}x", "state": "caution" if last.mnav < 1 else "clear",
+         "why": "Below 1x a new share buys less than a share's worth of BTC, so the flywheel stops; Strategy has funded dividends by selling BTC and buying back its preferreds instead."},
+        {"rule": "BTC per share", "test": "BTC per basic share lower than a year ago", "now": "–" if bps_yoy is None else f"{bps_yoy:+.1%} over 52 weeks",
+         "state": "caution" if bps_yoy is not None and bps_yoy < 0 else "clear",
+         "why": "Negative BTC Yield means dilution is outrunning buying; TD Cowen calls it dilution drag."},
+        {"rule": "Halving clock", "test": "13-19 months after a halving (MSTR's price tops: 18 months in 2021, 15 in 2025)", "now": f"{months:.0f} months after the {prev:%b %Y} halving",
+         "state": "watch" if in_top_window else "clear",
+         "why": f"Two cycles only. Next halving about {nxt:%b %Y}: mNAV peaked 7-9 months after (window {m_add(nxt, 7)}-{m_add(nxt, 9)}), MSTR's price 15-18 months after ({m_add(nxt, 15)}-{m_add(nxt, 18)})."},
+    ]
+    measures = {"basic": _r(float(last.mnav), 3)}
+    if "dil" in h:
+        d = h["dil"].astype(float).dropna()
+        if len(d):
+            measures["diluted"] = _r(float(last.mstr * d.iloc[-1] / (last.btc * last.hold)), 3)
+    ev = h.dropna(subset=[c for c in ("debt", "pref", "cash", "dil") if c in h]) if {"debt", "pref", "cash", "dil"} <= set(h.columns) else h.iloc[0:0]
+    if len(ev):
+        e = ev.iloc[-1]
+        measures["ev"] = _r(float((last.mstr * float(e.dil) + float(e.debt) + float(e.pref) - float(e.cash)) / (last.btc * last.hold)), 3)
+        measures["ev_inputs_date"] = str(ev.index[-1].date())
+    return {"checklist": check, "backtests": tests, "measures": measures, "since": str(w.index[0].date()), "as_of": str(w.index[-1].date()),
+            "research": _research()}
+
+
+def _research() -> dict:
+    f = DATA_DIR / SLUG / "mstr_research.json"
+    return json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
+
+
 def _mstr_now() -> dict:
     out: dict = {"stale": {}, "updated": int(time.time())}
     h = mstr_history()
@@ -289,6 +379,10 @@ def _mstr_now() -> dict:
         "note": j_note(),
         "as_of": str(h.index[-1].date()),
     })
+    try:
+        out["strategies"] = mnav_strategies(mstr, btc, hold, shares, h)
+    except Exception as e:
+        out["strategies_error"] = type(e).__name__
     # UK and HK treasury companies (hand-entered holdings; prices from Yahoo or CNBC, or holdings only)
     comps = {}
     for r in _rows("treasuries"):
