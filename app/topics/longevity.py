@@ -51,7 +51,7 @@ PCA_SQL = ("SELECT BNF_CHEMICAL_SUBSTANCE AS chem, SUM(ITEMS) AS items, SUM(NIC)
 CONCEPT = "https://data.sec.gov/api/xbrl/companyconcept/CIK{cik:010d}/{tax}/{tag}.json"
 # The SEC answers 403 unless the User-Agent reads "Name email" (see data/compute-chips/README.md); SEC_UA overrides it on the server
 SEC_HEADERS = {"User-Agent": os.environ.get("SEC_UA", "Dashboards admin@dashboards-production-bde6.up.railway.app"), "Accept": "application/json"}
-FIRMS = {"Eli Lilly": (59478, "USD", (("us-gaap", "Revenues"), ("us-gaap", "RevenueFromContractWithCustomerExcludingAssessedTax"))),
+FIRMS = {"Eli Lilly": (59478, "USD", (("us-gaap", "Revenues"),)),       # Lilly files no RevenueFromContractWithCustomer... (404): Revenues runs 2007 on
          "Novo Nordisk": (353278, "DKK", (("ifrs-full", "Revenue"),))}
 NASDAQ_ETF = "https://api.nasdaq.com/api/quote/{sym}/historical?assetclass={cls}&fromdate={a}&todate={b}&limit=9999"
 NASDAQ_HEADERS = {"Accept": "application/json, text/plain, */*", "Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"}

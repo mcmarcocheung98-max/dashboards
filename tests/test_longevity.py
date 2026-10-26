@@ -107,8 +107,6 @@ def fake_fetch_json(url, ttl=0, **k):
             raise ConnectionError("one month down")
         return pca_sql(t)
     if "data.sec.gov" in url:
-        if "RevenueFromContract" in url:
-            raise ConnectionError("404")
         return concept_json("lilly" if "CIK0000059478" in url else "novo")
     if "nasdaq" in url:
         return nasdaq_json(url.split("/quote/")[1].split("/")[0])

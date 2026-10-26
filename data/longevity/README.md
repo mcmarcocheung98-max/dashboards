@@ -17,7 +17,7 @@ Five tabs. Data at `/api/longevity/<lifespan|causes|glp1|approvals|markets>`. `/
 | Causes | England & Wales drug poisoning deaths; dementia and Alzheimer's share of deaths | ONS | hand-entered: `causes_uk.csv` | yearly |
 | Causes | Hong Kong deaths by cause | CHP | hand-entered: `causes_hk.csv` (placeholders, empty) | yearly |
 | GLP-1 | NHS England items dispensed and net ingredient cost: semaglutide, tirzepatide, liraglutide, dulaglutide | NHSBSA Prescription Cost Analysis, monthly tables `PCA_YYYYMM` from January 2021, summed by `BNF_CHEMICAL_SUBSTANCE` with CKAN `datastore_search_sql` (`opendata.nhsbsa.net`) | yes | monthly, about 2 months behind |
-| GLP-1 | Eli Lilly revenue (USD; annual and quarterly), Novo Nordisk revenue (DKK; annual) | SEC EDGAR companyconcept: Lilly `us-gaap/Revenues` (and `RevenueFromContractWithCustomerExcludingAssessedTax`), Novo `ifrs-full/Revenue` from the 20-F | yes | quarterly / yearly |
+| GLP-1 | Eli Lilly revenue (USD; annual and quarterly), Novo Nordisk revenue (DKK; annual) | SEC EDGAR companyconcept: Lilly `us-gaap/Revenues` (2007 on; Lilly has no `RevenueFromContractWithCustomerExcludingAssessedTax` concept), Novo `ifrs-full/Revenue` from the 20-F | yes | quarterly / yearly |
 | GLP-1 | Brand sales: Mounjaro, Zepbound (USD bn), Ozempic, Wegovy (DKK bn) | company annual reports | hand-entered: `products.csv` | yearly |
 | GLP-1 | Uptake surveys (KFF, Gallup), UK private use estimate | as cited per row | hand-entered: `uptake.csv` | as published |
 | Approvals | FDA CDER novel drug approvals per year | FDA "Novel Drug Approvals" pages | hand-entered: `fda_novel.csv` | yearly (add each January) |
