@@ -44,7 +44,8 @@ TOPIC = Topic(SLUG, "Search & Social Trends",
 WIKI = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/{lang}.wikipedia/all-access/user/{title}/daily/{a}/{b}"
 WIKI_TITLES = "https://{lang}.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&redirects=1&converttitles=1&titles={titles}"
 HN = "https://hn.algolia.com/api/v1/search_by_date?query={q}&tags={tag}&numericFilters=created_at_i%3E%3D{a},created_at_i%3C{b}&hitsPerPage=1"
-BSKY = "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q={q}&sort=latest&since={a}&until={b}&limit=100"
+# public.api.bsky.app answers 403 to Railway; the AppView host answers (checked with /layout, 2026-10-26)
+BSKY = "https://api.bsky.app/xrpc/app.bsky.feed.searchPosts?q={q}&sort=latest&since={a}&until={b}&limit=100"
 REDDIT = ("https://www.reddit.com/r/{sub}/about.json", "https://old.reddit.com/r/{sub}/about.json", "https://api.reddit.com/r/{sub}/about")
 GITHUB = "https://api.github.com/repos/{repo}"
 GTRENDS = ("https://trends.google.com/trends/api/explore?hl=en-US&tz=0&req=%7B%22comparisonItem%22%3A%5B%7B%22keyword%22%3A%22bitcoin%22%2C%22geo%22%3A%22%22%2C"
@@ -55,7 +56,7 @@ BOT = {"User-Agent": "dashboards-trends/1.0 (https://github.com/mcmarcocheung98-
 HEALTH_KEYS = {"wiki_en": "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia",
                "wiki_zh": "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/zh.wikipedia",
                "titles": "https://en.wikipedia.org/w/api.php?action=query", "hn": "https://hn.algolia.com/api/v1/search_by_date",
-               "bsky": "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts", "reddit": "https://www.reddit.com/r/<sub>/about.json",
+               "bsky": "https://api.bsky.app/xrpc/app.bsky.feed.searchPosts", "reddit": "https://www.reddit.com/r/<sub>/about.json",
                "github": "https://api.github.com/repos/<repo>"}
 
 PACE = {"wiki": 0.3, "hn": 0.4, "bsky": 1.0, "reddit": 3.0, "github": 1.5, "site": 0.5}
@@ -74,7 +75,7 @@ REGIONS = (("global", "English Wikipedia (global, US-led)"), ("uk", "UK-specific
 
 SOURCES = [{"name": "Wikimedia REST API: daily pageviews per article, English and Chinese Wikipedia (users, all access)", "url": "https://wikimedia.org/api/rest_v1/", "cadence": "daily"},
            {"name": "Hacker News search (Algolia): stories and comments per topic per week", "url": "https://hn.algolia.com/api", "cadence": "daily"},
-           {"name": "Bluesky public API (app.bsky.feed.searchPosts): posts per keyword per day", "url": "https://docs.bsky.app/docs/api/app-bsky-feed-search-posts", "cadence": "daily"},
+           {"name": "Bluesky API (app.bsky.feed.searchPosts): posts per keyword per day", "url": "https://docs.bsky.app/docs/api/app-bsky-feed-search-posts", "cadence": "daily"},
            {"name": "Reddit about.json: subreddit subscribers and active users", "url": "https://www.reddit.com/dev/api/", "cadence": "daily, hand-entered when blocked"},
            {"name": "GitHub REST API: stars of the main AI repositories", "url": "https://docs.github.com/en/rest/repos/repos", "cadence": "daily"},
            {"name": "This site's own dashboards (/api/<slug>/<name>) for the attention-vs-reality series", "url": "/", "cadence": "twice a day"},
@@ -827,10 +828,10 @@ def _layout_now() -> dict:
     urls = {"wikimedia en": wiki_url("en", "Bitcoin", now - pd.Timedelta(days=10), now - pd.Timedelta(days=1)),
             "wikimedia zh": wiki_url("zh", "比特币", now - pd.Timedelta(days=10), now - pd.Timedelta(days=1)),
             "wiki titles en": WIKI_TITLES.format(lang="en", titles=quote("AI agent|Solana (blockchain platform)|Zoox (company)|Housing crisis in the United Kingdom", safe="")),
-            "wiki titles zh": WIKI_TITLES.format(lang="zh", titles=quote("比特币|深度求索|宝可梦|宝可梦集换式卡牌游戏|特斯拉公司|英伟达|香港房地產|恒生指数", safe="")),
+            "wiki titles zh": WIKI_TITLES.format(lang="zh", titles=quote("比特币|深度求索|宝可梦|宝可梦集换式卡牌游戏|特斯拉公司|英伟达|恒生指数", safe="")),
             "hn algolia": HN.format(q="bitcoin", tag="story", a=int(wk.timestamp()), b=int((wk + pd.Timedelta(weeks=1)).timestamp())),
-            "bluesky public": BSKY.format(q="bitcoin", a=(now - pd.Timedelta(days=1)).strftime("%Y-%m-%dT00:00:00Z"), b=now.strftime("%Y-%m-%dT00:00:00Z")),
-            "bluesky appview": "https://api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=bitcoin&limit=1",
+            "bluesky": BSKY.format(q="bitcoin", a=(now - pd.Timedelta(days=1)).strftime("%Y-%m-%dT00:00:00Z"), b=now.strftime("%Y-%m-%dT00:00:00Z")),
+            "bluesky public host": "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=bitcoin&limit=1",
             "reddit www": REDDIT[0].format(sub="Bitcoin"), "reddit old": REDDIT[1].format(sub="Bitcoin"), "reddit api": REDDIT[2].format(sub="Bitcoin"),
             "github": GITHUB.format(repo="pytorch/pytorch"), "google trends": GTRENDS, "own site": f"{site()}/api/index"}
 

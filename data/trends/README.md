@@ -45,7 +45,7 @@ One reading per tracked topic: its attention z-score (the latest full week). **L
 | Daily pageviews per article, English and Chinese Wikipedia, from 2016 | Wikimedia REST API `metrics/pageviews/per-article/<lang>.wikipedia/all-access/user/<title>/daily/<from>/<to>` | yes; the history is downloaded once, then only the last two weeks again | daily, 0.3 s apart |
 | Article titles after redirects and Chinese script conversion | MediaWiki `api.php?action=query&redirects=1&converttitles=1`, 40 titles a request | yes | monthly |
 | HN stories and comments per topic per week | `hn.algolia.com/api/v1/search_by_date?query=…&tags=story|comment&numericFilters=created_at_i…` (nbHits) | yes; 26 weeks kept, complete weeks not asked again except the last two | daily, 0.4 s apart |
-| Bluesky posts per keyword per day | `public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=…&since=…&until=…` (up to 5 pages of 100) | yes, logged once a day, topics with `social=y` | daily, 1 s apart |
+| Bluesky posts per keyword per day | `api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=…&since=…&until=…` (up to 5 pages of 100) | yes, logged once a day, topics with `social=y` | daily, 1 s apart |
 | Reddit subscribers and active users | `www.reddit.com`, then `old.reddit.com`, then `api.reddit.com` `/r/<sub>/about.json` | yes, logged once a day; **hand-entered** in `reddit.csv` when the server is refused | daily, 3 s apart |
 | GitHub stars and forks | `api.github.com/repos/<repo>` (60 requests an hour unauthenticated; 10 a day used) | yes, logged once a day | daily |
 | Google Trends | trends.google.com | **hand-entered**: `gtrends.csv` | monthly |
@@ -57,8 +57,15 @@ site, `PACE` seconds apart. Pages only read what the fill stored. The store live
 `state.json` (what the last run got). In `/api/health` each source is listed once, under a stable address, not once per download:
 fresh when any of its downloads worked in the last run, stale (since its last good run) when none did.
 
-**Checked on the server:** not yet. The container this dashboard was written in could reach none of the sources, so the parsers
-follow the documented formats and are tested on fixtures. After the first deploy, read `/api/trends/layout` and note here what answered.
+**Checked on the server (2026-10-26, `/api/trends/layout` from Railway):**
+
+- Wikimedia pageviews (English and Chinese) and the MediaWiki title API: **200**. Every article resolved except 香港房地產 (no such page on Chinese Wikipedia; removed). Redirects followed: Zoox (company) → Zoox, Mortgage loan → Mortgage, Zoopla → Houseful (company), Stamp Duty Land Tax → Stamp duty in the United Kingdom, Housing crisis in the United Kingdom → Affordability of housing in the United Kingdom, 宝可梦 → 宝可梦系列, 恒生指数 → 恒生指數; 宝可梦集换式卡牌游戏 and 气候变化 converted to their traditional-script titles.
+- HN Algolia: **200** (its nbHits is marked non-exhaustive for large counts: treat big weekly numbers as estimates).
+- GitHub API: **200** (60 requests an hour unauthenticated).
+- Bluesky: `public.api.bsky.app` answers **403** to Railway; `api.bsky.app` answers **200**, so that host is used.
+- Reddit: **403** on `www`, `old` and `api.reddit.com`. Counts come only from `reddit.csv` until that changes; the fill stops asking after two refusals a run.
+- Google Trends: **429**. Hand-entered only.
+- This site's own API at `http://127.0.0.1:8080`: **200**.
 
 ## The files here
 

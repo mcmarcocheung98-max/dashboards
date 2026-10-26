@@ -40,9 +40,9 @@ recession,Recession,rates,global,en,Recession,recession,y,https://en.wikipedia.o
 fertility,Fertility rate,demographics,global,en,Total fertility rate,birth rate,,https://en.wikipedia.org/wiki/Total_fertility_rate,
 uk_boe,Bank of England,rates,uk,en,Bank of England,Bank of England,,https://en.wikipedia.org/wiki/Bank_of_England,UK-specific page
 uk_rightmove,Rightmove,housing,uk,en,Rightmove,rightmove,,https://en.wikipedia.org/wiki/Rightmove,UK-specific page
-uk_zoopla,Zoopla,housing,uk,en,Zoopla,,,https://en.wikipedia.org/wiki/Zoopla,UK-specific page
+uk_zoopla,Zoopla (Houseful),housing,uk,en,Zoopla,,,https://en.wikipedia.org/wiki/Zoopla,UK-specific page; redirects to Houseful (company)
 uk_sdlt,Stamp Duty Land Tax,housing,uk,en,Stamp Duty Land Tax,stamp duty,,https://en.wikipedia.org/wiki/Stamp_Duty_Land_Tax,UK-specific page
-uk_housing,UK housing crisis,housing,uk,en,Housing crisis in the United Kingdom,,,https://en.wikipedia.org/wiki/Housing_crisis_in_the_United_Kingdom,verify: title; UK-specific page
+uk_housing,UK housing crisis,housing,uk,en,Housing crisis in the United Kingdom,,,https://en.wikipedia.org/wiki/Housing_crisis_in_the_United_Kingdom,UK-specific page; redirects to Affordability of housing in the United Kingdom
 zh_bitcoin,比特币 Bitcoin,bitcoin,zh,zh,比特币,,,https://zh.wikipedia.org/wiki/%E6%AF%94%E7%89%B9%E5%B8%81,Chinese Wikipedia; the server converts the title to the stored script variant
 zh_ai,人工智能 AI,ai,zh,zh,人工智能,,,https://zh.wikipedia.org/wiki/%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD,Chinese Wikipedia
 zh_chatgpt,ChatGPT (zh),ai,zh,zh,ChatGPT,,,https://zh.wikipedia.org/wiki/ChatGPT,Chinese Wikipedia
@@ -52,5 +52,4 @@ zh_ptcg,宝可梦集换式卡牌游戏 Pokémon TCG,pokemon,zh,zh,宝可梦集�
 zh_tesla,特斯拉 Tesla,robotaxi,zh,zh,特斯拉公司,,,https://zh.wikipedia.org/wiki/%E7%89%B9%E6%96%AF%E6%8B%89%E5%85%AC%E5%8F%B8,verify: title
 zh_nvidia,英伟达 Nvidia,chips,zh,zh,英伟达,,,https://zh.wikipedia.org/wiki/%E8%8B%B1%E4%BC%9F%E8%BE%BE,verify: title
 zh_climate,气候变化 Climate change,climate,zh,zh,气候变化,,,https://zh.wikipedia.org/wiki/%E6%B0%94%E5%80%99%E5%8F%98%E5%8C%96,verify: title
-zh_hkproperty,香港房地产 HK property,housing,zh,zh,香港房地產,,,https://zh.wikipedia.org/wiki/%E9%A6%99%E6%B8%AF%E6%88%BF%E5%9C%B0%E7%94%A2,verify: title
 zh_hsi,恒生指数 Hang Seng Index,rates,zh,zh,恒生指数,,,https://zh.wikipedia.org/wiki/%E6%81%92%E7%94%9F%E6%8C%87%E6%95%B0,verify: title
