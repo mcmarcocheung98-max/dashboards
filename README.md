@@ -41,6 +41,12 @@ pytest -m network tests/test_sources.py     # fetches every live source: run by 
 - `/api/health` on the site lists every data source used since the last restart, per dashboard: fresh, stale (serving its last good copy) or failing. The index page shows the counts under each dashboard.
 - Actions → **source-health** runs daily at 07:17 UTC and keeps one issue labelled `source-health` open while any source has served a copy older than 3 days or failed for more than a day with nothing to show; it closes the issue when all are healthy. Set the repository variable `DASHBOARDS_URL` if the domain changes.
 
+## Month-end archive
+
+On the last day of every month the `archive` workflow copies one zip of every dashboard (all data, the daily snapshots, the
+hand-entered files) to OneDrive under `Dashboards/Archive/YYYY-MM/`. Setup and contents: [docs/ARCHIVE.md](docs/ARCHIVE.md).
+The same zip is at `/api/archive.zip` on the live site.
+
 ## Deploy on Railway
 
 1. Railway → New Project → Deploy from GitHub repo → this repository. Railway reads `railway.json` and builds the `Dockerfile`.

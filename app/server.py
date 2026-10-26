@@ -8,6 +8,7 @@ GET /api/<slug>/meta  title, tabs, sources
 GET /api/<slug>/changes  what changed since yesterday (topics/_daily.py): flipped readings and each tab's lean day by day
 GET /api/<slug>/<n>   that dashboard's data (JSON); 404 unknown, 503 when the source is down and no snapshot exists
 GET /healthz          'ok'
+GET /api/archive.zip  every dashboard's data, daily snapshots and hand-entered files in one zip (app/archive.py), built at most every 6 hours
 GET /api/probe        tries a fixed list of the sources from this server (status, size, start of body), cached 10 minutes
 GET /api/health       every data source used since start, per dashboard: fresh / stale (serving a snapshot) / failing, with alerts
 
@@ -84,6 +85,13 @@ def make_app() -> web.Application:
             return _json({"error": f"{name} is not available right now"}, 503)
         return _json(data)
 
+    async def api_archive(request):
+        from .cache import _cached
+        from .archive import build
+        data = await asyncio.to_thread(lambda: _cached("archive.zip", 6 * 3600, build))
+        return web.Response(body=data, content_type="application/zip",
+                            headers={**HEADERS, "Content-Disposition": "attachment; filename=dashboards-archive.zip"})
+
     async def healthz(request):
         return web.Response(text="ok")
 
@@ -93,6 +101,7 @@ def make_app() -> web.Application:
     app.router.add_get("/api/index", api_index)
     app.router.add_get("/api/health", api_health)
     app.router.add_get("/api/probe", api_probe)
+    app.router.add_get("/api/archive.zip", api_archive)
     app.router.add_get("/api/{slug}/{name}", api)
     app.router.add_get("/{slug}", page)
     return app

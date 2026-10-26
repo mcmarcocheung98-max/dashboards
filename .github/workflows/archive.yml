@@ -1,0 +1,61 @@
+name: archive
+# Month-end archive of every dashboard to OneDrive: on the last day of each month (UTC) it downloads /api/archive.zip from the live site
+# (every endpoint's data, the daily "what changed" snapshots and the hand-entered files) and copies it to
+# OneDrive:Dashboards/Archive/<YYYY-MM>/ with rclone. The zip is also kept on the run as an artifact for 90 days.
+#
+# One-time setup (see docs/ARCHIVE.md): on your own computer run `rclone config`, add a OneDrive remote named "onedrive",
+# then paste the contents of `rclone config file` into the repository secret RCLONE_CONFIG.
+on:
+  schedule:
+    - cron: "41 22 28-31 * *"          # every possible month end; the first step skips days that are not the last one
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Archive now, whatever the date"
+        type: boolean
+        default: true
+env:
+  SITE: https://dashboards-production-bde6.up.railway.app
+  DEST: onedrive:Dashboards/Archive
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Last day of the month?
+        id: when
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$(date -u -d tomorrow +%d)" = "01" ]; then
+            echo "go=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "Not the last day of the month; nothing to do."
+          fi
+          echo "month=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+          echo "day=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+      - name: Download the archive from the live site
+        if: steps.when.outputs.go == '1'
+        run: |
+          for i in 1 2 3 4; do
+            curl -fsS --max-time 1200 -o "dashboards-${{ steps.when.outputs.day }}.zip" "$SITE/api/archive.zip" && break
+            echo "attempt $i failed; retrying"; sleep $((i * 60))
+          done
+          unzip -l "dashboards-${{ steps.when.outputs.day }}.zip" | tail -1
+          unzip -l "dashboards-${{ steps.when.outputs.day }}.zip" | grep -c "error.txt" | xargs echo "endpoints that failed:"
+      - uses: actions/upload-artifact@v4
+        if: steps.when.outputs.go == '1'
+        with:
+          name: dashboards-${{ steps.when.outputs.day }}
+          path: dashboards-*.zip
+          retention-days: 90
+      - name: Copy to OneDrive
+        if: steps.when.outputs.go == '1'
+        env:
+          RCLONE_CONFIG_TEXT: ${{ secrets.RCLONE_CONFIG }}
+        run: |
+          if [ -z "$RCLONE_CONFIG_TEXT" ]; then
+            echo "::error::The RCLONE_CONFIG secret is not set, so the archive was not copied to OneDrive (it is attached to this run). See docs/ARCHIVE.md."
+            exit 1
+          fi
+          curl -fsS https://rclone.org/install.sh | sudo bash > /dev/null
+          mkdir -p ~/.config/rclone && printf '%s\n' "$RCLONE_CONFIG_TEXT" > ~/.config/rclone/rclone.conf
+          rclone copy dashboards-*.zip "$DEST/${{ steps.when.outputs.month }}/" -v
+          rclone lsl "$DEST/${{ steps.when.outputs.month }}/"
