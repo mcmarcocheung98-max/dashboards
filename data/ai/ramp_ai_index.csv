@@ -1,2 +1,2 @@
 date,value,source,note
-# Ramp AI Index: % of US businesses on Ramp with a paid subscription to an AI tool, monthly. Copy the latest figure from https://ramp.com/data . Empty on purpose until filled from the source.
+# Ramp AI Index: % of US businesses on Ramp that paid for an AI product or service that month. Read automatically from the records the page at https://ramp.com/data/ai-index embeds (Jul 2023 onward; Sep 2026 = 55.86, the page's "55.9%"). A row here (date = first of the month) overrides that month; cite the page or Ramp's monthly post.

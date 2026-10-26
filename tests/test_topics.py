@@ -257,6 +257,8 @@ def test_ai_adoption_payloads(snapdir, monkeypatch):
     def fake(url, ttl, **k):
         if url == A.BTOS_XLSX:
             return btos_national_xlsx().decode("latin-1")
+        if url == A.RAMP_PAGE:
+            return ramp_page()
         raise ConnectionError("blocked")                                         # ONS unreachable: the UK card says so
     monkeypatch.setattr(A, "fetch", fake)
     monkeypatch.setattr(J, "fetch", lambda url, ttl, **k: AIS)
@@ -265,6 +267,7 @@ def test_ai_adoption_payloads(snapdir, monkeypatch):
         B.json_safe(d)
         assert not [k for k in d if k.endswith("_error")], d
     assert f["now"]["btos"] == 24.6 and f["as_of"] == "2026-10-11" and f["now"]["btos_year_ago"] is None and f["btos_expect"][-1][1] == 28.6
+    assert f["now"]["ramp"] == 55.86 and len(f["ramp"]) == 39
     assert f["uk_hk"] == {} and not [r for r in B.manual_rows("ai", "btos_ai_use_us") if "verify" in r.get("note", "")]
     assert u["rows"][0]["date"] >= u["rows"][-1]["date"] and any(v for v in u["series"].values())
     assert g["rows"] and g["by_year"] and set(s["share"]) == {"US", "GB", "DE"}
@@ -672,18 +675,26 @@ def test_ai_merged_endpoints(snapdir, monkeypatch):
     assert r["US"]["ai_wide_index"] and r["US"]["ai_wide_over_professions"]
 
 
-def test_ai_layout_probe_groups_ramp_records(monkeypatch):
-    import requests
-    from app.topics import ai
-    page = '<script>self.__next_f.push([1,"' + ",".join(json.dumps({"date_month": f"2026-0{m}-01", "adoption_rate_pct": 55 + m / 10, "n_firms": 80000}, separators=(",", ":")).replace('"', '\\"') for m in (8, 9)) + '"])</script>'
-    monkeypatch.setattr(requests, "get", lambda *a, **k: type("R", (), {"text": page})())
-    g = ai._layout_now()["ramp"]["groups"]
-    B.json_safe(g)
-    assert list(g) == ["adoption_rate_pct,date_month,n_firms|"] and g["adoption_rate_pct,date_month,n_firms|"]["near_559"][-1]["date_month"] == "2026-09-01"
-    def down(*a, **k):
-        raise requests.ConnectionError("offline")
-    monkeypatch.setattr(requests, "get", down)
-    assert "error" in ai._layout_now()["ramp"]
+def ramp_page(months: int = 39) -> str:
+    """The Ramp AI Index page as served (Oct 2026): records inside a Next.js script string, escaped quotes; the overall series plus
+    breakdowns that carry an extra key (vendor, naics_sector, ...) and a Census comparison with question_version."""
+    recs = []
+    for i, d in enumerate(pd.date_range("2023-07-01", periods=months, freq="MS")):
+        dm = str(d.date())
+        recs += [{"date_month": dm, "adoption_rate_pct": round(24.53 + i * (55.86 - 24.53) / (months - 1), 2), "mom_change_pp": 0.8, "yoy_change_pp": None if i < 12 else 12.06},
+                 {"date_month": dm, "vendor": "Anthropic", "adoption_rate_pct": 0.15 + i, "mom_change_pp": 0},
+                 {"date_month": dm, "naics_sector": "Finance & Insurance", "adoption_rate_pct": 30.0, "mom_change_pp": 0},
+                 {"date_month": dm, "adoption_rate_pct": 3.7, "mom_change_pp": None, "record_count": 2, "question_version": "pre_nov_2025_wording_change", "selection_note": None}]
+    payload = ",".join(json.dumps(r, separators=(",", ":")) for r in recs).replace('"', '\\"')
+    return '<html><meta name="description" content="In September 2026, 55.9% of U.S. businesses on Ramp paid for AI"/><script>self.__next_f.push([1,"' + payload + '"])</script>' + " " * 50000
+
+
+def test_ramp_ai_index_parser():
+    from app.topics.ai_adoption import parse_ramp
+    s = parse_ramp(ramp_page())
+    assert len(s) == 39 and s.index[0] == pd.Timestamp("2023-07-01") and s.index[-1] == pd.Timestamp("2026-09-01") and s.iloc[-1] == 55.86 and s.iloc[0] == 24.53
+    with pytest.raises(ValueError):
+        parse_ramp("<html>redesigned</html>")
 
 
 # ------------------------------------------------------------------ housing: boroughs, fixed rate, US and HK

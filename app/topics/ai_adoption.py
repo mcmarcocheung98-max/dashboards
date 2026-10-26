@@ -2,7 +2,7 @@
 
 firms    share of US businesses using AI in the last two weeks, national and by sector (US Census Bureau Business Trends and Outlook
          Survey, every two weeks, from the National workbook; data/ai/btos_ai_use_us.csv adds periods by hand if it lacks one); Ramp AI Index (share of US businesses paying for AI tools,
-         monthly, hand-entered); UK share of firms using AI (ONS BICS, quarterly, newest wave workbook that carries the AI questions)
+         monthly, read from the records its page embeds); UK share of firms using AI (ONS BICS, quarterly, newest wave workbook that carries the AI questions)
 users    consumer reach: weekly active users of ChatGPT and other reported milestones (hand-entered, each with its source)
 agents   a dated timeline of agent products and protocols (hand-entered)
 skills   the share of job postings mentioning AI by country (Indeed Hiring Lab AI tracker, shared with /ai-jobs)
@@ -18,6 +18,8 @@ import pandas as pd
 from ._base import DAY, _pts, _r, fetch, manual, manual_rows, manual_sources, monthly, payload
 
 BTOS_XLSX = "https://www.census.gov/hfp/btos/downloads/National.xlsx"
+RAMP_PAGE = "https://ramp.com/data/ai-index"
+RAMP_KEYS = {"date_month", "adoption_rate_pct", "mom_change_pp", "yoy_change_pp"}      # the overall series; breakdowns carry a dimension key
 BICS_PAGE = "https://www.ons.gov.uk/economy/economicoutputandproductivity/output/datasets/businessinsightsandimpactontheukeconomy"
 BICS_SHEET = "AI Current Usage TS (WTD)"
 BICS_BANDS = {"All businesses": "UK: all businesses (ONS BICS)", "All size bands excluding 0 - 9": "UK: 10+ employees (ONS BICS)"}
@@ -25,7 +27,7 @@ AI_SHARE = "https://raw.githubusercontent.com/hiring-lab/ai-tracker/main/AI_post
 SLUG = "ai"
 SOURCES = [{"name": "US Census Bureau, Business Trends and Outlook Survey (AI questions)", "url": "https://www.census.gov/hfp/btos/", "cadence": "every 2 weeks"},
            {"name": "ONS Business Insights and Conditions Survey (AI questions)", "url": BICS_PAGE, "cadence": "quarterly"},
-           {"name": "Ramp AI Index (hand-entered)", "url": "https://ramp.com/data", "cadence": "monthly"},
+           {"name": "Ramp AI Index", "url": RAMP_PAGE, "cadence": "monthly"},
            {"name": "Indeed Hiring Lab AI tracker", "url": "https://github.com/hiring-lab/ai-tracker", "cadence": "monthly"},
            {"name": "Company announcements and press reports (hand-entered, cited per point)", "url": "", "cadence": "as announced"}]
 NOTES = "Survey shares are the percentage of responding businesses answering yes. Hand-entered points carry the source they were copied from; Census reworded its AI question for the period ending 16 Nov 2025 (now 'Super Intelligence or SI (formerly AI) in any of its business functions'); the US line starts there."
@@ -92,6 +94,40 @@ def btos(needle: str = "two weeks", hand_file: str = "btos_ai_use_us") -> pd.Ser
         pass
     hand = manual(SLUG, hand_file)
     s = pd.concat([hand if isinstance(hand, pd.Series) else pd.Series(dtype=float), auto])
+    return s[~s.index.duplicated(keep="last")].sort_index()
+
+
+# ------------------------------------------------------------------ Ramp AI Index: the page embeds its chart data
+def parse_ramp(html: str) -> pd.Series:
+    """Share of US businesses on Ramp paying for AI tools, %, monthly, from the records the Ramp AI Index page embeds (Next.js payload,
+    Oct 2026): the overall series is the set of {"date_month", "adoption_rate_pct", "mom_change_pp", "yoy_change_pp"} records;
+    breakdowns by vendor, sector, size and state add a key of their own and are left out."""
+    import json
+    import re
+    t = html.replace('\\"', '"')
+    pts = {}
+    for m in re.finditer(r'\{[^{}]*"date_month":\s*"[^{}]*\}', t):
+        try:
+            r = json.loads(m.group(0))
+        except ValueError:
+            continue
+        if set(r) == RAMP_KEYS and isinstance(r["adoption_rate_pct"], (int, float)):
+            pts[pd.Timestamp(r["date_month"])] = float(r["adoption_rate_pct"])
+    s = pd.Series(pts, dtype=float).sort_index()
+    if len(s) < 12 or not s.between(0, 100).all():
+        raise ValueError(f"Ramp AI Index layout changed ({len(s)} overall points found)")
+    return s
+
+
+def ramp() -> pd.Series:
+    """Automated points plus ramp_ai_index.csv; a hand-entered month wins."""
+    auto = pd.Series(dtype=float)
+    try:
+        auto = parse_ramp(fetch(RAMP_PAGE, TTL, headers={"Accept": "text/html,*/*"}, min_bytes=50000))
+    except Exception:
+        pass
+    hand = manual(SLUG, "ramp_ai_index")
+    s = pd.concat([auto, hand if isinstance(hand, pd.Series) else pd.Series(dtype=float)])
     return s[~s.index.duplicated(keep="last")].sort_index()
 
 
@@ -166,8 +202,8 @@ def _firms_now() -> dict:
     def countries():
         return {k: _pts(v, 2) for k, v in firm_adoption_intl().items()}
     out = payload({"btos_us": lambda: _pts(btos(), 2), "btos_expect": lambda: _pts(btos("six months", "btos_ai_expect_us"), 2), "btos_sectors": sectors,
-                   "ramp": lambda: _pts(manual(SLUG, "ramp_ai_index"), 2), "uk_hk": countries},
-                  sources=[BTOS_XLSX, BICS_PAGE])
+                   "ramp": lambda: _pts(ramp(), 2), "uk_hk": countries},
+                  sources=[BTOS_XLSX, BICS_PAGE, RAMP_PAGE])
     b = out.get("btos_us") or []
     out["now"] = {"btos": b[-1][1] if b else None, "btos_date": pd.Timestamp(b[-1][0], unit="s").strftime("%Y-%m-%d") if b else None,
                   "btos_year_ago": _year_ago(b),

@@ -8,7 +8,7 @@ Tabs: Openings · Headcount · Pay · AI vs the professions · Firms adopting ·
 
 FRED times out from cloud servers (Railway and GitHub alike), so US employment and pay now come from the BLS public API v1 (no key; two queries a day cover all ten series, 2010 to now). Same BLS series ids as before.
 
-The build container cannot reach ONS, C&SD, Census or Ramp; `/api/ai/layout` (not a tab) shows what the Railway server sees there. Read it with Actions > show-json.
+The build container cannot reach ONS, C&SD, Census or Ramp. The parsers were written against what the Railway server saw there in Oct 2026 (read through a temporary `/api/ai/layout` probe, now removed); each one's docstring records the layout it expects.
 
 **UK firms using AI** (ONS BICS): share using at least one AI technology = 100% − "does not currently use" − "not sure", weighted, dated at the end of the survey period. Wave 165 (21 Sep–4 Oct 2026) gives 29.7% of all businesses and 38.1% of those with 10+ employees, which matches ONS's published "around 3 in 10".
 
@@ -113,9 +113,9 @@ How fast businesses and people are taking up AI tools and agents: the Census Bur
 
 | Series | Source | Cadence | How |
 |---|---|---|---|
-| Businesses using AI (national) | [US Census Bureau, Business Trends and Outlook Survey](https://www.census.gov/hfp/btos/), question "In the last two weeks, did this business use Artificial Intelligence in producing goods or services?", share answering yes | Every two weeks | Automated from the National workbook when its layout is recognised, plus `btos_ai_use_us.csv` by hand (the two are merged; a hand-entered date wins over an automated one) |
+| Businesses using AI (national) | [US Census Bureau, Business Trends and Outlook Survey](https://www.census.gov/hfp/btos/), question "In the last two weeks, did this business use Super Intelligence or SI (formerly referred to as Artificial Intelligence or AI) in any of its business functions?" (wording since the period ending 16 Nov 2025), share answering yes | Every two weeks | Automated from the National workbook; `btos_ai_use_us.csv` adds a missing period by hand (a hand-entered date wins) |
 | Businesses using AI, by sector | Same survey, Sector workbook | Every two weeks | Hand-entered: `btos_ai_use_by_sector.csv` |
-| Businesses paying for AI tools | [Ramp AI Index](https://ramp.com/data): share of US businesses on Ramp's card platform with a paid AI subscription | Monthly | Hand-entered: `ramp_ai_index.csv` |
+| Businesses paying for AI tools | [Ramp AI Index](https://ramp.com/data/ai-index): share of US businesses on Ramp with an observed payment for an AI product or service in the month | Monthly | Automated (Oct 2026) from the records the page embeds: the overall series is the set with exactly `date_month, adoption_rate_pct, mom_change_pp, yoy_change_pp` (Jul 2023 onward); `ramp_ai_index.csv` overrides a month |
 | Reported users | Company announcements and press reports | As announced | Hand-entered: `users.csv` |
 | Agent launches | Company announcements | As announced | Hand-entered: `agent_milestones.csv` |
 | AI share of job postings | [Indeed Hiring Lab AI Tracker](https://github.com/hiring-lab/ai-tracker), CC BY 4.0 | Monthly refresh, daily data | Automated (shared with `/ai-jobs`) |
@@ -131,7 +131,7 @@ US federal data is public domain. Indeed data must be credited to Indeed Hiring 
 
 ### Keeping it up to date
 
-**Automated:** the Indeed tracker and the BTOS workbook are fetched daily. The BTOS workbook parser looks for the AI question's "Yes" row; if Census changes the layout, the automated part silently drops out and the hand-entered file carries the chart, so keep that file current anyway.
+**Automated:** the Indeed tracker, the BTOS workbook, the Ramp page and the ONS BICS workbooks are fetched daily; when one fails, the last good copy on the snapshot volume is served with a "stale since" note. If a layout changes, the parser raises, `/api/health` shows the source as failing, and the parser's docstring says what it expected.
 
 **`btos_ai_use_us.csv`** (`date,value,source,note`): only for a period the National workbook lacks; copy the "Yes" share from a Census release and cite it. Date = the reference period's end date.
 
@@ -139,7 +139,7 @@ The nine seed rows (Sep 2023 to Sep 2025, 3.7% to 9.7%) were removed in Oct 2026
 
 **`btos_ai_use_by_sector.csv`** (`date,series,value,source,note`): same workbook, Sector tab; `series` is the sector name as Census writes it (e.g. `Information`, `Professional, Scientific, and Technical Services`). Empty on purpose until filled.
 
-**`ramp_ai_index.csv`** (`date,value,source,note`): the latest monthly figure from [ramp.com/data](https://ramp.com/data). Empty on purpose until filled.
+**`ramp_ai_index.csv`** (`date,value,source,note`): only to override a month the page gets wrong or lacks; date = first of the month.
 
 **`users.csv`** (`date,series,value,source,note`): one row per announcement; `series` is the product and metric (`ChatGPT weekly active users`), `value` in users, `source` the announcement or a report quoting it.
 
@@ -156,6 +156,6 @@ Local preview: `python -m app.server`, then open `/ai`.
 ### Known gaps
 
 - The BTOS workbook parser was rewritten against the live workbook (Oct 2026, via `/api/ai/layout`): sheet `Response Estimates`, period codes as columns, dates from `Collection and Reference Dates`.
-- Ramp and sector files are empty; their cards say so.
+- The BTOS sector file is empty; its card says so. Ramp's figures cover businesses on Ramp's platform, which lean towards tech and finance, so they run well above the Census share.
 - Usage surveys with a consistent series (Stanford AI Index, McKinsey's annual survey) are not included; they would fit `users.csv` or a new file with the same format.
 - "Agent adoption" has no public time series yet; the timeline is a list of launches, not a measure of use.
