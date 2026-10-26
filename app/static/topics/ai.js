@@ -40,8 +40,9 @@ const VIEWS = {
     const ukc = uk.length ? card("UK workforce jobs (hand-entered from ONS JOBS03, thousands)", ...linesChart(uk.map(([k, pts]) => ({ name: k, points: pts })), v => num(v)))
       : card("UK headcount", el("div", { class: "muted" }, "No UK points entered yet: add quarterly ONS workforce-jobs figures to data/ai/uk_headcount.csv."));
     const hk = Object.entries(d.HK || {}).filter(([, pts]) => pts.length);
-    const hkc = hk.length ? card("Hong Kong employment (hand-entered from C&SD, thousands)", ...linesChart(hk.map(([k, pts]) => ({ name: k, points: pts })), v => num(v)))
-      : card("Hong Kong headcount", el("div", { class: "muted" }, "No Hong Kong points entered yet: add quarterly C&SD employment for financing & insurance and professional services to data/ai/hk_headcount.csv."));
+    const hkc = hk.length ? card("Hong Kong persons engaged (C&SD, thousands)", ...linesChart(hk.map(([k, pts]) => ({ name: k, points: pts })), v => num(v)),
+        note("C&SD Quarterly Survey of Employment and Vacancies, table 215-16001: persons engaged at the end of each quarter, civil service excluded. Professional, scientific & technical services include legal and accounting firms."))
+      : card("Hong Kong headcount", el("div", { class: "muted" }, "Not available right now (" + (d.HK_error || "no data") + ")."), stale(d));
     return [head, idx, yoy, ukc, hkc];
   },
   async ratio() {

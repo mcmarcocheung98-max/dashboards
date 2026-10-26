@@ -215,7 +215,23 @@ def _bls(body):
     return _j.dumps({"status": "REQUEST_SUCCEEDED", "Results": {"series": series}})
 
 
+def _csd_215_16001() -> str:
+    """C&SD table 215-16001 as its API returns it (Oct 2026): one record per industry, period and statistic."""
+    recs = []
+    for i, per in enumerate(f"{y}{m:02d}" for y in range(2018, 2027) for m in (3, 6, 9, 12)):
+        if per > "202606":
+            break
+        for ind, desc, base in (("", "Total", 2_800_000), ("ind_K", "K: Financing and insurance", 230_000), ("ind_M", "M: Professional, scientific and technical services", 150_000),
+                                ("ind_J", "J: Information and communications", 105_000)):
+            recs.append({"IND": ind, "INDDesc": desc, "freq": "M", "period": per, "sv": "PE", "svDesc": "No.", "figure": base + i * 500, "sd_value": ""})
+            recs.append({"IND": ind, "INDDesc": desc, "freq": "M", "period": per, "sv": "PE", "svDesc": "Year-on-year % change", "figure": 0.9, "sd_value": ""})
+            recs.append({"IND": ind, "INDDesc": desc, "freq": "M", "period": per, "sv": "VACR", "svDesc": "(%)", "figure": "", "sd_value": "[-\u00a732]"})
+    return json.dumps({"header": {"status": {"name": "Success", "code": 0}}, "dataSet": recs})
+
+
 def jobs_fetch(url, ttl, **k):
+    if "censtatd" in url:
+        return _csd_215_16001()
     if "api.bls.gov" in url:
         return _bls(k["post"])
     return AIS if "ai-tracker" in url else AGG if "aggregate" in url else IND
@@ -640,7 +656,9 @@ def test_ai_merged_endpoints(snapdir, monkeypatch):
     assert set(w["levels"]) == set(J.US_WAGES) and "All private" not in w["premium"] and w["as_of"] and w["missing"] == []
     assert all(sid.endswith("03") for sid in J.US_WAGES.values())
     h = J._headcount_now()
-    assert "HK" in h and h["HK"] == {}
+    hk = h["HK"]
+    assert set(hk) == {"Financing & insurance", "Professional, scientific & technical", "Information & communications"}
+    assert hk["Financing & insurance"][-1] == [int(pd.Timestamp("2026-06-01").timestamp()), 246.5] and len(hk["Financing & insurance"]) == 34
     r = J._ratio_now()
     assert r["US"]["ai_wide_index"] and r["US"]["ai_wide_over_professions"]
 

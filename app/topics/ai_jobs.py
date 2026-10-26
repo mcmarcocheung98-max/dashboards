@@ -7,6 +7,9 @@ headcount  US payroll employment (BLS via FRED, monthly, thousands): legal servi
            computer systems design. BLS.gov itself blocks automated downloads, so FRED's CSV is used (through curl, see _base._download)
 ratio      the AI share of postings against the professions' postings index, and headcount growth since 2020 side by side
 
+hk headcount  C&SD table 215-16001 (quarterly persons engaged by industry section, JSON API): financing & insurance, professional,
+           scientific & technical, information & communications
+
 Hand-entered (data/ai/): uk_headcount.csv (ONS workforce jobs for legal and financial services, quarterly: no stable
 free API, so a few points copied by hand with their source). Indeed data: CC BY 4.0, cite Indeed Hiring Lab.
 """
@@ -24,6 +27,8 @@ IND_ALL = "https://raw.githubusercontent.com/hiring-lab/job_postings_tracker/mas
 AI_SHARE = "https://raw.githubusercontent.com/hiring-lab/ai-tracker/main/AI_posting.csv"
 FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}"     # kept for the network test; FRED times out from Railway
 BLS = "https://api.bls.gov/publicAPI/v1/timeseries/data/"            # BLS public API v1: no key, 25 queries a day, 10 years per query
+CSD = "https://www.censtatd.gov.hk/api/get.php?id=215-16001&lang=en&full_series=1"   # C&SD web table 215-16001, quarterly, JSON
+HK_INDUSTRIES = {"ind_K": "Financing & insurance", "ind_M": "Professional, scientific & technical", "ind_J": "Information & communications"}
 SECTORS = {"ai": ["Software Development", "Data & Analytics"], "ai_wide": ["IT Systems & Solutions"], "professions": ["Legal", "Banking & Finance", "Accounting", "Insurance"]}
 US_SERIES = {"Legal services": "CES6054110001", "Finance & insurance": "CES5552000001", "Securities & investments": "CES5552300001",
              "Computer systems design": "CES6054150001", "All private": "CES0500000001"}
@@ -32,6 +37,7 @@ US_WAGES = {n: sid[:-2] + "03" for n, sid in US_SERIES.items()}
 SOURCES = [{"name": "Indeed Hiring Lab job postings index", "url": "https://github.com/hiring-lab/job_postings_tracker", "cadence": "weekly"},
            {"name": "Indeed Hiring Lab AI tracker", "url": "https://github.com/hiring-lab/ai-tracker", "cadence": "monthly"},
            {"name": "US employment and pay by industry (BLS Current Employment Statistics, public API)", "url": "https://www.bls.gov/ces/", "cadence": "monthly"},
+           {"name": "Hong Kong persons engaged by industry (C&SD table 215-16001)", "url": "https://www.censtatd.gov.hk/en/web_table.html?id=215-16001", "cadence": "quarterly"},
            {"name": "UK workforce jobs (ONS JOBS03, hand-entered)", "url": "https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/workforcejobsbyindustryjobs03", "cadence": "quarterly"}]
 NOTES = "Postings indexes are Indeed's seasonally adjusted counts relative to 1 February 2020 (= 100), 7-day average. 'AI share' counts postings whose text mentions AI terms (machine learning, data science, generative AI...), not only AI engineering jobs. Headcount is payroll employment, thousands."
 TTL = DAY
@@ -61,6 +67,22 @@ def parse_fred(text: str) -> pd.Series:
     d = pd.read_csv(StringIO(text))
     s = pd.Series(pd.to_numeric(d.iloc[:, 1], errors="coerce").to_numpy(), index=pd.to_datetime(d.iloc[:, 0], errors="coerce"))
     return s[s.index.notna()].dropna().sort_index()
+
+
+def parse_csd_persons(j: dict) -> dict[str, pd.Series]:
+    """C&SD table 215-16001 JSON -> {industry: persons engaged, thousands}, dated at the survey month (Mar, Jun, Sep, Dec).
+    Records look like {"IND": "ind_K", "period": "202606", "sv": "PE", "svDesc": "No.", "figure": 238500}; sv PE also comes as a
+    year-on-year % change (svDesc), and a suppressed figure is "" with a note in sd_value."""
+    if (j.get("header") or {}).get("status", {}).get("code") not in (0, None):
+        raise ValueError(f"C&SD: {j['header']['status'].get('message')}")
+    out: dict[str, dict] = {}
+    for r in j.get("dataSet") or []:
+        name = HK_INDUSTRIES.get(r.get("IND"))
+        if name and r.get("sv") == "PE" and r.get("svDesc") == "No." and r.get("figure") not in ("", None):
+            out.setdefault(name, {})[pd.Timestamp(year=int(r["period"][:4]), month=int(r["period"][4:6]), day=1)] = float(r["figure"]) / 1000
+    if not out:
+        raise ValueError("C&SD 215-16001: no persons-engaged rows for the chosen industries")
+    return {n: pd.Series(v, dtype=float).sort_index() for n, v in out.items()}
 
 
 # ------------------------------------------------------------------ data
@@ -139,9 +161,13 @@ def _headcount_now() -> dict:
         return {n: _pts(s, 0) for n, s in m.items()} if isinstance(m, dict) else {}
 
     def hk():
-        m = manual("ai", "hk_headcount")
-        return {n: _pts(s, 0) for n, s in m.items()} if isinstance(m, dict) else {}
-    out = payload({"US": us, "UK": uk, "HK": hk}, sources=[BLS])
+        series = parse_csd_persons(json.loads(fetch(CSD, TTL, min_bytes=10000)))
+        m = manual("ai", "hk_headcount")                              # a hand-entered quarter wins
+        for n, v in (m.items() if isinstance(m, dict) else []):
+            x = pd.concat([series.get(n, pd.Series(dtype=float)), v])
+            series[n] = x[~x.index.duplicated(keep="last")].sort_index()
+        return {n: _pts(s[s.index >= "2010-01-01"], 1) for n, s in series.items()}
+    out = payload({"US": us, "UK": uk, "HK": hk}, sources=[BLS, CSD])
     try:
         out["as_of"] = (out.get("US") or {}).get("latest", {}).get("Legal services", {}).get("date")
     except Exception:

@@ -18,7 +18,7 @@ The build container cannot reach ONS, C&SD, Census or Ramp; `/api/ai/layout` (no
 |---|---|---|---|
 | US pay in the same industries (hourly earnings, yearly growth, premium over all private-sector pay) | Pay tab | BLS CES via FRED, the `...03` series: CES6054110003, CES5552000003, CES5552300003, CES6054150003, CES0500000003 | Automated |
 | UK and Hong Kong pay | Pay tab | ONS EARN03; C&SD Labour Earnings Survey | Hand-entered: `pay_uk_hk.csv` |
-| Hong Kong headcount (financing & insurance, professional services) | Headcount tab | C&SD quarterly employment | Hand-entered: `hk_headcount.csv` |
+| Hong Kong headcount (financing & insurance; professional, scientific & technical; information & communications) | Headcount tab | [C&SD table 215-16001](https://www.censtatd.gov.hk/en/web_table.html?id=215-16001) via its JSON API (`api/get.php?id=215-16001&lang=en&full_series=1`), persons engaged, quarterly from 2000 | Automated (Oct 2026); `hk_headcount.csv` overrides a quarter |
 | IT Systems & Solutions in the AI group | AI vs the professions, toggle | Indeed sector file | Automated |
 | US firms expecting to use AI within six months | Firms adopting | Census BTOS National workbook, same parser with the "six months" question | Automated, with `btos_ai_expect_us.csv` as the hand-entered fallback |
 | UK share of firms using AI (all businesses; 10+ employees) | Firms adopting | [ONS BICS](https://www.ons.gov.uk/economy/economicoutputandproductivity/output/datasets/businessinsightsandimpactontheukeconomy), sheet `AI Current Usage TS (WTD)` of the newest wave workbook that carries the AI questions (about every sixth wave; the sheet holds the whole series from Sep 2023) | Automated (Oct 2026); `firm_adoption_uk_hk.csv` for extra or Hong Kong points |

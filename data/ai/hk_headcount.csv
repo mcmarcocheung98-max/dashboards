@@ -1,2 +1,2 @@
 date,series,value,source,note
-# Hong Kong employment, thousands, from the Census and Statistics Department's quarterly Labour Force / Quarterly Report of Employment and Vacancies (table 215-16xxx). One row per quarter (date = quarter start). Empty until filled from the source.
+# Hong Kong persons engaged, thousands. Read automatically from C&SD table 215-16001 (series: Financing & insurance; Professional, scientific & technical; Information & communications), dated at the survey month (YYYY-03-01, -06-01, -09-01, -12-01). A row here with the same series and date overrides the automated figure; cite the C&SD release.
