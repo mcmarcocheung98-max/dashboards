@@ -64,7 +64,7 @@ def pca_sql(table: str):
         if d == "Tirzepatide" and i < 36:
             continue
         recs.append({"CHEM": d, "items": str(int(k * 10000 * (1 + i / 30))), "nic": k * 1e6 * (1 + i / 25)})
-    return {"success": True, "result": {"records": recs, "fields": [{"id": "chem"}, {"id": "items"}, {"id": "nic"}]}}
+    return {"help": "x", "success": True, "result": {"help": "y", "success": "true", "result": {"records": recs, "fields": []}}}     # as NHSBSA nests it
 
 
 def concept_json(firm):
@@ -149,6 +149,7 @@ def test_parsers():
     assert M.parse_xmart({"value": []}).empty
     assert M.pca_months(pca_package())[0] == "PCA_202101" and "PCA metadata" not in M.pca_months(pca_package())
     assert M.parse_pca(pca_sql("PCA_202608"))["tirzepatide"][0] > 0
+    assert M.parse_pca({"success": True, "result": {"records": [{"chem": "Semaglutide", "items": 5, "nic": 1.0}]}}) == {"semaglutide": (5.0, 1.0)}
     with pytest.raises(ValueError):
         M.parse_pca({"success": False, "error": {"message": "bad sql"}})
     c = M.parse_cdc(cdc_json())

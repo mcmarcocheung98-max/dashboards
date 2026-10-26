@@ -208,8 +208,10 @@ def parse_pca(j) -> dict[str, tuple[float, float]]:
     """datastore_search_sql result -> {"semaglutide": (items, net ingredient cost)}."""
     if not (j or {}).get("success", True):
         raise ValueError("NHSBSA: " + str((j or {}).get("error"))[:120])
+    res = (j or {}).get("result") or {}
+    res = res.get("result", res) if isinstance(res.get("result"), dict) else res       # NHSBSA wraps the CKAN reply in a second result
     out = {}
-    for r in ((j or {}).get("result") or {}).get("records") or []:
+    for r in res.get("records") or []:
         r = {str(k).lower(): v for k, v in r.items()}
         d = str(r.get("chem") or "").lower()
         if d in GLP1:
