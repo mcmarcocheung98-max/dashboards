@@ -371,6 +371,38 @@ const asOf = d => d && d.as_of ? el("div", { class: "muted", style: "margin-top:
 const missing = (d, key, what) => d && d[key + "_error"] ? el("div", { class: "muted" }, (what || key) + " is not available right now (" + d[key + "_error"] + ").") : null;
 const cite = rows => rows && rows.length ? el("div", { class: "src", style: "margin-top:6px" }, "Sources: ", ...rows.flatMap((r, i) => [i ? ", " : "", link(host(r.source) + " (" + r.date + ")", r.source)])) : null;
 
+// What changed since yesterday (/api/<slug>/changes, one snapshot a day): the first tab lists every reading that flipped and a row of
+// squares per tab (its lean day by day); every other tab shows its own. Dashboards without readings show nothing.
+let CHANGES = null;
+const leanCol = l => l == null ? "transparent" : l > 0 ? "var(--up)" : l < 0 ? "var(--down)" : "var(--muted)";
+const fmtVal = v => v == null ? "–" : typeof v === "number" ? num(v, Math.abs(v) < 10 ? 2 : Math.abs(v) < 1000 ? 1 : 0) : String(v);
+function squares(t) {
+  return el("div", { style: "display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap" },
+    el("div", { class: "muted", style: "min-width:110px" }, t.label),
+    el("div", { style: "display:flex;gap:2px;flex-wrap:wrap" }, ...t.days.map(d => el("span", { title: d.date + (d.lean == null ? ": no reading" : d.lean > 0 ? ": leaning up" : d.lean < 0 ? ": leaning down" : ": neutral"),
+      style: "width:11px;height:11px;border-radius:2px;border:1px solid var(--line);background:" + leanCol(d.lean) + (d.lean === 0 ? ";opacity:.45" : "") }))));
+}
+function flipRow(r, showTab) {
+  const arrow = r.lean > r.was_lean ? "▲" : "▼";
+  return el("div", { style: "margin-top:4px" }, el("span", { style: "color:" + leanCol(r.lean) + ";font-weight:650" }, arrow + " "), r.label + ": " + fmtVal(r.was) + " → " + fmtVal(r.value),
+    showTab ? el("span", { class: "muted" }, " · ", el("a", { href: "#" + r.tab }, r.tab_label)) : null, r.note ? el("span", { class: "muted" }, " · " + r.note) : null);
+}
+function changesCard(tab, first) {
+  CHANGES = CHANGES || api("changes").catch(() => ({ available: false }));
+  return lazy(first ? "What changed since yesterday" : null, CHANGES, d => {
+    if (!d || !d.available) return null;
+    if (!d.since) return card(first ? "What changed since yesterday" : null, el("div", { class: "muted" }, d.first
+      ? "Saving one snapshot a day since " + d.first + ": changes appear from the next day, and the squares build up over time."
+      : "Saving one snapshot a day from today: changes appear from tomorrow."));
+    const flips = d.flipped.filter(r => first || r.tab === tab);
+    const strips = d.tabs.filter(t => first || t.tab === tab);
+    if (!first && !flips.length && !strips.length) return null;
+    const head = flips.length ? flips.map(r => flipRow(r, first)) : [el("div", { class: "muted" }, "No reading flipped since " + d.since + (d.moved.filter(r => first || r.tab === tab).length ? "; " + d.moved.filter(r => first || r.tab === tab).length + " moved without changing lean." : "."))];
+    return card(first ? "What changed since yesterday" : "Since " + d.since, ...head, ...strips.map(squares),
+      first ? note("Each square is one day: green leaning up, red leaning down, grey neutral. Compared with " + d.since + ".") : null);
+  });
+}
+
 function tabs() {
   document.getElementById("tabs").replaceChildren(...TABS.map(([k, l]) => el("button", { class: k === current ? "on" : "", onclick: () => { current = k; location.hash = k; tabs(); render(); } }, l)));
 }
@@ -384,7 +416,7 @@ async function render() {
   SYNC = [];
   try {
     const nodes = await window.TOPIC.VIEWS[current]();
-    view.replaceChildren(...[].concat(nodes).filter(Boolean));
+    view.replaceChildren(changesCard(current, current === TABS[0][0]), ...[].concat(nodes).filter(Boolean));
     old.forEach(c => c.remove());
   } catch (e) {
     view.replaceChildren(card(null, el("div", { class: "err" }, "Could not load: " + e.message)));

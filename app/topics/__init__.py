@@ -7,6 +7,10 @@ static/topic.html. See _base.py for fetching, snapshots and manual series.
 To add a dashboard: write topics/<name>.py with TOPIC = Topic(...), static/topics/<slug>.js, data/<slug>/ and tests/test_<slug>.py
 (optionally with smoke_patch(), which points the module's fetchers at fixtures for scripts/smoke.py). The module is found on its own:
 nothing shared changes. A helper module that only feeds a dashboard sets DASHBOARD = "<slug>" so /api/health files it there.
+
+What changed since yesterday: a module may define READINGS() -> [{"tab", "key", "label", "value", "lean": +1/0/-1, "note"?}], its
+headline indicators as they read now (from cached data only). One snapshot a day is saved and the page shows what flipped and each
+tab's lean day by day (see _daily.py). Without READINGS the dashboard simply shows no such card.
 """
 from __future__ import annotations
 
@@ -82,6 +86,19 @@ def meta(slug: str) -> dict:
     t, m = REGISTRY[slug], module(slug)
     return {"slug": t.slug, "title": t.title, "blurb": t.blurb, "tabs": [list(x) for x in t.tabs], "sources": list(getattr(m, "SOURCES", [])),
             "notes": getattr(m, "NOTES", "")}
+
+
+def save_daily(slug: str) -> str:
+    from . import _daily
+    fn = getattr(module(slug), "READINGS", None)
+    return _daily.save_today(slug, fn) if fn else "none"
+
+
+def changes(slug: str) -> dict:
+    from . import _daily
+    if not hasattr(module(slug), "READINGS"):
+        return {"available": False}
+    return _daily.changes(slug, REGISTRY[slug].tabs)
 
 
 def index() -> dict:

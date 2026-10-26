@@ -5,6 +5,7 @@ GET /<slug>           a dashboard (static/topic.html, which loads /<slug>.js)
 GET /<slug>.js        that dashboard's tabs and cards (static/topics/<slug>.js)
 GET /api/index        the list of dashboards
 GET /api/<slug>/meta  title, tabs, sources
+GET /api/<slug>/changes  what changed since yesterday (topics/_daily.py): flipped readings and each tab's lean day by day
 GET /api/<slug>/<n>   that dashboard's data (JSON); 404 unknown, 503 when the source is down and no snapshot exists
 GET /healthz          'ok'
 GET /api/probe        tries a fixed list of the sources from this server (status, size, start of body), cached 10 minutes
@@ -70,6 +71,8 @@ def make_app() -> web.Application:
         try:
             if name == "meta":
                 data = topics.meta(slug)
+            elif name == "changes":
+                data = await asyncio.to_thread(topics.changes, slug)
             elif name in topics.endpoints(slug):
                 data = await asyncio.to_thread(topics.endpoints(slug)[name])
             else:
@@ -119,6 +122,12 @@ async def _warm(app) -> None:
                         await asyncio.to_thread(topics.endpoints(t.slug)[name])
                     except Exception as e:
                         log.warning("warm %s/%s failed (%s)", t.slug, name, type(e).__name__)
+                try:
+                    res = await asyncio.to_thread(topics.save_daily, t.slug)
+                    if res == "saved":
+                        log.info("daily snapshot saved for %s", t.slug)
+                except Exception as e:
+                    log.warning("daily snapshot %s failed (%s: %s)", t.slug, type(e).__name__, e)
             await asyncio.sleep(WARM_EVERY)
     app["warmer"] = asyncio.create_task(loop())
 
