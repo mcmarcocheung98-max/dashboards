@@ -1,0 +1,25 @@
+{
+ "about": "The doc's 2026-27 candidate sectors, with 3-5 representative coins each (tickers from coins.csv) and the usage series that says whether the sector's fundamentals are growing. family links each sector to its past bursts in rotation.csv. Edit freely.",
+ "rules": [
+  ["Overvalued", "Representatives' median RSI vs BTC at 70 or above, or up 50%+ against BTC over 90 days: stretched, the late stage of a burst."],
+  ["Priced in", "Up 15%+ against BTC over 90 days and within 25% of the 1-year high: the rotation has already happened."],
+  ["Undervalued", "Usage up 10%+ over about 90 days while the coins are down 15%+ against BTC: fundamentals ahead of price."],
+  ["Awaiting rotation", "60%+ below the 1-year high, no longer falling against BTC (90 days better than -15%), and usage not shrinking: washed out and basing, its turn not yet come."],
+  ["Neutral", "None of the above."]
+ ],
+ "sectors": [
+  {"rank": 1, "family": "defi", "sector": "On-chain finance with revenue", "reps": ["HYPE", "AAVE", "JUP", "PENDLE", "ASTER"],
+   "usage": {"source": "metrics", "key": "hl_revenue_30d", "label": "Hyperliquid revenue, 30 days"}},
+  {"rank": 2, "family": "stable", "sector": "Stablecoin & payments infrastructure", "reps": ["ENA", "TRX", "SKY", "XPL"],
+   "usage": {"source": "metrics", "key": "stablecoins", "label": "Stablecoin supply"}},
+  {"rank": 3, "family": "rwa", "sector": "RWA / tokenized stocks & Treasuries", "reps": ["ONDO", "LINK", "SYRUP", "PLUME", "CFG"],
+   "usage": {"source": "evidence", "key": "RWA on-chain value ex-stablecoins (USD)", "label": "RWA on-chain value (hand-entered)"}},
+  {"rank": 4, "family": "prediction", "sector": "Prediction markets / InfoFi", "reps": [], "no_token": ["Polymarket", "Kalshi", "Azuro", "Limitless"],
+   "usage": {"source": "evidence", "key": "Prediction-market monthly volume (USD)", "label": "Prediction-market monthly volume (hand-entered)"}},
+  {"rank": 5, "family": "ai", "sector": "AI x crypto, second wave", "reps": ["TAO", "VIRTUAL", "RENDER", "AKT", "GRASS"], "usage": null},
+  {"rank": 6, "family": "l1", "sector": "High-throughput L1s / app-chains", "reps": ["SOL", "SUI", "TON"],
+   "usage": {"source": "metrics", "key": "defi_tvl", "label": "DeFi TVL, all chains (proxy for L1 activity)"}},
+  {"rank": 7, "family": "privacy", "sector": "Privacy / ZK", "reps": ["ZEC", "XMR", "DASH"], "usage": null},
+  {"rank": 8, "family": "btcfi", "sector": "BTC-fi / Bitcoin L2s", "reps": ["CORE", "STX", "BABY"], "usage": null}
+ ]
+}

@@ -512,13 +512,154 @@ def _signals_now() -> dict:
     return out
 
 
+# ------------------------------------------------------------------ sector rotation: four cycles on one timeline, and each candidate sector's status
+ROTATION = DATA_DIR / SLUG / "rotation.csv"
+SECTOR_STATUS = DATA_DIR / SLUG / "sector_status.json"
+CYCLE_PEAKS = {1: "2013-12-04", 2: "2017-12-17", 3: "2021-11-10", 4: "2025-10-06"}       # the doc's BTC peaks (research.json markers)
+CYCLE_HALVING = {1: HALVINGS[0], 2: HALVINGS[1], 3: HALVINGS[2], 4: HALVINGS[3]}
+
+
+def rotation_rows() -> list[dict]:
+    out = []
+    with ROTATION.open(newline="", encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            if not (r.get("cycle") or "").strip() or r["cycle"].startswith("#"):
+                continue
+            c = int(r["cycle"])
+            a = pd.Timestamp(r["start"] + "-01")
+            b = pd.Timestamp(r["end"] + "-01") + pd.offsets.MonthEnd(0)
+            h = CYCLE_HALVING[c]
+            out.append({"cycle": c, "sector": r["sector"], "family": r["family"], "start": int(a.timestamp()), "end": int(b.timestamp()),
+                        "m_start": _r((a - h).days / 30.44, 1), "m_end": _r((b - h).days / 30.44, 1), "source": r["source"], "note": r.get("note", "")})
+    return out
+
+
+def sector_status(coins: list[dict], metrics: dict, evidence: dict) -> list[dict]:
+    """One row per candidate sector: representatives' medians against BTC, the usage trend, and a status from the rules in
+    sector_status.json, checked in order: overvalued, priced in, undervalued, awaiting rotation, else neutral."""
+    cfg = json.loads(SECTOR_STATUS.read_text(encoding="utf-8"))
+    by = {c["ticker"]: c for c in coins if "kpi" in c}
+    hist = rotation_rows()
+    med = lambda xs: float(np.median(xs)) if xs else None
+    rows = []
+    for s in cfg["sectors"]:
+        reps = [by[t] for t in s.get("reps", []) if t in by]
+        k = lambda f: med([c["kpi"][f] for c in reps if c["kpi"].get(f) is not None])
+        rel, rsi_b, high = k("vs_btc_90d"), k("rsi_vs_btc"), k("from_high")
+        usage, u = None, s.get("usage")
+        if u:
+            if u["source"] == "metrics" and metrics.get(u["key"]):
+                pts = metrics[u["key"]]
+                old = [v for t, v in pts if t <= pts[-1][0] - 85 * 86400]
+                usage = pts[-1][1] / old[-1] - 1 if old and old[-1] else None
+            elif u["source"] == "evidence" and u["key"] in evidence:
+                ser = evidence[u["key"]].dropna()
+                ser = ser[ser > 0]
+                if len(ser) >= 2 and (ser.index[-1] - ser.index[-2]).days <= 200:
+                    usage = float(ser.iloc[-1] / ser.iloc[-2] - 1)
+        if rsi_b is not None and (rsi_b >= 70 or (rel or 0) >= 0.5):
+            st = "Overvalued"
+        elif rel is not None and rel >= 0.15 and high is not None and high >= -0.25:
+            st = "Priced in"
+        elif usage is not None and usage >= 0.10 and (rel is None or rel <= -0.15):
+            st = "Undervalued"
+        elif high is not None and high <= -0.6 and rel is not None and rel > -0.15 and (usage is None or usage >= 0):
+            st = "Awaiting rotation"
+        else:
+            st = "Neutral"
+        past = [h for h in hist if h["family"] == s["family"]]
+        rows.append({"rank": s["rank"], "sector": s["sector"], "status": st,
+                     "reps": [{"ticker": c["ticker"], "name": c["name"], "vs_btc_90d": c["kpi"].get("vs_btc_90d"), "rsi_vs_btc": c["kpi"].get("rsi_vs_btc"),
+                               "from_high": c["kpi"].get("from_high")} for c in reps],
+                     "no_token": s.get("no_token", []), "vs_btc_90d": _r(rel, 3), "rsi_vs_btc": _r(rsi_b, 1), "from_high": _r(high, 3),
+                     "usage": _r(usage, 3), "usage_label": u["label"] if u else None,
+                     "past": [{"cycle": h["cycle"], "sector": h["sector"], "m_start": h["m_start"], "m_end": h["m_end"]} for h in past]})
+    return rows
+
+
+def _rotation_now() -> dict:
+    coins = ENDPOINTS["coins"]().get("coins", [])
+    try:
+        m = ENDPOINTS["metrics"]()
+    except Exception:
+        m = {}
+    ev = manual(SLUG, "evidence")
+    now = pd.Timestamp.now()
+    last_h = max(h for h in HALVINGS if h <= now)
+    cfg = json.loads(SECTOR_STATUS.read_text(encoding="utf-8"))
+    return {"rotation": rotation_rows(), "halvings": [int(h.timestamp()) for h in HALVINGS], "next_halving": int(NEXT_HALVING.timestamp()),
+            "peaks": {c: int(pd.Timestamp(d).timestamp()) for c, d in CYCLE_PEAKS.items()},
+            "peak_months": {c: _r((pd.Timestamp(d) - CYCLE_HALVING[c]).days / 30.44, 1) for c, d in CYCLE_PEAKS.items()},
+            "months_now": _r((now - last_h).days / 30.44, 1), "months_to_next": _r((NEXT_HALVING - now).days / 30.44, 1),
+            "status": sector_status(coins, m, ev if isinstance(ev, dict) else {}), "rules": cfg["rules"], "about": cfg["about"],
+            "as_of": now.strftime("%Y-%m-%d"), "stale": {}, "updated": int(time.time())}
+
+
+# ------------------------------------------------------------------ what changed since yesterday (app/topics/_daily.py)
+def READINGS() -> list[dict]:
+    """Headline readings per tab, from what the endpoints already cache. lean: +1 = favourable for holding crypto / the doc's
+    risk-on reading, -1 = unfavourable, 0 = neither (see the README)."""
+    out = []
+    add = lambda tab, key, label, value, lean, note=None: out.append({"tab": tab, "key": key, "label": label, "value": value, "lean": lean, **({"note": note} if note else {})})
+    try:
+        n = ENDPOINTS["cycles"]().get("now") or {}
+        if n.get("vs_ma200") is not None:
+            add("cycles", "btc_vs_200d", "BTC vs its 200-day average", _r(n["vs_ma200"], 3), 1 if n["vs_ma200"] > 0 else -1)
+        if n.get("days_since_halving") is not None:
+            m = n["days_since_halving"] / 30.44
+            add("cycles", "halving_clock", "Months since the last halving", _r(m, 1), 1 if 6 <= m <= 18 else -1 if 18 < m <= 30 else 0,
+                "6-18 months after: the doc's bull window; 18-30: its bear year")
+    except Exception:
+        pass
+    try:
+        for s in ENDPOINTS["signals"]().get("status", []):
+            add("signals", "sig:" + s["signal"][:40], s["signal"], s["state"], 1 if s["state"] == "firing" else 0)
+    except Exception:
+        pass
+    try:
+        e = _flows.ENDPOINTS["etf"]()
+        d = e.get("daily_usd_m") or []
+        if d:
+            v = sum(p[1] for p in d[-5:])
+            add("etf", "etf_5d", "US spot ETF net flows, last 5 days (US$m)", _r(v, 0), 1 if v > 0 else -1 if v < 0 else 0)
+    except Exception:
+        pass
+    try:
+        m = _flows.ENDPOINTS["mstr"]()
+        k = m.get("kpi") or {}
+        if k.get("mnav") is not None:
+            add("mstr", "mnav", "MSTR mNAV (basic)", _r(k["mnav"], 2), 1 if k["mnav"] >= 1 else -1, "above 1 the issuance engine works; below it stalls")
+        held = m.get("held") or []
+        if len(held) >= 2:
+            add("mstr", "mstr_bought_week", "BTC Strategy added in the last week", _r(held[-1][1] - held[-2][1], 0), 1 if held[-1][1] > held[-2][1] else 0)
+        for c in (m.get("strategies") or {}).get("checklist", []):
+            add("mstr", "exit:" + c["rule"], "Exit checklist: " + c["rule"], c["state"], -1 if c["state"] in ("exit", "caution") else 0)
+    except Exception:
+        pass
+    try:
+        cs = [c for c in ENDPOINTS["coins"]().get("coins", []) if "kpi" in c]
+        if cs:
+            up = sum(1 for c in cs if (c["kpi"].get("rsi_vs_btc") or 0) > 50)
+            add("candidates", "rsi_breadth", "Candidates with RSI vs BTC above 50", f"{up}/{len(cs)}", 1 if up > len(cs) / 2 else -1 if up < len(cs) / 4 else 0)
+            ranked = sorted((c for c in cs if c["kpi"].get("vs_btc_90d") is not None), key=lambda c: c["kpi"]["vs_btc_90d"])
+            if ranked:
+                add("candidates", "strongest", "Strongest candidate vs BTC, 90 days", ranked[-1]["ticker"], 0, f"{ranked[-1]['kpi']['vs_btc_90d']:+.0%}")
+                add("candidates", "weakest", "Weakest candidate vs BTC, 90 days", ranked[0]["ticker"], 0, f"{ranked[0]['kpi']['vs_btc_90d']:+.0%}")
+        for s in ENDPOINTS["rotation"]().get("status", []):
+            add("sectors", "sector:" + str(s["rank"]), "Sector " + str(s["rank"]) + ": " + s["sector"], s["status"],
+                {"Undervalued": 1, "Awaiting rotation": 1, "Overvalued": -1, "Priced in": -1}.get(s["status"], 0))
+    except Exception:
+        pass
+    return out
+
+
 def _cached_ep(name, fn, ttl=6 * 3600):
     return lambda: _cached(f"topic:{SLUG}:{name}", ttl, fn)
 
 
 ENDPOINTS = {"cycles": _cached_ep("cycles", _cycles_now), "sectors": _cached_ep("sectors", _sectors_now, 600), "metrics": _cached_ep("metrics", _metrics_now),
              "candidates": _cached_ep("candidates", _candidates_now), "signals": _cached_ep("signals", _signals_now, 3600),
-             "coins": _cached_ep("coins", _coins_now)}
+             "coins": _cached_ep("coins", _coins_now), "rotation": _cached_ep("rotation", _rotation_now, 3600)}
 from . import btc_flows as _flows                                    # ETF and MSTR tabs
 ENDPOINTS.update(_flows.ENDPOINTS)
 BACKGROUND = [fill_coins]                    # slow, rate-limited downloads the server runs outside page requests

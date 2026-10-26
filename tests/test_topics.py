@@ -514,7 +514,7 @@ def test_btc_cycles_coins(snapdir, monkeypatch):
     assert set(C.fill_coins().values()) == {"ok"}
     k = C._coins_now()
     B.json_safe(k)
-    assert len(k["coins"]) == len(C.coins_list()) == 28 and all("kpi" in c for c in k["coins"]) and k["btc_now"] > 0
+    assert len(k["coins"]) == len(C.coins_list()) == 30 and all("kpi" in c for c in k["coins"]) and k["btc_now"] > 0
     hype = next(c for c in k["coins"] if c["ticker"] == "HYPE")
     assert hype["links"]["coinmarketcap"].endswith("/hyperliquid/") and hype["links"]["defillama"].endswith("/hyperliquid") and len(hype["spark"]) == 90
     assert abs(hype["kpi"]["beta"] - 2.0) < 0.05 and 0 <= hype["kpi"]["rsi"] <= 100 and 0 <= hype["kpi"]["rsi_vs_btc"] <= 100
@@ -542,7 +542,7 @@ def test_btc_cycles_coins(snapdir, monkeypatch):
     assert res["ZEC"].startswith("RuntimeError") and res["SOL"] == "ok"
     k2 = C._coins_now()
     zec = next(c for c in k2["coins"] if c["ticker"] == "ZEC")
-    assert zec["error"].startswith("loading") and sum("kpi" in c for c in k2["coins"]) == 27
+    assert zec["error"].startswith("loading") and sum("kpi" in c for c in k2["coins"]) == 29
 
 
 def test_btc_cycles_rsi_and_beta_edges():
@@ -1063,3 +1063,40 @@ def test_robotaxi_readings(snapdir, monkeypatch):
     assert keys["waymo_weekly"]["lean"] == 1 and keys["deliveries_yoy"]["lean"] == -1      # 500K after 250K; Q3 2026 below Q3 2025
     assert keys["waymo_per_million"]["note"].endswith("(lower is better)")
     assert R.readings(lambda n: {}) == [] and R.READINGS() is not None
+
+
+def test_btc_rotation_timeline_and_sector_status():
+    from app.topics import btc_cycles as C
+    rows = C.rotation_rows()
+    assert {r["cycle"] for r in rows} == {1, 2, 3, 4} and all(r["end"] >= r["start"] and r["source"] for r in rows)
+    defi = next(r for r in rows if r["sector"] == "DeFi summer")
+    assert defi["m_start"] == pytest.approx(0.7, abs=0.2)                       # Jun 2020, a month after the May 2020 halving
+    import json as _json
+    cfg = _json.loads(C.SECTOR_STATUS.read_text())
+    tickers = {c["ticker"] for c in C.coins_list()}
+    assert all(3 <= len(s["reps"]) <= 5 and set(s["reps"]) <= tickers for s in cfg["sectors"] if s["reps"]) and len(cfg["sectors"]) == 8
+    coin = lambda t, rel, rsi_, hi: {"ticker": t, "name": t, "kpi": {"vs_btc_90d": rel, "rsi_vs_btc": rsi_, "from_high": hi}}
+    coins = ([coin(t, 0.8, 75, -0.05) for t in ("HYPE", "AAVE", "JUP")] + [coin(t, -0.3, 40, -0.5) for t in ("ENA", "TRX", "SKY")] +
+             [coin(t, 0.2, 60, -0.1) for t in ("ONDO", "LINK", "SYRUP")] + [coin(t, -0.05, 45, -0.8) for t in ("ZEC", "XMR", "DASH")] +
+             [coin(t, 0.0, 50, -0.4) for t in ("SOL", "SUI", "TON")])
+    day = 86400 * 7
+    metrics = {"stablecoins": [[i * day, 100 + i] for i in range(20)], "defi_tvl": [[i * day, 100.0] for i in range(20)]}
+    st = {s["rank"]: s for s in C.sector_status(coins, metrics, {})}
+    assert st[1]["status"] == "Overvalued" and st[3]["status"] == "Priced in" and st[2]["status"] == "Undervalued"
+    assert st[7]["status"] == "Awaiting rotation" and st[6]["status"] == "Neutral" and st[4]["reps"] == [] and st[4]["no_token"]
+    assert st[7]["past"] and all(p["cycle"] in (1, 2, 4) for p in st[7]["past"])
+
+
+def test_btc_readings(snapdir, monkeypatch):
+    from app.topics import btc_cycles as C, _daily
+    monkeypatch.setattr(C, "ENDPOINTS", {**C.ENDPOINTS,
+        "cycles": lambda: {"now": {"vs_ma200": 0.1, "days_since_halving": 400}},
+        "signals": lambda: {"status": [{"signal": "Stablecoin supply rising", "state": "firing"}, {"signal": "Volume", "state": "not yet"}]},
+        "coins": lambda: {"coins": [{"ticker": t, "kpi": {"rsi_vs_btc": r, "vs_btc_90d": v}} for t, r, v in (("A", 60, 0.2), ("B", 40, -0.1), ("C", 55, 0.0))]},
+        "rotation": lambda: {"status": [{"rank": 1, "sector": "DeFi", "status": "Undervalued"}]}})
+    monkeypatch.setattr(C._flows, "ENDPOINTS", {"etf": lambda: {"daily_usd_m": [[0, 10.0], [1, -5.0], [2, 20.0]]},
+        "mstr": lambda: {"kpi": {"mnav": 0.9}, "held": [[0, 100.0], [1, 110.0]], "strategies": {"checklist": [{"rule": "BTC trend", "state": "clear"}]}}})
+    r = {x["key"]: x for x in _daily._clean(C.READINGS())}
+    assert r["btc_vs_200d"]["lean"] == 1 and r["halving_clock"]["lean"] == 1 and r["etf_5d"]["value"] == 25 and r["mnav"]["lean"] == -1
+    assert r["mstr_bought_week"]["value"] == 10 and r["rsi_breadth"]["value"] == "2/3" and r["strongest"]["value"] == "A" and r["weakest"]["value"] == "B"
+    assert r["sector:1"]["lean"] == 1 and r["sig:Stablecoin supply rising"]["lean"] == 1 and {x["tab"] for x in r.values()} >= {"cycles", "signals", "etf", "mstr", "candidates", "sectors"}

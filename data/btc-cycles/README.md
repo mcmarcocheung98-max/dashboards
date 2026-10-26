@@ -12,6 +12,8 @@ A dashboard built on the research doc "BTC Cycles & Sector Rotation: 2013–2026
 | | Each cycle from its halving | Price ÷ price on halving day, by days before and after, one line per cycle |
 | | Drawdown | Distance below the running high |
 | | Cycle anatomy table | The doc's cycle 1–5 table |
+| Sectors | Where each candidate sector stands | The doc's eight 2026-27 sectors, 3-5 representative coins each, with a status (undervalued, awaiting rotation, neutral, priced in, overvalued) from their median 90-day move against BTC, RSI vs BTC, distance from the 1-year high and the sector's usage trend; and when the sector's ancestors burst in past cycles |
+| | Sector rotation across the four cycles | Every sector burst of cycles 1-4 as a bar, on the halving clock (months from each halving, cycles stacked) or the calendar, with BTC peaks and today |
 | Sectors | Cycle 1 / 2 / 3 / 4 | That cycle's sector table from the doc, and its peak multiples as a log-scale bar chart |
 | | Cross-cycle comparison | The doc's 15-row table |
 | Winner metrics | Live cards | DeFi TVL, stablecoin supply, Hyperliquid TVL, Hyperliquid 30-day revenue, perp-DEX 30-day volume, perp DEXs by volume |
@@ -94,6 +96,12 @@ Coin Metrics community data is free for non-commercial use with attribution. Def
 
 **`mstr_research.json`**: the "How people value MSTR" card, sections of cited points (`[text](url)`). Gathered from web sources on 26 Oct 2026; keep a link on every point and move `as_of` when revising. The exit checklist and backtests are computed in `btc_flows.mnav_strategies`; their thresholds (2.5×, 1.25×, 40 weeks, 30% below the 52-week mNAV high) are the published ones, not fitted, and the rule texts there name the evidence for each.
 
+**`rotation.csv`** (`cycle,sector,start,end,family,source,note`): one row per sector burst, months as `YYYY-MM`. Cycles 3-4 are the doc's "Burst window" column; cycles 1-2 have no such column, so their months come from the doc's text (row peak dates, the "Burst duration" paragraph), and the months it does not give are marked verify. `family` ties a past sector to a 2026-27 sector.
+
+**`sector_status.json`**: the eight candidate sectors, their representative tickers (3-5, from coins.csv; prediction markets have no liquid token and list the venues instead), the usage series each one is judged on (`metrics` keys or `evidence.csv` series names), and the status rules in the order they are checked. Dash (DASH) and Babylon (BABY) were added to coins.csv so privacy and BTC-fi have three representatives; Babylon's CoinGecko id is marked verify.
+
+**What changed since yesterday** (`READINGS()` in btc_cycles.py, saved once a day by the server): lean +1 = the reading is on the doc's risk-on side (BTC above its 200-day average; 6-18 months after a halving; a signal firing; ETF 5-day net inflows; mNAV at or above 1; Strategy added BTC this week; more than half the candidates with RSI vs BTC above 50; a sector undervalued or awaiting rotation). -1 = the risk-off side (below the 200-day; 18-30 months after a halving; 5-day net outflows; mNAV below 1; an MSTR exit or caution flag; fewer than a quarter above 50; a sector priced in or overvalued). 0 = neither, or a label with no direction (the strongest and weakest coin).
+
 **`etf_milestones.csv`** (`date,event,market,source,note`): dated events shown on the ETFs tab, each cited to the regulator's or exchange's own release, or to the report that dates it.
 
 **Source notes (Oct 2026).** DefiLlama's perp-volume endpoints became paid (HTTP 402), so the page shows Hyperliquid's fees and all-chain spot DEX volume instead, both free. CoinGecko limits free calls to a few a minute, so coin data is filled by a background job 13 seconds apart every six hours; a coin not reached yet says "loading in the background". Yahoo refuses cloud servers, so stock prices fall back to Nasdaq's quote API (US tickers) and CNBC (London and Hong Kong), and MSTR uses BTC prices from Coin Metrics.
@@ -113,5 +121,5 @@ Local preview: `python -m app.server`, then open `/btc-cycles`.
 - Google Trends has no stable free API; the sixth signal is hand-entered.
 - Spot + ETF volume (the doc's signal 4) is approximated by CoinGecko's all-exchange spot volume.
 - Pre-2024 sector figures are the doc's approximations and are labelled so.
-- After a deploy the background fill takes about 7 minutes (28 coins, 13 s apart, longer after a 429); until a coin is reached its row says "loading in the background". Live check 25 Oct 2026 23:21 UTC (Actions > live-check, then show-json on `/api/health` and `/api/btc-cycles/coins`): all 28 coins filled, every CoinGecko source fresh, every tab OK; the only "not available" cards were the two UK/HK treasury prices on the MSTR tab.
+- After a deploy the background fill takes about 7 minutes (30 coins, 13 s apart, longer after a 429); until a coin is reached its row says "loading in the background". Live check 25 Oct 2026 23:21 UTC (Actions > live-check, then show-json on `/api/health` and `/api/btc-cycles/coins`): all 28 coins filled, every CoinGecko source fresh, every tab OK; the only "not available" cards were the two UK/HK treasury prices on the MSTR tab.
 - Prediction markets (rank 4) have no liquid token and no row; ASTER, LIT, XPL, SKY, SYRUP and PLUME ids are marked `verify`.

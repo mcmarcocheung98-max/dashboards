@@ -28,3 +28,5 @@ rank,sector,ticker,name,coingecko_id,cmc_slug,defillama_slug,note
 7,Privacy / ZK,XMR,Monero,monero,monero,,
 8,BTC-fi / Bitcoin L2s,CORE,Core,coredaoorg,core-dao,,
 8,BTC-fi / Bitcoin L2s,STX,Stacks,blockstack,stacks,,
+7,Privacy / ZK,DASH,Dash,dash,dash,,
+8,BTC-fi / Bitcoin L2s,BABY,Babylon,babylon,babylon,babylon,verify id

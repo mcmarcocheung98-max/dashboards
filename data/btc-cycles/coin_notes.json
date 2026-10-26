@@ -141,6 +141,16 @@
    "narrative": "Stacks is the longest-running Bitcoin layer with sBTC, in the doc's BTC-fi group.",
    "standout": "The doc names STX among the 2024 BTC-L2 tokens that failed to hold.",
    "thesis": "Projection is beta-scaled. Risk: low usage so far, per the doc."
+  },
+  "DASH": {
+   "narrative": "Dash (formerly Darkcoin) is the oldest coin in the doc's privacy sleeve: it led Anonymity v1 in 2014 and the privacy-coin run of 2017.",
+   "standout": "The doc: Darkcoin $0.3 to $15 (May 2014, ~50x) and DASH $10 to $1,550 (Jan 2018, ~150x); listed again among cycle 4's privacy names.",
+   "thesis": "Speculative sleeve; the projection is mechanical. Breaks on exchange delistings, the doc's main risk for privacy."
+  },
+  "BABY": {
+   "narrative": "Babylon lets bitcoin be staked to secure other chains, the doc's rank-8 BTC-fi idea of making the largest asset productive.",
+   "standout": "Named by the doc as a rank-8 play; the doc's case is that ETF-era holders want yield on BTC.",
+   "thesis": "Projection is beta-scaled. The doc's caveat: 2024's BTC-layer tokens all failed to hold, and value tends to accrue to BTC, not the layer."
   }
  }
 }

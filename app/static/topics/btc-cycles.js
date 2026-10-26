@@ -129,6 +129,93 @@ function fold(title, open, ...kids) {
   return el("div", { class: "card" }, h, body);
 }
 
+// ---------- sector rotation: the four cycles' bursts on one timeline, and each 2026-27 candidate sector's status today
+const FAMILY = { defi: ["On-chain finance / DeFi", "--s1"], stable: ["Stablecoins & payments", "--s2"], rwa: ["RWA", "--s3"], ai: ["AI", "--s4"],
+  l1: ["L1s / platforms", "--s5"], privacy: ["Privacy", "--s6"], btcfi: ["BTC-fi / BTC alternatives", "--hold"], meme: ["Memecoins", "--z2"], other: ["Other (NFTs, enterprise, treasuries)", "--z4"], prediction: ["Prediction markets", "--accent"] };
+function rotationTimeline(R) {
+  let mode = (() => { try { return sessionStorage.getItem("rotation-view") || "halving"; } catch (e) { return "halving"; } })();
+  const rows = R.rotation || [], read = el("div", { class: "muted", style: "min-height:18px;margin-top:4px" }, "Hover a bar for its sector and dates.");
+  const seg = el("div", { class: "seg" });
+  const host = el("div", {});
+  const draw = () => {
+    seg.replaceChildren(...[["halving", "Months from each halving"], ["calendar", "Calendar"]].map(([k, l]) => el("button", { class: k === mode ? "on" : "", onclick: () => { mode = k; try { sessionStorage.setItem("rotation-view", k); } catch (e) {} draw(); } }, l)));
+    const lanes = [];                                    // one lane per burst, grouped by cycle; a cycle label row before each group
+    for (const c of [1, 2, 3, 4]) { lanes.push({ head: c }); rows.filter(r => r.cycle === c).sort((a, b) => a.start - b.start).forEach(r => lanes.push({ r })); }
+    if (mode === "halving") lanes.push({ head: 5 });
+    const rowH = 15, H = lanes.length * rowH + 34;
+    host.replaceChildren(svgBox(H, (box, W) => {
+      const pad = { l: Math.min(230, W * 0.38), r: 12, t: 8, b: 24 };
+      const [x0, x1] = mode === "halving" ? [-8, Math.max(26, (R.months_now || 0) + 2)] : [Date.UTC(2013, 5, 1) / 1000, Date.now() / 1000 + 60 * 86400];
+      const X = v => pad.l + (v - x0) / (x1 - x0) * (W - pad.l - pad.r);
+      const svg = svgEl("svg", { width: W, height: H, style: "display:block;font-family:inherit" }, box);
+      const line = (x, color, dash, label, y0 = pad.t, y1 = H - pad.b) => {
+        svgEl("line", { x1: x, x2: x, y1: y0, y2: y1, stroke: color, "stroke-dasharray": dash || "", "stroke-width": 1 }, svg);
+        if (label) svgEl("text", { x: x + 3, y: pad.t + 9, fill: color, "font-size": 10.5 }, svg).textContent = label;
+      };
+      if (mode === "halving") {
+        for (let m = W < 600 ? 0 : -6; m <= x1; m += W < 600 ? 12 : 6) { svgEl("line", { x1: X(m), x2: X(m), y1: pad.t, y2: H - pad.b, stroke: css("--line") }, svg);
+          svgEl("text", { x: X(m), y: H - 6, fill: css("--muted"), "font-size": 10.5, "text-anchor": "middle" }, svg).textContent = (m > 0 ? "+" : "") + m + "m"; }
+        line(X(0), css("--muted"), "4 3", "halving");
+      } else {
+        for (let y = 2014; y <= new Date().getUTCFullYear(); y++) { const t = Date.UTC(y, 0, 1) / 1000; svgEl("line", { x1: X(t), x2: X(t), y1: pad.t, y2: H - pad.b, stroke: css("--line") }, svg);
+          if (y % 2 === 0 || W > 700) svgEl("text", { x: X(t), y: H - 6, fill: css("--muted"), "font-size": 10.5, "text-anchor": "middle" }, svg).textContent = "'" + String(y).slice(2); }
+        (R.halvings || []).forEach(t => line(X(t), css("--muted"), "4 3"));
+        Object.values(R.peaks || {}).forEach(t => line(X(t), css("--down"), "2 2"));
+      }
+      lanes.forEach((ln, i) => {
+        const y = pad.t + i * rowH;
+        if (ln.head) {
+          const label = ln.head === 5 ? "Now (cycle 5)" : "Cycle " + ln.head + (ln.head === 4 ? " (2024 halving)" : ln.head === 3 ? " (2020)" : ln.head === 2 ? " (2016)" : " (2012)");
+          svgEl("text", { x: 4, y: y + 11, fill: css("--ink2") || css("--muted"), "font-size": 11.5, "font-weight": 600 }, svg).textContent = label;
+          if (mode === "halving" && ln.head < 5 && R.peak_months) {            // that cycle's BTC peak, on its own header row
+            const xp = X(R.peak_months[ln.head]); svgEl("path", { d: `M${xp - 4},${y + 3} L${xp + 4},${y + 3} L${xp},${y + 11} Z`, fill: css("--down") }, svg);
+          }
+          if (ln.head === 5) {
+            const xn = X(R.months_now); line(xn, css("--accent"), "", null, y, y + rowH);
+            svgEl("text", { x: xn - 5, y: y + 11, fill: css("--accent"), "font-size": 11, "text-anchor": "end" }, svg).textContent = W < 600 ? "today +" + Math.round(R.months_now) + "m" : "today: " + Math.round(R.months_now) + " months after the 2024 halving, about " + Math.round(R.months_to_next) + " before the next";
+          }
+          return;
+        }
+        const r = ln.r, [nm, col] = FAMILY[r.family] || [r.family, "--muted"];
+        const a = mode === "halving" ? r.m_start : r.start, b = mode === "halving" ? r.m_end : r.end;
+        const xa = X(a), xb = Math.max(X(b), xa + 4);
+        svgEl("text", { x: pad.l - 6, y: y + 11, fill: css("--muted"), "font-size": 11, "text-anchor": "end" }, svg).textContent = (n => r.sector.length > n ? r.sector.slice(0, n - 1) + "…" : r.sector)(Math.max(10, Math.floor((pad.l - 10) / 5.8)));
+        const rect = svgEl("rect", { x: xa, y: y + 3, width: xb - xa, height: rowH - 5, rx: 2, fill: css(col) }, svg);
+        const when = new Date(r.start * 1000).toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "UTC" }) + "–" + new Date(r.end * 1000).toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "UTC" });
+        const msg = "Cycle " + r.cycle + " · " + r.sector + " (" + nm + "): " + when + ", " + Math.round(r.m_start) + " to " + Math.round(r.m_end) + " months after the halving." + (r.note ? " " + r.note + "." : "") + " Source: " + r.source + ".";
+        svgEl("title", {}, rect).textContent = msg;
+        rect.addEventListener("mouseenter", () => { read.textContent = msg; });
+      });
+    }));
+  };
+  draw();
+  const fams = [...new Set(rows.map(r => r.family))];
+  const legend = el("div", { class: "legend" }, ...fams.map(f => el("button", {}, el("span", { class: "sw", style: "background:" + css((FAMILY[f] || [0, "--muted"])[1]) }), (FAMILY[f] || [f])[0])),
+    el("button", {}, el("span", { class: "sw", style: "background:" + css("--down") }), "BTC peak"));
+  return card("Sector rotation across the four cycles", seg, legend, host, read,
+    note("Each bar is the window in which that sector led, from the doc's burst windows (cycles 3-4) and the dates in its text (cycles 1-2, approximate; rows marked verify in data/btc-cycles/rotation.csv). " +
+      "On the halving clock the pattern repeats: majors and platforms first, the speculative bursts in the 6-18 months after the halving, privacy last, after BTC's peak (red)."));
+}
+function statusCard(R) {
+  const tone = { Undervalued: "ok", "Awaiting rotation": "", Neutral: "", "Priced in": "bad", Overvalued: "bad" };
+  const col = { Undervalued: css("--up"), "Awaiting rotation": css("--accent"), Neutral: css("--muted"), "Priced in": css("--s2"), Overvalued: css("--down") };
+  const p0 = v => v == null ? "–" : pct(v, 0);
+  const head = ["Sector", "Status", "Representatives (90 days vs BTC)", "90d vs BTC", "RSI vs BTC", "From 1-year high", "Usage, ~90 days", "Past bursts (months after halving)"];
+  const rows = (R.status || []).map(s => el("tr", {},
+    el("td", {}, el("b", {}, s.rank + " · " + s.sector)),
+    el("td", {}, el("span", { class: "pill " + (tone[s.status] || ""), style: "color:" + col[s.status] + ";white-space:nowrap" }, s.status)),
+    el("td", { class: "wrap", style: "max-width:320px" }, ...(s.reps.length ? s.reps.map((c, i) => el("span", { style: "white-space:nowrap" }, (i ? " · " : ""), el("b", {}, c.ticker), " ", el("span", { class: cls(c.vs_btc_90d) }, p0(c.vs_btc_90d))))
+      : [el("span", { class: "muted" }, "No liquid token: " + (s.no_token || []).join(", "))])),
+    el("td", { class: cls(s.vs_btc_90d) }, p0(s.vs_btc_90d)), el("td", {}, s.rsi_vs_btc == null ? "–" : s.rsi_vs_btc.toFixed(0)), el("td", {}, p0(s.from_high)),
+    el("td", { class: "wrap" }, s.usage == null ? el("span", { class: "muted" }, s.usage_label ? "no recent reading" : "no usage series") : el("span", {}, el("span", { class: cls(s.usage) }, p0(s.usage)), el("span", { class: "muted" }, " " + s.usage_label))),
+    el("td", { class: "wrap muted" }, s.past.length ? s.past.map(h => "C" + h.cycle + " " + Math.round(h.m_start) + "–" + Math.round(h.m_end)).join(", ") : "none")));
+  return card("Where each 2026-27 candidate sector stands today",
+    el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...head.map(h => el("th", {}, h))), ...rows)),
+    el("ul", { class: "muted", style: "margin:8px 0 0;padding-left:18px;font-size:12.5px" }, ...(R.rules || []).map(([n, t]) => el("li", {}, el("b", { style: "color:" + col[n] }, n + ": "), t))),
+    note("Medians of the representatives (coins.csv); rules checked in the order listed. Mechanical readings of price against BTC and of usage, not a view on any coin. Today: " +
+      Math.round(R.months_now) + " months after the 2024 halving; past bursts mostly ran 6-18 months after one."));
+}
+
 // mNAV strategies and the exit window: today's checklist, the rule backtests (recomputed from the live data), and how people value MSTR
 function strategiesCards(S) {
   if (!S) return [];
@@ -194,7 +281,7 @@ const VIEWS = {
     return [head, bottom, priceCard, ov, dd, anat];
   },
   async sectors() {
-    const d = await api("sectors");
+    const [d, rot] = await Promise.all([api("sectors"), api("rotation").catch(() => null)]);
     const seg = el("div", { class: "seg" }, ...d.cycles.map(c => el("button", { class: c.n === cycleN ? "on" : "", onclick: () => { cycleN = c.n; render(); } }, "Cycle " + c.n)));
     const c = d.cycles.find(x => x.n === cycleN);
     const sectorCol = c.columns[0];
@@ -202,7 +289,8 @@ const VIEWS = {
     const mult = bars.length ? card("Peak multiples in this cycle (log scale)", ...svgBarsLog(bars)) : null;
     const tbl = card(c.heading, para(c.intro), table(c.columns, c.rows), para(c.after));
     const cross = fold("Cross-cycle comparison", true, para(d.cross_cycle.intro), table(d.cross_cycle.columns, d.cross_cycle.rows));
-    return [card(null, seg, el("div", { class: "muted" }, "Pick a cycle. Figures are the doc's, approximate before 2024.")), tbl, mult, cross];
+    const top = rot ? [statusCard(rot), rotationTimeline(rot)] : [];
+    return [...top, card(null, seg, el("div", { class: "muted" }, "Pick a cycle. Figures are the doc's, approximate before 2024.")), tbl, mult, cross];
   },
   async metrics() {
     const d = await api("metrics"), R = d.research, L = d.latest || {};
