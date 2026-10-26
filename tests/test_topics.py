@@ -722,6 +722,16 @@ def test_bls_over_the_daily_limit_keeps_the_last_good_reply(snapdir, monkeypatch
     h = J._headcount_now()
     assert h["US"] and not h.get("US_error")
 
+def test_pay_and_headcount_open_when_bls_is_down(snapdir, monkeypatch):
+    from app.topics import ai_jobs as J
+    over = json.dumps({"status": "REQUEST_NOT_PROCESSED", "message": ["Daily threshold reached."], "Results": {}})
+    monkeypatch.setattr(J, "fetch", lambda url, ttl, **k: over if "bls" in url else jobs_fetch(url, ttl, **k))
+    w, h = J._wages_now(), J._headcount_now()
+    B.json_safe(w)
+    assert w["levels"] is None and w["levels_error"] and "REQUEST_NOT_PROCESSED" in w["bls_error"] and w["missing"] == [] and w["as_of"] is None
+    assert h["US"] is None and h["HK"]
+
+
 def test_ramp_ai_index_parser():
     from app.topics.ai_adoption import parse_ramp
     s = parse_ramp(ramp_page())

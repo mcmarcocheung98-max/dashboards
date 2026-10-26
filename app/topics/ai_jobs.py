@@ -218,19 +218,25 @@ def _ratio_now() -> dict:
 
 def _wages_now() -> dict:
     """US average hourly earnings in the same industries: level, yearly change, and each against all private-sector pay."""
-    have = bls_all()
+    try:
+        have, err = bls_all(), None
+    except Exception as e:                                             # BLS down and nothing kept: the page still opens, with the reason
+        have, err = {}, f"{type(e).__name__}: {str(e)[:120]}"
     series = {n: have[sid] for n, sid in US_WAGES.items() if sid in have and len(have[sid])}
-    if "All private" not in series:
-        raise ValueError("BLS returned no all-private pay series")
-    allp = series["All private"]
+    allp = series.get("All private")
     since = pd.Timestamp("2010-01-01")
-    out = payload({"levels": lambda: {n: _pts(s[s.index >= since], 2) for n, s in series.items()},
-                   "yoy": lambda: {n: _pts(yoy(s)[s.index >= since] * 100, 2) for n, s in series.items()},
-                   "premium": lambda: {n: _pts((s / allp - 1).dropna()[lambda x: x.index >= since] * 100, 1) for n, s in series.items() if n != "All private"},
-                   "latest": lambda: {n: {"level": _r(s.iloc[-1], 2), "yoy": _r(yoy(s).iloc[-1] * 100, 2), "premium": _r((s.iloc[-1] / allp.iloc[-1] - 1) * 100, 1),
-                                          "date": str(s.index[-1].date())} for n, s in series.items()}},
+
+    def need():
+        if allp is None:
+            raise ValueError(err or "BLS returned no all-private pay series")
+    out = payload({"levels": lambda: need() or {n: _pts(s[s.index >= since], 2) for n, s in series.items()},
+                   "yoy": lambda: need() or {n: _pts(yoy(s)[s.index >= since] * 100, 2) for n, s in series.items()},
+                   "premium": lambda: need() or {n: _pts((s / allp - 1).dropna()[lambda x: x.index >= since] * 100, 1) for n, s in series.items() if n != "All private"},
+                   "latest": lambda: need() or {n: {"level": _r(s.iloc[-1], 2), "yoy": _r(yoy(s).iloc[-1] * 100, 2), "premium": _r((s.iloc[-1] / allp.iloc[-1] - 1) * 100, 1),
+                                                    "date": str(s.index[-1].date())} for n, s in series.items()}},
                   sources=[BLS])
-    out["missing"] = [n for n in US_WAGES if n not in series]           # industries BLS does not publish hourly pay for
+    out["missing"] = [n for n in US_WAGES if n not in series] if series else []      # industries BLS does not publish hourly pay for
+    out["bls_error"] = err
     out["uk_hk"] = sorted(manual_rows("ai", "pay_uk_hk"), key=lambda r: r["date"], reverse=True)
     out["as_of"] = (out.get("latest") or {}).get("All private", {}).get("date")
     return out

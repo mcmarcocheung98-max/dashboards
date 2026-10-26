@@ -29,21 +29,23 @@ const VIEWS = {
   },
   async headcount() {
     const d = await api("headcount"), u = d.US;
-    if (!u) return [card("US headcount", el("div", { class: "err" }, "Not available right now (" + (d.US_error || "no data") + ")."), stale(d))];
-    const names = Object.keys(u.levels);
-    const rows = names.map(n => el("tr", {}, el("td", {}, n), el("td", {}, num(u.latest[n].level * 1000)), el("td", { class: cls(u.latest[n].yoy) }, pct(u.latest[n].yoy / 100, 1)), el("td", { class: cls(u.latest[n].since_2020) }, pct(u.latest[n].since_2020 / 100, 1))));
-    const head = card("US payroll employment", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Industry", "Jobs", "vs a year ago", "vs Feb 2020"].map(h => el("th", {}, h))), ...rows)), asOf(d), stale(d),
-      note("BLS Current Employment Statistics (public API), seasonally adjusted. 'Computer systems design' is the closest industry to AI and software work."));
-    const idx = card("Headcount since February 2020 (= 100)", ...linesChart(names.map(n => ({ name: n, points: u.indexed[n], dashed: n === "All private", color: n === "All private" ? css("--hold") : undefined })), v => v == null ? "–" : v.toFixed(1)));
-    const yoy = card("Change on a year earlier", ...linesChart(names.map(n => ({ name: n, points: u.yoy[n], dashed: n === "All private", color: n === "All private" ? css("--hold") : undefined })), v => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(1) + "%", { small: true }));
+    const us = u ? (() => {
+      const names = Object.keys(u.levels);
+      const rows = names.map(n => el("tr", {}, el("td", {}, n), el("td", {}, num(u.latest[n].level * 1000)), el("td", { class: cls(u.latest[n].yoy) }, pct(u.latest[n].yoy / 100, 1)), el("td", { class: cls(u.latest[n].since_2020) }, pct(u.latest[n].since_2020 / 100, 1))));
+      const head = card("US payroll employment", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Industry", "Jobs", "vs a year ago", "vs Feb 2020"].map(h => el("th", {}, h))), ...rows)), asOf(d), stale(d),
+        note("BLS Current Employment Statistics (public API), seasonally adjusted. 'Computer systems design' is the closest industry to AI and software work."));
+      const idx = card("Headcount since February 2020 (= 100)", ...linesChart(names.map(n => ({ name: n, points: u.indexed[n], dashed: n === "All private", color: n === "All private" ? css("--hold") : undefined })), v => v == null ? "–" : v.toFixed(1)));
+      const yoy = card("Change on a year earlier", ...linesChart(names.map(n => ({ name: n, points: u.yoy[n], dashed: n === "All private", color: n === "All private" ? css("--hold") : undefined })), v => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(1) + "%", { small: true }));
+      return [head, idx, yoy];
+    })() : [card("US headcount", el("div", { class: "err" }, "Not available right now (" + (d.US_error || "no data") + ")."), stale(d))];
     const uk = Object.entries(d.UK || {}).filter(([, pts]) => pts.length);
-    const ukc = uk.length ? card("UK workforce jobs (hand-entered from ONS JOBS03, thousands)", ...linesChart(uk.map(([k, pts]) => ({ name: k, points: pts })), v => num(v)))
+    const ukc = uk.length ? card("UK workforce jobs (hand-entered from ONS JOBS03, thousands)", ...linesChart(uk.map(([k, pts]) => ({ name: k, points: pts })), v => num(v), { sync: false }))
       : card("UK headcount", el("div", { class: "muted" }, "No UK points entered yet: add quarterly ONS workforce-jobs figures to data/ai/uk_headcount.csv."));
     const hk = Object.entries(d.HK || {}).filter(([, pts]) => pts.length);
-    const hkc = hk.length ? card("Hong Kong persons engaged (C&SD, thousands)", ...linesChart(hk.map(([k, pts]) => ({ name: k, points: pts })), v => num(v)),
+    const hkc = hk.length ? card("Hong Kong persons engaged (C&SD, thousands)", ...linesChart(hk.map(([k, pts]) => ({ name: k, points: pts })), v => num(v), { sync: false }),
         note("C&SD Quarterly Survey of Employment and Vacancies, table 215-16001: persons engaged at the end of each quarter, civil service excluded. Professional, scientific & technical services include legal and accounting firms."))
       : card("Hong Kong headcount", el("div", { class: "muted" }, "Not available right now (" + (d.HK_error || "no data") + ")."), stale(d));
-    return [head, idx, yoy, ukc, hkc];
+    return [...us, ukc, hkc];
   },
   async ratio() {
     const d = await api("ratio"), c = d[cc];
@@ -65,7 +67,7 @@ const VIEWS = {
     const names = Object.keys(L);
     const head = card("US average hourly earnings, all employees", table(["Industry", "Hourly pay", "vs a year ago", "vs all private-sector pay"],
       names.map(n => [n, "$" + (L[n].level == null ? "–" : L[n].level.toFixed(2)), L[n].yoy == null ? "–" : (L[n].yoy > 0 ? "+" : "") + L[n].yoy.toFixed(1) + "%", n === "All private" ? "–" : (L[n].premium > 0 ? "+" : "") + L[n].premium.toFixed(0) + "%"])),
-      missing(d, "levels", "US pay"), (d.missing || []).length ? note("BLS publishes no hourly pay series for: " + d.missing.join(", ") + ".") : null, asOf(d), stale(d),
+      missing(d, "levels", "US pay"), d.bls_error ? note("BLS said: " + d.bls_error + " (its public API allows 25 queries a day; the page retries after a day).") : null, (d.missing || []).length ? note("BLS publishes no hourly pay series for: " + d.missing.join(", ") + ".") : null, asOf(d), stale(d),
       note("BLS Current Employment Statistics (series ending 03), seasonally adjusted, from the BLS public API."));
     const lv = d.levels ? card("Hourly pay ($)", ...linesChart(Object.entries(d.levels).map(([k, pts]) => ({ name: k, points: pts, dashed: k === "All private", color: k === "All private" ? css("--hold") : undefined })), v => v == null ? "–" : "$" + v.toFixed(2))) : null;
     const pr = d.premium ? card("Pay premium over all private-sector pay (%)", ...linesChart(Object.entries(d.premium).map(([k, pts]) => ({ name: k, points: pts })), v => v == null ? "–" : v.toFixed(0) + "%", { small: true }),
@@ -87,7 +89,7 @@ const VIEWS = {
       ...linesChart([{ name: "Using now", points: d.btos_us || [] }, { name: "Expect to use within 6 months", points: d.btos_expect, color: css("--s4"), dashed: true }], sh, { small: true }),
       note("The gap between the two lines is intent not yet acted on.")) : card("Expect to use AI within six months", el("div", { class: "muted" }, "Not read yet: the Census workbook was not reachable or its layout changed; add points to data/ai/btos_ai_expect_us.csv."));
     const lat = Object.entries(d.uk_hk_latest || {});
-    const intl = Object.keys(d.uk_hk || {}).length ? card("UK and Hong Kong: share of firms using AI", ...linesChart(Object.entries(d.uk_hk).map(([k, pts]) => ({ name: k, points: pts })), sh, { small: true }),
+    const intl = Object.keys(d.uk_hk || {}).length ? card("UK and Hong Kong: share of firms using AI", ...linesChart(Object.entries(d.uk_hk).map(([k, pts]) => ({ name: k, points: pts })), sh, { small: true, sync: false }),
       table(["Series", "Latest", "Period ending", "A year earlier"], lat.map(([k, v]) => [k, sh(v.value), v.date, sh(v.year_ago)])),
       note("UK: ONS Business Insights and Conditions Survey, asked about once a quarter: businesses using at least one AI technology (100% minus 'does not use' minus 'not sure'), weighted. Hong Kong has no comparable periodic survey yet; hand-entered points, if any, are listed below."),
       ...((d.uk_hk_rows || []).length ? [table(["Date", "Series", "%", "Source"], d.uk_hk_rows.map(r => [r.date, r.series, r.value, "[" + host(r.source) + "](" + r.source + ")"]))] : []), stale(d))
