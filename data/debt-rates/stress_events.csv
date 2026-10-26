@@ -1,0 +1,11 @@
+date,country,event,source,note
+2022-09-28,UK,"Gilt market crisis after the September mini-budget: LDI pension funds forced to sell, 30-year yields jump over 1 point in days; the Bank of England buys long gilts to restore order.",https://www.bankofengland.co.uk/news/2022/september/bank-of-england-announces-gilt-market-operation,verify: dates and size from memory
+2023-08-01,US,"Fitch downgrades the US from AAA to AA+, citing fiscal deterioration and repeated debt-limit standoffs.",https://www.fitchratings.com/research/sovereigns/fitch-downgrades-united-states-long-term-ratings-to-aa-affirms-f1-rating-01-08-2023,
+2023-11-09,US,"Weak 30-year bond auction: the issue tails by about 5 basis points and dealers take an unusually large share; part of the 2023 term-premium spike.",https://www.treasurydirect.gov/auctions/announcements-data-results/,verify: tail size from memory
+2023-12-05,China,"Moody's cuts China's outlook to negative, citing local-government and state-firm debt.",https://ratings.moodys.com/,verify: date from memory
+2024-04-10,China,"Fitch cuts China's outlook to negative on rising government debt.",https://www.fitchratings.com/,verify: date from memory
+2025-01-08,UK,"30-year gilt yield reaches its highest since 1998 (about 5.4%); sterling falls at the same time, a sign of fiscal rather than growth worry.",https://www.bankofengland.co.uk/boeapps/database/,verify: level from memory
+2025-04-09,US,"Treasury sell-off after the April tariff announcements: the 10-year yield rises about half a point in a week while the dollar falls.",https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics,verify: size from memory
+2025-05-16,US,"Moody's downgrades the US from Aaa to Aa1, the last of the three big agencies to drop the top rating.",https://ratings.moodys.com/,verify: date from memory
+2025-05-21,US,"20-year bond auction tails by about 1 basis point at above 5%; long yields jump the same day.",https://www.treasurydirect.gov/auctions/announcements-data-results/,verify: tail size from memory
+2025-09-02,UK,"30-year gilt yield reaches about 5.7%, the highest since 1998, ahead of the autumn Budget.",https://www.bankofengland.co.uk/boeapps/database/,verify: level from memory

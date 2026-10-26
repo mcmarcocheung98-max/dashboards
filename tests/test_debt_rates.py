@@ -1,0 +1,282 @@
+"""Global Debt & Rates (/debt-rates): parsers and payloads on fixtures shaped like each source; live checks are marked network."""
+import json
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from app.topics import _base as B
+from app.topics import debt_rates as D
+
+NOW = pd.Timestamp.now().normalize()
+
+
+# ------------------------------------------------------------------ fixtures in each source's own layout
+def imf_json(ind: str) -> dict:
+    base = {"GGXWDG_NGDP": {"USA": 60, "GBR": 40, "HKG": 1, "CHN": 25}, "GGXCNL_NGDP": {"USA": -5, "GBR": -4, "HKG": 1, "CHN": -3},
+            "GGXONLB_NGDP": {"USA": -2, "GBR": -1.5, "HKG": 0.5, "CHN": -2}, "GGR_NGDP": {"USA": 30, "GBR": 38, "HKG": 20, "CHN": 27},
+            "NGDP_RPCH": {"USA": 2, "GBR": 1.2, "HKG": 2.5, "CHN": 5}, "PCPIPCH": {"USA": 2.3, "GBR": 2.5, "HKG": 1.8, "CHN": 0.5}}[ind]
+    rise = {"GGXWDG_NGDP": 2.0, "GGXCNL_NGDP": -0.05, "GGXONLB_NGDP": 0.02}.get(ind, 0)
+    vals = {iso: {str(y): round(v + rise * (y - 2000), 2) for y in range(2000, NOW.year + 6)} for iso, v in base.items()}
+    vals["WEOWORLD"] = {"2020": 1.0}
+    return {"values": {ind: vals}, "api": {"version": "1"}}
+
+
+def penny_json() -> dict:
+    days = pd.date_range("2000-01-03", NOW, freq="7D")
+    return {"data": [{"record_date": str(t.date()), "tot_pub_debt_out_amt": str(5.6e12 + i * 2.7e10), "debt_held_public_amt": str(3.4e12 + i * 2.1e10)}
+                     for i, t in enumerate(days)]}
+
+
+MTS_ROWS = [(10, 1, "Receipts"), (20, 2, "Individual Income Taxes"), (120, 2, "Total"), (130, 1, "Net Outlays"), (140, 2, "National Defense"),
+            (230, 2, "Education, Training, Employment, and Social Services"), (320, 2, "Net Interest"), (340, 2, "Total")]
+
+
+def mts_json() -> dict:
+    out = []
+    for i, t in enumerate(pd.date_range("2014-10-31", NOW - pd.DateOffset(months=1), freq="ME")):
+        amt = {"Individual Income Taxes": 200e9, 120: 300e9 + i * 1.2e9, "National Defense": 55e9 + i * 0.1e9,
+               "Education, Training, Employment, and Social Services": 10e9 + 3e9 * np.sin(i), "Net Interest": 20e9 + i * 0.5e9, 340: 380e9 + i * 2e9}
+        for line, lvl, desc in MTS_ROWS:
+            v = amt.get(line, amt.get(desc))
+            out.append({"record_date": str(t.date()), "classification_desc": desc, "line_code_nbr": str(line),
+                        "current_month_rcpt_outly_amt": "null" if v is None else f"{v:.2f}"})
+    return {"data": out}
+
+
+def avg_rate_json() -> dict:
+    return {"data": [{"record_date": str(t.date()), "security_desc": "Total Marketable", "avg_interest_rate_amt": f"{1.5 + 0.02 * i:.3f}"}
+                     for i, t in enumerate(pd.date_range("2001-01-31", NOW, freq="ME"))]}
+
+
+def treasury_csv(y: int, real: bool) -> str:
+    days = pd.bdate_range(f"{y}-01-02", min(pd.Timestamp(f"{y}-12-31"), NOW))
+    if not len(days):
+        return ""
+    if real:
+        head, row = "Date,5 YR,7 YR,10 YR,20 YR,30 YR", lambda i, t: f"{t:%m/%d/%Y},1.0,1.2,{0.5 + (y - 2003) * 0.08 + 0.001 * i:.2f},1.5,1.6"
+    else:
+        head = "Date,1 Mo,2 Mo,3 Mo,6 Mo,1 Yr,2 Yr,3 Yr,5 Yr,7 Yr,10 Yr,20 Yr,30 Yr"
+        row = lambda i, t: f"{t:%m/%d/%Y},4.1,4.1,4.0,3.9,3.8,{2.0 + (y - 2000) * 0.07:.2f},3.6,3.7,3.9,{2.5 + (y - 2000) * 0.08 + 0.001 * i:.2f},4.6,4.7"
+    return "\n".join([head] + [row(i, t) for i, t in enumerate(reversed(days))])
+
+
+def boe_csv(code: str, since: int) -> str:
+    days = pd.bdate_range(f"{since}-01-02", NOW, freq="5B")
+    level = {"IUDBEDR": 3.0, "IUDMNPY": 3.5, "IUDMNZC": 3.5, "IUDMRZC": 0.3, "IUDMRPY": 0.3}[code]
+    return f"DATE,{code}\n" + "\n".join(f"{t:%d %b %Y},{level + np.sin(i / 60):.4f}" for i, t in enumerate(days))
+
+
+def ons_csv(sid: str) -> str:
+    months = pd.date_range("1997-04-01", NOW - pd.DateOffset(months=2), freq="MS")
+    lvl = {"hf6x": 40, "nmfx": 3000, "anbt": 50000}[sid]
+    meta = '"Title","x"\n"CDID","' + sid.upper() + '"\n"1997","1"\n"1997 Q2","2"\n'
+    return meta + "\n".join(f'"{t.year} {t.strftime("%b").upper()}","{lvl * (1 + i / 400):.1f}"' for i, t in enumerate(months))
+
+
+def hkma_json(path: str, offset: int) -> dict:
+    months = list(reversed(pd.date_range("2000-01-01", NOW, freq="MS")))
+    recs = []
+    for t in months[offset:offset + 100]:
+        if "efbn" in path:
+            recs.append({"end_of_month": t.strftime("%Y-%m"), "efn_2y": 2.0, "efn_10y": (3.0 if t.year < 2015 else None)})
+        else:
+            recs.append({"end_of_month": t.strftime("%Y-%m"), "ir_overnight": 1.0, "ir_1m": 1.5})
+    return {"header": {"success": True}, "result": {"datasize": len(recs), "records": recs}}
+
+
+def nyfed_json() -> dict:
+    days = pd.bdate_range("2016-03-01", NOW, freq="5B")
+    return {"refRates": [{"effectiveDate": str(t.date()), "type": "EFFR", "percentRate": 0.4 + i * 0.004, "targetRateFrom": round(0.25 + i * 0.004, 2),
+                          "targetRateTo": round(0.5 + i * 0.004, 2)} for i, t in enumerate(reversed(days))]}
+
+
+def fake_fetch(url, ttl=0, **k):
+    if "treasury.gov/resource-center" in url:
+        y = int(url.split("daily-treasury-rates.csv/")[1][:4])
+        text = treasury_csv(y, "real_yield" in url)
+        if not text:
+            raise ConnectionError("fixture: no such year")
+        return text
+    if "bankofengland" in url:
+        code = url.split("SeriesCodes=")[1].split("&")[0]
+        return boe_csv(code, int(url.split("Datefrom=01/Jan/")[1][:4]))
+    if "ons.gov.uk" in url:
+        return ons_csv(url.split("/timeseries/")[1].split("/")[0])
+    raise ConnectionError(f"fixture: no text for {url}")
+
+
+def fake_fetch_json(url, ttl=0, **k):
+    if "imf.org" in url:
+        return imf_json(url.rsplit("/", 1)[1])
+    if "debt_to_penny" in url:
+        return penny_json()
+    if "mts_table_9" in url:
+        return mts_json()
+    if "avg_interest_rates" in url:
+        return avg_rate_json()
+    if "hkma" in url:
+        return hkma_json(url, int(url.split("offset=")[1]))
+    if "newyorkfed" in url:
+        return nyfed_json()
+    raise ConnectionError(f"fixture: no JSON for {url}")
+
+
+def smoke_patch() -> None:
+    """scripts/smoke.py: every debt-rates source answered from the fixtures above."""
+    D.fetch, D.fetch_json = fake_fetch, fake_fetch_json
+
+
+@pytest.fixture
+def fixtures(tmp_path, monkeypatch):
+    from app import cache
+    monkeypatch.setattr(B, "SNAP_DIR", tmp_path / "snaps")
+    monkeypatch.setattr(D, "fetch", fake_fetch)
+    monkeypatch.setattr(D, "fetch_json", fake_fetch_json)
+    cache._cache.clear()
+    B.STALE.clear()
+    yield
+    cache._cache.clear()
+
+
+# ------------------------------------------------------------------ parsers
+def test_imf_parser_keeps_the_four_countries_and_ignores_the_rest():
+    d = D.parse_imf(imf_json("GGXWDG_NGDP"), "GGXWDG_NGDP")
+    assert set(d) == {"USA", "GBR", "HKG", "CHN"}
+    assert d["USA"].index[0] == pd.Timestamp("2000-01-01") and d["USA"].iloc[0] == 60
+    with pytest.raises(ValueError):
+        D.parse_imf({"values": {"GGXWDG_NGDP": {"FRA": {"2020": 1}}}}, "GGXWDG_NGDP")
+
+
+def test_mts9_tells_receipts_total_from_outlays_total():
+    m = D.parse_mts9(mts_json())
+    assert {"receipts", "outlays", "interest", "defence", "education"} <= set(m.columns)
+    assert m["receipts"].iloc[0] == pytest.approx(300.0) and m["outlays"].iloc[0] == pytest.approx(380.0)
+    assert m.index[0] == pd.Timestamp("2014-10-01") and m.index.freqstr == "MS"
+
+
+def test_treasury_csv_nominal_and_real_layouts():
+    n = D.parse_treasury_csv(treasury_csv(2020, False))
+    r = D.parse_treasury_csv(treasury_csv(2020, True))
+    assert set(n) == {"10y", "2y"} and set(r) == {"10y"}
+    assert n["10y"].index.is_monotonic_increasing and n["10y"].index[0] == pd.Timestamp("2020-01-02")
+    with pytest.raises(ValueError):
+        D.parse_treasury_csv("Date,1 Mo\n01/02/2020,1.0")
+
+
+def test_boe_parser_refuses_an_error_page():
+    assert D.parse_boe(boe_csv("IUDBEDR", 2020)).iloc[0] == pytest.approx(3.0)
+    with pytest.raises(ValueError):
+        D.parse_boe("<html>Invalid series</html>" + " " * 100)
+
+
+def test_ons_parser_monthly_and_quarterly():
+    s = D.parse_ons(ons_csv("hf6x"))
+    assert s.index[0] == pd.Timestamp("1997-04-01")
+    q = D.parse_ons('"Title","x"\n"2020 Q1","1.5"\n"2020 Q2","2.5"\n')
+    assert list(q.index.month) == [1, 4]
+    with pytest.raises(ValueError):
+        D.parse_ons('"Title","x"\n')
+
+
+def test_first_above():
+    t = pd.date_range("2015-01-01", periods=6, freq="YS")
+    a, b = pd.Series([1, 2, 5, 4, 6, 7], t), pd.Series([3, 3, 3, 5, 5, 5], t)
+    assert D.first_above(a, b) == "2019-01-01"
+    assert D.first_above(b, a) is None
+    assert D.first_above(a + 10, b) == "always"
+
+
+def test_hkma_parser_reads_every_page():
+    assert D.parse_hkma([hkma_json("er-ir", 0)], "ir_1m").iloc[-1] == 1.5
+
+
+# ------------------------------------------------------------------ payloads
+def test_every_endpoint_on_fixtures(fixtures):
+    for name in ("debt", "interest", "yields", "policy", "stress"):
+        p = D.ENDPOINTS[name]()
+        B.json_safe(p)
+        errs = {k: v for k, v in p.items() if k.endswith("_error")}
+        assert not errs, (name, errs)
+
+
+def test_debt_payload(fixtures):
+    p = D.ENDPOINTS["debt"]()
+    assert set(p["imf"]) == {"US", "UK", "Hong Kong", "China"}
+    us = p["imf"]["US"]
+    assert us["actual"] and us["proj"] and us["proj"][0] == us["actual"][-1]          # the dashed line starts at the last actual
+    assert {r["country"] for r in p["table"]} == {"US", "UK", "Hong Kong", "China"}
+    assert p["us_now"]["total"] > 5 and p["us_now"]["per_day_bn"] > 0
+
+
+def test_interest_payload_and_crossing(fixtures):
+    p = D.ENDPOINTS["interest"]()
+    us = p["us"]
+    assert us["rolling"]["interest"] and us["share"]
+    assert all(a["fy"] for a in us["annual"])
+    assert us["cross"]["defence"] is None or isinstance(us["cross"]["defence"], (int, str))
+    # net interest = primary - overall balance: US fixture 3 points of GDP in 2000
+    assert p["imf_gdp"]["US"]["actual"][0][1] == pytest.approx(3.0)
+    assert "UK" in p["hand"] and "interest" in p["hand"]["UK"]
+    assert p["uk_share"] and 0 < p["uk_share"][-1][1] < 100
+
+
+def test_yields_policy_and_stress(fixtures):
+    y = D.ENDPOINTS["yields"]()
+    assert set(y["nominal"]) == {"US", "UK", "Hong Kong", "China"} and len(y["real"]) == 2
+    hk = y["nominal"]["Hong Kong"]
+    assert pd.Timestamp(hk[-1][0], unit="s").year >= 2026                # HKGB rows follow the EFN series
+    pol = D.ENDPOINTS["policy"]()
+    assert pol["fed"]["upper"][0][1] == 6.5                               # hand-entered target from 2000
+    assert all(v is not None for v in pol["now"].values()), pol["now"]
+    base = dict(pol["hk"])
+    t = int(pd.Timestamp("2010-01-01").timestamp())
+    assert base[t] == pytest.approx(1.25)                                 # HIBOR average (1.25) above Fed lower end + 0.5 (0.5)
+    s = D.ENDPOINTS["stress"]()
+    assert {r["country"] for r in s["score"]} == {"US", "UK", "Hong Kong", "China"}
+    row = next(r for r in s["score"] if r["country"] == "US")
+    assert row["pb_star"] == pytest.approx(row["debt"] * row["r_g"] / (100 + row["g"]), abs=0.02)
+    assert s["events"] and s["spread"]
+
+
+def test_a_dead_source_blanks_one_chart(fixtures, monkeypatch):
+    def no_imf(url, ttl=0, **k):
+        if "imf.org" in url:
+            raise ConnectionError("down")
+        return fake_fetch_json(url, ttl, **k)
+    monkeypatch.setattr(D, "fetch_json", no_imf)
+    p = D.ENDPOINTS["debt"]()
+    assert p["imf"] is None and p["imf_error"] == "ConnectionError" and p["us_total"]
+
+
+def test_hand_entered_rows_cite_a_source():
+    import csv
+    for f in (B.MANUAL_DIR / "debt-rates").glob("*.csv"):
+        rows = [r for r in csv.DictReader(f.open()) if r["date"] and not r["date"].startswith("#")]
+        assert rows, f.name
+        for r in rows:
+            assert r["source"].startswith("http"), (f.name, r)
+            pd.Timestamp(r["date"])
+
+
+# ------------------------------------------------------------------ live (run by hand: pytest -m network tests/test_debt_rates.py)
+@pytest.mark.network
+@pytest.mark.parametrize("key", ["debt", "primary", "balance", "revenue", "growth", "inflation"])
+def test_live_imf(key):
+    assert len(D.imf(key)) == 4
+
+
+@pytest.mark.network
+def test_live_fiscal_data():
+    assert D.mts()["interest"].notna().sum() > 100
+    assert D.penny()["tot_pub_debt_out_amt"].iloc[-1] > 30
+    assert len(D.avg_rate()) > 100
+
+
+@pytest.mark.network
+def test_live_yields_and_rates():
+    assert len(D.treasury("daily_treasury_yield_curve")["10y"]) > 4000
+    assert len(D.boe("uk10", 2020)) > 100 and len(D.boe("uk10_real", 2020)) > 100
+    assert D.ons("receipts").iloc[-1] > 10000
+    assert len(D.nyfed()) > 1000
+    assert len(D.hkma(D.HK_EFBN, "efn_10y")) > 50

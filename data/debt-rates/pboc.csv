@@ -1,0 +1,31 @@
+date,series,value,source,note
+# PBoC policy rates, %, on the day each change took effect
+2019-08-20,1-year LPR,4.25,https://www.chinamoney.com.cn/english/bmklpr/,verify: first reformed LPR fixing
+2019-09-20,1-year LPR,4.20,https://www.chinamoney.com.cn/english/bmklpr/,verify
+2019-11-20,1-year LPR,4.15,https://www.chinamoney.com.cn/english/bmklpr/,verify
+2020-02-20,1-year LPR,4.05,https://www.chinamoney.com.cn/english/bmklpr/,verify
+2020-04-20,1-year LPR,3.85,https://www.chinamoney.com.cn/english/bmklpr/,verify
+2021-12-20,1-year LPR,3.80,https://www.chinamoney.com.cn/english/bmklpr/,verify
+2022-01-20,1-year LPR,3.70,https://www.chinamoney.com.cn/english/bmklpr/,verify
+2022-08-22,1-year LPR,3.65,https://www.chinamoney.com.cn/english/bmklpr/,verify
+2023-06-20,1-year LPR,3.55,https://www.chinamoney.com.cn/english/bmklpr/,verify
+2023-08-21,1-year LPR,3.45,https://www.chinamoney.com.cn/english/bmklpr/,verify
+2024-07-22,1-year LPR,3.35,https://www.chinamoney.com.cn/english/bmklpr/,verify
+2024-10-21,1-year LPR,3.10,https://www.chinamoney.com.cn/english/bmklpr/,verify
+2025-05-20,1-year LPR,3.00,https://www.chinamoney.com.cn/english/bmklpr/,verify: changes after May 2025 not entered
+2016-02-18,7-day reverse repo,2.25,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify: rate in force from early 2016
+2017-02-03,7-day reverse repo,2.35,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
+2017-03-16,7-day reverse repo,2.45,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
+2017-12-14,7-day reverse repo,2.50,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
+2018-03-22,7-day reverse repo,2.55,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
+2019-11-18,7-day reverse repo,2.50,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
+2020-02-03,7-day reverse repo,2.40,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
+2020-03-30,7-day reverse repo,2.20,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
+2021-12-20,7-day reverse repo,2.20,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify: unchanged
+2022-01-17,7-day reverse repo,2.10,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
+2022-08-15,7-day reverse repo,2.00,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
+2023-06-13,7-day reverse repo,1.90,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
+2023-08-15,7-day reverse repo,1.80,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
+2024-07-22,7-day reverse repo,1.70,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
+2024-09-27,7-day reverse repo,1.50,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
+2025-05-08,7-day reverse repo,1.40,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify: changes after May 2025 not entered

@@ -1,0 +1,8 @@
+date,series,value,source,note
+# CBO The Budget and Economic Outlook: 2025 to 2035 (January 2025), % of GDP, US fiscal years
+2025-09-30,Net interest (CBO),3.2,https://www.cbo.gov/publication/60870,verify: from memory
+2030-09-30,Net interest (CBO),3.6,https://www.cbo.gov/publication/60870,verify: from memory
+2035-09-30,Net interest (CBO),4.1,https://www.cbo.gov/publication/60870,verify: from memory
+2025-09-30,Defense discretionary (CBO),2.9,https://www.cbo.gov/publication/60870,verify: from memory
+2030-09-30,Defense discretionary (CBO),2.6,https://www.cbo.gov/publication/60870,verify: from memory
+2035-09-30,Defense discretionary (CBO),2.5,https://www.cbo.gov/publication/60870,verify: from memory

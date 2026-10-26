@@ -1,0 +1,14 @@
+date,value,source,note
+# China government bond 10-year yield, year-end, % (ChinaBond yield curve)
+2014-12-31,3.62,https://yield.chinabond.com.cn/,verify: year-end from memory
+2015-12-31,2.82,https://yield.chinabond.com.cn/,verify: year-end from memory
+2016-12-31,3.01,https://yield.chinabond.com.cn/,verify: year-end from memory
+2017-12-31,3.88,https://yield.chinabond.com.cn/,verify: year-end from memory
+2018-12-31,3.23,https://yield.chinabond.com.cn/,verify: year-end from memory
+2019-12-31,3.14,https://yield.chinabond.com.cn/,verify: year-end from memory
+2020-12-31,3.14,https://yield.chinabond.com.cn/,verify: year-end from memory
+2021-12-31,2.78,https://yield.chinabond.com.cn/,verify: year-end from memory
+2022-12-31,2.84,https://yield.chinabond.com.cn/,verify: year-end from memory
+2023-12-31,2.56,https://yield.chinabond.com.cn/,verify: year-end from memory
+2024-12-31,1.68,https://yield.chinabond.com.cn/,verify: year-end from memory
+2025-12-31,1.85,https://yield.chinabond.com.cn/,verify: approximate year-end from memory

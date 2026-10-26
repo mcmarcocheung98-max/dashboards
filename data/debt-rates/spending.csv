@@ -1,0 +1,49 @@
+date,series,value,source,note
+# UK: HM Treasury PESA, total managed expenditure by function, GBP bn, fiscal year ending 31 March. Interest = public sector debt interest.
+2016-03-31,UK interest,34.1,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
+2020-03-31,UK interest,41.0,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
+2021-03-31,UK interest,24.0,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: low RPI and Bank Rate in 2020-21
+2022-03-31,UK interest,69.0,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
+2023-03-31,UK interest,107.0,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: index-linked gilts uplifted by RPI
+2024-03-31,UK interest,104.0,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
+2025-03-31,UK interest,105.0,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: outturn estimate
+2016-03-31,UK defence,35.6,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
+2020-03-31,UK defence,42.4,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
+2021-03-31,UK defence,44.6,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
+2022-03-31,UK defence,46.6,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
+2023-03-31,UK defence,51.8,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
+2024-03-31,UK defence,56.5,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
+2025-03-31,UK defence,60.2,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: outturn estimate
+2016-03-31,UK education,85.6,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
+2020-03-31,UK education,95.7,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
+2021-03-31,UK education,99.6,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
+2022-03-31,UK education,107.6,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
+2023-03-31,UK education,107.7,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
+2024-03-31,UK education,116.7,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
+2025-03-31,UK education,122.5,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: outturn estimate
+# UK forecast: OBR Economic and fiscal outlook, debt interest net of APF, GBP bn
+2026-03-31,UK interest (OBR forecast),111.0,https://obr.uk/efo/economic-and-fiscal-outlook-march-2025/,verify: from memory of the March 2025 EFO
+2030-03-31,UK interest (OBR forecast),132.0,https://obr.uk/efo/economic-and-fiscal-outlook-march-2025/,verify: from memory of the March 2025 EFO
+# Hong Kong: HKSAR Budget, HKD bn, fiscal year ending 31 March. No defence line: the PLA garrison is funded by the central government.
+2025-03-31,Hong Kong education,109.0,https://www.budget.gov.hk/2025/eng/estimates.html,verify: total education expenditure from memory
+2025-03-31,Hong Kong interest,3.0,https://www.budget.gov.hk/2025/eng/estimates.html,verify: interest on government bonds from memory; small next to fiscal reserves
+# China: Ministry of Finance, national general public budget final accounts, CNY bn, calendar year. Interest = debt interest payments; excludes LGFV debt.
+2019-12-31,China interest,840,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
+2020-12-31,China interest,979,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
+2021-12-31,China interest,1045,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
+2022-12-31,China interest,1136,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
+2023-12-31,China interest,1163,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
+2024-12-31,China interest,1200,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
+2019-12-31,China defence,1190,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: national defence budget from memory
+2020-12-31,China defence,1268,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: national defence budget from memory
+2021-12-31,China defence,1355,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: national defence budget from memory
+2022-12-31,China defence,1450,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: national defence budget from memory
+2023-12-31,China defence,1554,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: national defence budget from memory
+2024-12-31,China defence,1665,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: national defence budget from memory
+2025-12-31,China defence,1781,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: 2025 budget figure from memory
+2019-12-31,China education,3496,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
+2020-12-31,China education,3636,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
+2021-12-31,China education,3768,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
+2022-12-31,China education,3963,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
+2023-12-31,China education,4124,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
+2024-12-31,China education,4210,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory

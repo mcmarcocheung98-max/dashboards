@@ -1,0 +1,7 @@
+date,value,source,note
+# Hong Kong 10-year yield after Exchange Fund Notes stopped (2015): HKGB 10-year institutional bond, %, tender average yield unless noted
+2020-12-31,0.70,https://www.hkgb.gov.hk/en/statistics/index.html,verify: approximate year-end secondary yield from memory
+2022-12-31,3.20,https://www.hkgb.gov.hk/en/statistics/index.html,verify: approximate year-end secondary yield from memory
+2023-12-31,3.20,https://www.hkgb.gov.hk/en/statistics/index.html,verify: approximate year-end secondary yield from memory
+2024-12-31,3.50,https://www.hkgb.gov.hk/en/statistics/index.html,verify: approximate year-end secondary yield from memory
+2026-08-12,3.58,https://www.info.gov.hk/gia/general/202608/12/P2026081200501p.htm,verify: tender of HKGB 3.17 3507 (10-year) as summarised by a search result
