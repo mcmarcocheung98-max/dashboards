@@ -448,6 +448,7 @@ def fill_coins(pause_on_limit: float = 75.0) -> dict:
     """Background job: download BTC and every candidate coin from CoinGecko one at a time (PACE apart), waiting longer after a 429.
     Coins already fetched within a day come from memory and cost nothing. Returns {ticker: 'ok' | error}."""
     done = {}
+    by_tick = {c["ticker"]: c for c in coins_list()}
     for cid, tick in [("bitcoin", "BTC")] + [(c["coingecko_id"], c["ticker"]) for c in coins_list()]:
         for attempt in range(2):
             try:
@@ -463,12 +464,15 @@ def fill_coins(pause_on_limit: float = 75.0) -> dict:
                     time.sleep(pause_on_limit)
                 else:
                     break
-    for c in coins_list():                                # then each coin's fees, TVL, unlocks and supply (optional parts)
-        try:
-            fd = fill_fundamentals(c)
-            done[c["ticker"] + ":fundamentals"] = "ok" if not fd.get("errors") else "partial: " + ", ".join(fd["errors"])
-        except Exception as e:
-            done[c["ticker"] + ":fundamentals"] = f"{type(e).__name__}: {str(e)[:80]}"
+        if tick in by_tick:                               # then that coin's fees, TVL, unlocks and supply, unless fetched in the last 20 hours,
+            if time.time() - (fundamentals(tick).get("updated") or 0) < 20 * 3600:    # so a redeploy mid-fill resumes instead of starting over
+                done[tick + ":fundamentals"] = "fresh"
+                continue
+            try:
+                fd = fill_fundamentals(by_tick[tick])
+                done[tick + ":fundamentals"] = "ok" if not fd.get("errors") else "partial: " + ", ".join(fd["errors"])
+            except Exception as e:
+                done[tick + ":fundamentals"] = f"{type(e).__name__}: {str(e)[:80]}"
     from ..cache import _cache
     for k in [k for k in _cache if k.startswith(f"topic:{SLUG}:coin")]:      # the next page view rebuilds from the fresh data
         _cache.pop(k, None)
