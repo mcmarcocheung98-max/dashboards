@@ -249,6 +249,17 @@ def test_yields_policy_and_stress(fixtures):
     assert s["events"] and s["spread"]
 
 
+def test_fed_range_with_a_point_target_from_the_api(fixtures, monkeypatch):
+    """The NY Fed API can give a pre-2008 single target as targetRateFrom alone, on days the hand-entered history also covers."""
+    n = pd.DataFrame({"effr": [1.0, 1.1, 0.2], "lo": [1.0, 1.0, 0.0], "hi": [None, None, 0.25]},
+                     index=pd.to_datetime(["2008-10-29", "2008-11-03", "2008-12-16"]))
+    monkeypatch.setattr(D, "nyfed", lambda: n.copy())
+    r = D.fed_range()
+    assert not r.index.duplicated().any() and r.loc["2008-11-03", "hi"] == 1.0
+    assert len(D.steps(r["lo"])) and len(D.hk_base())
+    B.json_safe(D.ENDPOINTS["policy"]())
+
+
 def test_readings_come_from_the_cached_payloads(fixtures):
     assert D.READINGS() == []                                             # nothing computed yet: nothing to report, nothing fetched
     for name in ("interest", "yields", "policy", "stress"):

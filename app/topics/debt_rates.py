@@ -295,6 +295,7 @@ def month_end(s: pd.Series) -> pd.Series:
 def steps(s: pd.Series, end: pd.Timestamp | None = None) -> pd.Series:
     """A rate that changes on given days -> its value at each month start (carried forward to `end`, default this month)."""
     s = s.dropna().sort_index()
+    s = s[~s.index.duplicated(keep="last")]
     end = end or pd.Timestamp.now().normalize().replace(day=1)
     idx = pd.date_range(s.index[0].normalize().replace(day=1), end, freq="MS")
     return s.reindex(s.index.union(idx)).ffill().reindex(idx).dropna()
@@ -457,8 +458,9 @@ def fed_range() -> pd.DataFrame:
     h = hand("fed_target").get("value", pd.Series(dtype=float))
     try:
         n = nyfed()
+        n["hi"] = n["hi"].fillna(n["lo"])          # a single target (before December 2008) can come as targetRateFrom alone
     except Exception:
-        n = pd.DataFrame(columns=["effr", "lo", "hi"])
+        n = pd.DataFrame(columns=["effr", "lo", "hi"], dtype=float)
     if len(h):
         lo = h.where(h.index < "2008-12-16", h - 0.25)
         pre = pd.DataFrame({"hi": h, "lo": lo})
@@ -466,6 +468,7 @@ def fed_range() -> pd.DataFrame:
         if len(api):
             pre = pre[pre.index < api.index[0]]
         n = pd.concat([pre, n]).sort_index()
+        n = n[~n.index.duplicated(keep="last")]
     if n.empty:
         raise ValueError("no Fed target: NY Fed unreachable and data/debt-rates/fed_target.csv empty")
     return n
