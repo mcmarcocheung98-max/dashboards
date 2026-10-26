@@ -1,45 +1,88 @@
 // London Housing Index: tabs and cards. Data from /api/housing/<prices|market|afford>; helpers from topic.html.
 (() => {
 const pc = (v, d = 1) => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(d) + "%";
-// Borough map: one blue ramp, five quantile bins, low to high = away from the page colour (light theme light→dark, dark theme dark→light);
-// both ends clear 2:1 against the surface (checked with the dataviz palette validator); grey = no figure
-const RAMPS = { light: ["#86b6ef", "#5598e7", "#2a78d6", "#1c5cab", "#104281"], dark: ["#184f95", "#256abf", "#3987e5", "#6da7ec", "#b7d3f6"] };
+// Borough map: a green-to-blue ramp, seven bins, low to high = away from the page colour (light theme light green→dark blue, dark theme
+// dark green→light blue); lightness rises steadily and both ends clear 2:1 against the surface (dataviz palette validator); grey = no figure.
+// The bins are fixed per measure across the whole timeline, so the map darkens as prices rise rather than re-ranking every month.
+const RAMPS = { light: ["#6dc295", "#4bae98", "#2f93a4", "#2577ad", "#1d5fa3", "#15478c", "#0c2f66"],
+  dark: ["#1d5a45", "#1f7560", "#23907b", "#2fa9a3", "#4dbdc8", "#7fcfe6", "#b9e3f7"] };
 const isDark = () => parseInt((css("--surface").match(/^#(..)/) || [0, "ff"])[1], 16) < 0x80;
 const MAP_METRICS = [["flat", "Flat"], ["terraced", "Terraced house"], ["semi", "Semi-detached"], ["detached", "Detached"], ["rent_2bed", "2-bed rent / month"]];
-let mapMetric = "flat";
+let mapMetric = "flat", mapMonth = null, mapPlay = null;
 const money = v => v == null ? "–" : v >= 1e6 ? "£" + (v / 1e6).toFixed(2) + "m" : v >= 1e4 ? "£" + Math.round(v / 1000) + "k" : gbp(v);
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 function boroughMap(d) {
+  const H = d.map.history || {}, V = H.values || {}, n = H.months || 0;
+  const [y0, m0] = (H.start || "2005-01").split("-").map(Number);
+  const label = i => MONTHS[(m0 - 1 + i) % 12] + " " + (y0 + Math.floor((m0 - 1 + i) / 12));
+  const names = Object.fromEntries(d.rows.filter(r => r.code).map(r => [r.code, r.borough]));
+  const at = (m, code, i) => ((V[m] || {})[code] || [])[i] ?? null;
+  const fmt = (m, v) => v == null ? "–" : m === "rent_2bed" ? gbp(v) + " a month" : money(v);
+  const lastWith = m => { for (let i = n - 1; i >= 0; i--) if (Object.values(V[m] || {}).some(a => a[i] != null)) return i; return n - 1; };
+  const firstWith = m => { for (let i = 0; i < n; i++) if (Object.values(V[m] || {}).some(a => a[i] != null)) return i; return 0; };
   const host = el("div", {}), info = el("div", { class: "muted", style: "min-height:40px;margin-top:6px" }, "Hover over or tap a borough.");
-  const byCode = Object.fromEntries(d.rows.filter(r => r.code).map(r => [r.code, r]));
-  const show = r => info.replaceChildren(el("b", { style: "color:var(--ink)" }, r.borough), " · flat " + money(r.flat) + " · terraced " + money(r.terraced) +
-    " · semi " + money(r.semi) + " · detached " + money(r.detached) + " · 2-bed rent " + (r.rent_2bed ? gbp(r.rent_2bed) + " a month" : "–") + " · all homes " + money(r.avg));
+  let picked = null;
+  const show = code => {
+    if (!code) return;
+    const i = mapMonth;
+    info.replaceChildren(el("b", { style: "color:var(--ink)" }, names[code] || code), " · " + label(i) + " · flat " + money(at("flat", code, i)) + " · terraced " + money(at("terraced", code, i)) +
+      " · semi " + money(at("semi", code, i)) + " · detached " + money(at("detached", code, i)) + " · 2-bed rent " + fmt("rent_2bed", at("rent_2bed", code, i)));
+  };
   const draw = () => {
-    const vals = d.rows.map(r => r[mapMetric]).filter(v => v != null).sort((a, b) => a - b);
-    const cuts = [1, 2, 3, 4].map(i => vals[Math.floor(i * vals.length / 5)]);
+    if (mapPlay) { clearInterval(mapPlay); mapPlay = null; }
+    const RAMP = RAMPS[isDark() ? "dark" : "light"], first = firstWith(mapMetric), last = lastWith(mapMetric);
+    if (mapMonth == null || mapMonth > last) mapMonth = last;
+    if (mapMonth < first) mapMonth = first;
+    // fixed bins for this measure: septiles of every borough-month value on the timeline
+    const all = Object.values(V[mapMetric] || {}).flat().filter(v => v != null).sort((a, b) => a - b);
+    const cuts = [1, 2, 3, 4, 5, 6].map(k => all[Math.floor(k * all.length / 7)]);
     const bin = v => v == null ? null : cuts.filter(c => v >= c).length;
-    const RAMP = RAMPS[isDark() ? "dark" : "light"];
-    const svg = svgEl("svg", { viewBox: d.map.viewBox, role: "img", "aria-label": "Map of London boroughs coloured by " + MAP_METRICS.find(m => m[0] === mapMetric)[1], style: "width:100%;height:auto;max-height:560px;display:block" });
+    const metricName = MAP_METRICS.find(m => m[0] === mapMetric)[1];
+    const svg = svgEl("svg", { viewBox: d.map.viewBox, role: "img", style: "width:100%;height:auto;max-height:560px;display:block" });
+    const paths = {};
     for (const sh of d.map.shapes) {
-      const r = byCode[sh.code], b = r ? bin(r[mapMetric]) : null;
-      const p = svgEl("path", { d: sh.d, fill: b == null ? css("--chip") : RAMP[b], stroke: css("--surface"), "stroke-width": 2, "stroke-linejoin": "round", style: "cursor:pointer" }, svg);
-      if (!r) continue;
-      svgEl("title", {}, p).textContent = r.borough + ": " + (r[mapMetric] == null ? "no figure" : mapMetric === "rent_2bed" ? gbp(r[mapMetric]) + " a month" : money(r[mapMetric]));
-      const on = () => { svg.querySelectorAll("path").forEach(x => x.setAttribute("stroke", css("--surface"))); p.setAttribute("stroke", css("--ink")); svg.append(p); show(r); };
+      const p = svgEl("path", { d: sh.d, stroke: css("--surface"), "stroke-width": 2, "stroke-linejoin": "round", style: "cursor:pointer;transition:fill .25s" }, svg);
+      const t = svgEl("title", {}, p);
+      paths[sh.code] = [p, t];
+      const on = () => { picked = sh.code; Object.values(paths).forEach(([x]) => x.setAttribute("stroke", css("--surface"))); p.setAttribute("stroke", css("--ink")); svg.append(p); show(sh.code); };
       p.addEventListener("mouseenter", on); p.addEventListener("click", on);
     }
-    const lo = vals[0], edges = [lo, ...cuts, vals[vals.length - 1]];
+    const when = el("b", { style: "font-variant-numeric:tabular-nums;min-width:72px;display:inline-block;color:var(--ink)" });
+    const paint = () => {
+      for (const [code, [p, t]] of Object.entries(paths)) {
+        const v = at(mapMetric, code, mapMonth), b = bin(v);
+        p.setAttribute("fill", b == null ? css("--chip") : RAMP[b]);
+        t.textContent = (names[code] || code) + ", " + label(mapMonth) + ": " + (v == null ? "no figure" : fmt(mapMetric, v));
+      }
+      svg.setAttribute("aria-label", "Map of London boroughs coloured by " + metricName + ", " + label(mapMonth));
+      when.textContent = label(mapMonth); slider.value = mapMonth; show(picked);
+    };
+    const slider = el("input", { type: "range", min: first, max: last, step: 1, value: mapMonth, "aria-label": "Month", style: "flex:1;min-width:120px;accent-color:var(--accent)",
+      oninput: e => { mapMonth = +e.target.value; paint(); } });
+    const stop = () => { clearInterval(mapPlay); mapPlay = null; play.textContent = "▶ Play"; };
+    const play = el("button", { style: "border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:8px;padding:4px 10px;font:inherit;font-size:12.5px;cursor:pointer",
+      onclick: () => {
+        if (mapPlay) return stop();
+        if (mapMonth >= last) mapMonth = first;
+        play.textContent = "❚❚ Pause";
+        mapPlay = setInterval(() => { if (!document.contains(svg) || mapMonth >= last) return stop(); mapMonth = Math.min(last, mapMonth + 3); paint(); }, 160);
+      } }, "▶ Play");
+    const timeline = el("div", { style: "display:flex;align-items:center;gap:10px;margin:4px 0 8px;flex-wrap:wrap" }, play, when, slider,
+      el("span", { class: "muted" }, label(first) + " – " + label(last)));
+    const edges = [all[0], ...cuts, all[all.length - 1]];
     const legend = el("div", { class: "chips", style: "margin-top:6px;font-size:12px" }, ...RAMP.map((c, i) => el("span", { style: "display:inline-flex;align-items:center;gap:5px;color:var(--ink2)" },
       el("i", { style: `display:inline-block;width:14px;height:14px;border-radius:3px;background:${c}` }), money(edges[i]) + "–" + money(edges[i + 1]))),
       el("span", { style: "display:inline-flex;align-items:center;gap:5px;color:var(--ink2)" }, el("i", { style: "display:inline-block;width:14px;height:14px;border-radius:3px;background:var(--chip)" }), "no figure"));
     const seg = el("div", { class: "seg" }, ...MAP_METRICS.map(([k, l]) => el("button", { class: k === mapMetric ? "on" : "", onclick: () => { mapMetric = k; draw(); } }, l)));
-    host.replaceChildren(seg, svg, legend);
+    host.replaceChildren(seg, timeline, svg, legend);
+    paint();
   };
+  if (!n) return card("Map: what a home costs in each borough", el("div", { class: "muted" }, "Not available right now."));
   draw();
-  const rm = (d.rows.find(r => r.rent_month) || {}).rent_month;
-  return card("Map: what a home costs in each borough", host, info,
+  return card("Map: what a home costs in each borough, over time", host, info,
     d.rents_error ? el("div", { class: "muted" }, "2-bed rents not available right now (" + d.rents_error + ").") : null,
-    note("Colour: five equal-sized groups of boroughs, light (cheapest fifth) to dark (dearest fifth), for the measure chosen above. Prices: UK HPI average by property type, " +
-      (d.as_of || "").slice(0, 7) + ". Rent: ONS Price Index of Private Rents, average agreed rent for a 2-bedroom home" + (rm ? ", " + rm.slice(0, 7) : "") + ". " + d.map.source));
+    note("Drag the timeline or press Play to watch prices change month by month. Colour: seven bands, green (cheapest) to dark blue (dearest), fixed across all years for the measure chosen, so the map darkens as prices rise; prices are as paid, not adjusted for inflation. " +
+      "Prices: UK HPI average by property type (from 2005). Rent: ONS Price Index of Private Rents, average agreed rent for a 2-bedroom home (from 2015). " + d.map.source));
 }
 const VIEWS = {
   async prices() {

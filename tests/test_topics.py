@@ -684,6 +684,11 @@ def test_housing_borough_map(snapdir, monkeypatch):
     w = next(r for r in b["rows"] if r["borough"] == "City of Westminster")
     assert w["code"] == "E09000033" and w["rent_2bed"] == 3600 and w["flat"] and w["terraced"] and w["rent_month"] == "2026-09-01"
     assert next(r for r in b["rows"] if r["borough"] == "City of London")["rent_2bed"] is None and b["rents_error"] is None
+    h = b["map"]["history"]
+    assert h["start"] == "2005-01" and set(h["values"]) == {"flat", "terraced", "semi", "detached", "rent_2bed"}
+    wf, wr = h["values"]["flat"]["E09000033"], h["values"]["rent_2bed"]["E09000033"]
+    assert len(wf) == len(wr) == h["months"] and all(v % 100 == 0 for v in wf if v is not None)        # prices to the nearest £100
+    assert wr[(2014 - 2005) * 12] is None and wr[(2015 - 2005) * 12] == 2900 and wr[-1] == 3600         # rents start in 2015
 
 
 def test_housing_rents_from_pipr(snapdir, monkeypatch):

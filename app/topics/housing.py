@@ -521,6 +521,10 @@ def _afford_now() -> dict:
     return out
 
 
+MAP_HISTORY = {"flat": "avg_flat", "terraced": "avg_terraced", "semi": "avg_semi", "detached": "avg_detached", "rent_2bed": "rent_2bed"}   # map measure -> column
+MAP_SINCE = "2005-01-01"        # the map's timeline starts here (rents start in 2015 and are blank before)
+
+
 def borough_map() -> dict:
     """data/housing/london_boroughs.json: SVG outlines of the 33 boroughs (ONS boundaries, simplified), keyed by ONS code."""
     import json
@@ -532,6 +536,7 @@ def _boroughs_now() -> dict:
     """Every London borough's average price (all, flat, and the three house types) and yearly change from the UK HPI, the 2-bed and
     all-property rent from ONS PIPR, and the outlines for the map."""
     rows, series, errors, rents_error = [], {}, {}, None
+    hist: dict[str, dict] = {m: {} for m in MAP_HISTORY}
     geo = borough_map()
     code_of = {g["name"]: g["code"] for g in geo["boroughs"]} | {"City of Westminster": "E09000033"}
     try:
@@ -553,13 +558,33 @@ def _boroughs_now() -> dict:
                          "rent_2bed": last(rf["rent_2bed"]) if rf is not None else None, "rent": last(rf["rent"]) if rf is not None else None,
                          "rent_month": str(rf["rent_2bed"].dropna().index[-1].date()) if rf is not None and rf["rent_2bed"].notna().any() else None})
             series[name] = _pts(_rebase(a, "2015-01-01"), 1)
+            if code:
+                for m, col in MAP_HISTORY.items():
+                    frame = rf if m == "rent_2bed" else d
+                    if frame is not None:
+                        hist[m][code] = frame[col]
         except Exception as e:
             errors[b] = type(e).__name__
     if not [r for r in rows if r["avg"]]:
         raise ValueError(f"no borough could be read ({len(errors)} failed)")
     rows.sort(key=lambda r: -(r["avg"] or 0))
     return {"rows": rows, "indexed": series, "errors": errors, "rents_error": rents_error, "as_of": max(r["month"] for r in rows), "stale": {},
-            "updated": int(time.time()), "map": {"viewBox": geo["viewBox"], "source": geo["source"], "shapes": [{"code": g["code"], "d": g["d"]} for g in geo["boroughs"]]}}
+            "updated": int(time.time()), "map": {"viewBox": geo["viewBox"], "source": geo["source"], "shapes": [{"code": g["code"], "d": g["d"]} for g in geo["boroughs"]],
+                                                 "history": _map_history(hist)}}
+
+
+def _map_history(hist: dict[str, dict[str, pd.Series]]) -> dict:
+    """Monthly values per measure and borough on one month axis from MAP_SINCE to the latest month any measure has, for the map's
+    timeline: {"start": "YYYY-MM", "months": n, "values": {measure: {code: [int or None, ...]}}}. Prices are rounded to £100."""
+    ends = [s.dropna().index.max() for by in hist.values() for s in by.values() if s.notna().any()]
+    if not ends:
+        return {}
+    idx = pd.date_range(MAP_SINCE, max(ends), freq="MS")
+    vals = {}
+    for m, by in hist.items():
+        step = 1 if m == "rent_2bed" else 100
+        vals[m] = {c: [None if pd.isna(v) else int(round(v / step) * step) for v in s.groupby(s.index).last().reindex(idx).to_numpy()] for c, s in by.items()}
+    return {"start": idx[0].strftime("%Y-%m"), "months": len(idx), "values": vals}
 
 
 def _rates(missing: dict) -> dict:
