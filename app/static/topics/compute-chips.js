@@ -115,7 +115,7 @@ const VIEWS = {
       : card("Share prices", el("div", { class: "muted" }, "Not available right now (" + (d.prices_error || "no data") + ")."));
     const rows = card("Hand-entered revenue", table(["Quarter end", "Company", "Revenue (bn)", "Source"], (d.rows || []).map(r => el("tr", {}, el("td", {}, r.date), el("td", {}, r.series), el("td", {}, num(+r.value, 2)), srcCell(r)))),
       note("Add each quarter from the company's results release. Rows marked verify were entered from memory."));
-    return [head, rev, yoy, px, rows];
+    return [head, px, rev, yoy, rows];          // the daily price chart first: it drives the shared date axis, the quarterly charts follow
   },
 
   async supply() {

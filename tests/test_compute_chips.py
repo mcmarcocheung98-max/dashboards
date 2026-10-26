@@ -236,7 +236,7 @@ def test_every_endpoint_through_the_server(mocked):
 
     async def go():
         async with TestClient(TestServer(make_app())) as c:
-            for name in ["meta", *M.ENDPOINTS]:
+            for name in ["meta", *(k for k in M.ENDPOINTS if k != "sec_probe")]:     # sec_probe is a live diagnostic
                 r = await c.get(f"/api/compute-chips/{name}")
                 assert r.status == 200, name
             assert (await c.get("/compute-chips.js")).status == 200

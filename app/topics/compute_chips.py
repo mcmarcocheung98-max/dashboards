@@ -402,6 +402,22 @@ def _overview_now() -> dict:
     return out
 
 
+def _sec_probe() -> dict:
+    """/api/compute-chips/sec_probe: what SEC EDGAR answers this server with each kind of User-Agent (it refuses Railway with 403 so far).
+    Not a tab; read it with the show-json workflow."""
+    url = EDGAR.format(cik=CHIPMAKERS["AMD"])
+    variants = {"configured": SEC_HEADERS, "name and site": {"User-Agent": "Dashboards admin@dashboards-production-bde6.up.railway.app"},
+                "browser": {"User-Agent": B.UA["User-Agent"]}, "python-requests": {}}
+    out = {}
+    for name, h in variants.items():
+        try:
+            r = requests.get(url, headers=h, timeout=20)
+            out[name] = {"status": r.status_code, "bytes": len(r.content), "start": r.text[:160]}
+        except Exception as e:
+            out[name] = {"error": f"{type(e).__name__}: {str(e)[:120]}"}
+    return out
+
+
 def _cached_ep(name, fn, ttl=6 * 3600):
     from ..cache import _cached
     return lambda: _cached(f"topic:{SLUG}:{name}", ttl, fn)
@@ -409,4 +425,5 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 
 _power, _capex, _compute, _chips, _supply = (_cached_ep("power", _power_now), _cached_ep("capex", _capex_now), _cached_ep("compute", _compute_now),
                                              _cached_ep("chips", _chips_now), _cached_ep("supply", _supply_now, 600))
-ENDPOINTS = {"overview": _cached_ep("overview", _overview_now, 600), "power": _power, "capex": _capex, "compute": _compute, "chips": _chips, "supply": _supply}
+ENDPOINTS = {"overview": _cached_ep("overview", _overview_now, 600), "power": _power, "capex": _capex, "compute": _compute, "chips": _chips, "supply": _supply,
+             "sec_probe": _cached_ep("sec_probe", _sec_probe, 600)}
