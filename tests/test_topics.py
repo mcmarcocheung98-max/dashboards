@@ -395,7 +395,7 @@ def test_routes(snapdir, monkeypatch):
             assert idx.status == 200 and "Dashboards" in await idx.text() and idx.headers["X-Frame-Options"] == "DENY"
             assert (await c.get("/healthz")).status == 200
             j = await (await c.get("/api/index")).json()
-            assert [d["slug"] for d in j["dashboards"]] == list(topics.REGISTRY)
+            assert sorted(d["slug"] for d in j["dashboards"]) == sorted(topics.REGISTRY) and j["categories"]
             page = await c.get("/housing")
             assert page.status == 200 and "window.TOPIC.VIEWS" in await page.text()
             js = await c.get("/housing.js")

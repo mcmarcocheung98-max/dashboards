@@ -84,7 +84,7 @@ def endpoints(slug: str) -> dict:
 
 def meta(slug: str) -> dict:
     t, m = REGISTRY[slug], module(slug)
-    return {"slug": t.slug, "title": t.title, "blurb": t.blurb, "tabs": [list(x) for x in t.tabs], "sources": list(getattr(m, "SOURCES", [])),
+    return {"slug": t.slug, "title": t.title, "blurb": t.blurb, "category": category(slug), "tabs": [list(x) for x in t.tabs], "sources": list(getattr(m, "SOURCES", [])),
             "notes": getattr(m, "NOTES", "")}
 
 
@@ -101,8 +101,25 @@ def changes(slug: str) -> dict:
     return _daily.changes(slug, REGISTRY[slug].tabs)
 
 
+# The index page groups dashboards under these headings, in this order. A dashboard not listed here goes under "More".
+CATEGORIES = (
+    ("Money & markets", "Prices, rates and where capital is flowing.", ("btc-cycles", "debt-rates", "housing")),
+    ("AI & technology", "How fast AI, chips and machines are arriving, and who leads.", ("ai", "compute-chips", "china-us-tech", "robotaxi", "space")),
+    ("People & planet", "The slow forces: population, health and climate.", ("demographics", "longevity", "climate")),
+)
+
+
+def category(slug: str) -> str:
+    return next((name for name, _, slugs in CATEGORIES if slug in slugs), "More")
+
+
 def index() -> dict:
-    return {"dashboards": [{"slug": t.slug, "title": t.title, "blurb": t.blurb, "icon": t.icon} for t in REGISTRY.values()]}
+    tile = lambda t: {"slug": t.slug, "title": t.title, "blurb": t.blurb, "icon": t.icon, "category": category(t.slug)}
+    groups = [{"name": n, "blurb": b, "dashboards": [tile(REGISTRY[s]) for s in slugs if s in REGISTRY]} for n, b, slugs in CATEGORIES]
+    listed = {s for _, _, slugs in CATEGORIES for s in slugs}
+    groups.append({"name": "More", "blurb": "", "dashboards": [tile(t) for t in REGISTRY.values() if t.slug not in listed]})
+    groups = [g for g in groups if g["dashboards"]]
+    return {"categories": groups, "dashboards": [d for g in groups for d in g["dashboards"]]}
 
 
 # old addresses of dashboards that were merged or renamed: slug -> (new slug, tab)

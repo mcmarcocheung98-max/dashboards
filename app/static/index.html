@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dashboards</title>
-<meta name="description" content="Public, read-only data dashboards: London housing, AI adoption, autonomous cars, AI jobs.">
+<meta name="description" content="Public, read-only data dashboards on money and markets, AI and technology, and people and the planet.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232a78d6'/><path d='M7 22l6-7 5 4 7-9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <style>
   :root {
@@ -68,6 +68,12 @@
   a.tile .card { height: 100%; transition: border-color .15s; }
   a.tile:hover .card { border-color: var(--accent); }
   .tile h2 { font-size: 16px; }
+  /* one row per category: its title on the left, its dashboards following to the right; stacked on a phone */
+  .cat { display: grid; grid-template-columns: 200px 1fr; gap: 16px; padding: 18px 0; border-top: 1px solid var(--line); }
+  .cat:first-child { border-top: 0; padding-top: 4px; }
+  .cat h2.cname { font-size: 17px; margin: 4px 0 6px; font-weight: 650; }
+  .cat .tiles { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  @media (max-width: 720px) { .cat { grid-template-columns: 1fr; gap: 8px; } }
 </style>
 </head>
 <body>
@@ -82,8 +88,12 @@ const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag)
 const healthLine = (slug, H) => { const h = H && H.dashboards && H.dashboards[slug]; if (!h || !(h.fresh + h.stale + h.failing)) return null;
   return el("div", { class: "muted", style: "margin-top:8px;font-size:12px" }, "Sources: " + h.fresh + " fresh" + (h.stale ? " · " + h.stale + " showing last copy" : "") + (h.failing ? " · " + h.failing + " failing" : "")); };
 Promise.all([fetch("/api/index").then(r => r.json()), fetch("/api/health").then(r => r.json()).catch(() => null)]).then(([d, H]) => {
-  document.getElementById("view").replaceChildren(el("div", { class: "tiles" }, ...d.dashboards.map(t => el("a", { class: "tile", href: "/" + t.slug },
-    el("div", { class: "card" }, el("h2", {}, t.title), el("div", { class: "muted" }, t.blurb), healthLine(t.slug, H))))));
+  const tile = t => el("a", { class: "tile", href: "/" + t.slug },
+    el("div", { class: "card" }, el("h2", {}, t.title), el("div", { class: "muted" }, t.blurb), healthLine(t.slug, H)));
+  const cats = d.categories || [{ name: "", blurb: "", dashboards: d.dashboards }];
+  document.getElementById("view").replaceChildren(el("div", {}, ...cats.map(c => el("section", { class: "cat" },
+    el("div", {}, el("h2", { class: "cname" }, c.name), el("div", { class: "muted" }, c.blurb), el("div", { class: "muted", style: "margin-top:4px" }, c.dashboards.length + (c.dashboards.length === 1 ? " dashboard" : " dashboards"))),
+    el("div", { class: "tiles" }, ...c.dashboards.map(tile))))));
 }).catch(e => document.getElementById("view").replaceChildren(el("div", { class: "card err" }, "Could not load: " + e.message)));
 </script>
 </body>

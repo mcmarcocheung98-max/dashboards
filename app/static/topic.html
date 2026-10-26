@@ -78,7 +78,7 @@
 </style>
 </head>
 <body>
-<div class="crumbs"><a href="/">All dashboards</a></div>
+<div class="crumbs"><a href="/">All dashboards</a><span id="crumbcat"></span></div>
 <header>
   <div><h1 id="title">Dashboard</h1><div class="sub" id="blurb"></div></div>
   <div class="sub" id="stamp"></div>
@@ -435,6 +435,7 @@ async function boot() {
   META = await api("meta");
   document.title = META.title;
   document.getElementById("title").textContent = META.title;
+  if (META.category) document.getElementById("crumbcat").textContent = " › " + META.category;
   document.getElementById("blurb").textContent = META.blurb;
   TABS = META.tabs;
   if (!TABS.some(t => t[0] === current)) current = TABS[0][0];
