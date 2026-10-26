@@ -88,7 +88,7 @@ def fake_read(url):
         raise LookupError(str(e))
 
 
-def fake_http_get(url, timeout=30):
+def fake_http_get(url, timeout=30, headers=None):
     if "prices.pokemontcg.io/tcgplayer/" in url:
         pid = 1000 + sum(map(ord, url.rsplit("/", 1)[1])) % 900
         return 200, f"https://www.tcgplayer.com/product/{pid}/x", "", ["https://tcgplayer.pxf.io/c/1/2?u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F" + str(pid), f"https://www.tcgplayer.com/product/{pid}/x"]

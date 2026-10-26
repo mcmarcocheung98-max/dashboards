@@ -47,6 +47,8 @@ TCG_HISTORY = "https://infinite-api.tcgplayer.com/price/history/{pid}/detailed?r
 TCG_DETAILS = "https://mp-search-api.tcgplayer.com/v2/product/{pid}/details"
 FX = "https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,HKD"
 FX_FALLBACK = "https://open.er-api.com/v6/latest/USD"
+# PriceCharting answers 400 "unauthorized request" (JSON) to the shared UA's Accept (csv, json): ask for a web page
+PC_HEADERS = {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.9"}
 TCG_HEADERS = {"Accept": "application/json, text/plain, */*", "Origin": "https://www.tcgplayer.com", "Referer": "https://www.tcgplayer.com/"}
 
 PACE = 8.0                       # seconds between downloads from the same shop site in the background fill
@@ -246,10 +248,10 @@ def _save_resolved(d: dict) -> None:
     f.write_text(json.dumps(d, indent=1, sort_keys=True))
 
 
-def http_get(url: str, timeout: int = 30) -> tuple[int, str, str, list[str]]:
+def http_get(url: str, timeout: int = 30, headers: dict | None = None) -> tuple[int, str, str, list[str]]:
     """(status, final url, body, redirect chain) with plain requests, for finding a product's address; not snapshotted."""
     import requests
-    r = requests.get(url, headers=B.UA, timeout=timeout, allow_redirects=True)
+    r = requests.get(url, headers={**B.UA, **(headers or PC_HEADERS)}, timeout=timeout, allow_redirects=True)
     return r.status_code, r.url, r.text, [h.headers.get("location", "") for h in r.history] + [r.url]
 
 
@@ -313,7 +315,7 @@ def _resolve_tcg(item: dict, ptcg: dict, res: dict) -> str | None:
     if tcg_id(item):
         return tcg_id(item)
     r = res.setdefault(item["key"], {})
-    link = (ptcg.get(item.get("ptcg_id")) or {}).get("tcg_url")
+    link = (ptcg.get(item.get("ptcg_id")) or {}).get("tcg_url") or (f"https://prices.pokemontcg.io/tcgplayer/{item['ptcg_id']}" if item.get("ptcg_id") else None)
     if not link or r.get("tcg_tried", 0) > time.time() - 7 * DAY:
         return None
     r["tcg_tried"] = time.time()
@@ -388,7 +390,7 @@ def fill() -> dict:
             u = _resolve_pc(i, res)
             if not u:
                 raise LookupError("no PriceCharting page")
-            parse_pc_chart(polite(u, "pc", MAX_AGE["pc"], min_bytes=500))
+            parse_pc_chart(polite(u, "pc", MAX_AGE["pc"], min_bytes=500, headers=PC_HEADERS))
         step(f"pc {i['key']}", pc)
         pid = _resolve_tcg(i, ptcg, res)
         if pid:
@@ -814,10 +816,14 @@ def _regions_now() -> dict:
         fx = _fx()
     except LookupError:
         fx = None
+    L = daily_log()
+    logged = {k: v.ffill().iloc[-1] for k, v in L.get("market", pd.DataFrame()).items()} if "market" in L else {}
     cards = []
     for i in items:
-        p = P.get(i.get("ptcg_id"))
-        if not p:
+        p = dict(P.get(i.get("ptcg_id")) or {})
+        if not p.get("tcg") and _f(logged.get(i["key"])):         # pokemontcg.io down: TCGplayer's own market price from the daily log
+            p["tcg"] = _f(logged[i["key"]])
+        if not p.get("tcg") and not p.get("cm_trend"):
             continue
         eur = p.get("cm_trend") or p.get("cm_avg30")
         usd_eu = eur / fx["EUR"] if eur and fx else None
@@ -833,7 +839,6 @@ def _regions_now() -> dict:
                       "eu_7v30": _r(p["cm_avg7"] / p["cm_avg30"] - 1, 4) if p.get("cm_avg7") and p.get("cm_avg30") else None,
                       "us_30d": us30, "tcg_url": p.get("tcg_url"), "cm_url": p.get("cm_url")})
     med = lambda k: _r(float(np.median([c[k] for c in cards if c[k] is not None])), 4) if any(c[k] is not None for c in cards) else None
-    L = daily_log()
 
     def log_mom(field, days=30):
         if field not in L or len(L[field]) < days // 2:
@@ -849,7 +854,8 @@ def _regions_now() -> dict:
         prev = s[s.index <= s.index[-1] - pd.DateOffset(months=3)]
         if len(prev) and prev.iloc[-1]:
             jp_chg.append(s.iloc[-1] / prev.iloc[-1] - 1)
-    regions = [{"region": "US (TCGplayer)", "mom": log_mom("tcg") if log_mom("tcg") is not None else med("us_30d"), "basis": "30-day change, basket median"},
+    us = next((m for m in (log_mom("tcg"), log_mom("market"), med("us_30d")) if m is not None), None)
+    regions = [{"region": "US (TCGplayer)", "mom": us, "basis": "30-day change, basket median"},
                {"region": "UK / EU (Cardmarket)", "mom": log_mom("cm_trend") if log_mom("cm_trend") is not None else med("eu_7v30"),
                 "basis": "30-day change of the trend price once a month of daily log exists; until then the 7-day vs 30-day average"},
                {"region": "Japan (hand-entered)", "mom": _r(float(np.median(jp_chg)), 4) if jp_chg else None, "basis": "3-month change, median of the entered sets"}]
@@ -923,23 +929,34 @@ def _layout_now() -> dict:
             "pricecharting sealed": f"{PC_BASE}/game/{sealed.get('pricecharting', 'pokemon-evolving-skies/booster-box')}",
             "pricecharting search": PC_SEARCH.format(q="charizard+base+set"),
             "pokemontcg.io tcgplayer link": "https://prices.pokemontcg.io/tcgplayer/base1-4",
+            "pokemontcg.io one card": "https://api.pokemontcg.io/v2/cards/base1-4", "pokemontcg.io simple query": PTCG.format(q="id:base1-4"),
+            "tcgdex card": "https://api.tcgdex.net/v2/en/cards/base1-4", "tcgdex modern card": "https://api.tcgdex.net/v2/en/cards/swsh7-215",
             "tcgplayer history": TCG_HISTORY.format(pid="42382"), "tcgplayer details": TCG_DETAILS.format(pid="42382"),
             "tcgcsv groups": "https://tcgcsv.com/tcgplayer/3/groups", "frankfurter": FX, "er-api": FX_FALLBACK,
             "cardmarket": "https://www.cardmarket.com/en/Pokemon/Products/Singles/Base-Set/Charizard-V1-BS4",
             "yuyutei": "https://yuyu-tei.jp/sell/poc/s/search?search_word=%E3%83%AA%E3%82%B6%E3%83%BC%E3%83%89%E3%83%B3",
-            "snkrdunk": "https://snkrdunk.com/en/trading-cards", "ebay sold": "https://www.ebay.com/sch/i.html?_nkw=pokemon+booster+box&LH_Sold=1&LH_Complete=1",
+            "snkrdunk": "https://snkrdunk.com/en/", "ebay sold": "https://www.ebay.com/sch/i.html?_nkw=pokemon+booster+box&LH_Sold=1&LH_Complete=1",
             "google trends": "https://trends.google.com/trends/api/explore?hl=en-US&tz=0&req=%7B%22comparisonItem%22%3A%5B%7B%22keyword%22%3A%22pokemon%20cards%22%2C%22geo%22%3A%22US%22%2C%22time%22%3A%22today%205-y%22%7D%5D%7D",
             "psa pop": "https://www.psacard.com/pop/tcg-cards/1999/pokemon-game/57801", "gemrate": "https://www.gemrate.com/"}
 
     def one(item):
         k, u = item
-        h = {**B.UA, **(TCG_HEADERS if "tcgplayer" in k and "link" not in k else {})}
+        h = {**B.UA, **(TCG_HEADERS if "tcgplayer" in k and "link" not in k else PC_HEADERS if "pricecharting" in k or k in ("yuyutei", "snkrdunk") else {})}
         try:
             r = requests.get(u, headers=h, timeout=30, stream=True, allow_redirects=True)
             head = r.raw.read(200000, decode_content=True).decode("utf-8", "replace")
             r.close()
             chart = re.search(r"VGPC\.chart_data\s*=\s*(\{.{0,300})", head, re.S)
-            return k, {"status": r.status_code, "final": r.url, "type": r.headers.get("content-type", ""), "bytes_read": len(head), "start": head[:600],
+            try:
+                j = json.loads(head)
+                keys = {"keys": sorted(j)[:60] if isinstance(j, dict) else None}
+                if k in ("tcgplayer details", "tcgdex card"):
+                    keys["json"] = {a: b for a, b in j.items() if a not in ("customAttributes", "description")}
+            except ValueError:
+                keys = {}
+            yen = re.findall(r"([0-9,]{3,9})\s*円", head)[:10] if k == "yuyutei" else None
+            return k, {"status": r.status_code, "final": r.url, "type": r.headers.get("content-type", ""), "bytes_read": len(head), "start": head[:600], **keys,
+                       **({"yen": yen, "card_blocks": re.findall(r'<div[^>]+class="[^"]*card-product[^"]*"[^>]*>.{0,600}', head, re.S)[:2]} if k == "yuyutei" else {}),
                        **({"chart_data": chart.group(1)} if chart else {}), **({"search_first": parse_pc_search(head)} if "search" in k else {})}
         except Exception as e:
             return k, {"error": f"{type(e).__name__}: {str(e)[:160]}"}
