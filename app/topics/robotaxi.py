@@ -378,11 +378,11 @@ def cpuc_trips(max_new: int = 3) -> dict[str, pd.Series]:
 
 
 ENERGY_PROBES = {
-    "ember yearly": "https://storage.googleapis.com/emb-prod-bkt-publicdata/public-downloads/yearly_full_release_long_format.csv",
-    "ember monthly": "https://storage.googleapis.com/emb-prod-bkt-publicdata/public-downloads/monthly_full_release_long_format.csv",
-    "ember page": "https://ember-energy.org/data/yearly-electricity-data/",
-    "iea evs csv": "https://api.iea.org/evs?parameters=EV%20sales%20share&category=Historical&mode=Cars&csv=true",
-    "iea evs json": "https://api.iea.org/evs/?parameters=EV%20sales%20share&category=Historical&mode=Cars",
+    "ember yearly": "https://files.ember-energy.org/public-downloads/generation/outputs/release_generation_yearly_global.csv",
+    "ember yearly page": "https://ember-energy.org/data/yearly-electricity-data/",
+    "ember monthly page": "https://ember-energy.org/data/monthly-electricity-data/",
+    "ember ev page": "https://ember-energy.org/data/monthly-ev-sales-data/",
+    "iea gevo page": "https://www.iea.org/data-and-statistics/data-product/global-ev-outlook-2026",
 }
 
 
@@ -395,10 +395,11 @@ def _energy_probe() -> dict:
     for k, u in ENERGY_PROBES.items():
         try:
             r = requests.get(u, headers=UA, timeout=40, stream=True)
-            head = r.raw.read(4000, decode_content=True).decode("utf-8", "replace")
+            body = r.raw.read(400000 if "page" in k else 4000, decode_content=True).decode("utf-8", "replace")
+            head = body[:1500]
             r.close()
             out[k] = {"status": r.status_code, "type": r.headers.get("content-type", ""), "length": r.headers.get("content-length"),
-                      "start": head[:1200], "csv_links": sorted(set(re.findall(r'https?://[^"\' ]+\.csv', head)))[:20]}
+                      "start": head[:1200], "csv_links": sorted(set(re.findall(r'https?://[^"\' <>]+\.(?:csv|xlsx|zip)', body)))[:30]}
         except Exception as e:
             out[k] = {"error": f"{type(e).__name__}: {str(e)[:160]}"}
     return out
