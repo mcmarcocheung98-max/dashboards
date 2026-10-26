@@ -131,7 +131,7 @@ def yahoo(sym: str, start: str = "2019-01-01") -> pd.Series:
 # the month after the quarter.
 CORR_METRICS = [("Deliveries", "pct", True), ("Production", "pct", True), ("Energy storage deployed (GWh)", "pct", True),
                 ("Revenue ($M)", "pct", False), ("GAAP gross margin (%)", "diff", False), ("Operating margin (%)", "diff", False),
-                ("Non-GAAP EPS ($)", "diff", False), ("Free cash flow ($M)", "diff", False)]
+                ("Non-GAAP EPS ($)", "diff", False), ("Free cash flow ($M)", "diff", False), ("Active FSD subscriptions (M)", "pct", False)]
 
 
 def tesla_vs_price(px: pd.Series, t: dict[str, pd.Series], min_n: int = 6) -> dict:
