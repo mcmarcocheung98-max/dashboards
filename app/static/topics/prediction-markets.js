@@ -13,8 +13,14 @@ const wrap = s => el("td", { class: "wrap" }, s);
 
 // The top card follows the timeline (topic.html's followHead: hovering a chart shows that day, a click keeps it, "Back to latest"
 // returns); until the page shell has it, the card shows the latest figures.
+// a series logged by this server has one point on its first day: a chart (and a head following it) needs two
+const enough = p => p && p.length >= 2;
+const enoughAny = by => Object.values(by || {}).some(enough);
+const waiting = since => el("div", { class: "muted" }, "Logged once a day by this server" + (since ? " since " + since : "") + ": the chart appears from the second day.");
 function head(items, extra = [], opts = {}) {
-  items = items.filter(i => i.points && i.points.length);
+  const all = items.filter(i => i.points && i.points.length);
+  items = all.filter(i => enough(i.points));
+  if (!items.length && all.length) return card(null, el("div", { class: "kpis" }, ...all.map(i => kpi(i.label, i.fmt(last(i.points)))), ...extra));
   const more = extra.length ? el("div", { class: "kpis", style: "margin-top:10px" }, ...extra) : null;
   if (typeof followHead === "function" && items.length) return card(null, followHead(items, opts), more);
   return card(null, el("div", { class: "kpis" }, ...items.map(i => kpi(i.label, i.fmt(last(i.points))))), more);
@@ -45,7 +51,7 @@ const VIEWS = {
       ...top.map(([k, p]) => ({ label: k + ", 24 hours", points: p, fmt: money, delta: D_PCT }))],
       [kpi("Open markets in the sample", num(t.markets)), kpi("Liquidity on the book", money(t.liq))]);
     const lines = card("Money traded in 24 hours, by category (Polymarket)",
-      ...linesChart(Object.entries(cl).map(([k, p]) => ({ name: k, points: p, color: catCol(k) })), money),
+      ...(enoughAny(cl) ? linesChart(Object.entries(cl).map(([k, p]) => ({ name: k, points: p, color: catCol(k) })), money) : [waiting(d.log_since)]),
       note("Each day's total 24-hour volume across the open events in the sample, summed by category. " + logNote(d.log_since)));
     const cats = d.cats || [];
     const bars = cats.length ? card("Traded in the last 24 hours, by category",
@@ -79,12 +85,12 @@ const VIEWS = {
     const picker = el("div", { class: "seg", style: "flex-wrap:wrap" }, ...items.map(i => el("button", { class: i.key === pickMarket ? "on" : "", onclick: () => { pickMarket = i.key; render(); } }, i.label)));
     const odds = card("Odds history: " + it.label + " (Polymarket, % chance)", picker,
       p.title ? el("div", { class: "muted", style: "margin-bottom:6px" }, "Matched: ", link(p.title, p.url), p.end ? " · closes " + p.end : "") : el("div", { class: "muted" }, "No open Polymarket market matches this row right now."),
-      ...(it.hist.length ? linesChart([{ name: "Yes price", points: it.hist, color: css("--s1") }], v => pc(v, 1), { hlines: [50] }) : [el("div", { class: "muted" }, "No price history.")]),
+      ...(enough(it.hist) ? linesChart([{ name: "Yes price", points: it.hist, color: css("--s1") }], v => pc(v, 1), { hlines: [50] }) : [el("div", { class: "muted" }, "No price history.")]),
       note("Daily closing price of the Yes share from Polymarket's CLOB, read as the market's chance. " + (it.note || "")));
-    const vol = card("Money behind the moves: traded each day ($)", ...linesChart([{ name: "Volume that day", points: it.volume, bar: true, color: css("--s1") }], money, { small: true }),
-      it.volume.length ? null : el("div", { class: "muted" }, "Builds from the second day of the log."),
+    const vol = card("Money behind the moves: traded each day ($)",
+      ...(enough(it.volume) ? linesChart([{ name: "Volume that day", points: it.volume, bar: true, color: css("--s1") }], money, { small: true }) : [el("div", { class: "muted" }, "Builds from the third day of the log (the change between two days).")]),
       note("The day's change in the market's all-time volume. Polymarket's API has no volume history, so " + logNote().toLowerCase()));
-    const liq = card("Liquidity on the book ($)", ...linesChart([{ name: "Liquidity", points: it.liq, color: css("--s6") }], money, { small: true }),
+    const liq = card("Liquidity on the book ($)", ...(enough(it.liq) ? linesChart([{ name: "Liquidity", points: it.liq, color: css("--s6") }], money, { small: true }) : [waiting()]),
       note("Money resting in orders near the price: the deeper it is, the more it costs to move the odds. " + logNote()));
     const all = card("The watchlist", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Question", "Matched market", "Chance", "24h", "7 days", "Traded, 24h", "Liquidity"].map(h => el("th", {}, h))),
       ...items.map(i => { const q = i.poly || {}; return el("tr", {}, wrap([i.label]), wrap([q.title ? link(q.title, q.url) : el("span", { class: "muted" }, "no match")]), el("td", {}, prob(q.yes)),
@@ -96,7 +102,7 @@ const VIEWS = {
   async categories() {
     const d = await api("categories"), L = d.log || {}, v = L.vol24 || {}, lq = L.liq || {};
     const hd = head(Object.entries(v).map(([k, p]) => ({ label: k + ", 24h", points: p, fmt: money, delta: D_PCT })));
-    const lines = (title, by, txt) => card(title, ...linesChart(Object.entries(by).map(([k, p]) => ({ name: k, points: p, color: catCol(k) })), money, { small: true }), note(txt));
+    const lines = (title, by, txt) => card(title, ...(enoughAny(by) ? linesChart(Object.entries(by).map(([k, p]) => ({ name: k, points: p, color: catCol(k) })), money, { small: true }) : [waiting()]), note(txt));
     const per = (d.cats || []).map(c => { const t = c.totals || {};
       return card(c.label, el("div", { class: "kpis" }, kpi("Traded, 24h", money(t.vol24)), kpi("Traded, all time", money(t.volume)), kpi("Liquidity", money(t.liq)), kpi("Events / markets", (t.events || 0) + " / " + (t.markets || 0))),
         c.top.length ? marketTable(c.top, ["yes", "d1", "vol24", "liq", "end"]) : el("div", { class: "muted" }, "No open market in the sample."),
@@ -108,7 +114,7 @@ const VIEWS = {
 
   async venues() {
     const d = await api("venues"), items = d.items || [];
-    const shared = items.filter(i => Object.keys(i.log || {}).length >= 2);
+    const shared = items.filter(i => Object.values(i.log || {}).filter(enough).length >= 2);
     const first = shared[0] || items[0];
     const hd = first ? head(Object.entries(first.log || {}).map(([v, p]) => ({ label: first.label + ": " + VENUE[v][0], points: p, fmt: x => pc(x, 1) })),
       [kpi("Questions on 2+ venues", String(items.filter(i => i.venues >= 2).length))]) : null;
@@ -119,17 +125,17 @@ const VIEWS = {
       why(d.missing),
       note("Each venue's own market for the question, matched by keywords; hover a price to see it, and check the wording, since venues settle on different rules and dates. Gap = highest minus lowest price, in points. Real money: Polymarket, Kalshi and PredictIt. Manifold trades play money. A gap that stays open is usually fees, limits (PredictIt caps bets at $850), or wording, not free money."));
     const charts = shared.slice(0, 6).map(i => card(i.label + ": price on each venue (% chance)",
-      ...linesChart(Object.entries(i.log).map(([v, p]) => ({ name: VENUE[v][0], points: p, color: css(VENUE[v][1]), dashed: v === "manifold" })), x => pc(x, 1), { small: true }),
+      ...linesChart(Object.entries(i.log).filter(([, p]) => enough(p)).map(([v, p]) => ({ name: VENUE[v][0], points: p, color: css(VENUE[v][1]), dashed: v === "manifold" })), x => pc(x, 1), { small: true }),
       note("Matched: " + Object.keys(VENUE).filter(v => i[v]).map(v => VENUE[v][0] + " \"" + i[v].title + "\"").join("; ") + ". " + logNote())));
     return [hd, tbl, el("div", { class: "grid2" }, ...charts), nfa()].filter(Boolean);
   },
 
   async regions() {
     const d = await api("regions"), R = d.regions || [];
-    const firstLine = r => r.watch.find(w => w.hist && w.hist.length);
+    const firstLine = r => r.watch.find(w => enough(w.hist));
     const hd = head(R.map(r => { const w = firstLine(r); return w ? { label: r.key + ": " + w.label, points: w.hist, fmt: v => pc(v, 1), delta: D_PTS } : null; }).filter(Boolean));
     const blocks = R.map(r => {
-      const lines = r.watch.filter(w => w.hist && w.hist.length);
+      const lines = r.watch.filter(w => enough(w.hist));
       return card(r.label,
         lines.length ? linesChart(lines.map(w => ({ name: w.label, points: w.hist })), v => pc(v, 1), { small: true }) : el("div", { class: "muted" }, "No watchlist market here has a Polymarket price history."),
         el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Watchlist", ...Object.values(VENUE).map(v => v[0])].map(h => el("th", {}, h))),
