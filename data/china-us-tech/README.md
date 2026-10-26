@@ -1,0 +1,85 @@
+# China vs US Tech (`/china-us-tech`)
+
+**The question:** who leads in each layer of the tech stack, and where is the gap closing?
+
+Code: `app/topics/china_us_tech.py` (data), `app/static/topics/china-us-tech.js` (cards), `tests/test_china_us_tech.py` (fixtures and `smoke_patch()`).
+Data for each tab: `/api/china-us-tech/<overview|models|research|ev|chips|markets>`. `/api/china-us-tech/layout` (not a tab) shows what the
+server gets back from every automated source (status, size, first 300 characters), so you can check reachability from Railway with
+Actions > show-json.
+
+## Leans: what +1 and -1 mean
+
+**+1 means China gaining relative to the US; -1 means the US gaining; 0 means the reading stayed inside its band.** A lean describes the
+*direction of the latest move*, not who leads: the US can lead a layer while its reading leans +1 because the gap narrowed.
+
+| Tab | Reading (`key`) | Value | +1 when | -1 when |
+|---|---|---|---|---|
+| AI models | `models_share` | China's share of US + China notable models, last full year (%) | share is 3 points or more above the average of the 3 years before | 3 points or more below |
+| AI models | `compute_gap` | log10(largest US training run ÷ largest Chinese run), single-country models | gap shrank by 0.1 orders of magnitude or more over a year | grew by 0.1 or more |
+| AI models | `arena_gap` | best US minus best Chinese Arena score at the latest snapshot | gap narrowed by more than 5 points since the snapshot before | widened by more than 5 |
+| Patents & research | `pct_gap` | China minus US PCT applications, latest year | China's margin widened by more than 500 | narrowed by more than 500 |
+| Patents & research | `cited_share` | China's share of US + China AI papers with >100 citations, latest year at least two years old (%) | share rose more than 2 points over three years | fell more than 2 points |
+| EVs & batteries | `ev_share_gap` | EV share of new cars, China minus US (points) | China's lead widened by more than a point | narrowed by more than a point |
+| EVs & batteries | `battery_china` | Chinese makers' share of EV battery installations (%) | rose more than a point on the year | fell more than a point |
+| EVs & batteries | `byd_tesla` | BYD ÷ Tesla battery-electric deliveries | ratio rose more than 0.05 | fell more than 0.05 |
+| Chips trade | `node_gap` | years SMIC reached its newest node after TSMC | half a year or more shorter than at the node before | half a year or more longer |
+| Chips trade | `controls` | US and allied export-control steps in the last 12 months, net (-1 tighten, +1 ease) | easings outnumber tightenings | tightenings outnumber easings |
+| Chips trade | `ic_imports` | China's IC imports vs the year before (%) | imports fell more than 5% (less dependence) | rose more than 5% |
+| Markets | `rel_1y` | China tech ADR basket vs US tech basket, last 12 months (%) | China's basket beat the US basket by more than 5% | lagged by more than 5% |
+
+The Overview tab shows the same rows with the leader of each layer. `READINGS()` reads only the cached tab payloads (the warmer keeps
+every tab but Overview computed), so the daily snapshot never triggers a download. Caveat on `ic_imports`: imports also fall in a chip
+downturn (2023), so read it next to the node gap and the controls timeline.
+
+## Tabs, cards and sources
+
+| Tab | Card | Source | Automated? | Cadence |
+|---|---|---|---|---|
+| AI models | Notable models per year by country; China's share; open-weight models; largest training run by country; top runs | Epoch AI `notable_ai_models.csv` (country of each developing organisation; a joint US-China model counts for both in counts, and is left out of the compute frontier) | yes | Epoch updates weekly |
+| AI models | Best US vs best Chinese model, Arena score | `leaderboard.csv` | **hand-entered** | add a snapshot every month or two from lmarena.ai |
+| Patents & research | PCT applications by origin; China minus US | `pct.csv` (WIPO PCT Yearly Review / press release) | **hand-entered** | yearly: provisional figures in February/March, final in the Yearly Review |
+| Patents & research | AI papers and highly cited AI papers (>100 citations) by country of the authors' institutions | OpenAlex works API, concept `C154945302` (Artificial intelligence), `group_by=publication_year`, one call per country (US, CN, GB, HK) | yes | daily (OpenAlex refreshes continuously) |
+| Patents & research | The 100 most-cited AI papers by country | `top_cited.csv` (Stanford AI Index) | **hand-entered** | each April |
+| EVs & batteries | Electric share of new car sales; electric cars sold | IEA Global EV Outlook through Our World in Data (`electric-car-sales-share`, `electric-car-sales` grapher CSVs); `ev_share.csv` fills years OWID lacks and is the only source for Hong Kong | yes (OWID); Hong Kong **hand-entered** | yearly (GEVO, May) |
+| EVs & batteries | China NEV exports | `ev_exports.csv` (CAAM) | **hand-entered** | yearly (monthly if you want more detail: add rows dated the 1st) |
+| EVs & batteries | BYD vs Tesla BEV deliveries | `byd_tesla.csv` (Tesla quarterly delivery releases; BYD monthly volume filings on HKEX, stock 1211) | **hand-entered** | yearly |
+| EVs & batteries | Battery makers' share; by home country | `battery_share.csv` (SNE Research; `country` column groups the makers) | **hand-entered** | yearly (SNE publishes in February) |
+| Chips trade | China IC imports and exports, yearly | `ic_trade.csv` (GACC, HS 8542) | **hand-entered** | yearly |
+| Chips trade | China IC imports per month | `ic_imports_monthly.csv` (GACC monthly "major imports" table) | **hand-entered**, empty for now | monthly: add one row per month and the chart appears |
+| Chips trade | SMIC vs TSMC node gap | `node_gap.csv` (pairs rows by node; TSMC 16nm is entered as 14) | **hand-entered** | when a new node is confirmed (TechInsights teardowns) |
+| Chips trade | Export-control timeline | `controls.csv` (`direction`: -1 tightens China's access, +1 eases it, 0 China's own counter-measures) | **hand-entered** | as rules are published |
+| Chips trade | SMIC and Huawei milestones | `milestones.csv` | **hand-entered** | as events happen |
+| Markets | US tech basket (AAPL, MSFT, NVDA, GOOGL, AMZN, META) vs US-listed Chinese tech (BABA, PDD, JD, BIDU, NTES) and KWEB; ratio; calendar-year returns | Nasdaq quote API (stocks via the shared `nasdaq_daily`; KWEB with `assetclass=etf`) | yes | daily |
+| Markets | Hang Seng TECH yearly return | `hstech.csv`: iShares Hang Seng TECH ETF calendar-year return (HKD), a stand-in for the index | **hand-entered** | each January |
+| Markets | Where tech lists: London, Hong Kong, New York | `listings.csv` | **hand-entered** | as events happen |
+
+Each chart's card says what it shows and what 5-, 10- and 20-year question it answers.
+
+## Hand-entered files
+
+All rows carry a `source` URL. **Rows whose `note` says `verify` were written from memory or from a secondary summary (a search result,
+a news site) and must be checked against the cited page**; replace the value and drop `verify` once checked. Rows checked against a
+primary or close-to-primary page on 2026-10-26: PCT 2024 and 2025 for China, US, Japan, Korea and Germany (WIPO); CAAM 2025 NEV
+exports (via CnEVPost); SNE Research 2025 shares and the 2024 CATL, BYD and LGES shares (via CnEVPost). Everything else is `verify`.
+
+- `leaderboard.csv`: `date,series,value,model,source,note`, series `US best` / `China best`, value = Arena score of the top model of that
+  country on the LMArena text leaderboard (default view) on that date. LMArena re-scales scores, so only compare the two on the same date.
+- `pct.csv`: `date,series,value,source,note`, series = origin (China, US, Japan, Korea, Germany, UK), dated 1 January of the filing year.
+  The UK 2023-24 rows are rough. Hong Kong is not entered yet (WIPO lists it as "China, Hong Kong SAR"): add it from the WIPO IP statistics data center.
+- `top_cited.csv`: the AI Index count of the 100 most-cited AI papers by country (China excludes Hong Kong).
+- `ev_share.csv`: fallback EV shares (%) for China, US, UK, World, and the only Hong Kong series (EPD/Transport Department: EV share of new private car first registrations).
+- `ev_exports.csv` (million vehicles), `byd_tesla.csv` (vehicles), `battery_share.csv` (%), `ic_trade.csv` (USD bn), `hstech.csv` (%): one row per year, dated 1 January.
+- `ic_imports_monthly.csv`: one row per month, dated the 1st, USD bn. The `#` line is a comment the loader skips.
+- `controls.csv`, `milestones.csv`, `listings.csv`, `node_gap.csv`: one row per event; see the columns in each header.
+
+## Caveats
+
+- Country attribution follows the source: developer organisation (Epoch), applicant residence (WIPO), author institution (OpenAlex). Hong Kong is shown separately where the source separates it; in the AI Index it is separate from China.
+- OpenAlex citation counts favour older papers; the share of highly cited papers compares the US and China within each year, and the reading skips the last two years.
+- The Nasdaq baskets are price-only, equal-weighted buy and hold from January 2019. Tencent, Meituan and Xiaomi trade in Hong Kong and are not on Nasdaq's API, which is why the Hang Seng TECH return is entered by hand.
+- Reachability from Railway: Epoch AI and the Nasdaq API already serve other dashboards. Our World in Data and OpenAlex are new here; check them with `/api/china-us-tech/layout`. If either refuses the server, the cards fall back to the hand-entered rows (EV shares) or say what is missing (OpenAlex), and the rest of the page is unaffected.
+
+## Requests for shared code
+
+- `_base.nasdaq_daily` hard-codes `assetclass=stocks`; an `assetclass` argument would let ETFs (KWEB here) use it instead of the copy in `china_us_tech.nasdaq_etf`. A request, not needed for the page to work.
+- A free, cloud-reachable source for the Hang Seng TECH index level (Hang Seng Indexes' site has no documented CSV) would replace `hstech.csv`. If one is found, adding it to `PROBE_URLS` would let `/api/probe` watch it.

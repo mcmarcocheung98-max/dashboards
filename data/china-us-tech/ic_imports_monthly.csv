@@ -1,0 +1,2 @@
+date,value,source,note
+# one row per month: date = first of the month, value = IC imports that month in USD bn (GACC monthly table 'Major imports'), source = the release URL

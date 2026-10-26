@@ -1,0 +1,13 @@
+date,series,value,model,source,note
+2024-06-30,US best,1287,GPT-4o,https://lmarena.ai/leaderboard/text,Arena score from memory; verify
+2024-06-30,China best,1240,Yi-Large-preview,https://lmarena.ai/leaderboard/text,Arena score from memory; verify
+2024-12-31,US best,1374,Gemini-Exp-1206,https://lmarena.ai/leaderboard/text,Arena score from memory; verify
+2024-12-31,China best,1318,DeepSeek-V3,https://lmarena.ai/leaderboard/text,Arena score from memory; verify
+2025-01-31,US best,1382,Gemini-2.0-Flash-Thinking,https://lmarena.ai/leaderboard/text,Arena score from memory; verify
+2025-01-31,China best,1361,DeepSeek-R1,https://lmarena.ai/leaderboard/text,Arena score from memory; verify
+2025-06-30,US best,1470,Gemini-2.5-Pro,https://lmarena.ai/leaderboard/text,Arena score from memory; verify
+2025-06-30,China best,1424,DeepSeek-R1-0528,https://lmarena.ai/leaderboard/text,Arena score from memory; verify
+2025-12-31,US best,1492,Gemini-3-Pro,https://lmarena.ai/leaderboard/text,Arena score from memory; verify
+2025-12-31,China best,1440,GLM-4.7 / Kimi-K2-Thinking,https://lmarena.ai/leaderboard/text,Arena score from memory; verify
+2026-07-31,US best,1512,Claude Opus 4.8 Thinking,https://www.swfte.com/ai/lmarena-ai,secondary summary of the leaderboard; verify on lmarena.ai
+2026-07-31,China best,1462,DeepSeek V4 Pro,https://www.swfte.com/ai/lmarena-ai,secondary summary of the leaderboard; verify on lmarena.ai

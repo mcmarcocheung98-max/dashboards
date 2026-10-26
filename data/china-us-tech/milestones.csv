@@ -1,0 +1,10 @@
+date,who,event,source,note
+2019-11-15,SMIC,14nm FinFET in volume production,https://www.smics.com/en/site/news,from memory; verify
+2020-09-15,Huawei,Kirin 9000 (TSMC 5nm) is the last chip TSMC may make for Huawei,https://www.huawei.com/en/news,from memory; verify
+2022-07-21,SMIC,TechInsights finds a 7nm-class (N+2) chip made by SMIC in a bitcoin miner,https://www.techinsights.com/,from memory; verify
+2023-08-29,Huawei,Mate 60 Pro ships with the Kirin 9000S on SMIC 7nm,https://www.techinsights.com/,from memory; verify
+2023-10-01,Huawei,Ascend 910B AI accelerator (SMIC 7nm) shipping to Chinese clouds,https://www.huawei.com/en/news,from memory; verify
+2024-11-26,Huawei,Mate 70 with Kirin 9020 (SMIC N+2),https://www.techinsights.com/,from memory; verify
+2025-04-10,Huawei,CloudMatrix 384: 384 Ascend 910C chips in one system to rival Nvidia GB200 NVL72,https://www.huawei.com/en/news,from memory; verify
+2025-09-18,Huawei,"Ascend roadmap: 950 (2026), 960 (2027), 970 (2028) with Huawei's own HBM",https://www.huawei.com/en/news/2025/9/hc-xu-keynote-speech,from memory; verify
+2025-12-10,SMIC,TechInsights reports Kirin 9030 on SMIC N+3 (5nm-class),https://www.techinsights.com/,from memory; verify

@@ -1,0 +1,14 @@
+date,series,value,source,note
+2019-01-01,Tesla,367500,https://ir.tesla.com/,deliveries (all BEV); from memory; verify
+2020-01-01,Tesla,499550,https://ir.tesla.com/,from memory; verify
+2021-01-01,Tesla,936222,https://ir.tesla.com/,from memory; verify
+2022-01-01,Tesla,1313851,https://ir.tesla.com/,from memory; verify
+2023-01-01,Tesla,1808581,https://ir.tesla.com/,from memory; verify
+2024-01-01,Tesla,1789226,https://ir.tesla.com/,from memory; verify
+2025-01-01,Tesla,1636129,https://ir.tesla.com/,from memory; verify
+2020-01-01,BYD,130970,https://www.hkexnews.hk/,BEV passenger cars from BYD's monthly volume filings (HKEX 1211); from memory; verify
+2021-01-01,BYD,320810,https://www.hkexnews.hk/,from memory; verify
+2022-01-01,BYD,911140,https://www.hkexnews.hk/,from memory; verify
+2023-01-01,BYD,1574822,https://www.hkexnews.hk/,from memory; verify
+2024-01-01,BYD,1764992,https://www.hkexnews.hk/,from memory; verify
+2025-01-01,BYD,2256714,https://www.hkexnews.hk/,from memory; verify

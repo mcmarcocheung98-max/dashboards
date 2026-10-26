@@ -1,0 +1,7 @@
+date,value,source,note
+2020-01-01,0.223,http://en.caam.org.cn/,China NEV exports (million vehicles) from memory of CAAM releases; verify
+2021-01-01,0.310,http://en.caam.org.cn/,from memory of CAAM releases; verify
+2022-01-01,0.679,http://en.caam.org.cn/,from memory of CAAM releases; verify
+2023-01-01,1.203,http://en.caam.org.cn/,from memory of CAAM releases; verify
+2024-01-01,1.284,http://en.caam.org.cn/,from memory of CAAM releases; verify
+2025-01-01,2.615,https://cnevpost.com/2026/01/14/china-nev-sales-1-71-million-dec-2025-caam/,CAAM full year as reported by CnEVPost (about double 2024)

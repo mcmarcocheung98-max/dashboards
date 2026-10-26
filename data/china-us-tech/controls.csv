@@ -1,0 +1,17 @@
+date,actor,event,direction,source,note
+2019-05-16,US,Huawei added to the Entity List,-1,https://www.federalregister.gov/documents/2019/05/21/2019-10616/addition-of-entities-to-the-entity-list,verify
+2020-05-15,US,Foreign direct product rule extended to chips designed by Huawei (tightened again in August 2020),-1,https://www.bis.doc.gov/,from memory; verify
+2020-06-30,US,Hong Kong's separate export-control treatment ends: Hong Kong is treated as China under the EAR,-1,https://www.bis.doc.gov/,from memory; verify
+2020-12-18,US,SMIC added to the Entity List (tools for 10nm and below presumptively denied),-1,https://www.federalregister.gov/,from memory; verify
+2022-10-07,US,"Advanced computing and chipmaking-tool rules for China (A100/H100 class chips, tools for 16/14nm logic and below)",-1,https://www.bis.doc.gov/index.php/about-bis/newsroom/2082,verify
+2023-01-27,US / Netherlands / Japan,Netherlands and Japan agree to join US controls on chipmaking tools,-1,https://www.government.nl/,from memory; verify
+2023-07-03,China,China announces export licences for gallium and germanium (from 1 August 2023),0,http://english.mofcom.gov.cn/,China's counter-measure; verify
+2023-10-17,US,Update closes the A800/H800 gap and widens tool controls,-1,https://www.bis.doc.gov/,from memory; verify
+2024-12-02,US,HBM and 24 kinds of chipmaking tools controlled; 140 Chinese entities listed,-1,https://www.bis.doc.gov/,from memory; verify
+2025-01-15,US,AI diffusion rule (country tiers for AI chips),-1,https://www.federalregister.gov/,rescinded in May 2025; from memory; verify
+2025-04-15,US,Nvidia H20 and AMD MI308 need a licence for China,-1,https://www.sec.gov/,Nvidia 8-K; from memory; verify
+2025-04-04,China,Export licences for seven rare earths and magnets,0,http://english.mofcom.gov.cn/,China's counter-measure; verify
+2025-05-13,US,AI diffusion rule rescinded; guidance that using Huawei Ascend chips anywhere may breach US controls,-1,https://www.bis.gov/,from memory; verify
+2025-08-11,US,H20 licences granted in exchange for 15% of China revenue,1,https://www.commerce.gov/,from memory; verify
+2025-10-09,China,Rare-earth controls widened to foreign products using Chinese rare earths,0,http://english.mofcom.gov.cn/,suspended for a year after the 30 October Trump-Xi meeting; verify
+2025-12-08,US,Nvidia H200 sales to China allowed with 25% to the US government,1,https://www.whitehouse.gov/,from memory; verify

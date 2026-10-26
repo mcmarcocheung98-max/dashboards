@@ -1,0 +1,9 @@
+date,series,value,source,note
+2015-07-01,TSMC,14,https://www.tsmc.com/english/dedicatedFoundry/technology/logic,16nm FinFET volume production (paired with SMIC 14nm); from memory; verify
+2018-04-01,TSMC,7,https://www.tsmc.com/english/dedicatedFoundry/technology/logic,7nm volume production; from memory; verify
+2020-04-01,TSMC,5,https://www.tsmc.com/english/dedicatedFoundry/technology/logic,5nm volume production; from memory; verify
+2022-12-29,TSMC,3,https://www.tsmc.com/english/dedicatedFoundry/technology/logic,3nm volume production; from memory; verify
+2025-10-01,TSMC,2,https://www.tsmc.com/english/dedicatedFoundry/technology/logic,2nm volume production (Q4 2025); from memory; verify
+2019-11-15,SMIC,14,https://www.smics.com/en/site/news,14nm FinFET volume production; from memory; verify
+2022-07-21,SMIC,7,https://www.techinsights.com/,N+2 found in a shipping chip; from memory; verify
+2025-12-10,SMIC,5,https://www.techinsights.com/,N+3 (5nm-class) found in Kirin 9030; from memory; verify

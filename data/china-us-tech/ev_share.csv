@@ -1,0 +1,30 @@
+date,series,value,source,note
+2019-01-01,China,5,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2020-01-01,China,6,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2021-01-01,China,16,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2022-01-01,China,29,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2023-01-01,China,38,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2024-01-01,China,48,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2019-01-01,US,2,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2020-01-01,US,2,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2021-01-01,US,5,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2022-01-01,US,8,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2023-01-01,US,10,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2024-01-01,US,10,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2019-01-01,UK,3,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2020-01-01,UK,11,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2021-01-01,UK,19,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2022-01-01,UK,23,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2023-01-01,UK,24,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2024-01-01,UK,28,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2019-01-01,World,2.6,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2020-01-01,World,4,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2021-01-01,World,9,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2022-01-01,World,14,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2023-01-01,World,18,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2024-01-01,World,22,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
+2020-01-01,Hong Kong,14,https://www.epd.gov.hk/epd/english/environmentinhk/air/prob_solutions/promotion_ev.html,EV share of new private car first registrations; from memory; verify
+2021-01-01,Hong Kong,25,https://www.epd.gov.hk/epd/english/environmentinhk/air/prob_solutions/promotion_ev.html,EV share of new private car first registrations; from memory; verify
+2022-01-01,Hong Kong,53,https://www.epd.gov.hk/epd/english/environmentinhk/air/prob_solutions/promotion_ev.html,EV share of new private car first registrations; from memory; verify
+2023-01-01,Hong Kong,64,https://www.epd.gov.hk/epd/english/environmentinhk/air/prob_solutions/promotion_ev.html,EV share of new private car first registrations; from memory; verify
+2024-01-01,Hong Kong,70,https://www.epd.gov.hk/epd/english/environmentinhk/air/prob_solutions/promotion_ev.html,EV share of new private car first registrations; from memory; verify

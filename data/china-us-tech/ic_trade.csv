@@ -1,0 +1,19 @@
+date,series,value,source,note
+2015-01-01,Imports,230.7,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
+2016-01-01,Imports,227.1,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
+2017-01-01,Imports,260.1,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
+2018-01-01,Imports,312.1,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
+2019-01-01,Imports,305.6,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
+2020-01-01,Imports,350.0,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
+2021-01-01,Imports,432.6,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
+2022-01-01,Imports,415.6,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
+2023-01-01,Imports,349.4,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
+2024-01-01,Imports,385.0,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
+2025-01-01,Imports,425.0,https://axis-intelligence.com/?p=41378,CN¥3035.5bn at 7.1429 per USD (secondary source); verify against GACC
+2018-01-01,Exports,84.6,http://english.customs.gov.cn/statics/report/monthly.html,USD bn; from memory of GACC releases; verify
+2019-01-01,Exports,101.6,http://english.customs.gov.cn/statics/report/monthly.html,USD bn; from memory of GACC releases; verify
+2020-01-01,Exports,116.6,http://english.customs.gov.cn/statics/report/monthly.html,USD bn; from memory of GACC releases; verify
+2021-01-01,Exports,153.8,http://english.customs.gov.cn/statics/report/monthly.html,USD bn; from memory of GACC releases; verify
+2022-01-01,Exports,153.9,http://english.customs.gov.cn/statics/report/monthly.html,USD bn; from memory of GACC releases; verify
+2023-01-01,Exports,136.2,http://english.customs.gov.cn/statics/report/monthly.html,USD bn; from memory of GACC releases; verify
+2024-01-01,Exports,159.5,http://english.customs.gov.cn/statics/report/monthly.html,USD bn; from memory of GACC releases; verify
