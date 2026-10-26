@@ -139,6 +139,10 @@ def fixtures(tmp_path, monkeypatch):
     cache._cache.clear()
 
 
+def _pts_of(s):
+    return B._pts(s, 2)
+
+
 # ------------------------------------------------------------------ parsers
 def test_imf_parser_keeps_the_four_countries_and_ignores_the_rest():
     d = D.parse_imf(imf_json("GGXWDG_NGDP"), "GGXWDG_NGDP")
@@ -215,8 +219,12 @@ def test_interest_payload_and_crossing(fixtures):
     assert us["rolling"]["interest"] and us["share"]
     assert all(a["fy"] for a in us["annual"])
     assert us["cross"]["defence"] is None or isinstance(us["cross"]["defence"], (int, str))
-    # net interest = primary - overall balance: US fixture 3 points of GDP in 2000
-    assert p["imf_gdp"]["US"]["actual"][0][1] == pytest.approx(3.0)
+    # net interest = primary - overall balance, from the committed IMF copy
+    imf = {k: dict(v) for k, v in B.manual(D.SLUG, "imf").items()}
+    t = pd.Timestamp("2010-01-01")
+    want = imf["USA GGXONLB_G01_GDP_PT"][t] - imf["USA GGXCNL_G01_GDP_PT"][t]
+    got = dict(p["imf_gdp"]["US"]["actual"])[int(t.timestamp())]
+    assert got == pytest.approx(want, abs=0.01) and 1 < got < 5
     assert "UK" in p["hand"] and "interest" in p["hand"]["UK"]
     assert p["uk_share"] and 0 < p["uk_share"][-1][1] < 100
 
@@ -231,7 +239,9 @@ def test_yields_policy_and_stress(fixtures):
     assert all(v is not None for v in pol["now"].values()), pol["now"]
     base = dict(pol["hk"])
     t = int(pd.Timestamp("2010-01-01").timestamp())
-    assert base[t] == pytest.approx(1.25)                                 # HIBOR average (1.25) above Fed lower end + 0.5 (0.5)
+    assert base[t] == pytest.approx(0.5)                                  # Fed lower end (0) + 0.5
+    hib = pd.Series(1.25, index=pd.date_range("2009-01-01", "2011-01-01", freq="MS"))
+    assert dict(_pts_of(D.hk_base(hib)))[t] == pytest.approx(1.25)        # the HIBOR term wins when it is higher
     s = D.ENDPOINTS["stress"]()
     assert {r["country"] for r in s["score"]} == {"US", "UK", "Hong Kong", "China"}
     row = next(r for r in s["score"] if r["country"] == "US")
@@ -239,14 +249,32 @@ def test_yields_policy_and_stress(fixtures):
     assert s["events"] and s["spread"]
 
 
+def test_readings_come_from_the_cached_payloads(fixtures):
+    assert D.READINGS() == []                                             # nothing computed yet: nothing to report, nothing fetched
+    for name in ("interest", "yields", "policy", "stress"):
+        D.ENDPOINTS[name]()
+    rows = D.READINGS()
+    keys = {r["key"] for r in rows}
+    assert {"us_int_share", "us_int_vs_def", "y10_US", "gap_US", "spread_US"} <= keys
+    assert all(r["lean"] in (-1, 0, 1) and r["tab"] in {"debt", "interest", "yields", "policy", "stress"} for r in rows)
+    B.json_safe(rows)
+
+
 def test_a_dead_source_blanks_one_chart(fixtures, monkeypatch):
-    def no_imf(url, ttl=0, **k):
-        if "imf.org" in url:
+    def no_penny(url, ttl=0, **k):
+        if "debt_to_penny" in url:
             raise ConnectionError("down")
         return fake_fetch_json(url, ttl, **k)
-    monkeypatch.setattr(D, "fetch_json", no_imf)
+    monkeypatch.setattr(D, "fetch_json", no_penny)
     p = D.ENDPOINTS["debt"]()
-    assert p["imf"] is None and p["imf_error"] == "ConnectionError" and p["us_total"]
+    assert p["us_total"] is None and p["us_total_error"] == "ConnectionError" and p["imf"]["US"]["actual"]
+
+
+def test_imf_copy_covers_the_four_countries_and_the_scorecard_inputs():
+    for key in D.IMF_IND:
+        assert set(D.imf(key)) == {"USA", "GBR", "HKG", "CHN"}, key
+    rows = B.manual_rows(D.SLUG, "imf")
+    assert all("verify" in r["note"] for r in rows if r["series"][:3] in ("CHN", "HKG"))
 
 
 def test_hand_entered_rows_cite_a_source():
@@ -263,7 +291,12 @@ def test_hand_entered_rows_cite_a_source():
 @pytest.mark.network
 @pytest.mark.parametrize("key", ["debt", "primary", "balance", "revenue", "growth", "inflation"])
 def test_live_imf(key):
-    assert len(D.imf(key)) == 4
+    """imf.org refuses the Railway server; run from a machine that can reach it, and compare with data/debt-rates/imf.csv."""
+    live, copy = D.imf_live(key), D.imf(key)
+    assert len(live) == 4
+    for iso in ("USA", "GBR"):
+        j = pd.concat([live[iso], copy[iso]], axis=1).dropna()
+        assert (j.iloc[:, 0] - j.iloc[:, 1]).abs().max() < 0.5, (key, iso)
 
 
 @pytest.mark.network
@@ -279,4 +312,4 @@ def test_live_yields_and_rates():
     assert len(D.boe("uk10", 2020)) > 100 and len(D.boe("uk10_real", 2020)) > 100
     assert D.ons("receipts").iloc[-1] > 10000
     assert len(D.nyfed()) > 1000
-    assert len(D.hkma(D.HK_EFBN, "efn_10y")) > 50
+    assert len(D.hkma(D.HK_EFBN, "efn_10y")) > 50                    # HKMA refuses Railway; the page reads data/debt-rates/hk_10y.csv

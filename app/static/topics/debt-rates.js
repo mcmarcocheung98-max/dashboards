@@ -27,7 +27,7 @@ const VIEWS = {
       ...t.map(r => kpi(r.country + ", debt % of GDP " + (Y.now || ""), pc(r.now, 0)))), asOf(d), stale(d));
     const imfCard = card("General government gross debt, % of GDP",
       ...linesChart(imfLines(d.imf), v => pc(v, 0), { extend: true, hlines: [100] }), missing(d, "imf", "IMF debt"),
-      note("IMF World Economic Outlook, general government (all levels: federal, state, local), so the US figure is higher than federal debt held by the public. Dashed: IMF projections. Hong Kong's government has almost no debt; its fiscal reserves are larger than its borrowing. China's figure excludes local-government financing vehicles (the IMF's 'augmented' measure is far higher)."),
+      note("IMF World Economic Outlook, general government (all levels: federal, state, local), so the US figure is higher than federal debt held by the public. Dashed: IMF projections. imf.org refuses this server, so the page reads a copy of the IMF values (US and UK copied exactly; China and Hong Kong headline years entered by hand and marked verify; see data/debt-rates/imf.csv). Hong Kong's government has almost no debt; its fiscal reserves are larger than its borrowing. China's figure excludes local-government financing vehicles (the IMF's 'augmented' measure is far higher)."),
       ask("5 years: is anyone's debt ratio set to fall without a policy change? 10 years: who has added the most since 2015, and is it Covid or something structural? 20 years: since 2007 the US and UK have roughly doubled their ratios. Is 100% of GDP a ceiling markets enforce, or a line both have already crossed?"));
     const tbl = t.length ? card("Debt, % of GDP: before the crisis, before Covid, now, and in five years (IMF)",
       el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Country", "2007", "2019", String(Y.now || "Latest"), String(Y.proj5 || "+5 years") + " (proj.)", "Change, 10 years"].map(h => el("th", {}, h))),
@@ -44,7 +44,7 @@ const VIEWS = {
       missing(d, "uk_psnd", "ONS public sector net debt (HF6X)"),
       note("ONS series HF6X. Net debt (debt minus liquid assets) is the UK's headline measure, so it reads lower than the IMF's gross figure above."),
       ask("5 years: does debt peak below 100% of GDP, as the OBR's fiscal rules require? 10 years: how much of the rise since 2015 has been reversed? 20 years: debt was under 40% of GDP before 2008. Can it get back to pre-crisis levels in peacetime?"));
-    return [head, imfCard, tbl, us, uk];
+    return [head, imfCard, tbl, us, uk, card("IMF values entered by hand", ...handNote({ imf: d.imf_cites }))];
   },
 
   async interest() {
@@ -105,7 +105,7 @@ const VIEWS = {
     const head = card(null, el("div", { class: "kpis" }, ...Object.entries(n).map(([k, v]) => kpi(k + " 10-year (" + v.t + ")", pc(v.v, 2)))), asOf(d), stale(d));
     const nom = card("10-year government bond yields (%)", ...linesChart(lines(d.nominal), v => pc(v, 2)), missing(d, "nominal", "10-year yields"),
       Object.keys(d.missing || {}).length ? el("div", { class: "muted" }, "Not available right now: " + Object.entries(d.missing).map(([k, v]) => k + " (" + v + ")").join(", ") + ".") : null,
-      note("US: Treasury par yield curve, month-end. UK: Bank of England 10-year nominal gilt yield, month-end. Hong Kong: HKMA Exchange Fund Note 10-year yield to 2015, then HKGB 10-year yields (hand-entered). China: ChinaBond 10-year, year-end (hand-entered). Hong Kong's yield tracks the US because of the dollar peg; China's moves with its own deflation."),
+      note("US: Treasury par yield curve, month-end. UK: Bank of England 10-year nominal gilt yield, month-end. Hong Kong: HKMA Exchange Fund Note 10-year yield to 2015 (copied from the HKMA API, which refuses this server), then HKGB 10-year yields (hand-entered). China: ChinaBond 10-year, year-end (hand-entered). Hong Kong's yield tracks the US because of the dollar peg; China's moves with its own deflation."),
       ask("5 years: are yields settling at a new range of 4–5% in the US and UK, or drifting back towards 2%? 10 years: the US–China gap reversed in 2022, so China now borrows more cheaply than the US. 20 years: the 1981–2020 bull market in bonds ended. What would it take to get 10-year yields under 2% again?"),
       ...handNote(d.cites));
     const real = card("Real 10-year yields: US TIPS and UK index-linked gilts (%)", ...linesChart(lines(d.real), v => pc(v, 2), { small: true, hlines: [0] }), missing(d, "real", "Real yields"),
@@ -121,7 +121,7 @@ const VIEWS = {
       { name: "Bank of England Bank Rate", points: d.boe || [], color: col("UK") }, { name: "HKMA base rate", points: d.hk || [], color: col("Hong Kong") },
       { name: "PBoC 7-day reverse repo", points: pb["7-day reverse repo"] || [], color: col("China") }, { name: "PBoC 1-year LPR", points: pb["1-year LPR"] || [], color: col("China"), dashed: true }],
       v => pc(v, 2)), missing(d, "fed", "Fed funds (NY Fed)"), missing(d, "boe", "Bank Rate"), missing(d, "hk", "HKMA base rate"),
-      note("Fed: New York Fed (target range from 2016, earlier target changes hand-entered). HKMA base rate: the HKMA's formula from March 2009, the higher of the Fed range's lower end + 0.5 points and the average of overnight and 1-month HIBOR (month-end values here; the HKMA uses five-day averages). PBoC: hand-entered changes. The 7-day reverse repo has been its main policy rate since 2024; the LPR prices most loans."),
+      note("Fed: New York Fed (target range from 2016, earlier target changes hand-entered). HKMA base rate: the HKMA's formula from March 2009, the higher of the Fed range's lower end + 0.5 points and the average of overnight and 1-month HIBOR. The HKMA API refuses this server, so the line shows the Fed term, which has set the base rate since 2009. PBoC: hand-entered changes. The 7-day reverse repo has been its main policy rate since 2024; the LPR prices most loans."),
       ask("5 years: does the Fed cut faster than the BoE, and does Hong Kong (pegged to the dollar) get rate cuts that its property market needs while China eases for deflation? 10 years: in 2015 all four were near their lows. 20 years: policy rates set the floor under every government's borrowing cost, so how far apart can the US and China run?"),
       ...handNote(d.cites));
     const effr = f.effr && f.effr.length ? card("US: effective fed funds rate inside the target range (%)", ...linesChart([{ name: "Top of range", points: f.upper, color: col("US") },

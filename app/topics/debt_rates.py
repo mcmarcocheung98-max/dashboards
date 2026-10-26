@@ -38,8 +38,11 @@ TOPIC = Topic(SLUG, "Global Debt & Rates",
 TTL = DAY
 COUNTRIES = {"USA": "US", "GBR": "UK", "HKG": "Hong Kong", "CHN": "China"}
 IMF = "https://www.imf.org/external/datamapper/api/v1/{ind}"            # returns every country; the country filter is ignored
-IMF_IND = {"debt": "GGXWDG_NGDP", "balance": "GGXCNL_NGDP", "primary": "GGXONLB_NGDP", "revenue": "GGR_NGDP",
+# WEO debt, growth, inflation; Fiscal Monitor (FM) balances and revenue, which the DataMapper carries under _G01_GDP_PT codes
+IMF_IND = {"debt": "GGXWDG_NGDP", "balance": "GGXCNL_G01_GDP_PT", "primary": "GGXONLB_G01_GDP_PT", "revenue": "GGR_G01_GDP_PT",
            "growth": "NGDP_RPCH", "inflation": "PCPIPCH"}
+# imf.org answers GitHub runners but refuses the Railway server (HTTP 403), so the page reads data/debt-rates/imf.csv, a copy of the
+# DataMapper values (series "<ISO> <indicator>"), refreshed after each WEO; /layout keeps checking whether the server can reach imf.org.
 FISCAL = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/"
 PENNY = FISCAL + "v2/accounting/od/debt_to_penny?fields=record_date,tot_pub_debt_out_amt,debt_held_public_amt&filter=record_date:gte:2000-01-01&page%5Bsize%5D=10000"
 MTS9 = (FISCAL + "v1/accounting/mts/mts_table_9?fields=record_date,classification_desc,line_code_nbr,current_month_rcpt_outly_amt"
@@ -184,9 +187,18 @@ def parse_nyfed(j: dict) -> pd.DataFrame:
 
 
 # ------------------------------------------------------------------ data
-def imf(key: str) -> dict[str, pd.Series]:
+def imf_live(key: str) -> dict[str, pd.Series]:
     ind = IMF_IND[key]
     return parse_imf(fetch_json(IMF.format(ind=ind), TTL, timeout=60, min_bytes=1000), ind)
+
+
+def imf(key: str) -> dict[str, pd.Series]:
+    """The committed copy of the IMF DataMapper values (see IMF above): {ISO: yearly Series}."""
+    ind = IMF_IND[key]
+    out = {k.split(" ", 1)[0]: v for k, v in hand("imf").items() if k.endswith(" " + ind) and len(v)}
+    if not out:
+        raise ValueError(f"data/debt-rates/imf.csv has no {ind} rows")
+    return {iso: out[iso] for iso in COUNTRIES if iso in out}
 
 
 def imf_interest() -> dict[str, pd.Series]:
@@ -329,7 +341,7 @@ def _debt_now() -> dict:
                    "us_total": lambda: _pts(month_end(penny()["tot_pub_debt_out_amt"]), 3),
                    "us_public": lambda: _pts(month_end(penny()["debt_held_public_amt"]), 3),
                    "uk_psnd": lambda: _pts(ons("psnd"), 1)},
-                  sources=[IMF.format(ind=IMF_IND["debt"]), PENNY, ONS.format(sid="hf6x")])
+                  sources=[PENNY, ONS.format(sid="hf6x")])
     try:
         d = imf("debt")
         out["table"] = [{"country": COUNTRIES[iso], "y2007": _at(s, 2007), "y2019": _at(s, 2019), "now": _at(s, yr - 1), "proj5": _at(s, yr + 4),
@@ -338,6 +350,7 @@ def _debt_now() -> dict:
         out["years"] = {"now": yr - 1, "proj5": yr + 4}
     except Exception as e:
         out["table"], out["table_error"] = [], type(e).__name__
+    out["imf_cites"] = [c for c in manual_sources(SLUG, "imf")]
     p = out.get("us_total") or []
     out["as_of"] = str(pd.Timestamp(p[-1][0], unit="s").date()) if p else None
     try:
@@ -384,27 +397,20 @@ def _interest_now() -> dict:
     out = payload({"imf_gdp": lambda: _by_country(imf_interest), "imf_revenue": lambda: _by_country(imf_interest_revenue, 1),
                    "us": _us_spending, "us_avg_rate": lambda: _pts(avg_rate(), 3), "uk_share": _uk_share,
                    "hand": _hand_spending, "cbo": lambda: {k: _pts(v, 2) for k, v in hand("cbo").items()}},
-                  sources=[IMF.format(ind=IMF_IND["primary"]), IMF.format(ind=IMF_IND["balance"]), MTS9, AVG_RATE, ONS.format(sid="nmfx"), ONS.format(sid="anbt")])
-    out["cites"] = {n: manual_sources(SLUG, n) for n in ("spending", "cbo")}
+                  sources=[MTS9, AVG_RATE, ONS.format(sid="nmfx"), ONS.format(sid="anbt")])
+    out["cites"] = {n: manual_sources(SLUG, n) for n in ("spending", "cbo", "imf")}
     out["rows"] = {n: manual_rows(SLUG, n) for n in ("spending", "cbo")}
     out["as_of"] = (out.get("us") or {}).get("month")
     return out
 
 
 def hk10() -> pd.Series:
-    """EFN 10-year (HKMA, ends 2015) then HKGB 10-year tender yields (hand-entered)."""
-    parts = []
-    try:
-        parts.append(hkma(HK_EFBN, "efn_10y"))
-    except Exception:
-        pass
-    h = hand("hk_10y").get("value", pd.Series(dtype=float))
-    if len(h):
-        parts.append(h)
-    if not parts:
-        raise ValueError("no Hong Kong 10-year yield: HKMA unreachable and data/debt-rates/hk_10y.csv empty")
-    s = pd.concat(parts).sort_index()
-    return s[~s.index.duplicated(keep="last")]
+    """data/debt-rates/hk_10y.csv: the EFN 10-year to 2015 (copied from the HKMA API, which refuses the Railway server), then HKGB
+    10-year yields."""
+    s = hand("hk_10y").get("value", pd.Series(dtype=float))
+    if s.empty:
+        raise ValueError("data/debt-rates/hk_10y.csv is empty")
+    return s
 
 
 def yields10_why() -> tuple[dict[str, pd.Series], dict[str, str]]:
@@ -465,16 +471,14 @@ def fed_range() -> pd.DataFrame:
     return n
 
 
-def hk_base() -> pd.Series:
+def hk_base(hibor: pd.Series | None = None) -> pd.Series:
     """HKMA base rate from its formula (March 2009 on): the higher of the Fed range's lower end + 0.5 and the average of overnight and
-    1-month HIBOR (month-end values here, the HKMA uses five-day averages)."""
+    1-month HIBOR. The HKMA API refuses the Railway server, so the page uses the Fed term alone, which has set the base rate since 2009;
+    `hibor` (monthly average of the two HIBORs) adds the other term where it is available."""
     f = steps(fed_range()["lo"])
     base = f[f.index >= "2009-04-01"] + 0.5
-    try:
-        h = (hkma(HK_HIBOR, "ir_overnight") + hkma(HK_HIBOR, "ir_1m")) / 2
-        base = pd.concat([base, h.reindex(base.index)], axis=1).max(axis=1)
-    except Exception:
-        pass
+    if hibor is not None and len(hibor):
+        base = pd.concat([base, hibor.reindex(base.index)], axis=1).max(axis=1)
     return base
 
 
@@ -485,7 +489,7 @@ def _policy_now() -> dict:
     pb = hand("pboc")
     out = payload({"fed": fed, "boe": lambda: _pts(steps(boe("bank_rate")), 2), "hk": lambda: _pts(hk_base(), 2),
                    "pboc": lambda: {k: _pts(steps(v), 2) for k, v in pb.items()}},
-                  sources=[NYFED.format(end=pd.Timestamp.now().strftime("%Y-%m-%d")), BOE.format(y=1995, code="IUDBEDR"), HKMA.format(path=HK_HIBOR, offset=0)])
+                  sources=[NYFED.format(end=pd.Timestamp.now().strftime("%Y-%m-%d")), BOE.format(y=1995, code="IUDBEDR")])
     last = lambda p: p[-1][1] if p else None
     out["now"] = {"Fed (upper)": last((out.get("fed") or {}).get("upper")), "Bank of England": last(out.get("boe")), "HKMA base rate": last(out.get("hk")),
                   "PBoC 7-day reverse repo": last((out.get("pboc") or {}).get("7-day reverse repo"))}
@@ -538,7 +542,7 @@ def _stress_now() -> dict:
     def us_slope():
         t = treasury("daily_treasury_yield_curve")
         return _pts(month_end(t["10y"] - t["2y"]), 2) if "2y" in t else []
-    out = payload({"spread": spreads, "us_slope": us_slope, "score": scorecard}, sources=[IMF.format(ind=IMF_IND["debt"])])
+    out = payload({"spread": spreads, "us_slope": us_slope, "score": scorecard}, sources=[])
     out["events"] = sorted(manual_rows(SLUG, "stress_events"), key=lambda r: r["date"], reverse=True)
     out["years"] = {"now": pd.Timestamp.now().year - 1, "proj5": pd.Timestamp.now().year + 4}
     out["as_of"] = str(pd.Timestamp.now().date())
@@ -552,7 +556,7 @@ def _layout_now() -> dict:
     import requests
     from ._base import UA
     y = pd.Timestamp.now().year
-    urls = {"imf debt": IMF.format(ind="GGXWDG_NGDP"), "imf primary": IMF.format(ind="GGXONLB_NGDP"), "penny": PENNY.replace("10000", "2"),
+    urls = {"imf debt": IMF.format(ind="GGXWDG_NGDP"), "imf revenue (FM)": IMF.format(ind="GGR_G01_GDP_PT"), "penny": PENNY.replace("10000", "2"),
             "mts9": MTS9.replace("10000", "3"), "avg rate": AVG_RATE.replace("10000", "2"),
             "tsy nominal": TSY.format(y=y, kind="daily_treasury_yield_curve"), "tsy real": TSY.format(y=y, kind="daily_treasury_real_yield_curve"),
             "nyfed": NYFED.format(end=f"{y}-01-10").replace("2000-01-01", f"{y}-01-01"),
@@ -568,6 +572,39 @@ def _layout_now() -> dict:
             return {"error": f"{type(e).__name__}: {str(e)[:160]}"}
     with ThreadPoolExecutor(max_workers=8) as ex:
         return dict(zip(urls, ex.map(one, urls.values())))
+
+
+def READINGS() -> list[dict]:
+    """Headline readings for 'what changed since yesterday', from cached payloads only. lean +1 = more fiscal stress, -1 = less."""
+    from ..cache import _cache
+    got = lambda name: (_cache.get(f"topic:{SLUG}:{name}") or (0, {}))[1] or {}
+    last = lambda p: p[-1][1] if p else None
+    band = lambda v, hi, lo: None if v is None else (1 if v >= hi else -1 if v <= lo else 0)
+    out = []
+
+    def add(tab, key, label, value, lean, note=None):
+        if value is not None:
+            out.append({"tab": tab, "key": key, "label": label, "value": value, "lean": lean or 0, **({"note": note} if note else {})})
+    us = got("interest").get("us") or {}
+    share, r = last(us.get("share")), us.get("rolling") or {}
+    add("interest", "us_int_share", "US net interest, % of federal receipts", share, band(share, 15, 10), "+1 at 15% or more, -1 at 10% or less")
+    i, dfn = last(r.get("interest")), last(r.get("defence"))
+    if None not in (i, dfn):
+        add("interest", "us_int_vs_def", "US net interest minus defence, last 12 months ($bn)", round(i - dfn, 1), 1 if i > dfn else -1)
+    add("interest", "uk_int_share", "UK debt interest, % of receipts", last(got("interest").get("uk_share")), band(last(got("interest").get("uk_share")), 10, 7))
+    for k, v in (got("yields").get("now") or {}).items():
+        add("yields", f"y10_{k}", f"{k} 10-year yield (%)", v.get("v"), band(v.get("v"), 4.5, 3.0) if k in ("US", "UK") else 0)
+    for k, v in (got("policy").get("now") or {}).items():
+        add("policy", f"rate_{k}", f"{k} (%)", v, 0)
+    st = got("stress")
+    for row in st.get("score") or []:
+        g = row.get("gap")
+        add("stress", f"gap_{row['country']}", f"{row['country']}: debt-stabilising primary balance minus IMF projection (pts of GDP)", g,
+            None if g is None else (1 if g > 0.5 else -1 if g < -0.5 else 0))
+    for k, pts in (st.get("spread") or {}).items():
+        v = last(pts)
+        add("stress", f"spread_{k}", f"{k}: 10-year minus policy rate (pts)", v, band(v, 1.5, 0) if k in ("US", "UK") else 0)
+    return out
 
 
 def _cached_ep(name, fn, ttl=6 * 3600):

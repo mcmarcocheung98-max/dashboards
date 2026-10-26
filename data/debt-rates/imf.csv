@@ -1,0 +1,441 @@
+date,series,value,source,note
+# IMF DataMapper values (WEO: GGXWDG_NGDP debt, NGDP_RPCH real growth, PCPIPCH inflation; Fiscal Monitor: GGXCNL_G01_GDP_PT overall balance,
+# GGXONLB_G01_GDP_PT primary balance, GGR_G01_GDP_PT revenue; all % of GDP or %), one row per country, indicator and year.
+# US and UK: copied exactly from the API through a GitHub runner on 2026-10-26 (imf.org refuses the Railway server).
+# China and Hong Kong: headline years written from memory of earlier WEO/Fiscal Monitor releases (verify), because the copy above cut them off.
+2001-01-01,USA GGXWDG_NGDP,53.5,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2002-01-01,USA GGXWDG_NGDP,55.9,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2003-01-01,USA GGXWDG_NGDP,59.0,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2004-01-01,USA GGXWDG_NGDP,66.4,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2005-01-01,USA GGXWDG_NGDP,65.8,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2006-01-01,USA GGXWDG_NGDP,64.5,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2007-01-01,USA GGXWDG_NGDP,65.0,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2008-01-01,USA GGXWDG_NGDP,73.9,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2009-01-01,USA GGXWDG_NGDP,87.1,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2010-01-01,USA GGXWDG_NGDP,95.7,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2011-01-01,USA GGXWDG_NGDP,100.0,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2012-01-01,USA GGXWDG_NGDP,103.7,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2013-01-01,USA GGXWDG_NGDP,105.0,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2014-01-01,USA GGXWDG_NGDP,105.0,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2015-01-01,USA GGXWDG_NGDP,105.5,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2016-01-01,USA GGXWDG_NGDP,107.5,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2017-01-01,USA GGXWDG_NGDP,106.5,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2018-01-01,USA GGXWDG_NGDP,107.7,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2019-01-01,USA GGXWDG_NGDP,108.8,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2020-01-01,USA GGXWDG_NGDP,132.6,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2021-01-01,USA GGXWDG_NGDP,125.0,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2022-01-01,USA GGXWDG_NGDP,119.2,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2023-01-01,USA GGXWDG_NGDP,120.0,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2024-01-01,USA GGXWDG_NGDP,122.3,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2025-01-01,USA GGXWDG_NGDP,124.4,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2026-01-01,USA GGXWDG_NGDP,126.8,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2027-01-01,USA GGXWDG_NGDP,128.7,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2028-01-01,USA GGXWDG_NGDP,132.3,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2029-01-01,USA GGXWDG_NGDP,136.4,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2030-01-01,USA GGXWDG_NGDP,140.7,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2031-01-01,USA GGXWDG_NGDP,145.0,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2000-01-01,GBR GGXWDG_NGDP,37.7,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2001-01-01,GBR GGXWDG_NGDP,35.0,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2002-01-01,GBR GGXWDG_NGDP,35.5,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2003-01-01,GBR GGXWDG_NGDP,36.8,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2004-01-01,GBR GGXWDG_NGDP,39.8,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2005-01-01,GBR GGXWDG_NGDP,41.0,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2006-01-01,GBR GGXWDG_NGDP,42.1,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2007-01-01,GBR GGXWDG_NGDP,43.1,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2008-01-01,GBR GGXWDG_NGDP,50.7,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2009-01-01,GBR GGXWDG_NGDP,64.6,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2010-01-01,GBR GGXWDG_NGDP,75.5,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2011-01-01,GBR GGXWDG_NGDP,81.0,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2012-01-01,GBR GGXWDG_NGDP,84.0,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2013-01-01,GBR GGXWDG_NGDP,84.8,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2014-01-01,GBR GGXWDG_NGDP,86.4,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2015-01-01,GBR GGXWDG_NGDP,87.3,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2016-01-01,GBR GGXWDG_NGDP,87.2,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2017-01-01,GBR GGXWDG_NGDP,85.9,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2018-01-01,GBR GGXWDG_NGDP,85.3,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2019-01-01,GBR GGXWDG_NGDP,84.5,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2020-01-01,GBR GGXWDG_NGDP,104.4,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2021-01-01,GBR GGXWDG_NGDP,103.0,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2022-01-01,GBR GGXWDG_NGDP,97.1,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2023-01-01,GBR GGXWDG_NGDP,98.3,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2024-01-01,GBR GGXWDG_NGDP,99.4,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2025-01-01,GBR GGXWDG_NGDP,102.1,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2026-01-01,GBR GGXWDG_NGDP,102.0,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2027-01-01,GBR GGXWDG_NGDP,102.5,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2028-01-01,GBR GGXWDG_NGDP,102.3,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2029-01-01,GBR GGXWDG_NGDP,101.6,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2030-01-01,GBR GGXWDG_NGDP,100.9,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2031-01-01,GBR GGXWDG_NGDP,100.2,https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP,copied from the API 2026-10-26
+2015-01-01,USA NGDP_RPCH,2.9,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2016-01-01,USA NGDP_RPCH,1.8,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2017-01-01,USA NGDP_RPCH,2.5,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2018-01-01,USA NGDP_RPCH,3.0,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2019-01-01,USA NGDP_RPCH,2.6,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2020-01-01,USA NGDP_RPCH,-2.1,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2021-01-01,USA NGDP_RPCH,6.3,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2022-01-01,USA NGDP_RPCH,2.4,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2023-01-01,USA NGDP_RPCH,2.9,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2024-01-01,USA NGDP_RPCH,3.0,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2025-01-01,USA NGDP_RPCH,2.3,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2026-01-01,USA NGDP_RPCH,2.3,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2027-01-01,USA NGDP_RPCH,2.3,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2028-01-01,USA NGDP_RPCH,2.1,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2029-01-01,USA NGDP_RPCH,1.9,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2030-01-01,USA NGDP_RPCH,1.8,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2031-01-01,USA NGDP_RPCH,1.8,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2015-01-01,GBR NGDP_RPCH,2.2,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2016-01-01,GBR NGDP_RPCH,2.2,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2017-01-01,GBR NGDP_RPCH,3.3,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2018-01-01,GBR NGDP_RPCH,1.6,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2019-01-01,GBR NGDP_RPCH,1.4,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2020-01-01,GBR NGDP_RPCH,-10.0,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2021-01-01,GBR NGDP_RPCH,8.5,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2022-01-01,GBR NGDP_RPCH,5.0,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2023-01-01,GBR NGDP_RPCH,0.4,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2024-01-01,GBR NGDP_RPCH,1.1,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2025-01-01,GBR NGDP_RPCH,1.2,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2026-01-01,GBR NGDP_RPCH,1.3,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2027-01-01,GBR NGDP_RPCH,1.2,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2028-01-01,GBR NGDP_RPCH,1.6,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2029-01-01,GBR NGDP_RPCH,1.5,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2030-01-01,GBR NGDP_RPCH,1.4,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2031-01-01,GBR NGDP_RPCH,1.4,https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH,copied from the API 2026-10-26
+2015-01-01,USA PCPIPCH,0.1,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2016-01-01,USA PCPIPCH,1.3,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2017-01-01,USA PCPIPCH,2.1,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2018-01-01,USA PCPIPCH,2.4,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2019-01-01,USA PCPIPCH,1.8,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2020-01-01,USA PCPIPCH,1.3,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2021-01-01,USA PCPIPCH,4.7,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2022-01-01,USA PCPIPCH,8.0,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2023-01-01,USA PCPIPCH,4.1,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2024-01-01,USA PCPIPCH,3.0,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2025-01-01,USA PCPIPCH,2.7,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2026-01-01,USA PCPIPCH,3.6,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2027-01-01,USA PCPIPCH,2.8,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2028-01-01,USA PCPIPCH,2.1,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2029-01-01,USA PCPIPCH,1.9,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2030-01-01,USA PCPIPCH,1.9,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2031-01-01,USA PCPIPCH,1.9,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2015-01-01,GBR PCPIPCH,0.0,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2016-01-01,GBR PCPIPCH,0.7,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2017-01-01,GBR PCPIPCH,2.7,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2018-01-01,GBR PCPIPCH,2.5,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2019-01-01,GBR PCPIPCH,1.8,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2020-01-01,GBR PCPIPCH,0.9,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2021-01-01,GBR PCPIPCH,2.6,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2022-01-01,GBR PCPIPCH,9.1,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2023-01-01,GBR PCPIPCH,7.3,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2024-01-01,GBR PCPIPCH,2.5,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2025-01-01,GBR PCPIPCH,3.4,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2026-01-01,GBR PCPIPCH,3.3,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2027-01-01,GBR PCPIPCH,2.8,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2028-01-01,GBR PCPIPCH,2.0,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2029-01-01,GBR PCPIPCH,2.0,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2030-01-01,GBR PCPIPCH,2.0,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2031-01-01,GBR PCPIPCH,2.0,https://www.imf.org/external/datamapper/api/v1/PCPIPCH,copied from the API 2026-10-26
+2001-01-01,USA GGXCNL_G01_GDP_PT,-0.544,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2002-01-01,USA GGXCNL_G01_GDP_PT,-3.821,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2003-01-01,USA GGXCNL_G01_GDP_PT,-4.771,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2004-01-01,USA GGXCNL_G01_GDP_PT,-4.244,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2005-01-01,USA GGXCNL_G01_GDP_PT,-3.075,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2006-01-01,USA GGXCNL_G01_GDP_PT,-2.036,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2007-01-01,USA GGXCNL_G01_GDP_PT,-2.913,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2008-01-01,USA GGXCNL_G01_GDP_PT,-6.612,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2009-01-01,USA GGXCNL_G01_GDP_PT,-13.177,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2010-01-01,USA GGXCNL_G01_GDP_PT,-10.993,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2011-01-01,USA GGXCNL_G01_GDP_PT,-9.716,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2012-01-01,USA GGXCNL_G01_GDP_PT,-8.114,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2013-01-01,USA GGXCNL_G01_GDP_PT,-4.561,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2014-01-01,USA GGXCNL_G01_GDP_PT,-4.026,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2015-01-01,USA GGXCNL_G01_GDP_PT,-3.53,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2016-01-01,USA GGXCNL_G01_GDP_PT,-4.356,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2017-01-01,USA GGXCNL_G01_GDP_PT,-4.794,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2018-01-01,USA GGXCNL_G01_GDP_PT,-5.335,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2019-01-01,USA GGXCNL_G01_GDP_PT,-5.805,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2020-01-01,USA GGXCNL_G01_GDP_PT,-14.127,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2021-01-01,USA GGXCNL_G01_GDP_PT,-11.495,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2022-01-01,USA GGXCNL_G01_GDP_PT,-3.749,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2023-01-01,USA GGXCNL_G01_GDP_PT,-7.86,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2024-01-01,USA GGXCNL_G01_GDP_PT,-7.816,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2025-01-01,USA GGXCNL_G01_GDP_PT,-7.058,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2026-01-01,USA GGXCNL_G01_GDP_PT,-8.544,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2027-01-01,USA GGXCNL_G01_GDP_PT,-7.764,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2028-01-01,USA GGXCNL_G01_GDP_PT,-8.076,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2029-01-01,USA GGXCNL_G01_GDP_PT,-8.271,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2030-01-01,USA GGXCNL_G01_GDP_PT,-8.41,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2031-01-01,USA GGXCNL_G01_GDP_PT,-8.384,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2000-01-01,GBR GGXCNL_G01_GDP_PT,1.401,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2001-01-01,GBR GGXCNL_G01_GDP_PT,0.341,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2002-01-01,GBR GGXCNL_G01_GDP_PT,-1.954,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2003-01-01,GBR GGXCNL_G01_GDP_PT,-3.206,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2004-01-01,GBR GGXCNL_G01_GDP_PT,-3.156,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2005-01-01,GBR GGXCNL_G01_GDP_PT,-3.143,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2006-01-01,GBR GGXCNL_G01_GDP_PT,-2.749,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2007-01-01,GBR GGXCNL_G01_GDP_PT,-2.641,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2008-01-01,GBR GGXCNL_G01_GDP_PT,-5.062,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2009-01-01,GBR GGXCNL_G01_GDP_PT,-9.989,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2010-01-01,GBR GGXCNL_G01_GDP_PT,-9.251,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2011-01-01,GBR GGXCNL_G01_GDP_PT,-7.422,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2012-01-01,GBR GGXCNL_G01_GDP_PT,-7.952,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2013-01-01,GBR GGXCNL_G01_GDP_PT,-5.284,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2014-01-01,GBR GGXCNL_G01_GDP_PT,-5.462,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2015-01-01,GBR GGXCNL_G01_GDP_PT,-4.533,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2016-01-01,GBR GGXCNL_G01_GDP_PT,-3.279,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2017-01-01,GBR GGXCNL_G01_GDP_PT,-2.477,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2018-01-01,GBR GGXCNL_G01_GDP_PT,-2.225,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2019-01-01,GBR GGXCNL_G01_GDP_PT,-2.369,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2020-01-01,GBR GGXCNL_G01_GDP_PT,-12.87,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2021-01-01,GBR GGXCNL_G01_GDP_PT,-7.504,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2022-01-01,GBR GGXCNL_G01_GDP_PT,-4.582,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2023-01-01,GBR GGXCNL_G01_GDP_PT,-6.022,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2024-01-01,GBR GGXCNL_G01_GDP_PT,-6.004,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2025-01-01,GBR GGXCNL_G01_GDP_PT,-5.27,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2026-01-01,GBR GGXCNL_G01_GDP_PT,-3.775,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2027-01-01,GBR GGXCNL_G01_GDP_PT,-3.039,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2028-01-01,GBR GGXCNL_G01_GDP_PT,-2.493,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2029-01-01,GBR GGXCNL_G01_GDP_PT,-1.804,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2030-01-01,GBR GGXCNL_G01_GDP_PT,-1.548,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2031-01-01,GBR GGXCNL_G01_GDP_PT,-1.425,https://www.imf.org/external/datamapper/api/v1/GGXCNL_G01_GDP_PT,copied from the API 2026-10-26
+2001-01-01,USA GGXONLB_G01_GDP_PT,1.768,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2002-01-01,USA GGXONLB_G01_GDP_PT,-1.717,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2003-01-01,USA GGXONLB_G01_GDP_PT,-2.812,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2004-01-01,USA GGXONLB_G01_GDP_PT,-2.351,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2005-01-01,USA GGXONLB_G01_GDP_PT,-1.084,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2006-01-01,USA GGXONLB_G01_GDP_PT,-0.074,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2007-01-01,USA GGXONLB_G01_GDP_PT,-0.847,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2008-01-01,USA GGXONLB_G01_GDP_PT,-4.589,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2009-01-01,USA GGXONLB_G01_GDP_PT,-11.288,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2010-01-01,USA GGXONLB_G01_GDP_PT,-8.966,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2011-01-01,USA GGXONLB_G01_GDP_PT,-7.419,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2012-01-01,USA GGXONLB_G01_GDP_PT,-5.905,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2013-01-01,USA GGXONLB_G01_GDP_PT,-2.584,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2014-01-01,USA GGXONLB_G01_GDP_PT,-2.056,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2015-01-01,USA GGXONLB_G01_GDP_PT,-1.692,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2016-01-01,USA GGXONLB_G01_GDP_PT,-2.374,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2017-01-01,USA GGXONLB_G01_GDP_PT,-2.781,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2018-01-01,USA GGXONLB_G01_GDP_PT,-3.101,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2019-01-01,USA GGXONLB_G01_GDP_PT,-3.528,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2020-01-01,USA GGXONLB_G01_GDP_PT,-12.077,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2021-01-01,USA GGXONLB_G01_GDP_PT,-9.222,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2022-01-01,USA GGXONLB_G01_GDP_PT,-1.004,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2023-01-01,USA GGXONLB_G01_GDP_PT,-4.853,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2024-01-01,USA GGXONLB_G01_GDP_PT,-4.63,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2025-01-01,USA GGXONLB_G01_GDP_PT,-3.88,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2026-01-01,USA GGXONLB_G01_GDP_PT,-4.924,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2027-01-01,USA GGXONLB_G01_GDP_PT,-3.958,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2028-01-01,USA GGXONLB_G01_GDP_PT,-3.904,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2029-01-01,USA GGXONLB_G01_GDP_PT,-3.689,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2030-01-01,USA GGXONLB_G01_GDP_PT,-3.559,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2031-01-01,USA GGXONLB_G01_GDP_PT,-3.376,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2000-01-01,GBR GGXONLB_G01_GDP_PT,3.061,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2001-01-01,GBR GGXONLB_G01_GDP_PT,1.825,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2002-01-01,GBR GGXONLB_G01_GDP_PT,-0.579,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2003-01-01,GBR GGXONLB_G01_GDP_PT,-1.796,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2004-01-01,GBR GGXONLB_G01_GDP_PT,-1.688,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2005-01-01,GBR GGXONLB_G01_GDP_PT,-1.544,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2006-01-01,GBR GGXONLB_G01_GDP_PT,-1.137,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2007-01-01,GBR GGXONLB_G01_GDP_PT,-0.952,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2008-01-01,GBR GGXONLB_G01_GDP_PT,-3.514,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2009-01-01,GBR GGXONLB_G01_GDP_PT,-8.523,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2010-01-01,GBR GGXONLB_G01_GDP_PT,-6.723,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2011-01-01,GBR GGXONLB_G01_GDP_PT,-4.627,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2012-01-01,GBR GGXONLB_G01_GDP_PT,-5.611,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2013-01-01,GBR GGXONLB_G01_GDP_PT,-3.895,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2014-01-01,GBR GGXONLB_G01_GDP_PT,-3.643,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2015-01-01,GBR GGXONLB_G01_GDP_PT,-3.029,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2016-01-01,GBR GGXONLB_G01_GDP_PT,-1.668,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2017-01-01,GBR GGXONLB_G01_GDP_PT,-0.676,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2018-01-01,GBR GGXONLB_G01_GDP_PT,-0.561,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2019-01-01,GBR GGXONLB_G01_GDP_PT,-0.948,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2020-01-01,GBR GGXONLB_G01_GDP_PT,-11.747,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2021-01-01,GBR GGXONLB_G01_GDP_PT,-5.406,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2022-01-01,GBR GGXONLB_G01_GDP_PT,-1.037,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2023-01-01,GBR GGXONLB_G01_GDP_PT,-3.674,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2024-01-01,GBR GGXONLB_G01_GDP_PT,-3.981,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2025-01-01,GBR GGXONLB_G01_GDP_PT,-2.665,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2026-01-01,GBR GGXONLB_G01_GDP_PT,-1.148,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2027-01-01,GBR GGXONLB_G01_GDP_PT,-0.331,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2028-01-01,GBR GGXONLB_G01_GDP_PT,0.355,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2029-01-01,GBR GGXONLB_G01_GDP_PT,1.181,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2030-01-01,GBR GGXONLB_G01_GDP_PT,1.476,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2031-01-01,GBR GGXONLB_G01_GDP_PT,1.513,https://www.imf.org/external/datamapper/api/v1/GGXONLB_G01_GDP_PT,copied from the API 2026-10-26
+2001-01-01,USA GGR_G01_GDP_PT,32.257,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2002-01-01,USA GGR_G01_GDP_PT,29.877,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2003-01-01,USA GGR_G01_GDP_PT,29.266,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2004-01-01,USA GGR_G01_GDP_PT,29.476,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2005-01-01,USA GGR_G01_GDP_PT,30.853,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2006-01-01,USA GGR_G01_GDP_PT,31.656,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2007-01-01,USA GGR_G01_GDP_PT,31.649,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2008-01-01,USA GGR_G01_GDP_PT,30.532,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2009-01-01,USA GGR_G01_GDP_PT,28.222,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2010-01-01,USA GGR_G01_GDP_PT,28.77,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2011-01-01,USA GGR_G01_GDP_PT,29.08,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2012-01-01,USA GGR_G01_GDP_PT,29.109,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2013-01-01,USA GGR_G01_GDP_PT,31.222,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2014-01-01,USA GGR_G01_GDP_PT,31.298,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2015-01-01,USA GGR_G01_GDP_PT,31.501,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2016-01-01,USA GGR_G01_GDP_PT,30.977,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2017-01-01,USA GGR_G01_GDP_PT,30.4,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2018-01-01,USA GGR_G01_GDP_PT,30.014,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2019-01-01,USA GGR_G01_GDP_PT,30.014,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2020-01-01,USA GGR_G01_GDP_PT,30.609,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2021-01-01,USA GGR_G01_GDP_PT,31.735,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2022-01-01,USA GGR_G01_GDP_PT,33.069,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2023-01-01,USA GGR_G01_GDP_PT,29.607,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2024-01-01,USA GGR_G01_GDP_PT,29.795,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2025-01-01,USA GGR_G01_GDP_PT,30.501,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2026-01-01,USA GGR_G01_GDP_PT,29.695,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2027-01-01,USA GGR_G01_GDP_PT,29.947,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2028-01-01,USA GGR_G01_GDP_PT,29.868,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2029-01-01,USA GGR_G01_GDP_PT,29.869,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2030-01-01,USA GGR_G01_GDP_PT,30.132,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2031-01-01,USA GGR_G01_GDP_PT,30.264,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2000-01-01,GBR GGR_G01_GDP_PT,35.293,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2001-01-01,GBR GGR_G01_GDP_PT,34.959,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2002-01-01,GBR GGR_G01_GDP_PT,33.998,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2003-01-01,GBR GGR_G01_GDP_PT,33.95,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2004-01-01,GBR GGR_G01_GDP_PT,34.853,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2005-01-01,GBR GGR_G01_GDP_PT,35.263,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2006-01-01,GBR GGR_G01_GDP_PT,35.589,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2007-01-01,GBR GGR_G01_GDP_PT,35.875,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2008-01-01,GBR GGR_G01_GDP_PT,35.665,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2009-01-01,GBR GGR_G01_GDP_PT,34.263,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2010-01-01,GBR GGR_G01_GDP_PT,35.24,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2011-01-01,GBR GGR_G01_GDP_PT,35.872,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2012-01-01,GBR GGR_G01_GDP_PT,35.345,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2013-01-01,GBR GGR_G01_GDP_PT,36.22,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2014-01-01,GBR GGR_G01_GDP_PT,35.322,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2015-01-01,GBR GGR_G01_GDP_PT,35.535,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2016-01-01,GBR GGR_G01_GDP_PT,36.005,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2017-01-01,GBR GGR_G01_GDP_PT,36.266,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2018-01-01,GBR GGR_G01_GDP_PT,36.122,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2019-01-01,GBR GGR_G01_GDP_PT,35.778,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2020-01-01,GBR GGR_G01_GDP_PT,36.27,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2021-01-01,GBR GGR_G01_GDP_PT,37.203,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2022-01-01,GBR GGR_G01_GDP_PT,38.502,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2023-01-01,GBR GGR_G01_GDP_PT,37.95,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2024-01-01,GBR GGR_G01_GDP_PT,37.437,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2025-01-01,GBR GGR_G01_GDP_PT,38.195,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2026-01-01,GBR GGR_G01_GDP_PT,39.685,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2027-01-01,GBR GGR_G01_GDP_PT,40.652,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2028-01-01,GBR GGR_G01_GDP_PT,41.048,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2029-01-01,GBR GGR_G01_GDP_PT,41.402,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2030-01-01,GBR GGR_G01_GDP_PT,41.723,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2031-01-01,GBR GGR_G01_GDP_PT,41.893,https://www.imf.org/external/datamapper/api/v1/GGR_G01_GDP_PT,copied from the API 2026-10-26
+2007-01-01,CHN GGXWDG_NGDP,29.0,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2010-01-01,CHN GGXWDG_NGDP,33.7,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2015-01-01,CHN GGXWDG_NGDP,41.5,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2019-01-01,CHN GGXWDG_NGDP,60.4,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2020-01-01,CHN GGXWDG_NGDP,70.1,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2021-01-01,CHN GGXWDG_NGDP,71.8,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2022-01-01,CHN GGXWDG_NGDP,77.4,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2023-01-01,CHN GGXWDG_NGDP,84.4,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2024-01-01,CHN GGXWDG_NGDP,90.1,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2025-01-01,CHN GGXWDG_NGDP,96.3,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2026-01-01,CHN GGXWDG_NGDP,101.0,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2028-01-01,CHN GGXWDG_NGDP,108.0,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2030-01-01,CHN GGXWDG_NGDP,113.0,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2015-01-01,CHN GGXCNL_G01_GDP_PT,-2.8,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2019-01-01,CHN GGXCNL_G01_GDP_PT,-6.1,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2020-01-01,CHN GGXCNL_G01_GDP_PT,-9.7,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2021-01-01,CHN GGXCNL_G01_GDP_PT,-6.1,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2022-01-01,CHN GGXCNL_G01_GDP_PT,-7.5,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2023-01-01,CHN GGXCNL_G01_GDP_PT,-7.1,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2024-01-01,CHN GGXCNL_G01_GDP_PT,-7.3,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2025-01-01,CHN GGXCNL_G01_GDP_PT,-8.6,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2026-01-01,CHN GGXCNL_G01_GDP_PT,-8.5,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2028-01-01,CHN GGXCNL_G01_GDP_PT,-8.4,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2030-01-01,CHN GGXCNL_G01_GDP_PT,-8.2,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2015-01-01,CHN GGXONLB_G01_GDP_PT,-2.1,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2019-01-01,CHN GGXONLB_G01_GDP_PT,-5.2,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2020-01-01,CHN GGXONLB_G01_GDP_PT,-8.6,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2021-01-01,CHN GGXONLB_G01_GDP_PT,-5.0,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2022-01-01,CHN GGXONLB_G01_GDP_PT,-6.3,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2023-01-01,CHN GGXONLB_G01_GDP_PT,-5.8,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2024-01-01,CHN GGXONLB_G01_GDP_PT,-6.0,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2025-01-01,CHN GGXONLB_G01_GDP_PT,-7.2,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2026-01-01,CHN GGXONLB_G01_GDP_PT,-7.0,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2028-01-01,CHN GGXONLB_G01_GDP_PT,-6.7,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2030-01-01,CHN GGXONLB_G01_GDP_PT,-6.3,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2015-01-01,CHN GGR_G01_GDP_PT,28.5,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2019-01-01,CHN GGR_G01_GDP_PT,28.1,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2020-01-01,CHN GGR_G01_GDP_PT,25.7,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2021-01-01,CHN GGR_G01_GDP_PT,26.4,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2022-01-01,CHN GGR_G01_GDP_PT,25.9,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2023-01-01,CHN GGR_G01_GDP_PT,26.6,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2024-01-01,CHN GGR_G01_GDP_PT,26.0,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2025-01-01,CHN GGR_G01_GDP_PT,25.5,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2026-01-01,CHN GGR_G01_GDP_PT,25.4,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2028-01-01,CHN GGR_G01_GDP_PT,25.4,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2030-01-01,CHN GGR_G01_GDP_PT,25.4,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2025-01-01,CHN NGDP_RPCH,4.8,https://www.imf.org/external/datamapper/NGDP_RPCH@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2026-01-01,CHN NGDP_RPCH,4.2,https://www.imf.org/external/datamapper/NGDP_RPCH@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2027-01-01,CHN NGDP_RPCH,4.0,https://www.imf.org/external/datamapper/NGDP_RPCH@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2028-01-01,CHN NGDP_RPCH,3.8,https://www.imf.org/external/datamapper/NGDP_RPCH@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2029-01-01,CHN NGDP_RPCH,3.6,https://www.imf.org/external/datamapper/NGDP_RPCH@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2030-01-01,CHN NGDP_RPCH,3.4,https://www.imf.org/external/datamapper/NGDP_RPCH@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2025-01-01,CHN PCPIPCH,0.0,https://www.imf.org/external/datamapper/PCPIPCH@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2026-01-01,CHN PCPIPCH,0.8,https://www.imf.org/external/datamapper/PCPIPCH@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2027-01-01,CHN PCPIPCH,1.2,https://www.imf.org/external/datamapper/PCPIPCH@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2028-01-01,CHN PCPIPCH,1.5,https://www.imf.org/external/datamapper/PCPIPCH@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2029-01-01,CHN PCPIPCH,1.8,https://www.imf.org/external/datamapper/PCPIPCH@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2030-01-01,CHN PCPIPCH,2.0,https://www.imf.org/external/datamapper/PCPIPCH@WEO/CHN,verify: from memory of an earlier WEO / Fiscal Monitor
+2007-01-01,HKG GGXWDG_NGDP,1.2,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2010-01-01,HKG GGXWDG_NGDP,0.6,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2015-01-01,HKG GGXWDG_NGDP,0.1,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2019-01-01,HKG GGXWDG_NGDP,0.3,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2020-01-01,HKG GGXWDG_NGDP,1.0,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2021-01-01,HKG GGXWDG_NGDP,2.0,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2022-01-01,HKG GGXWDG_NGDP,4.3,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2023-01-01,HKG GGXWDG_NGDP,6.1,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2024-01-01,HKG GGXWDG_NGDP,8.0,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2025-01-01,HKG GGXWDG_NGDP,10.5,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2026-01-01,HKG GGXWDG_NGDP,12.5,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2028-01-01,HKG GGXWDG_NGDP,15.0,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2030-01-01,HKG GGXWDG_NGDP,16.0,https://www.imf.org/external/datamapper/GGXWDG_NGDP@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2015-01-01,HKG GGXCNL_G01_GDP_PT,0.6,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2019-01-01,HKG GGXCNL_G01_GDP_PT,-0.6,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2020-01-01,HKG GGXCNL_G01_GDP_PT,-9.2,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2021-01-01,HKG GGXCNL_G01_GDP_PT,0.0,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2022-01-01,HKG GGXCNL_G01_GDP_PT,-6.6,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2023-01-01,HKG GGXCNL_G01_GDP_PT,-4.4,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2024-01-01,HKG GGXCNL_G01_GDP_PT,-3.4,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2025-01-01,HKG GGXCNL_G01_GDP_PT,-2.5,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2026-01-01,HKG GGXCNL_G01_GDP_PT,-1.5,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2028-01-01,HKG GGXCNL_G01_GDP_PT,-0.5,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2030-01-01,HKG GGXCNL_G01_GDP_PT,0.0,https://www.imf.org/external/datamapper/GGXCNL_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2015-01-01,HKG GGXONLB_G01_GDP_PT,-0.9,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2019-01-01,HKG GGXONLB_G01_GDP_PT,-2.0,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2020-01-01,HKG GGXONLB_G01_GDP_PT,-10.5,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2021-01-01,HKG GGXONLB_G01_GDP_PT,-1.5,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2022-01-01,HKG GGXONLB_G01_GDP_PT,-8.0,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2023-01-01,HKG GGXONLB_G01_GDP_PT,-6.0,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2024-01-01,HKG GGXONLB_G01_GDP_PT,-5.0,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2025-01-01,HKG GGXONLB_G01_GDP_PT,-4.2,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2026-01-01,HKG GGXONLB_G01_GDP_PT,-3.3,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2028-01-01,HKG GGXONLB_G01_GDP_PT,-2.3,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2030-01-01,HKG GGXONLB_G01_GDP_PT,-1.8,https://www.imf.org/external/datamapper/GGXONLB_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2015-01-01,HKG GGR_G01_GDP_PT,18.8,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2019-01-01,HKG GGR_G01_GDP_PT,19.3,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2020-01-01,HKG GGR_G01_GDP_PT,18.0,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2021-01-01,HKG GGR_G01_GDP_PT,21.5,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2022-01-01,HKG GGR_G01_GDP_PT,18.0,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2023-01-01,HKG GGR_G01_GDP_PT,17.5,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2024-01-01,HKG GGR_G01_GDP_PT,18.0,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2025-01-01,HKG GGR_G01_GDP_PT,18.5,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2026-01-01,HKG GGR_G01_GDP_PT,19.0,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2028-01-01,HKG GGR_G01_GDP_PT,19.5,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2030-01-01,HKG GGR_G01_GDP_PT,19.5,https://www.imf.org/external/datamapper/GGR_G01_GDP_PT@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2025-01-01,HKG NGDP_RPCH,3.2,https://www.imf.org/external/datamapper/NGDP_RPCH@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2026-01-01,HKG NGDP_RPCH,2.4,https://www.imf.org/external/datamapper/NGDP_RPCH@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2027-01-01,HKG NGDP_RPCH,2.4,https://www.imf.org/external/datamapper/NGDP_RPCH@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2028-01-01,HKG NGDP_RPCH,2.5,https://www.imf.org/external/datamapper/NGDP_RPCH@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2029-01-01,HKG NGDP_RPCH,2.6,https://www.imf.org/external/datamapper/NGDP_RPCH@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2030-01-01,HKG NGDP_RPCH,2.6,https://www.imf.org/external/datamapper/NGDP_RPCH@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2025-01-01,HKG PCPIPCH,1.5,https://www.imf.org/external/datamapper/PCPIPCH@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2026-01-01,HKG PCPIPCH,1.8,https://www.imf.org/external/datamapper/PCPIPCH@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2027-01-01,HKG PCPIPCH,2.0,https://www.imf.org/external/datamapper/PCPIPCH@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2028-01-01,HKG PCPIPCH,2.2,https://www.imf.org/external/datamapper/PCPIPCH@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2029-01-01,HKG PCPIPCH,2.4,https://www.imf.org/external/datamapper/PCPIPCH@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
+2030-01-01,HKG PCPIPCH,2.5,https://www.imf.org/external/datamapper/PCPIPCH@WEO/HKG,verify: from memory of an earlier WEO / Fiscal Monitor
