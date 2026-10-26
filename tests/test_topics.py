@@ -1131,7 +1131,7 @@ def test_btc_fundamentals_parse_and_factors(snapdir, monkeypatch):
     fd = {"fees": [[int(t.timestamp()), 1e5 * 365 / 365] for t in idx], "tvl": [[int(t.timestamp()), 1e9] for t in idx],
           "schedule": [[int((idx[-1] + pd.Timedelta(days=d)).timestamp()), 1000.0 + max(0, d) * 1000.0 / 800] for d in range(-60, 900, 7)],
           "supply": {"circulating_supply": 1000, "total_supply": 2000, "max_supply": 2000}}
-    F = C.fund_factors(fd, px, mc, ["2027-12-31"])
+    F = C.fund_factors(fd, mc / 1000, mc, ["2027-12-31"])             # price = market cap / 1,000 coins, so 1,000 circulating against 2,000 max
     assert F["factors"]["valuation_basis"] == "price-to-fees" and F["factors"]["valuation"] == pytest.approx(1.5)
     assert F["factors"]["dilution_basis"].startswith("unlock schedule") and 0.4 < F["factors"]["dilution"]["2027-12-31"] < 0.7
     assert F["kpi"]["p_fees"] < F["kpi"]["p_fees_median"] and F["kpi"]["unlock_12m"] > 0.3 and "fees_30d" in F["series"]
@@ -1145,7 +1145,7 @@ def test_btc_fundamentals_parse_and_factors(snapdir, monkeypatch):
     monkeypatch.setattr(C, "PACE", 0)
     C.fill_coins()
     C.FUND_DIR.mkdir(parents=True, exist_ok=True)
-    (C.FUND_DIR / "HYPE.json").write_text(_json.dumps({"schedule": [[int((pd.Timestamp.now() + pd.Timedelta(days=d)).timestamp()), 1000.0 + max(0, d)] for d in range(-400, 1200, 7)]}))
+    (C.FUND_DIR / "HYPE.json").write_text(_json.dumps({"schedule": [[int((pd.Timestamp.now() + pd.Timedelta(days=d)).timestamp()), 1e8 + max(0, d) * 1e8 / 365] for d in range(-400, 1200, 7)]}))
     f = C._coin_now("HYPE")
     p0 = f["projection"][0]
     assert p0["dilution"] < 1 and p0["base"] == pytest.approx(p0["base_beta_only"] * p0["dilution"] * p0["valuation"], rel=1e-3)
@@ -1161,3 +1161,14 @@ def test_btc_dilution_needs_a_cap():
     assert F["factors"]["dilution"] == {} and F["factors"]["dilution_basis"] is None          # no cap known: no factor
     G = C.fund_factors({"supply": {"max_supply": 1.2e10}}, px, mc, ["2028-12-31"])
     assert G["factors"]["dilution"]["2028-12-31"] == pytest.approx(1e10 / 1.2e10, rel=1e-3)   # growth capped at max supply
+
+
+def test_btc_schedule_adds_tokens_to_circulating_supply():
+    from app.topics import btc_cycles as C
+    idx = pd.date_range("2025-10-27", periods=365, freq="D")
+    px = pd.Series(1.0, index=idx)
+    mc = pd.Series(13.4e9, index=idx)                                        # 13.4bn circulating (CoinGecko)
+    sched = [[int((idx[-1] + pd.Timedelta(days=d)).timestamp()), 6e9 + max(0, d) * 3e9 / 365] for d in range(-60, 1200, 7)]   # +3bn a year
+    F = C.fund_factors({"schedule": sched, "supply": {"max_supply": 15e9}}, px, mc, ["2027-12-31", "2028-12-31"])
+    assert F["kpi"]["unlock_12m"] == pytest.approx(1.6 / 13.4, rel=0.02)            # capped at 15bn: +1.6bn, not +3bn or +50%
+    assert F["factors"]["dilution"]["2028-12-31"] == pytest.approx(13.4 / 15, rel=1e-3)

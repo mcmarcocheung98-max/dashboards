@@ -420,13 +420,17 @@ def fund_factors(fd: dict, px: pd.Series, mc: pd.Series, dates: list[str]) -> di
     sched = _ser(fd.get("schedule"))
     dil, how = {}, None
     if len(sched) >= 4 and sched.asof(now) and sched.iloc[-1] > 0:
-        how = "unlock schedule (DefiLlama)"
+        # DefiLlama's "unlocked" and CoinGecko's circulating supply count differently, so the schedule supplies the tokens added
+        # between now and the date, which go on top of today's circulating supply, capped at max supply
+        how = "unlock schedule (DefiLlama), added to circulating supply" + (" and capped at max supply" if cap else "")
         s_now = float(sched.asof(now))
         out["series"]["schedule"] = fd.get("schedule")
-        K["unlock_12m"] = _r(float(sched.asof(now + pd.Timedelta(days=365))) / s_now - 1, 3)
+        added = lambda t: max(0.0, float(sched.asof(t) if t <= sched.index[-1] else sched.iloc[-1]) - s_now)
+        base_c = float(c_now) if c_now else s_now
+        c_at = lambda t: min(base_c + added(t), float(cap)) if cap else base_c + added(t)
+        K["unlock_12m"] = _r(c_at(now + pd.Timedelta(days=365)) / base_c - 1, 3)
         for d in dates:
-            t = pd.Timestamp(d)
-            dil[d] = min(1.0, s_now / float(sched.asof(t) if t <= sched.index[-1] else sched.iloc[-1]))
+            dil[d] = min(1.0, base_c / c_at(pd.Timestamp(d)))
     elif len(circ) > 200 and c_now and cap:               # without a known cap an extrapolated emission rate has no ceiling: no factor then
         yrs0 = (circ.index[-1] - circ.index[0]).days / 365.25
         g = float(circ.iloc[-1] / circ.iloc[0]) ** (1 / yrs0) - 1 if yrs0 > 0.5 and circ.iloc[0] > 0 else 0.0
@@ -522,7 +526,8 @@ def _coin_full(c: dict, btc: pd.Series) -> dict:
     proj = project(now, btc_now, beta, sc) if beta is not None else []
     F = fund_factors(fundamentals(c["ticker"]), coin_px, mc.reindex(coin_px.index).ffill(), [p["date"] for p in proj])
     for p in proj:                                       # BTC beta x dilution from unlocks x half-way valuation reversion
-        dl = F["factors"]["dilution"].get(p["date"], 1.0) or 1.0
+        dl = F["factors"]["dilution"].get(p["date"])
+        dl = 1.0 if dl is None else dl
         p["factor"] = _r(dl * F["factors"]["valuation"], 4)
         p["dilution"], p["valuation"] = dl, F["factors"]["valuation"]
         for k in ("bear", "base", "bull"):
@@ -543,7 +548,7 @@ def _coin_full(c: dict, btc: pd.Series) -> dict:
             "series": {"price": _pts(coin_px, 6), "btc_indexed": _pts(btc_px / btc_px.iloc[0] * coin_px.iloc[0], 6), "ratio": _pts(ratio, 10),
                        "rsi": _pts(r_coin, 1), "rsi_vs_btc": _pts(r_ratio, 1), "market_cap": _pts(mc, 0)},
             "fundamentals": F,
-            "projection": proj, "implied_mcap_base": [{"date": p["date"], "mcap": _r(p["base"] * supply / (p.get("dilution") or 1.0), 0)} for p in proj] if supply else []}
+            "projection": proj, "implied_mcap_base": [{"date": p["date"], "mcap": _r(p["base"] * supply / p["dilution"], 0) if p.get("dilution") else None} for p in proj] if supply else []}
 
 
 def btc_chart() -> pd.Series:
