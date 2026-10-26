@@ -595,6 +595,49 @@ def _rotation_now() -> dict:
             "as_of": now.strftime("%Y-%m-%d"), "stale": {}, "updated": int(time.time())}
 
 
+# ------------------------------------------------------------------ diagnostic: what the server sees at the per-coin fundamentals sources
+PROBE_URLS = {
+    "protocol (TVL)": "https://api.llama.fi/protocol/ethena",
+    "fees (protocol)": "https://api.llama.fi/summary/fees/ethena?dataType=dailyFees",
+    "fees (chain: solana)": "https://api.llama.fi/summary/fees/solana?dataType=dailyFees",
+    "fees overview (chain)": "https://api.llama.fi/overview/fees/solana?excludeTotalDataChart=false&excludeTotalDataChartBreakdown=true&dataType=dailyFees",
+    "chain TVL": "https://api.llama.fi/v2/historicalChainTvl/Solana",
+    "emission (unlocks)": "https://api.llama.fi/emission/ethena",
+    "emissions list": "https://api.llama.fi/emissions",
+    "emissions dataset": "https://defillama-datasets.llama.fi/emissions/ethena",
+    "coingecko detail": "https://api.coingecko.com/api/v3/coins/ethena?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false",
+}
+
+
+def _fund_probe() -> dict:
+    """Not a tab: status, size, keys and the start of each body, read from the server's own network (Actions > show-json)."""
+    import requests
+    from ._base import UA
+    out = {}
+    for name, url in PROBE_URLS.items():
+        try:
+            r = requests.get(url, headers=UA, timeout=20)
+            row = {"status": r.status_code, "bytes": len(r.content), "start": r.text[:300]}
+            try:
+                j = r.json()
+                row["keys"] = list(j)[:40] if isinstance(j, dict) else f"list[{len(j)}]"
+                if isinstance(j, dict):
+                    row["shapes"] = {k: (type(v).__name__ + (f"[{len(v)}]" if isinstance(v, (list, dict)) else "")) for k, v in list(j.items())[:40]}
+                    for k in ("documentedData", "realTimeData", "data", "metadata", "categories"):
+                        if k in j:
+                            v = j[k]
+                            row[k] = (list(v)[:20] if isinstance(v, dict) else str(v)[:400])
+                    if isinstance(j.get("market_data"), dict):
+                        md = j["market_data"]
+                        row["supply"] = {k: md.get(k) for k in ("circulating_supply", "total_supply", "max_supply")}
+            except ValueError:
+                pass
+        except Exception as e:
+            row = {"error": f"{type(e).__name__}: {str(e)[:150]}"}
+        out[name] = {"url": url, **row}
+    return out
+
+
 # ------------------------------------------------------------------ what changed since yesterday (app/topics/_daily.py)
 def READINGS() -> list[dict]:
     """Headline readings per tab, from what the endpoints already cache. lean: +1 = favourable for holding crypto / the doc's
@@ -659,7 +702,8 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 
 ENDPOINTS = {"cycles": _cached_ep("cycles", _cycles_now), "sectors": _cached_ep("sectors", _sectors_now, 600), "metrics": _cached_ep("metrics", _metrics_now),
              "candidates": _cached_ep("candidates", _candidates_now), "signals": _cached_ep("signals", _signals_now, 3600),
-             "coins": _cached_ep("coins", _coins_now), "rotation": _cached_ep("rotation", _rotation_now, 3600)}
+             "coins": _cached_ep("coins", _coins_now), "rotation": _cached_ep("rotation", _rotation_now, 3600),
+             "fund-probe": _cached_ep("fund-probe", _fund_probe, 1800)}
 from . import btc_flows as _flows                                    # ETF and MSTR tabs
 ENDPOINTS.update(_flows.ENDPOINTS)
 BACKGROUND = [fill_coins]                    # slow, rate-limited downloads the server runs outside page requests
