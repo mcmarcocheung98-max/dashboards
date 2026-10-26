@@ -11,6 +11,11 @@ const MAP_METRICS = [["flat", "Flat"], ["terraced", "Terraced house"], ["semi", 
 let mapMetric = "flat", mapMonth = null, mapPlay = null;
 const money = v => v == null ? "–" : v >= 1e6 ? "£" + (v / 1e6).toFixed(2) + "m" : v >= 1e4 ? "£" + Math.round(v / 1000) + "k" : gbp(v);
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+// Top cards follow the date hovered or clicked on any chart (datedHead/valueAt from topic.html): t is that date, null = latest
+const YEAR = 365.25 * 86400;
+const timeAt = (pts, t) => { if (!pts || !pts.length) return null; if (t == null) return pts[pts.length - 1][0]; let r = null; for (const p of pts) { if (p[0] <= t) r = p[0]; else break; } return r; };
+const chgAt = (pts, t, yrs) => { const T = timeAt(pts, t), v = valueAt(pts, T), w = T == null ? null : valueAt(pts, T - yrs * YEAR); return v == null || !w ? null : v / w - 1; };
+const monthOf = (pts, t) => { const T = timeAt(pts, t); return T == null ? "–" : month(T); };
 function boroughMap(d) {
   const H = d.map.history || {}, V = H.values || {}, n = H.months || 0;
   const [y0, m0] = (H.start || "2005-01").split("-").map(Number);
@@ -87,9 +92,16 @@ function boroughMap(d) {
 const VIEWS = {
   async prices() {
     const d = await api("prices"), n = d.now || {};
-    const head = card(null, el("div", { class: "kpis" }, kpi("London average price", gbp(n.avg)), kpi("Change on a year ago", pc(n.yoy), cls(n.yoy)),
-      kpi("From the peak (" + (n.peak_month ? month(new Date(n.peak_month).getTime() / 1000) : "–") + ")", pct(n.from_peak), cls(n.from_peak)),
-      kpi("5 years", pct(n.change_5y, 0), cls(n.change_5y)), kpi("10 years", pct(n.change_10y, 0), cls(n.change_10y))), asOf(d), stale(d));
+    const A = d.london_avg || [], Y = d.london_yoy || [];
+    const peakTo = t => { const T = timeAt(A, t); let best = null; for (const p of A) { if (T != null && p[0] > T) break; if (!best || p[1] > best[1]) best = p; } return best; };
+    const head = card(null, datedHead([
+      { label: t => "London average price (" + monthOf(A, t) + ")", value: t => [gbp(valueAt(A, timeAt(A, t)))] },
+      { label: () => "Change on a year ago", value: t => { const v = valueAt(Y, timeAt(Y, t)); return [pc(v), cls(v)]; } },
+      { label: t => { const pk = peakTo(t); return "From the peak (" + (pk ? month(pk[0]) : "–") + ")"; },
+        value: t => { const pk = peakTo(t), v = valueAt(A, timeAt(A, t)); const x = pk && v != null ? v / pk[1] - 1 : null; return [pct(x), cls(x)]; } },
+      { label: () => "5 years", value: t => { const x = chgAt(A, t, 5); return [pct(x, 0), cls(x)]; } },
+      { label: () => "10 years", value: t => { const x = chgAt(A, t, 10); return [pct(x, 0), cls(x)]; } }],
+      { latest: "Latest: " + (n.avg ? monthOf(A, null) : "–") }), asOf(d), stale(d));
     const real = card("London average price: as paid, and in today's money",
       ...linesChart([{ name: "Average price", points: d.london_avg || [] }, { name: "In today's money (CPIH)", points: d.london_real || [], dashed: true, color: css("--hold") }], v => gbp(v)),
       missing(d, "london_real", "The inflation-adjusted line"), note("HM Land Registry UK House Price Index, all property types, London. The dashed line restates each month's price in the money of the latest CPIH month."));
@@ -109,9 +121,13 @@ const VIEWS = {
   },
   async market() {
     const d = await api("market"), n = d.now || {}, t = d.by_type || {}, ty = d.by_type_yoy || {};
-    const head = card(null, el("div", { class: "kpis" }, ...Object.entries(n.types || {}).map(([k, v]) => kpi(k, gbp(v))),
-      kpi("Sales in " + (n.volume_month ? month(new Date(n.volume_month).getTime() / 1000) : "last month"), num(n.volume_last)),
-      kpi("Sales, last 12 months", num(n.volume_12m) + (n.volume_12m_prev ? " (" + pct(n.volume_12m / n.volume_12m_prev - 1, 0) + " on the year before)" : ""))), asOf(d), stale(d));
+    const V = d.volume || [], V12 = d.volume_12m || [];
+    const head = card(null, datedHead([
+      ...Object.entries(t).map(([k, pts]) => ({ label: tt => k + " · " + pct(chgAt(pts, tt, 1), 1) + " on a year", value: tt => [gbp(valueAt(pts, timeAt(pts, tt)))] })),
+      { label: tt => "Sales in " + monthOf(V, tt), value: tt => [num(valueAt(V, timeAt(V, tt)))] },
+      { label: tt => { const x = chgAt(V12, tt, 1); return "Sales, 12 months to " + monthOf(V12, tt) + (x == null ? "" : " · " + pct(x, 0) + " on the year before"); },
+        value: tt => [num(valueAt(V12, timeAt(V12, tt)))] }],
+      { latest: "Latest: " + monthOf(V, null) }), asOf(d), stale(d));
     const types = card("Average price by property type", ...linesChart(Object.entries(t).map(([k, pts]) => ({ name: k, points: pts })), v => gbp(v)), missing(d, "by_type"));
     const yoy = card("Change on a year earlier, by type", ...linesChart(Object.entries(ty).map(([k, pts]) => ({ name: k, points: pts })), v => pc(v), { small: true }));
     const vol = card("Sales volume (completed transactions registered)", ...linesChart([{ name: "Sales a month", points: d.volume || [] }, { name: "12-month total", points: d.volume_12m || [], axis: "left", dashed: true, color: css("--hold") }], v => num(v)),
@@ -120,10 +136,16 @@ const VIEWS = {
   },
   async afford() {
     const d = await api("afford"), n = d.now || {};
-    const head = card(null, el("div", { class: "kpis" }, kpi("Bank Rate", n.bank_rate == null ? "–" : n.bank_rate.toFixed(2) + "%"),
-      kpi(n.pe_basis === "london" ? "Price to London pay" : "Price to UK pay", n.price_to_earnings == null ? "–" : n.price_to_earnings.toFixed(1) + "×"), kpi("Highest ratio seen", n.pe_peak == null ? "–" : n.pe_peak.toFixed(1) + "×"),
-      kpi("London median full-time pay" + (n.london_pay_year ? " (" + n.london_pay_year + ")" : ""), gbp(n.london_pay)),
-      kpi("Illustrative mortgage a month", gbp(n.mortgage))), asOf(d), stale(d));
+    const PE = d.price_to_london_pay || d.price_to_earnings || [], LP = d.london_pay || [], BR = d.bank_rate || [], FX = d.fixed_2y || [], MG = d.mortgage || [];
+    const rate = v => v == null ? "–" : v.toFixed(2) + "%";
+    const head = card(null, datedHead([
+      { label: () => "Bank Rate", value: t => [rate(valueAt(BR, t))] },
+      { label: () => "2-year fixed, 75% LTV", value: t => [rate(valueAt(FX, t))] },
+      { label: t => (n.pe_basis === "london" ? "Price to London pay" : "Price to UK pay") + " (" + monthOf(PE, t) + ")", value: t => { const v = valueAt(PE, timeAt(PE, t)); return [v == null ? "–" : v.toFixed(1) + "×"]; } },
+      { label: () => "Highest ratio seen", value: () => [n.pe_peak == null ? "–" : n.pe_peak.toFixed(1) + "×"] },
+      { label: t => { const T = timeAt(LP, t); return "London median full-time pay" + (T ? " (" + new Date(T * 1000).getUTCFullYear() + ")" : ""); }, value: t => [gbp(valueAt(LP, t))] },
+      { label: () => "Illustrative mortgage a month", value: t => [gbp(valueAt(MG, timeAt(MG, t)))] }],
+      { latest: "Latest figures" }), asOf(d), stale(d));
     const pe = card("London average price ÷ annual pay", ...linesChart([{ name: "÷ London median full-time pay", points: d.price_to_london_pay || [], width: 3 },
       { name: "÷ UK average regular pay (monthly trend)", points: d.price_to_earnings || [], dashed: true, color: css("--hold") }], v => v == null ? "–" : v.toFixed(1) + "×"),
       missing(d, "price_to_london_pay", "The London-pay ratio (ONS ASHE via Nomis)"), missing(d, "price_to_earnings", "The UK-pay trend"),
