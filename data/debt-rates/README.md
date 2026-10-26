@@ -24,6 +24,11 @@ Data for each tab: `/api/debt-rates/<debt|interest|yields|policy|stress>`. `/api
 | Policy | Bank Rate | BoE IADB `IUDBEDR` | yes | on change |
 | Policy | HKMA base rate | computed from the HKMA formula's Fed term: Fed lower bound + 0.5, from March 2009 (the HIBOR term needs the HKMA API, which refuses Railway; it has not set the rate since 2009) | derived | monthly |
 | Policy | PBoC 7-day reverse repo, 1-year LPR | `pboc.csv` | **hand-entered** | on change |
+| Policy & CPI | CPI inflation, year on year: US, UK, Hong Kong, China | US: BLS CPI-U all items NSA (`CUUR0000SA0`) from the bulk file `download.bls.gov/pub/time.series/cu/cu.data.1.AllItems` (not the BLS API, whose 25-a-day quota the ai dashboard uses); UK: ONS D7G7; HK: C&SD table 510-60001 (composite CPI); China: `cn_cpi.csv` | US/UK/HK yes; China **hand-entered** | monthly (China yearly) |
+| Policy & CPI | Real policy rate = policy rate − CPI | computed | derived | monthly |
+| Policy & CPI | FOMC rate decisions (each change in the target or the top of the range) | computed from the Fed range (NY Fed API from July 2000, `fed_target.csv` before) | derived | on change |
+| FOMC & odds | Next FOMC meetings | `fomc.csv` | **hand-entered** | yearly, when the Fed publishes the calendar |
+| FOMC & odds | Polymarket odds: every open event tagged `fed-rates` (Fed decisions, number of cuts, 10-year yield ranges), each outcome's chance = price of its Yes share; daily price history of the next Fed-decision event's outcomes | Polymarket Gamma API (`gamma-api.polymarket.com/events?tag_slug=fed-rates`) and CLOB API (`clob.polymarket.com/prices-history`) | yes | hourly (payload cached 30 minutes) |
 | Stress | Scorecard: debt, interest/revenue, r, g, r − g, debt-stabilising primary balance, IMF primary balance, gap | `imf.csv` (`NGDP_RPCH`, `PCPIPCH`, `GGXONLB_G01_GDP_PT`), latest 10-year yields | partly (IMF copy; China and HK yields from CSV) | |
 | Stress | 10-year minus policy rate (term-premium proxy), US 10y − 2y | from the series above | yes | |
 | Stress | Auction tails, downgrades, market stress | `stress_events.csv` | **hand-entered** notes | as events happen |
@@ -50,6 +55,8 @@ All rows carry a `source` URL. Rows whose `note` says **verify** were written fr
 - `hk_10y.csv`: Exchange Fund Note 10-year month-end yields, Oct 1996 to Feb 2015, **copied from the HKMA API on 2026-10-26** (it refuses Railway with HTTP 405), then HKGB 10-year yields after the notes stopped: tender average yields from HKMA press releases, or year-end secondary yields (**verify**).
 - `pboc.csv`: PBoC 1-year LPR and 7-day reverse repo, one row per change. Changes after May 2025 are not entered yet: check pbc.gov.cn and chinamoney.com.cn. **verify.**
 - `fed_target.csv`: Fed target (to Dec 2008) and upper bound of the range (from Dec 2008), one row per change, for the years before the NY Fed API reports the range. **verify** against the FOMC open market operations history.
+- `fomc.csv`: `date,meeting,source,note`, one row per scheduled FOMC meeting, dated the decision day (second day). 2026 entered from memory (**verify**); add the next year's dates when the Fed publishes them.
+- `cn_cpi.csv`: China CPI, annual average year-on-year %, NBS (**verify**). Monthly rows can be added (date = the month).
 - `stress_events.csv`: `date,country,event,source,note`, notable auction tails, downgrades and market stress. Add a row when an auction tails noticeably (the TreasuryDirect result against the when-issued yield) or a rating changes.
 
 ## What changed since yesterday (READINGS)
@@ -57,7 +64,7 @@ All rows carry a `source` URL. Rows whose `note` says **verify** were written fr
 `READINGS()` reports the headline readings from the cached tab payloads. **lean +1 means more fiscal stress, -1 less**: US and UK debt % of GDP (+1 at 100% or more, -1 at 60% or less; China and HK lean 0), US debt added a day (+1 at $6bn or more, -1 at $3bn or less), US interest
 share of receipts (+1 at 15% or more, -1 at 10% or less), US interest above defence (+1), UK interest share (+1 at 10%, -1 at 7%),
 US and UK 10-year yields (+1 at 4.5% or more, -1 at 3% or less), each country's stress gap (+1 above +0.5 points of GDP, -1 below
--0.5) and the US and UK 10-year minus policy spread (+1 at 1.5 points or more, -1 at zero or below). Policy rates and the HK and China
+-0.5) and the US and UK 10-year minus policy spread (+1 at 1.5 points or more, -1 at zero or below). US and UK CPI inflation (+1 at 3% or more, -1 at 2% or less). Policy rates, the Polymarket odds for the next Fed decision, the HK and China CPI and the HK and China
 yields are reported with lean 0.
 
 ## Caveats

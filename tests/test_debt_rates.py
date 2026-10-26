@@ -69,7 +69,7 @@ def boe_csv(code: str, since: int) -> str:
 
 def ons_csv(sid: str) -> str:
     months = pd.date_range("1997-04-01", NOW - pd.DateOffset(months=2), freq="MS")
-    lvl = {"hf6x": 40, "nmfx": 3000, "anbt": 50000}[sid]
+    lvl = {"hf6x": 40, "nmfx": 3000, "anbt": 50000, "d7g7": 2.5}[sid]
     meta = '"Title","x"\n"CDID","' + sid.upper() + '"\n"1997","1"\n"1997 Q2","2"\n'
     return meta + "\n".join(f'"{t.year} {t.strftime("%b").upper()}","{lvl * (1 + i / 400):.1f}"' for i, t in enumerate(months))
 
@@ -91,6 +91,39 @@ def nyfed_json() -> dict:
                           "targetRateTo": round(0.5 + i * 0.004, 2)} for i, t in enumerate(reversed(days))]}
 
 
+def bls_text() -> str:
+    lines = ["series_id        \tyear\tperiod\t       value\tfootnote_codes"]
+    for i, t in enumerate(pd.date_range("2000-01-01", NOW - pd.DateOffset(months=1), freq="MS")):
+        lines.append(f"CUUR0000SA0      \t{t.year}\tM{t.month:02d}\t{170 * 1.0025 ** i:12.3f}\t")
+        if t.month == 12:
+            lines.append(f"CUUR0000SA0      \t{t.year}\tM13\t{999:12.3f}\t")
+        lines.append(f"CUUR0100SA0      \t{t.year}\tM{t.month:02d}\t{1.0:12.3f}\t")
+    return "\n".join(lines)
+
+
+def csd_json() -> dict:
+    ms = pd.date_range("1990-01-01", NOW - pd.DateOffset(months=1), freq="MS")
+    rows = [{"freq": "M", "period": t.strftime("%Y%m"), "sv": "A_CM_1920", "svDesc": "Year-on-year % change", "figure": 1.5, "sd_value": ""} for t in ms]
+    rows += [{"freq": "M", "period": t.strftime("%Y%m"), "sv": "B_CM_1920", "svDesc": "Year-on-year % change", "figure": 9.9, "sd_value": ""} for t in ms[-3:]]
+    return {"header": {}, "dataSet": rows}
+
+
+def poly_json() -> list:
+    def mk(label, yes, closed=False):
+        return {"question": f"Will the Fed {label}?", "groupItemTitle": label, "outcomes": '["Yes", "No"]', "outcomePrices": json.dumps([str(yes), str(round(1 - yes, 4))]),
+                "clobTokenIds": json.dumps([f"tok-{label}", f"no-{label}"]), "volume": "12345.6", "closed": closed, "active": True}
+    nxt = (NOW + pd.Timedelta(days=2)).strftime("%Y-%m-%dT00:00:00Z")
+    return [{"title": "How many Fed rate cuts in 2026?", "slug": "how-many-fed-rate-cuts-in-2026", "endDate": "2026-12-31T00:00:00Z", "volume": "9000000",
+             "markets": [mk("No cuts", 0.01), mk("3 cuts", 0.6), mk("4 cuts", 0.3), mk("old", 0.5, closed=True)]},
+            {"title": "Fed decision in October?", "slug": "fed-decision-in-october", "endDate": nxt, "volume": "5000000",
+             "markets": [mk("25 bps decrease", 0.83), mk("No change", 0.16), mk("50+ bps decrease", 0.01)]}]
+
+
+def clob_json(token: str) -> dict:
+    days = pd.date_range(NOW - pd.Timedelta(days=60), NOW, freq="12h")
+    return {"history": [{"t": int(t.timestamp()), "p": round(0.5 + 0.3 * i / len(days), 3)} for i, t in enumerate(days)]}
+
+
 def fake_fetch(url, ttl=0, **k):
     if "treasury.gov/resource-center" in url:
         y = int(url.split("daily-treasury-rates.csv/")[1][:4])
@@ -101,6 +134,8 @@ def fake_fetch(url, ttl=0, **k):
     if "bankofengland" in url:
         code = url.split("SeriesCodes=")[1].split("&")[0]
         return boe_csv(code, int(url.split("Datefrom=01/Jan/")[1][:4]))
+    if "download.bls.gov" in url:
+        return bls_text()
     if "ons.gov.uk" in url:
         return ons_csv(url.split("/timeseries/")[1].split("/")[0])
     raise ConnectionError(f"fixture: no text for {url}")
@@ -117,6 +152,12 @@ def fake_fetch_json(url, ttl=0, **k):
         return avg_rate_json()
     if "hkma" in url:
         return hkma_json(url, int(url.split("offset=")[1]))
+    if "censtatd" in url:
+        return csd_json()
+    if "gamma-api.polymarket" in url:
+        return poly_json()
+    if "clob.polymarket" in url:
+        return clob_json(url.split("market=")[1].split("&")[0])
     if "newyorkfed" in url:
         return nyfed_json()
     raise ConnectionError(f"fixture: no JSON for {url}")
@@ -197,7 +238,7 @@ def test_hkma_parser_reads_every_page():
 
 # ------------------------------------------------------------------ payloads
 def test_every_endpoint_on_fixtures(fixtures):
-    for name in ("debt", "interest", "yields", "policy", "stress"):
+    for name in ("debt", "interest", "yields", "policy", "odds", "stress"):
         p = D.ENDPOINTS[name]()
         B.json_safe(p)
         errs = {k: v for k, v in p.items() if k.endswith("_error")}
@@ -260,15 +301,54 @@ def test_fed_range_with_a_point_target_from_the_api(fixtures, monkeypatch):
     B.json_safe(D.ENDPOINTS["policy"]())
 
 
+def test_cpi_parsers():
+    s = D.parse_bls_cpi(bls_text())
+    assert s.index[0] == pd.Timestamp("2000-01-01") and s.max() < 900                  # M13 annual averages and other areas left out
+    h = D.parse_csd_cpi(csd_json())
+    assert (h == 1.5).all()                                                             # the composite CPI (A_CM), not the others
+    with pytest.raises(ValueError):
+        D.parse_bls_cpi("series_id\tyear\tperiod\tvalue\n")
+
+
+def test_poly_parser_keeps_open_markets_and_reads_yes():
+    ev = D.parse_poly(poly_json())
+    assert [e["slug"] for e in ev] == ["fed-decision-in-october", "how-many-fed-rate-cuts-in-2026"]      # soonest first
+    cuts = ev[1]["markets"]
+    assert "old" not in [m["label"] for m in cuts] and next(m for m in cuts if m["label"] == "3 cuts")["yes"] == 0.6
+    assert ev[0]["markets"][0]["token"] == "tok-25 bps decrease"
+    assert D.parse_poly([{"title": "x", "markets": [{"outcomes": "not json"}]}]) == []
+
+
+def test_fomc_decisions_and_meetings(fixtures):
+    dec = D.fomc_decisions()
+    assert dec[-1]["date"] == "2001-01-03" and dec[-1]["bp"] == -50                       # oldest kept change in the hand history
+    assert all(r["bp"] != 0 for r in dec) and dec == sorted(dec, key=lambda r: r["date"], reverse=True)
+    m = D.next_meetings(pd.Timestamp("2026-10-26"))
+    assert m[0]["date"] == "2026-10-28" and all(r["source"].startswith("http") for r in m)
+
+
+def test_policy_and_odds_payloads(fixtures):
+    p = D.ENDPOINTS["policy"]()
+    assert set(p["cpi"]) == {"US", "UK", "Hong Kong", "China"} and not p["cpi_missing"]
+    assert p["cpi"]["US"][-1][1] == pytest.approx((1.0025 ** 12 - 1) * 100, abs=0.01)
+    assert set(p["real"]) >= {"US", "UK", "Hong Kong"} and p["decisions"]
+    o = D.ENDPOINTS["odds"]()
+    assert not {k for k in o if k.endswith("_error")}, o
+    assert o["history"]["title"] == "Fed decision in October?" and set(o["history"]["lines"]) == {"25 bps decrease", "No change"}
+    assert o["events"][0]["slug"] == "fed-decision-in-october" and o["fed_now"] is not None
+    B.json_safe(p), B.json_safe(o)
+
+
 def test_readings_come_from_the_cached_payloads(fixtures):
     assert D.READINGS() == []                                             # nothing computed yet: nothing to report, nothing fetched
-    for name in ("debt", "interest", "yields", "policy", "stress"):
+    for name in ("debt", "interest", "yields", "policy", "odds", "stress"):
         D.ENDPOINTS[name]()
     rows = D.READINGS()
     keys = {r["key"] for r in rows}
-    assert {r["tab"] for r in rows} == {"debt", "interest", "yields", "policy", "stress"}
+    assert {r["tab"] for r in rows} == {"debt", "interest", "yields", "policy", "odds", "stress"}
+    assert {"cpi_US", "next_25 bps decrease"} <= keys
     assert {"debt_US", "us_per_day", "us_int_share", "us_int_vs_def", "y10_US", "gap_US", "spread_US"} <= keys
-    assert all(r["lean"] in (-1, 0, 1) and r["tab"] in {"debt", "interest", "yields", "policy", "stress"} for r in rows)
+    assert all(r["lean"] in (-1, 0, 1) and r["tab"] in {"debt", "interest", "yields", "policy", "odds", "stress"} for r in rows)
     B.json_safe(rows)
 
 

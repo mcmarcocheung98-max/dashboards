@@ -25,15 +25,16 @@ from io import StringIO
 import numpy as np
 import pandas as pd
 
-from ._base import (DAY, _part, _pts, _r, fetch, fetch_json, latest_date, manual, manual_rows, manual_sources, payload)
+from ._base import (DAY, HOUR, _part, _pts, _r, fetch, fetch_json, latest_date, manual, manual_rows, manual_sources, payload)
 from . import Topic
 
 SLUG = "debt-rates"
 TOPIC = Topic(SLUG, "Global Debt & Rates",
               "Government debt, interest bills, 10-year yields and policy rates in the US, UK, Hong Kong and China: which hits fiscal stress first, "
               "and when interest overtakes defence or education.",
-              "debt_rates", (("debt", "Debt"), ("interest", "Interest cost"), ("yields", "Yields"), ("policy", "Policy rates"), ("stress", "Stress")),
-              ("debt", "interest", "yields", "policy", "stress"), icon="chart", order=60)
+              "debt_rates", (("debt", "Debt"), ("interest", "Interest cost"), ("yields", "Yields"), ("policy", "Policy & CPI"), ("odds", "FOMC & odds"),
+                             ("stress", "Stress")),
+              ("debt", "interest", "yields", "policy", "odds", "stress"), icon="chart", order=60)
 
 TTL = DAY
 COUNTRIES = {"USA": "US", "GBR": "UK", "HKG": "Hong Kong", "CHN": "China"}
@@ -60,6 +61,16 @@ ONS_SERIES = {"psnd": "hf6x", "interest": "nmfx", "receipts": "anbt"}
 HKMA = "https://api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/{path}?pagesize=100&offset={offset}"
 HK_EFBN, HK_HIBOR = "efbn/efbn-yield-endperiod", "er-ir/hk-interbank-ir-endperiod"
 NYFED = "https://markets.newyorkfed.org/api/rates/unsecured/effr/search.json?startDate=2000-01-01&endDate={end}"
+# CPI, all items, year-on-year %: US from the BLS bulk file (no daily quota, unlike the BLS API the ai dashboard uses; BLS asks bulk
+# downloaders to say who they are in the User-Agent), UK from ONS D7G7, Hong Kong from C&SD table 510-60001, China hand-entered
+BLS_CPI = "https://download.bls.gov/pub/time.series/cu/cu.data.1.AllItems"
+BLS_HEADERS = {"User-Agent": "dashboards/1.0 (+https://github.com/mcmarcocheung98-max/dashboards; public data dashboard)", "Accept": "text/plain,*/*"}
+ONS_CPI = "https://www.ons.gov.uk/generator?format=csv&uri=/economy/inflationandpriceindices/timeseries/d7g7/mm23"
+CSD_CPI = "https://www.censtatd.gov.hk/api/get.php?id=510-60001&lang=en&full_series=1"
+# Polymarket: open markets on Fed rates and Treasury yields (Gamma API), and the price history of a market's Yes token (CLOB API)
+POLY = "https://gamma-api.polymarket.com/events?tag_slug={tag}&closed=false&limit=50"
+POLY_TAGS = ("fed-rates",)
+POLY_HIST = "https://clob.polymarket.com/prices-history?market={token}&interval=max&fidelity=720"
 
 SOURCES = [{"name": "IMF World Economic Outlook (DataMapper API): gross debt, overall and primary balance, revenue, growth, inflation", "url": "https://www.imf.org/external/datamapper/", "cadence": "April and October"},
            {"name": "US Treasury Fiscal Data: debt to the penny, Monthly Treasury Statement table 9, average interest rates", "url": "https://fiscaldata.treasury.gov/", "cadence": "daily / monthly"},
@@ -68,6 +79,8 @@ SOURCES = [{"name": "IMF World Economic Outlook (DataMapper API): gross debt, ov
            {"name": "Bank Rate and gilt yield curves (Bank of England database)", "url": "https://www.bankofengland.co.uk/boeapps/database/", "cadence": "daily"},
            {"name": "Public sector finances: net debt, debt interest, receipts (ONS PUSF)", "url": "https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/publicsectorfinance", "cadence": "monthly"},
            {"name": "Exchange Fund Bills and Notes yields, HIBOR (HKMA open API)", "url": "https://apidocs.hkma.gov.hk/", "cadence": "monthly"},
+           {"name": "CPI: US (BLS CPI-U, all items), UK (ONS D7G7), Hong Kong (C&SD composite CPI)", "url": "https://www.bls.gov/cpi/", "cadence": "monthly"},
+           {"name": "Prediction-market odds (Polymarket Gamma and CLOB APIs)", "url": "https://polymarket.com/", "cadence": "hourly"},
            {"name": "Hand-entered: HM Treasury PESA, OBR, CBO, HK Budget, China MoF, ChinaBond, PBoC, HKGB tenders (see data/debt-rates/README.md)", "url": "https://github.com/mcmarcocheung98-max/dashboards/tree/main/data/debt-rates", "cadence": "as published"}]
 NOTES = ("General government figures (IMF) are comparable across countries; national series (US federal, UK central government) are what each "
          "treasury reports. Net interest = primary balance minus overall balance. Projections are the IMF's latest WEO and, for the US, CBO. "
@@ -186,6 +199,72 @@ def parse_nyfed(j: dict) -> pd.DataFrame:
     return d[~d.index.duplicated(keep="last")]
 
 
+def parse_bls_cpi(text: str, series: str = "CUUR0000SA0") -> pd.Series:
+    """BLS bulk file (tab-separated series_id, year, period, value, footnotes) -> monthly CPI-U index for `series` (M13, the annual
+    average, dropped)."""
+    rows = {}
+    for line in text.splitlines():
+        f = [x.strip() for x in line.split("\t")]
+        if len(f) >= 4 and f[0] == series and f[2].startswith("M") and f[2] != "M13":
+            v = pd.to_numeric(f[3], errors="coerce")
+            if pd.notna(v):
+                rows[pd.Timestamp(year=int(f[1]), month=int(f[2][1:]), day=1)] = float(v)
+    if len(rows) < 24:
+        raise ValueError(f"BLS CPI file: {len(rows)} months of {series}")
+    return pd.Series(rows).sort_index()
+
+
+def parse_csd_cpi(j: dict) -> pd.Series:
+    """C&SD web table JSON (dataSet: freq, period YYYYMM, sv, svDesc, figure) -> monthly year-on-year % of the composite CPI
+    (series codes starting A_CM; the first year-on-year series otherwise)."""
+    rows = [r for r in ((j or {}).get("dataSet") or []) if r.get("freq") == "M" and "year-on-year" in str(r.get("svDesc", "")).lower()]
+    if not rows:
+        raise ValueError("C&SD 510-60001: no monthly year-on-year rows")
+    svs = sorted({r.get("sv") for r in rows}, key=lambda v: (not str(v).startswith("A_CM"), str(v)))
+    rows = [r for r in rows if r.get("sv") == svs[0]]
+    s = pd.Series({pd.to_datetime(str(r["period"]), format="%Y%m", errors="coerce"): pd.to_numeric(r.get("figure"), errors="coerce") for r in rows})
+    return s[s.index.notna()].dropna().sort_index()
+
+
+def _jlist(v) -> list:
+    """Gamma API fields such as outcomes and outcomePrices are JSON arrays sent as strings."""
+    if isinstance(v, list):
+        return v
+    try:
+        return json.loads(v or "[]")
+    except (TypeError, ValueError):
+        return []
+
+
+def parse_poly(events: list) -> list[dict]:
+    """Gamma API events -> [{title, slug, end, volume, markets: [{label, yes, volume, token}]}], open markets only, by end date."""
+    out = []
+    for e in events or []:
+        ms = []
+        for m in e.get("markets") or []:
+            if m.get("closed") or m.get("active") is False:
+                continue
+            outs, prices, toks = _jlist(m.get("outcomes")), _jlist(m.get("outcomePrices")), _jlist(m.get("clobTokenIds"))
+            if not outs or len(prices) != len(outs):
+                continue
+            i = next((k for k, o in enumerate(outs) if str(o).lower() == "yes"), 0)
+            yes = pd.to_numeric(prices[i], errors="coerce")
+            if pd.isna(yes):
+                continue
+            ms.append({"label": m.get("groupItemTitle") or m.get("question") or "", "question": m.get("question") or "", "yes": round(float(yes), 4),
+                       "volume": _r(m.get("volume"), 0), "token": toks[i] if i < len(toks) else None})
+        if ms:
+            out.append({"title": e.get("title") or "", "slug": e.get("slug") or "", "end": str(e.get("endDate") or "")[:10],
+                        "volume": _r(e.get("volume"), 0), "markets": ms})
+    return sorted(out, key=lambda e: (e["end"] or "9999", e["title"]))
+
+
+def parse_poly_history(j: dict) -> pd.Series:
+    h = (j or {}).get("history") or []
+    s = pd.Series({pd.Timestamp(int(x["t"]), unit="s").normalize(): float(x["p"]) for x in h if "t" in x and "p" in x})
+    return s[~s.index.duplicated(keep="last")].sort_index()
+
+
 # ------------------------------------------------------------------ data
 def imf_live(key: str) -> dict[str, pd.Series]:
     ind = IMF_IND[key]
@@ -279,6 +358,51 @@ def hkma(path: str, field: str) -> pd.Series:
 
 def nyfed() -> pd.DataFrame:
     return parse_nyfed(fetch_json(NYFED.format(end=pd.Timestamp.now().strftime("%Y-%m-%d")), TTL, timeout=90, min_bytes=500))
+
+
+def cpi() -> tuple[dict[str, pd.Series], dict[str, str]]:
+    """CPI year-on-year % by country, monthly (China yearly, hand-entered), and why any is missing."""
+    out, why = {}, {}
+
+    def us():
+        idx = parse_bls_cpi(fetch(BLS_CPI, TTL, headers=BLS_HEADERS, min_bytes=10_000, timeout=90))
+        idx = idx.reindex(pd.date_range(idx.index[0], idx.index[-1], freq="MS"))
+        return (idx / idx.shift(12) * 100 - 100).dropna()
+    for name, fn in (("US", us), ("UK", lambda: parse_ons(fetch(ONS_CPI, TTL, min_bytes=200))),
+                     ("Hong Kong", lambda: parse_csd_cpi(fetch_json(CSD_CPI, TTL, min_bytes=500, timeout=60))),
+                     ("China", lambda: hand("cn_cpi").get("value", pd.Series(dtype=float)))):
+        try:
+            s = fn()
+            if len(s):
+                out[name] = s
+        except Exception as e:
+            why[name] = f"{type(e).__name__}: {str(e)[:100]}"
+    return out, why
+
+
+def poly_events() -> list[dict]:
+    seen, out = set(), []
+    for tag in POLY_TAGS:
+        for e in parse_poly(fetch_json(POLY.format(tag=tag), HOUR, min_bytes=20, timeout=30)):
+            if e["slug"] not in seen:
+                seen.add(e["slug"])
+                out.append(e)
+    return out
+
+
+def poly_history(token: str) -> pd.Series:
+    return parse_poly_history(fetch_json(POLY_HIST.format(token=token), HOUR, min_bytes=10, timeout=30))
+
+
+def fomc_decisions(r: pd.DataFrame | None = None) -> list[dict]:
+    """Every change in the Fed's target (the top of the range from December 2008), newest first: {date, from, to, bp}. Dates are the
+    day the new rate took effect (the day after the meeting, or the day of an unscheduled cut)."""
+    r = fed_range() if r is None else r
+    hi = r["hi"].dropna()
+    hi = hi[~hi.index.duplicated(keep="last")].sort_index()
+    ch = hi.diff()
+    out = [{"date": str(t.date()), "from": _r(hi.shift(1)[t], 2), "to": _r(v, 2), "bp": int(round(ch[t] * 100))} for t, v in hi[ch.abs() > 0.001].items()]
+    return list(reversed(out))
 
 
 def hand(name: str) -> dict[str, pd.Series]:
@@ -490,14 +614,69 @@ def _policy_now() -> dict:
         r = fed_range()
         return {"upper": _pts(steps(r["hi"]), 2), "lower": _pts(steps(r["lo"]), 2), "effr": _pts(month_end(r["effr"]) if "effr" in r else pd.Series(dtype=float), 2)}
     pb = hand("pboc")
+    why: dict = {}
+
+    def infl():
+        c, w = cpi()
+        why.update(w)
+        return {k: _pts(v, 2) for k, v in c.items()}
+
+    def real():
+        """Policy rate minus CPI inflation, monthly: below zero, money is cheap after inflation."""
+        c, _ = cpi()
+        pol = {"US": lambda: steps(fed_range()["hi"]), "UK": lambda: steps(boe("bank_rate")), "Hong Kong": hk_base,
+               "China": lambda: steps(pb.get("7-day reverse repo", pd.Series(dtype=float)))}
+        out = {}
+        for k, s in c.items():
+            try:
+                p = pol[k]()
+                s = s if k != "China" else s.resample("MS").last().dropna()
+                out[k] = _pts((p.reindex(s.index, method="ffill") - s).dropna(), 2)
+            except Exception:
+                continue
+        return out
     out = payload({"fed": fed, "boe": lambda: _pts(steps(boe("bank_rate")), 2), "hk": lambda: _pts(hk_base(), 2),
-                   "pboc": lambda: {k: _pts(steps(v), 2) for k, v in pb.items()}},
-                  sources=[NYFED.format(end=pd.Timestamp.now().strftime("%Y-%m-%d")), BOE.format(y=1995, code="IUDBEDR")])
+                   "pboc": lambda: {k: _pts(steps(v), 2) for k, v in pb.items()}, "cpi": infl, "real": real,
+                   "decisions": lambda: fomc_decisions()[:40]},
+                  sources=[NYFED.format(end=pd.Timestamp.now().strftime("%Y-%m-%d")), BOE.format(y=1995, code="IUDBEDR"), BLS_CPI, ONS_CPI, CSD_CPI])
+    out["cpi_missing"] = why
+    c = out.get("cpi") or {}
+    out["cpi_now"] = {k: {"v": p[-1][1], "t": str(pd.Timestamp(p[-1][0], unit="s").date())[:7]} for k, p in c.items() if p}
     last = lambda p: p[-1][1] if p else None
     out["now"] = {"Fed (upper)": last((out.get("fed") or {}).get("upper")), "Bank of England": last(out.get("boe")), "HKMA base rate": last(out.get("hk")),
                   "PBoC 7-day reverse repo": last((out.get("pboc") or {}).get("7-day reverse repo"))}
-    out["cites"] = {n: manual_sources(SLUG, n) for n in ("pboc", "fed_target")}
+    out["cites"] = {n: manual_sources(SLUG, n) for n in ("pboc", "fed_target", "cn_cpi")}
     out["as_of"] = str(pd.Timestamp.now().date())
+    return out
+
+
+def next_meetings(now: pd.Timestamp | None = None) -> list[dict]:
+    """data/debt-rates/fomc.csv (date = the decision day, the second day of the meeting): meetings from today on."""
+    now = (now or pd.Timestamp.now()).normalize()
+    rows = sorted(manual_rows(SLUG, "fomc"), key=lambda r: r["date"])
+    return [r for r in rows if pd.Timestamp(r["date"]) >= now]
+
+
+def _odds_now() -> dict:
+    """Next FOMC meetings, recent decisions, and Polymarket odds on Fed rates and Treasury yields; the price history of the markets in
+    the next decision's event (one line per outcome that has a 2%+ chance now)."""
+    def history():
+        ev = next((e for e in poly_events() if "decision" in e["title"].lower()), None)
+        if not ev:
+            return {}
+        out = {}
+        for m in sorted(ev["markets"], key=lambda m: -m["yes"])[:5]:
+            if m["token"] and m["yes"] >= 0.02:
+                s = poly_history(m["token"])
+                if len(s):
+                    out[m["label"]] = _pts(s * 100, 1)
+        return {"title": ev["title"], "lines": out}
+    out = payload({"events": lambda: poly_events()[:12], "history": history, "decisions": lambda: fomc_decisions()[:12]},
+                  sources=[POLY.format(tag=t) for t in POLY_TAGS])
+    out["meetings"] = next_meetings()
+    out["fed_now"] = (out.get("decisions") or [{}])[0].get("to") if out.get("decisions") else None
+    out["cites"] = {"fomc": manual_sources(SLUG, "fomc")}
+    out["as_of"] = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())
     return out
 
 
@@ -566,6 +745,9 @@ def _layout_now() -> dict:
             "hkma efbn": HKMA.format(path=HK_EFBN, offset=0).replace("pagesize=100", "pagesize=2"), "hkma hibor": HKMA.format(path=HK_HIBOR, offset=0).replace("pagesize=100", "pagesize=2")}
     urls.update({f"boe {c}": BOE.format(y=y, code=c) for cs in BOE_CODES.values() for c in cs})
     urls.update({f"ons {s}": ONS.format(sid=s) for s in ONS_SERIES.values()})
+    urls.update({"ons d7g7 cpi": ONS_CPI, "csd cpi": CSD_CPI, "polymarket": POLY.format(tag="fed-rates").replace("limit=50", "limit=2"),
+                 "polymarket clob": "https://clob.polymarket.com/time"})
+    heads = {"bls cpi (own UA)": (BLS_CPI, BLS_HEADERS), "bls cpi (browser UA)": (BLS_CPI, None)}
 
     def one(u):
         try:
@@ -573,8 +755,19 @@ def _layout_now() -> dict:
             return {"status": r.status_code, "bytes": len(r.content), "type": r.headers.get("content-type", ""), "start": r.text[:300]}
         except Exception as e:
             return {"error": f"{type(e).__name__}: {str(e)[:160]}"}
+    def two(item):
+        u, h = item
+        try:
+            r = requests.get(u, headers=h or UA, timeout=40, stream=True)
+            body = next(r.iter_content(400), b"")
+            r.close()
+            return {"status": r.status_code, "type": r.headers.get("content-type", ""), "length": r.headers.get("content-length"), "start": body.decode("latin-1")[:300]}
+        except Exception as e:
+            return {"error": f"{type(e).__name__}: {str(e)[:160]}"}
     with ThreadPoolExecutor(max_workers=8) as ex:
-        return dict(zip(urls, ex.map(one, urls.values())))
+        out = dict(zip(urls, ex.map(one, urls.values())))
+        out.update(zip(heads, ex.map(two, heads.values())))
+        return out
 
 
 def READINGS() -> list[dict]:
@@ -605,6 +798,13 @@ def READINGS() -> list[dict]:
         add("yields", f"y10_{k}", f"{k} 10-year yield (%)", v.get("v"), band(v.get("v"), 4.5, 3.0) if k in ("US", "UK") else 0)
     for k, v in (got("policy").get("now") or {}).items():
         add("policy", f"rate_{k}", f"{k} (%)", v, 0)
+    for k, v in (got("policy").get("cpi_now") or {}).items():
+        add("policy", f"cpi_{k}", f"{k} CPI inflation, year on year (%)", v.get("v"), band(v.get("v"), 3, 2) if k in ("US", "UK") else 0,
+            "+1 at 3% or more, -1 at 2% or less" if k in ("US", "UK") else None)
+    od = got("odds")
+    hist = (od.get("history") or {}).get("lines") or {}
+    for k, pts in list(hist.items())[:3]:
+        add("odds", f"next_{k}", f"Next Fed decision, Polymarket: {k} (%)", pts[-1][1] if pts else None, 0)
     st = got("stress")
     for row in st.get("score") or []:
         g = row.get("gap")
@@ -622,4 +822,4 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 
 
 ENDPOINTS = {"debt": _cached_ep("debt", _debt_now), "interest": _cached_ep("interest", _interest_now), "yields": _cached_ep("yields", _yields_now),
-             "policy": _cached_ep("policy", _policy_now), "stress": _cached_ep("stress", _stress_now), "layout": _cached_ep("layout", _layout_now, 1800)}
+             "policy": _cached_ep("policy", _policy_now), "odds": _cached_ep("odds", _odds_now, 1800), "stress": _cached_ep("stress", _stress_now), "layout": _cached_ep("layout", _layout_now, 1800)}

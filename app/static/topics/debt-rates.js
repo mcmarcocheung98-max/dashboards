@@ -127,7 +127,49 @@ const VIEWS = {
     const effr = f.effr && f.effr.length ? card("US: effective fed funds rate inside the target range (%)", ...linesChart([{ name: "Top of range", points: f.upper, color: col("US") },
       { name: "Bottom of range", points: f.lower || [], color: col("US"), dashed: true }, { name: "Effective rate (month-end)", points: f.effr, color: css("--hold") }], v => pc(v, 2), { small: true }),
       note("New York Fed. The effective rate sits inside the range. It drifting to the top was a sign of tight bank reserves in 2019, a risk again as the Fed shrinks its balance sheet.")) : null;
-    return [head, all, effr].filter(Boolean);
+    const cn = d.cpi_now || {};
+    const cpiCard = card("CPI inflation, year on year (%)",
+      el("div", { class: "kpis" }, ...Object.entries(cn).map(([k, v]) => kpi(k + " CPI (" + v.t + ")", pc(v.v, 1)))),
+      ...linesChart(lines(d.cpi), v => pc(v, 1), { hlines: [2] }), missing(d, "cpi", "CPI"),
+      Object.keys(d.cpi_missing || {}).length ? el("div", { class: "muted" }, "Not available right now: " + Object.entries(d.cpi_missing).map(([k, v]) => k + " (" + v + ")").join(", ") + ".") : null,
+      note("US: BLS CPI-U, all items, not seasonally adjusted, change on the same month a year earlier. UK: ONS CPI annual rate (D7G7). Hong Kong: C&SD composite CPI. China: NBS, annual averages (hand-entered). The dashed line is the 2% target the Fed and the BoE aim for; the HKMA has no target (the peg imports US policy) and the PBoC's is about 2%."),
+      ask("5 years: does inflation settle at 2%, or at 3% with rates held higher, which is what keeps interest bills rising? 10 years: China has been near zero since 2023 while the US and UK had their worst inflation since the 1980s. 20 years: inflation erodes debt, so does a government with debt above 100% of GDP quietly prefer 3%?"),
+      ...handNote({ cn_cpi: (d.cites || {}).cn_cpi }));
+    const realCard = card("Real policy rate: policy rate minus CPI inflation (points)", ...linesChart(lines(d.real), v => sgn(v, 2), { small: true, hlines: [0] }),
+      missing(d, "real", "Real policy rates"),
+      note("Below zero, central-bank money is cheaper than inflation, so policy is easy even when the rate looks high. China's line uses annual CPI, so it moves in steps."),
+      ask("5 years: real rates above 1–2% squeeze borrowers, including governments rolling over debt. 10 years: they were negative almost everywhere from 2009 to 2022. 20 years: is the 2009–2021 era of negative real rates the exception or the rule?"));
+    const dec = d.decisions || [];
+    const decCard = dec.length ? card("FOMC rate decisions (change in the target or the top of the range)",
+      el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Effective", "From", "To", "Change"].map(h => el("th", {}, h))),
+        ...dec.slice(0, 20).map(r => el("tr", {}, el("td", {}, r.date), el("td", {}, pc(r.from, 2)), el("td", {}, pc(r.to, 2)), el("td", { class: cls(-r.bp) }, (r.bp > 0 ? "+" : "") + r.bp + " bp"))))),
+      note("Computed from the target range (New York Fed from July 2000, the FOMC history before that). The date is when the new rate took effect, the day after the decision for a scheduled meeting. The latest 20 changes; the FOMC & odds tab lists the next meetings.")) : null;
+    return [head, all, cpiCard, realCard, decCard, effr].filter(Boolean);
+  },
+
+  async odds() {
+    const d = await api("odds"), m = d.meetings || [], next = m[0], ev = d.events || [], h = d.history || {};
+    const days = next ? Math.round((new Date(next.date + "T19:00:00Z") - Date.now()) / 86400000) : null;
+    const head = card(null, el("div", { class: "kpis" }, kpi("Fed funds, top of range", pc(d.fed_now, 2)),
+      kpi("Next FOMC decision", next ? next.date + (days != null && days >= 0 ? " (" + (days === 0 ? "today" : "in " + days + " day" + (days === 1 ? "" : "s")) + ")" : "") : "–"),
+      kpi("Meetings left this year", String(m.filter(x => x.date.slice(0, 4) === String(new Date().getUTCFullYear())).length))),
+      el("div", { class: "muted", style: "margin-top:6px" }, "Odds updated " + (d.as_of || "–") + ". Polymarket prices are what traders pay for a $1 'Yes' share, so 0.62 reads as a 62% chance; they are bets, not forecasts from the Fed."), stale(d));
+    const hist = Object.keys(h.lines || {}).length ? card("Polymarket: " + h.title + " (chance, %)",
+      ...linesChart(Object.entries(h.lines).map(([k, pts], i) => ({ name: k, points: pts, color: css(SERIES[i % SERIES.length]) })), v => pc(v, 0), { sync: false, small: true }),
+      note("Daily price of each outcome's Yes share since the market opened. A line jumping after a CPI release or a Fed speech shows what the market learned."),
+      ask("Next meeting: is a cut priced in, or still a coin toss? Watch how the odds move after the CPI print on the Policy & CPI tab.")) : (d.history_error ? card("Polymarket odds history", missing(d, "history", "The odds history")) : null);
+    const evCards = ev.map(e => card(e.title, el("div", { class: "scroll" }, el("table", {}, el("tr", {}, el("th", {}, "Outcome"), el("th", {}, "Chance"), el("th", {}, ""), el("th", {}, "Volume")),
+      ...e.markets.slice().sort((a, b) => b.yes - a.yes).slice(0, 10).map(x => el("tr", {}, el("td", { class: "wrap" }, x.label || x.question), el("td", {}, pc(x.yes * 100, 0)),
+        el("td", { style: "min-width:120px" }, el("div", { class: "bar" }, el("i", { style: "left:0;width:" + Math.round(x.yes * 100) + "%;background:var(--accent)" }))), el("td", {}, x.volume == null ? "–" : "$" + big(x.volume)))))),
+      el("div", { class: "src", style: "margin-top:6px" }, "Closes " + (e.end || "–") + " · total volume " + (e.volume == null ? "–" : "$" + big(e.volume)) + " · ", link("polymarket.com/event/" + e.slug, "https://polymarket.com/event/" + e.slug))));
+    const evNone = ev.length ? null : card("Polymarket odds", missing(d, "events", "Polymarket") || el("div", { class: "muted" }, "No open Fed-rate markets right now."));
+    const meet = card("FOMC meetings ahead", m.length ? el("div", { class: "tl" }, ...m.flatMap(x => [el("div", { class: "d" }, x.date), el("div", {}, link(x.meeting, x.source), x.note ? el("span", { class: "muted" }, " (" + x.note + ")") : null)]))
+      : el("div", { class: "muted" }, "No meetings entered: add next year's dates to data/debt-rates/fomc.csv."),
+      note("Meetings marked (projections) publish the dot plot: each official's path for rates, the Fed's own forecast to set against the market's."));
+    const dec = d.decisions || [];
+    const decCard = dec.length ? card("Last FOMC decisions", el("div", { class: "tl" }, ...dec.slice(0, 8).flatMap(r => [el("div", { class: "d" }, r.date),
+      el("div", { class: cls(-r.bp) }, (r.bp > 0 ? "Raised " : "Cut ") + Math.abs(r.bp) + " bp to " + pc(r.to, 2))]))) : null;
+    return [head, hist, ...evCards, evNone, meet, decCard].filter(Boolean);
   },
 
   async stress() {

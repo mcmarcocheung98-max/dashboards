@@ -1,0 +1,10 @@
+date,meeting,source,note
+# FOMC scheduled meetings: date = the decision day (second day). Add the next year's dates when the Fed publishes them (usually in the summer before).
+2026-01-28,January 27-28,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,verify: 2026 calendar from memory
+2026-03-18,March 17-18 (projections),https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,verify: 2026 calendar from memory
+2026-04-29,April 28-29,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,verify: 2026 calendar from memory
+2026-06-17,June 16-17 (projections),https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,verify: 2026 calendar from memory
+2026-07-29,July 28-29,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,verify: 2026 calendar from memory
+2026-09-16,September 15-16 (projections),https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,verify: 2026 calendar from memory
+2026-10-28,October 27-28,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,verify: 2026 calendar from memory
+2026-12-09,December 8-9 (projections),https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,verify: 2026 calendar from memory
