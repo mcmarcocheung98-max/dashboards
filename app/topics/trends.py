@@ -354,7 +354,7 @@ def fill_hn(items: list[dict], out: dict, done: dict) -> None:
                 break
         for k in [k for k in rec if k != "_q" and k not in keep]:
             rec.pop(k)
-    save("hn", store)
+        save("hn", store)               # after each topic: the first backfill takes minutes and a redeploy must not lose it
 
 
 def count_bsky(q: str, day: pd.Timestamp) -> tuple[int, bool]:
@@ -430,24 +430,31 @@ def fill() -> dict:
     dashboards' series. Returns {what: 'ok' | error}."""
     items, done, log = topics_list(), {}, []
     out: dict[str, list] = {k: [] for k in HEALTH_KEYS}
-    for name, fn in (("wiki", lambda: fill_wiki(items, out, done)), ("hn", lambda: fill_hn(items, out, done)),
-                     ("social", lambda: fill_social(items, out, log, done)), ("reality", lambda: fill_reality(done))):
+    def social():
+        fill_social(items, out, log, done)
+        done["log"] = f"{log_today(log)} rows"
+    # quick steps first and each one saved as it ends: every push to main redeploys, and the HN backfill is the slow one
+    for name, fn in (("wiki", lambda: fill_wiki(items, out, done)), ("reality", lambda: fill_reality(done)), ("social", social),
+                     ("hn", lambda: fill_hn(items, out, done))):
         try:
             fn()
         except Exception as e:
             done[name] = f"{type(e).__name__}: {str(e)[:100]}"
-    try:
-        done["log"] = f"{log_today(log)} rows"
-    except OSError as e:
-        done["log"] = type(e).__name__
+        if name != "hn":
+            _health({k: v for k, v in out.items() if v})
+            _uncache()
     _health(out)
     state = load("state")
     state.update(fill_at=time.time(), fill={k: v for k, v in done.items() if v != "ok"}, counts={k: [sum(o is True for o in v), len(v)] for k, v in out.items()})
     save("state", state)
-    from ..cache import _cache
-    for k in [k for k in _cache if k.startswith(f"topic:{SLUG}:")]:      # the next page view rebuilds from the fresh data
-        _cache.pop(k, None)
+    _uncache()
     return done
+
+
+def _uncache() -> None:
+    from ..cache import _cache
+    for k in [k for k in _cache if k.startswith(f"topic:{SLUG}:") and not k.endswith(":layout")]:   # the next view rebuilds from fresh data
+        _cache.pop(k, None)
 
 
 BACKGROUND = [fill]
