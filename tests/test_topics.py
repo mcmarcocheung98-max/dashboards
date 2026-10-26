@@ -666,16 +666,18 @@ def test_ai_merged_endpoints(snapdir, monkeypatch):
     assert r["US"]["ai_wide_index"] and r["US"]["ai_wide_over_professions"]
 
 
-def test_ai_layout_probe_reports_errors_instead_of_failing(monkeypatch):
+def test_ai_layout_probe_groups_ramp_records(monkeypatch):
     import requests
     from app.topics import ai
+    page = '<script>self.__next_f.push([1,"' + ",".join(json.dumps({"date_month": f"2026-0{m}-01", "adoption_rate_pct": 55 + m / 10, "n_firms": 80000}, separators=(",", ":")).replace('"', '\\"') for m in (8, 9)) + '"])</script>'
+    monkeypatch.setattr(requests, "get", lambda *a, **k: type("R", (), {"text": page})())
+    g = ai._layout_now()["ramp"]["groups"]
+    B.json_safe(g)
+    assert list(g) == ["adoption_rate_pct,date_month,n_firms|"] and g["adoption_rate_pct,date_month,n_firms|"]["near_559"][-1]["date_month"] == "2026-09-01"
     def down(*a, **k):
         raise requests.ConnectionError("offline")
     monkeypatch.setattr(requests, "get", down)
-    out = ai._layout_now()
-    B.json_safe(out)
-    assert set(out) == {"pages", "csd", "files"} and len(out["csd"]) == 1 and len(out["files"]) == 1
-    assert all("error" in v for g in out.values() for v in g.values())
+    assert "error" in ai._layout_now()["ramp"]
 
 
 # ------------------------------------------------------------------ housing: boroughs, fixed rate, US and HK
