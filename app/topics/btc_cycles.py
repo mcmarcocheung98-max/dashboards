@@ -382,8 +382,8 @@ def _ser(pts) -> pd.Series:
 
 def fund_factors(fd: dict, px: pd.Series, mc: pd.Series, dates: list[str]) -> dict:
     """Indicators and the two projection factors for one coin.
-    dilution(T) = supply now / supply at T: from the unlock schedule when there is one, else from the past year's supply growth carried
-    forward and capped at max (or total) supply. valuation = (1-year median price-to-fees / price-to-fees now) ^ 0.5, clamped to 0.67-1.5:
+    dilution(T) = supply now / supply at T: from the unlock schedule when there is one, else from the past year's supply growth (at most
+    50% a year) carried forward and capped at max (or total) supply; 1 when neither a schedule nor a supply cap is known. valuation = (1-year median price-to-fees / price-to-fees now) ^ 0.5, clamped to 0.67-1.5:
     half-way back to the coin's own usual multiple; price-to-TVL when there are no fees; 1 when neither exists."""
     out: dict = {"series": {}, "kpi": {}}
     now = px.index[-1]
@@ -427,11 +427,11 @@ def fund_factors(fd: dict, px: pd.Series, mc: pd.Series, dates: list[str]) -> di
         for d in dates:
             t = pd.Timestamp(d)
             dil[d] = min(1.0, s_now / float(sched.asof(t) if t <= sched.index[-1] else sched.iloc[-1]))
-    elif len(circ) > 200 and c_now:
-        g = float(np.clip(circ.iloc[-1] / circ.iloc[0] - 1, 0, 1.0))
+    elif len(circ) > 200 and c_now and cap:               # without a known cap an extrapolated emission rate has no ceiling: no factor then
         yrs0 = (circ.index[-1] - circ.index[0]).days / 365.25
-        g = (1 + g) ** (1 / yrs0) - 1 if yrs0 > 0.5 else g
-        how = "past year's supply growth, carried forward" + (" and capped at max supply" if cap else "")
+        g = float(circ.iloc[-1] / circ.iloc[0]) ** (1 / yrs0) - 1 if yrs0 > 0.5 and circ.iloc[0] > 0 else 0.0
+        g = float(np.clip(g, 0, 0.5))
+        how = "past year's supply growth (at most 50% a year), carried forward and capped at max supply"
         K["unlock_12m"] = _r(g, 3)
         for d in dates:
             yrs = max(0.0, (pd.Timestamp(d) - now).days / 365.25)

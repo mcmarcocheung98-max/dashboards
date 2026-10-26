@@ -1129,7 +1129,7 @@ def test_btc_fundamentals_parse_and_factors(snapdir, monkeypatch):
     assert F["kpi"]["p_fees"] < F["kpi"]["p_fees_median"] and F["kpi"]["unlock_12m"] > 0.3 and "fees_30d" in F["series"]
     # no fees, no TVL, no schedule, flat supply: both factors 1
     G = C.fund_factors({}, px, pd.Series(1e6, index=idx), ["2027-12-31"])
-    assert G["factors"]["valuation"] == 1.0 and G["factors"]["dilution"]["2027-12-31"] == pytest.approx(1.0)
+    assert G["factors"]["valuation"] == 1.0 and G["factors"]["dilution"].get("2027-12-31", 1.0) == 1.0
     # the coin payload applies them: adjusted = beta-only x dilution x valuation
     import json as _json
     charts = _chart(mult=2.0)
@@ -1142,3 +1142,14 @@ def test_btc_fundamentals_parse_and_factors(snapdir, monkeypatch):
     p0 = f["projection"][0]
     assert p0["dilution"] < 1 and p0["base"] == pytest.approx(p0["base_beta_only"] * p0["dilution"] * p0["valuation"], rel=1e-3)
     assert f["kpi"]["base_2027"] == p0["base"] and f["fundamentals"]["factors"]["dilution_basis"].startswith("unlock schedule")
+
+
+def test_btc_dilution_needs_a_cap():
+    from app.topics import btc_cycles as C
+    idx = pd.date_range("2025-10-27", periods=365, freq="D")
+    px = pd.Series(1.0, index=idx)
+    mc = pd.Series(np.linspace(5e9, 1e10, 365), index=idx)                  # supply doubled in a year
+    F = C.fund_factors({}, px, mc, ["2028-12-31"])
+    assert F["factors"]["dilution"] == {} and F["factors"]["dilution_basis"] is None          # no cap known: no factor
+    G = C.fund_factors({"supply": {"max_supply": 1.2e10}}, px, mc, ["2028-12-31"])
+    assert G["factors"]["dilution"]["2028-12-31"] == pytest.approx(1e10 / 1.2e10, rel=1e-3)   # growth capped at max supply
