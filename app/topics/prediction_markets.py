@@ -355,7 +355,7 @@ def resolve_row(row: dict, pool: list[dict] | None, why: dict) -> dict:
     if row.get("kalshi") and ":" in row["kalshi"]:
         series, spec = row["kalshi"].split(":", 1)
         try:
-            k = _pick([m for m in kalshi_series(series.strip()) if matches(m["title"] + " " + m["sub"], spec)], how, "vol", "close")
+            k = _pick([m for m in kalshi_series(series.strip()) if matches(m["title"] + " " + m["sub"] + " " + m["ticker"], spec)], how, "vol", "close")
         except Exception as e:
             why[f"Kalshi {series}"] = type(e).__name__
     out["kalshi"] = {"yes": k["yes"], "prev": k["prev"], "vol": k["vol"], "title": k["title"], "url": k["url"], "ticker": k["ticker"], "end": k["close"]} if k else None

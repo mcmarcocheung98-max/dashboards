@@ -32,7 +32,7 @@ each venue by **keywords**, so the next Fed meeting or a new contract is picked 
 
 - `polymarket`: words that must all appear in the event title, question or outcome of an open two-outcome market in the pool; `a/b` means
   either, `_` stands for a space (`no_change`).
-- `kalshi`: `SERIES:keywords`, e.g. `KXFEDDECISION:hold/maintain` (keywords matched on the market title and its Yes subtitle).
+- `kalshi`: `SERIES:keywords`, e.g. `KXFEDDECISION:hold/maintain` (keywords matched on the market title, its Yes subtitle and its ticker, so `CONTROLH:2026` picks the 2026 House race).
 - `manifold`: `search term:keywords` (open binary markets only).
 - `predictit`: keywords on the market and contract name.
 - `pick`: `volume` (the most traded match) or `soonest` (the one that closes first: the next meeting, the next print).
