@@ -1,0 +1,9 @@
+date,series,value,source,note
+# fallback only: Ember's yearly file replaces these rows for every year it covers
+2014-01-01,US,3860,https://www.eia.gov/electricity/annual/,total US end use incl. direct use; verify
+2018-01-01,US,4000,https://www.eia.gov/electricity/annual/,total US end use incl. direct use; verify
+2023-01-01,US,4000,https://www.eia.gov/electricity/annual/,total US end use incl. direct use (LBNL's 176 TWh = 4.4%); verify
+2024-01-01,US,4100,https://www.eia.gov/electricity/annual/,total US end use incl. direct use; verify
+2024-01-01,China,9852,https://www.nea.gov.cn/,NEA: 2024 society-wide electricity consumption 98521 bn kWh; verify
+2024-01-01,UK,285,https://www.gov.uk/government/statistics/energy-trends-section-5-electricity,DESNZ Energy Trends total demand; verify
+2024-01-01,World,30000,https://www.iea.org/reports/electricity-2025,IEA: world electricity demand about 30 PWh; verify

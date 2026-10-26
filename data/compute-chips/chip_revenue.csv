@@ -1,0 +1,35 @@
+date,series,value,source,note
+# quarterly revenue in billions, dated at the quarter end; TSMC and SMIC in US dollars, ASML in euros (net sales). All from memory: verify against the IR page
+2023-03-31,TSMC,16.72,https://investor.tsmc.com/english/quarterly-results,verify
+2023-06-30,TSMC,15.68,https://investor.tsmc.com/english/quarterly-results,verify
+2023-09-30,TSMC,17.28,https://investor.tsmc.com/english/quarterly-results,verify
+2023-12-31,TSMC,19.62,https://investor.tsmc.com/english/quarterly-results,verify
+2024-03-31,TSMC,18.87,https://investor.tsmc.com/english/quarterly-results,verify
+2024-06-30,TSMC,20.82,https://investor.tsmc.com/english/quarterly-results,verify
+2024-09-30,TSMC,23.50,https://investor.tsmc.com/english/quarterly-results,verify
+2024-12-31,TSMC,26.88,https://investor.tsmc.com/english/quarterly-results,verify
+2025-03-31,TSMC,25.53,https://investor.tsmc.com/english/quarterly-results,verify
+2025-06-30,TSMC,30.07,https://investor.tsmc.com/english/quarterly-results,verify
+2025-09-30,TSMC,33.10,https://investor.tsmc.com/english/quarterly-results,verify
+2023-03-31,ASML (EUR),6.75,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
+2023-06-30,ASML (EUR),6.90,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
+2023-09-30,ASML (EUR),6.67,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
+2023-12-31,ASML (EUR),7.24,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
+2024-03-31,ASML (EUR),5.29,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
+2024-06-30,ASML (EUR),6.24,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
+2024-09-30,ASML (EUR),7.47,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
+2024-12-31,ASML (EUR),9.26,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
+2025-03-31,ASML (EUR),7.74,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
+2025-06-30,ASML (EUR),7.69,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
+2025-09-30,ASML (EUR),7.52,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
+2023-03-31,SMIC,1.46,https://www.smics.com/en/site/company_financialSummary,verify
+2023-06-30,SMIC,1.56,https://www.smics.com/en/site/company_financialSummary,verify
+2023-09-30,SMIC,1.62,https://www.smics.com/en/site/company_financialSummary,verify
+2023-12-31,SMIC,1.68,https://www.smics.com/en/site/company_financialSummary,verify
+2024-03-31,SMIC,1.75,https://www.smics.com/en/site/company_financialSummary,verify
+2024-06-30,SMIC,1.90,https://www.smics.com/en/site/company_financialSummary,verify
+2024-09-30,SMIC,2.17,https://www.smics.com/en/site/company_financialSummary,verify
+2024-12-31,SMIC,2.21,https://www.smics.com/en/site/company_financialSummary,verify
+2025-03-31,SMIC,2.25,https://www.smics.com/en/site/company_financialSummary,verify
+2025-06-30,SMIC,2.21,https://www.smics.com/en/site/company_financialSummary,verify
+2025-09-30,SMIC,2.38,https://www.smics.com/en/site/company_financialSummary,verify

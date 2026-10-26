@@ -1,0 +1,11 @@
+date,series,value,source,note
+2024-01-01,US (IEA base case),183,https://www.iea.org/reports/energy-and-ai,starting point of the projection; verify
+2030-01-01,US (IEA base case),423,https://www.iea.org/reports/energy-and-ai,IEA base case: +240 TWh (+130%) on 2024; verify
+2024-01-01,China (IEA base case),104,https://www.iea.org/reports/energy-and-ai,starting point of the projection; verify
+2030-01-01,China (IEA base case),279,https://www.iea.org/reports/energy-and-ai,IEA base case: +175 TWh (+170%) on 2024; verify
+2024-01-01,World (IEA base case),415,https://www.iea.org/reports/energy-and-ai,starting point of the projection; verify
+2030-01-01,World (IEA base case),945,https://www.iea.org/reports/energy-and-ai,IEA base case; verify
+2023-01-01,US (LBNL low),176,https://eta-publications.lbl.gov/sites/default/files/2024-12/lbnl-2024-united-states-data-center-energy-usage-report.pdf,starting point; verify
+2028-01-01,US (LBNL low),325,https://eta-publications.lbl.gov/sites/default/files/2024-12/lbnl-2024-united-states-data-center-energy-usage-report.pdf,LBNL 2028 range low end (6.7% of US electricity); verify
+2023-01-01,US (LBNL high),176,https://eta-publications.lbl.gov/sites/default/files/2024-12/lbnl-2024-united-states-data-center-energy-usage-report.pdf,starting point; verify
+2028-01-01,US (LBNL high),580,https://eta-publications.lbl.gov/sites/default/files/2024-12/lbnl-2024-united-states-data-center-energy-usage-report.pdf,LBNL 2028 range high end (12% of US electricity); verify

@@ -1,0 +1,8 @@
+date,series,value,source,note
+2014-01-01,US,60,https://eta-publications.lbl.gov/sites/default/files/2024-12/lbnl-2024-united-states-data-center-energy-usage-report.pdf,LBNL Dec 2024 report: roughly flat near 60 TWh 2014-2016; verify
+2018-01-01,US,76,https://eta-publications.lbl.gov/sites/default/files/2024-12/lbnl-2024-united-states-data-center-energy-usage-report.pdf,LBNL Dec 2024: 76 TWh (1.9% of US electricity); verify
+2023-01-01,US,176,https://eta-publications.lbl.gov/sites/default/files/2024-12/lbnl-2024-united-states-data-center-energy-usage-report.pdf,LBNL Dec 2024: 176 TWh (4.4% of US electricity); verify
+2024-01-01,US,183,https://www.iea.org/reports/energy-and-ai,IEA Energy & AI (Apr 2025): US about 45% of the world's 415 TWh; verify
+2024-01-01,China,104,https://www.iea.org/reports/energy-and-ai,IEA Energy & AI (Apr 2025): China about 25% of the world's 415 TWh; verify
+2024-01-01,World,415,https://www.iea.org/reports/energy-and-ai,IEA Energy & AI (Apr 2025): about 1.5% of world electricity; verify
+2024-01-01,UK,7,https://www.neso.energy/publications/future-energy-scenarios-fes,commonly cited ~2.5% of UK electricity; replace with the NESO FES data workbook's data-centre line; verify
