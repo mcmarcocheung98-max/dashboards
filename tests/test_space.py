@@ -60,7 +60,7 @@ def satcat_tsv():
         for i in range(10):
             star = y >= 2019 and i < 6
             name = f"Starlink-{y}{i}" if star else f"Sat {y}-{i}"
-            mass = (300 + 100 * (y - 2019)) * (5 if star else 1) if y >= 2019 else 2000
+            mass = (300 + 100 * (y - 2019)) * (500 if star else 100) if y >= 2019 else 200000
             body.append(f"S{y}{i}\t{y}{i}\t{y}-001\tA\tP\t{name}\t{name}\t{y} Mar  1\t-\t-\t-\t-\tO\tLEO\tX\tUS\tX\tX\tX\t{mass}\t")
         body.append(f"R{y}\t\t{y}-001\tB\tR2\tF9 Stage 2\t-\t{y} Mar  1\t-\t-\t-\t-\tR\tLEO\tX\tUS\tX\tX\tX\t4000\t")       # a rocket body: not a payload
     body.append("S99\t\t-\t\tP\tMystery\t-\t-\t-\t-\t-\t-\tO\tLEO\tX\tUS\tX\tX\tX\t-\t")                                    # no date or mass
@@ -154,8 +154,8 @@ def test_gcat_parsers():
     L2 = M.parse_launches(launch_tsv(), {})                       # orgs.tsv unreachable: the fallback names the big providers
     assert L2.loc[L2["agency"] == "SPX", "country"].iloc[0] == "US" and L2.loc[L2["agency"] == "LANDSPACE", "country"].iloc[0] == "Other"
     m = M.parse_payload_mass(satcat_tsv())
-    assert m.loc[2000, "total"] == pytest.approx(20.0) and m.loc[2000, "starlink"] == 0
-    assert m.loc[2024, "starlink"] == pytest.approx(6 * 800 * 5 / 1000) and m.loc[2024, "count"] == 10
+    assert m.loc[2000, "total"] == pytest.approx(2000.0) and m.loc[2000, "starlink"] == 0
+    assert m.loc[2024, "starlink"] == pytest.approx(6 * 800 * 500 / 1000) and m.loc[2024, "count"] == 10
     with pytest.raises(ValueError):
         M.parse_launches("#Launch_Tag\tLaunch_Date\tAgency\tLaunch_Code\nx\t2020 Jan 1\tSPX\tSS\n", o)
 
@@ -242,3 +242,18 @@ def test_live_sources():
     assert o
     assert len(M.parse_launches(B._download(M.GCAT_LAUNCH, 120), o)) > 6000
     assert len(M.parse_celestrak(B._download(M.CELESTRAK, 120))) > 5000
+
+
+def test_polite_uses_a_recent_snapshot(mocked, monkeypatch):
+    calls = []
+    monkeypatch.setattr(M, "fetch", lambda url, ttl=0, **k: calls.append(url) or fake_fetch(url))
+    snap = B._snap(M.CELESTRAK)
+    snap.parent.mkdir(parents=True, exist_ok=True)
+    snap.write_text(celestrak_csv(), encoding="utf-8")
+    assert len(M.active()) > 1000 and calls == []                # a snapshot from today: no download
+    import os
+    os.utime(snap, (0, 0))
+    from app import cache
+    cache._cache.clear()
+    M.active()
+    assert calls == [M.CELESTRAK]                                 # an old one: download again

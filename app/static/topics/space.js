@@ -47,7 +47,7 @@ const VIEWS = {
       table(["Provider", "Country", String(K.last_year || ""), "Share", (K.year || "") + " so far"], L.providers.map(p => el("tr", {}, el("td", {}, p.provider), el("td", {}, p.country), el("td", {}, f0(p.last)), el("td", {}, pct(p.share, 0).replace("+", "")), el("td", {}, f0(p.ytd))))),
       note("GCAT's agency codes, named from its organisations table. The second-biggest provider flying weekly (52 a year) is one of the routine-infrastructure signs.")) : null;
     const M = d.mass;
-    const mass = M ? card("Payload mass launched to orbit per year (tonnes)", ...linesChart([{ name: "All payloads", points: M.total, color: css("--hold") }, { name: "Starlink", points: M.starlink, color: css("--s1") }, { name: "Everything else", points: M.other, color: css("--s2") }], f0),
+    const mass = M ? card("Payload mass launched to orbit per year (tonnes)", ...linesChart([{ name: "All payloads", points: M.total, color: css("--hold") }, { name: "Starlink", points: M.starlink, color: css("--s1") }, { name: "Everything else", points: M.other, color: css("--s2") }], v => big(v)),
       note("Sum of payload launch masses in GCAT's satellite catalog, by launch year (rocket stages excluded). " +
         "5 years: Starlink is most of the tonnage; does the rest grow too? 10 years: Starship-scale rockets would multiply it, which is the real test of cheaper access. 20 years: tonnes to orbit is the freight measure of a space economy, as tonne-km is for rail."))
       : card("Payload mass", missing(d, "mass", "GCAT's satellite catalog"));

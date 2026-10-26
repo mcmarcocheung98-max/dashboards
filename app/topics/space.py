@@ -177,9 +177,20 @@ def parse_payload_mass(text: str) -> pd.DataFrame:
     return res.fillna(0)
 
 
+def polite(url: str, ttl: float = DAY, max_age: float = 20 * 3600, **kw) -> str:
+    """fetch(), but a disk snapshot younger than max_age is used as it is: CelesTrak answers 403 to a client that downloads the same
+    file again within a few hours, and every redeploy empties the memory cache."""
+    import time
+    from ..cache import _cached
+    snap = B._snap(url)
+    if snap.exists() and time.time() - snap.stat().st_mtime < max_age:
+        return _cached(f"topic:{url}", ttl, lambda: snap.read_text(encoding="utf-8"))
+    return fetch(url, ttl, **kw)
+
+
 def orgs() -> dict:
     try:
-        return parse_orgs(fetch(GCAT_ORGS, 7 * DAY, timeout=90))
+        return parse_orgs(polite(GCAT_ORGS, 7 * DAY, 7 * DAY, timeout=90))
     except Exception:
         return {}
 
@@ -187,11 +198,11 @@ def orgs() -> dict:
 def launches() -> pd.DataFrame:
     """The parsed launch list, cached so the Launches and China tabs parse the 14 MB file once."""
     from ..cache import _cached
-    return _cached(f"topic:{SLUG}:launch-list", 6 * 3600, lambda: parse_launches(fetch(GCAT_LAUNCH, DAY, timeout=120, min_bytes=10000), orgs()))
+    return _cached(f"topic:{SLUG}:launch-list", 6 * 3600, lambda: parse_launches(polite(GCAT_LAUNCH, DAY, timeout=120, min_bytes=10000), orgs()))
 
 
 def payload_mass() -> pd.DataFrame:
-    return parse_payload_mass(fetch(GCAT_SATCAT, DAY, timeout=180, min_bytes=10000))
+    return parse_payload_mass(polite(GCAT_SATCAT, DAY, timeout=180, min_bytes=10000))
 
 
 # ------------------------------------------------------------------ CelesTrak SATCAT
@@ -222,7 +233,7 @@ def parse_celestrak(text: str) -> pd.DataFrame:
 
 
 def active() -> pd.DataFrame:
-    return parse_celestrak(fetch(CELESTRAK, DAY, timeout=120, min_bytes=10000))
+    return parse_celestrak(polite(CELESTRAK, DAY, timeout=120, min_bytes=10000))
 
 
 # ------------------------------------------------------------------ Nasdaq
@@ -599,8 +610,8 @@ def _layout_now() -> dict:
     from concurrent.futures import ThreadPoolExecutor
     import requests
     b = pd.Timestamp.now().strftime("%Y-%m-%d")
-    urls = {"gcat launch": GCAT_LAUNCH, "gcat orgs": GCAT_ORGS, "gcat satcat": GCAT_SATCAT, "celestrak satcat": CELESTRAK,
-            "celestrak active gp": "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=csv",
+    # CelesTrak is left out: it answers 403 to repeat downloads, and the Satellites tab already shows whether it answers
+    urls = {"gcat launch": GCAT_LAUNCH, "gcat orgs": GCAT_ORGS, "gcat satcat": GCAT_SATCAT,
             "nasdaq RKLB": NASDAQ.format(sym="RKLB", cls="stocks", a="2026-09-01", b=b), "nasdaq UFO": NASDAQ.format(sym="UFO", cls="etf", a="2026-09-01", b=b)}
 
     def one(item):
