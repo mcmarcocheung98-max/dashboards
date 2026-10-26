@@ -254,6 +254,196 @@ def coin_chart(cg_id: str, live: bool = False) -> tuple[pd.Series, pd.Series]:
     return parse_chart(fetch_json(url, TTL, min_bytes=1000))
 
 
+# ------------------------------------------------------------------ per-coin fundamentals: TVL, fees, unlock schedule, supply
+LLAMA_PROTO = "https://api.llama.fi/protocol/{slug}"
+LLAMA_FEES = "https://api.llama.fi/summary/fees/{slug}?dataType=dailyFees"
+LLAMA_CHAIN_TVL = "https://api.llama.fi/v2/historicalChainTvl/{chain}"
+LLAMA_EMISSIONS = "https://defillama-datasets.llama.fi/emissions/{slug}"         # the free dataset; api.llama.fi/emission is paid (402)
+CG_DETAIL = "https://api.coingecko.com/api/v3/coins/{id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false"
+FUND_DIR = SNAP_DIR / "btc_fundamentals"                                          # one compact file per coin, written by the background fill
+
+
+def parse_tvl(j) -> pd.Series:
+    """Protocol TVL ({"tvl": [{"date", "totalLiquidityUSD"}]}) or chain TVL ([{"date", "tvl"}]), daily."""
+    rows = j.get("tvl") if isinstance(j, dict) else j
+    s = pd.Series({pd.to_datetime(int(r["date"]), unit="s").normalize(): float(r.get("totalLiquidityUSD", r.get("tvl")) or 0) for r in rows or []})
+    return s[~s.index.duplicated(keep="last")].sort_index()
+
+
+def parse_fees(j: dict) -> pd.Series:
+    s = pd.Series({pd.to_datetime(int(t), unit="s").normalize(): float(v or 0) for t, v in (j or {}).get("totalDataChart") or []})
+    return s[~s.index.duplicated(keep="last")].sort_index()
+
+
+def parse_emissions(j: dict) -> pd.Series:
+    """Total unlocked supply over time, past and scheduled: the sum over every allocation of its cumulative `unlocked`."""
+    parts = []
+    for alloc in (((j or {}).get("documentedData") or {}).get("data") or []):
+        pts = {pd.to_datetime(int(p["timestamp"]), unit="s").normalize(): float(p.get("unlocked") or 0) for p in alloc.get("data") or [] if p.get("timestamp") is not None}
+        if pts:
+            parts.append(pd.Series(pts).sort_index())
+    if not parts:
+        raise ValueError("emissions: no documented allocations")
+    idx = sorted(set().union(*[p.index for p in parts]))
+    return sum(p.reindex(idx).ffill().fillna(0) for p in parts).sort_index()
+
+
+def _optional_json(url: str):
+    """For sources a coin may simply not have (an unlock schedule, a child protocol's fees): a plain download, so a 404 is not
+    recorded as a failing source in /api/health."""
+    from ._base import _download
+    return json.loads(_download(url, 60))
+
+
+def _llama_json(url: str):
+    """A DefiLlama download used once by the fill: parsed, then dropped from memory (protocol files run to megabytes; the disk snapshot stays)."""
+    from ..cache import _cache
+    try:
+        return fetch_json(url, TTL, min_bytes=200)
+    finally:
+        _cache.pop(f"topic:{url}", None)
+
+
+def _llama_slug(name: str) -> str:
+    return "".join(ch if ch.isalnum() else "-" for ch in name.lower()).strip("-").replace("--", "-")
+
+
+def fill_fundamentals(c: dict) -> dict:
+    """Download one coin's fundamentals and keep a compact copy (daily TVL and fees for 400 days, the unlock schedule weekly to its end,
+    supply now). Every part is optional; what failed is recorded. CoinGecko is paced like the price fill; DefiLlama is not rate-limited."""
+    out, err = {"ticker": c["ticker"], "updated": int(time.time()), "sources": {}}, {}
+    slug, chain = (c.get("defillama_slug") or "").strip(), (c.get("llama_chain") or "").strip()
+    cut = pd.Timestamp.now().normalize() - pd.Timedelta(days=400)
+    keep = lambda s: _pts(s[s.index >= cut], 2)
+    try:
+        url = LLAMA_PROTO.format(slug=slug) if slug else LLAMA_CHAIN_TVL.format(chain=chain) if chain else None
+        if url:
+            out["tvl"], out["sources"]["tvl"] = keep(parse_tvl(_llama_json(url))), url
+    except Exception as e:
+        err["tvl"] = f"{type(e).__name__}: {str(e)[:80]}"
+    try:
+        url = LLAMA_FEES.format(slug=slug or _llama_slug(chain)) if (slug or chain) else None
+        if url:
+            j = _llama_json(url)
+            fees = parse_fees(j)
+            for child in ([] if len(fees) else (j.get("childProtocols") or [])):       # a parent protocol carries no daily history; its children do
+                name = child if isinstance(child, str) else (child.get("slug") or child.get("name") or "")
+                try:
+                    url = LLAMA_FEES.format(slug=_llama_slug(name))
+                    fees = parse_fees(_optional_json(url))
+                    if len(fees):
+                        break
+                except Exception:
+                    continue
+            if len(fees):
+                out["fees"], out["sources"]["fees"] = keep(fees), url
+    except Exception as e:
+        err["fees"] = f"{type(e).__name__}: {str(e)[:80]}"
+    for key in [k for k in dict.fromkeys([slug, c["coingecko_id"]]) if k]:
+        url = LLAMA_EMISSIONS.format(slug=key)
+        try:
+            sched = parse_emissions(_optional_json(url))
+            out["schedule"], out["sources"]["schedule"] = _pts(sched.resample("W").last().dropna(), 0), url
+            break
+        except Exception as e:
+            err["schedule"] = f"{type(e).__name__}: {str(e)[:80]}"
+    if "schedule" in out:
+        err.pop("schedule", None)
+    try:
+        url = CG_DETAIL.format(id=c["coingecko_id"])
+        from ..cache import _cache
+        if f"topic:{url}" not in _cache:
+            wait = PACE - (time.time() - _last_download[0])
+            if wait > 0:
+                time.sleep(wait)
+            _last_download[0] = time.time()
+        md = fetch_json(url, TTL, min_bytes=500).get("market_data") or {}
+        out["supply"] = {k: md.get(k) for k in ("circulating_supply", "total_supply", "max_supply")}
+        out["sources"]["supply"] = f"https://www.coingecko.com/en/coins/{c['coingecko_id']}"
+    except Exception as e:
+        err["supply"] = f"{type(e).__name__}: {str(e)[:80]}"
+    out["errors"] = err
+    FUND_DIR.mkdir(parents=True, exist_ok=True)
+    (FUND_DIR / f"{c['ticker']}.json").write_text(json.dumps(out))
+    return out
+
+
+def fundamentals(ticker: str) -> dict:
+    f = FUND_DIR / f"{ticker}.json"
+    try:
+        return json.loads(f.read_text()) if f.exists() else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _ser(pts) -> pd.Series:
+    return pd.Series({pd.to_datetime(int(t), unit="s"): v for t, v in pts or []}, dtype=float).sort_index()
+
+
+def fund_factors(fd: dict, px: pd.Series, mc: pd.Series, dates: list[str]) -> dict:
+    """Indicators and the two projection factors for one coin.
+    dilution(T) = supply now / supply at T: from the unlock schedule when there is one, else from the past year's supply growth carried
+    forward and capped at max (or total) supply. valuation = (1-year median price-to-fees / price-to-fees now) ^ 0.5, clamped to 0.67-1.5:
+    half-way back to the coin's own usual multiple; price-to-TVL when there are no fees; 1 when neither exists."""
+    out: dict = {"series": {}, "kpi": {}}
+    now = px.index[-1]
+    circ = (mc / px).replace([np.inf, -np.inf], np.nan).dropna()
+    out["series"]["supply"] = _pts(circ, 0)
+    fees, tvl = _ser(fd.get("fees")), _ser(fd.get("tvl"))
+    K = out["kpi"]
+    basis, ratio_now, ratio_med = None, None, None
+    if len(fees) >= 60:
+        f30 = fees.rolling(30).sum().dropna()
+        out["series"]["fees_30d"] = _pts(f30.iloc[::7], 0)
+        pf = (mc / (f30.reindex(mc.index, method="ffill") * 365 / 30)).replace([np.inf, -np.inf], np.nan).dropna()
+        pf = pf[pf > 0]
+        K["fees_30d"], K["fees_annual"] = _r(float(f30.iloc[-1]), 0), _r(float(f30.iloc[-1] * 365 / 30), 0)
+        if len(pf) >= 30:
+            K["p_fees"], K["p_fees_median"] = _r(float(pf.iloc[-1]), 1), _r(float(pf.median()), 1)
+            out["series"]["p_fees"] = _pts(pf, 2)
+            basis, ratio_now, ratio_med = "price-to-fees", float(pf.iloc[-1]), float(pf.median())
+    if len(tvl) >= 30:
+        out["series"]["tvl"] = _pts(tvl.iloc[::7] if len(tvl) > 120 else tvl, 0)
+        K["tvl"] = _r(float(tvl.iloc[-1]), 0)
+        pt = (mc / tvl.reindex(mc.index, method="ffill")).replace([np.inf, -np.inf], np.nan).dropna()
+        pt = pt[pt > 0]
+        if len(pt) >= 30:
+            K["p_tvl"], K["p_tvl_median"] = _r(float(pt.iloc[-1]), 2), _r(float(pt.median()), 2)
+            if basis is None:
+                basis, ratio_now, ratio_med = "price-to-TVL", float(pt.iloc[-1]), float(pt.median())
+    tilt = float(np.clip((ratio_med / ratio_now) ** 0.5, 0.67, 1.5)) if basis and ratio_now and ratio_med else 1.0
+    sup = fd.get("supply") or {}
+    cap = sup.get("max_supply") or sup.get("total_supply")
+    c_now = float(circ.iloc[-1]) if len(circ) else sup.get("circulating_supply")
+    if c_now and cap:
+        K["unlocked_share"] = _r(min(1.0, c_now / float(cap)), 3)
+    sched = _ser(fd.get("schedule"))
+    dil, how = {}, None
+    if len(sched) >= 4 and sched.asof(now) and sched.iloc[-1] > 0:
+        how = "unlock schedule (DefiLlama)"
+        s_now = float(sched.asof(now))
+        out["series"]["schedule"] = fd.get("schedule")
+        K["unlock_12m"] = _r(float(sched.asof(now + pd.Timedelta(days=365))) / s_now - 1, 3)
+        for d in dates:
+            t = pd.Timestamp(d)
+            dil[d] = min(1.0, s_now / float(sched.asof(t) if t <= sched.index[-1] else sched.iloc[-1]))
+    elif len(circ) > 200 and c_now:
+        g = float(np.clip(circ.iloc[-1] / circ.iloc[0] - 1, 0, 1.0))
+        yrs0 = (circ.index[-1] - circ.index[0]).days / 365.25
+        g = (1 + g) ** (1 / yrs0) - 1 if yrs0 > 0.5 else g
+        how = "past year's supply growth, carried forward" + (" and capped at max supply" if cap else "")
+        K["unlock_12m"] = _r(g, 3)
+        for d in dates:
+            yrs = max(0.0, (pd.Timestamp(d) - now).days / 365.25)
+            c_t = c_now * (1 + g) ** yrs
+            if cap:
+                c_t = min(c_t, float(cap))
+            dil[d] = min(1.0, c_now / c_t) if c_t else 1.0
+    out["factors"] = {"valuation": _r(tilt, 3), "valuation_basis": basis, "dilution": {d: _r(v, 3) for d, v in dil.items()}, "dilution_basis": how}
+    out["sources"], out["errors"], out["updated"] = fd.get("sources", {}), fd.get("errors", {}), fd.get("updated")
+    return out
+
+
 def fill_coins(pause_on_limit: float = 75.0) -> dict:
     """Background job: download BTC and every candidate coin from CoinGecko one at a time (PACE apart), waiting longer after a 429.
     Coins already fetched within a day come from memory and cost nothing. Returns {ticker: 'ok' | error}."""
@@ -273,6 +463,12 @@ def fill_coins(pause_on_limit: float = 75.0) -> dict:
                     time.sleep(pause_on_limit)
                 else:
                     break
+    for c in coins_list():                                # then each coin's fees, TVL, unlocks and supply (optional parts)
+        try:
+            fd = fill_fundamentals(c)
+            done[c["ticker"] + ":fundamentals"] = "ok" if not fd.get("errors") else "partial: " + ", ".join(fd["errors"])
+        except Exception as e:
+            done[c["ticker"] + ":fundamentals"] = f"{type(e).__name__}: {str(e)[:80]}"
     from ..cache import _cache
     for k in [k for k in _cache if k.startswith(f"topic:{SLUG}:coin")]:      # the next page view rebuilds from the fresh data
         _cache.pop(k, None)
@@ -318,7 +514,16 @@ def _coin_full(c: dict, btc: pd.Series) -> dict:
     d90 = coin_px.index[-1] - pd.Timedelta(days=90)
     vs_btc_90 = _r(ratio.iloc[-1] / ratio.asof(d90) - 1, 4) if ratio.asof(d90) else None
     r_coin, r_ratio = rsi(coin_px), rsi(ratio)
-    proj = project(now, btc_now, beta, scenarios()) if beta is not None else []
+    sc = scenarios()
+    proj = project(now, btc_now, beta, sc) if beta is not None else []
+    F = fund_factors(fundamentals(c["ticker"]), coin_px, mc.reindex(coin_px.index).ffill(), [p["date"] for p in proj])
+    for p in proj:                                       # BTC beta x dilution from unlocks x half-way valuation reversion
+        dl = F["factors"]["dilution"].get(p["date"], 1.0) or 1.0
+        p["factor"] = _r(dl * F["factors"]["valuation"], 4)
+        p["dilution"], p["valuation"] = dl, F["factors"]["valuation"]
+        for k in ("bear", "base", "bull"):
+            p[k + "_beta_only"] = p[k]
+            p[k] = _r(p[k] * p["factor"], 4)
     return {"ticker": c["ticker"], "name": c["name"], "rank": int(c["rank"]), "sector": c["sector"], "note": c.get("note", ""),
             "links": {"coinmarketcap": f"https://coinmarketcap.com/currencies/{c['cmc_slug']}/" if c.get("cmc_slug") else None,
                       "defillama": f"https://defillama.com/protocol/{c['defillama_slug']}" if c.get("defillama_slug") else None,
@@ -333,7 +538,8 @@ def _coin_full(c: dict, btc: pd.Series) -> dict:
             "spark": _pts(coin_px.iloc[-90:], 6),
             "series": {"price": _pts(coin_px, 6), "btc_indexed": _pts(btc_px / btc_px.iloc[0] * coin_px.iloc[0], 6), "ratio": _pts(ratio, 10),
                        "rsi": _pts(r_coin, 1), "rsi_vs_btc": _pts(r_ratio, 1), "market_cap": _pts(mc, 0)},
-            "projection": proj, "implied_mcap_base": [{"date": p["date"], "mcap": _r(p["base"] * supply, 0)} for p in proj] if supply else []}
+            "fundamentals": F,
+            "projection": proj, "implied_mcap_base": [{"date": p["date"], "mcap": _r(p["base"] * supply / (p.get("dilution") or 1.0), 0)} for p in proj] if supply else []}
 
 
 def btc_chart() -> pd.Series:

@@ -470,7 +470,8 @@ function coinCharts(f, px, r1) {
   const rsi = card("RSI 14: the coin ÷ BTC ratio (solid) and the coin in USD (dashed)", ...linesChart([{ name: "RSI vs BTC", points: S.rsi_vs_btc }, { name: "RSI (USD)", points: S.rsi, dashed: true }], r1, { small: true, hlines: [30, 50, 70] }),
     note("Above 70: has run hard (against BTC for the solid line). Below 30: washed out."));
   const mcap = card("Market cap, 365 days", ...linesChart([{ name: "Market cap", points: S.market_cap }], v => usdBig(v), { small: true }));
-  const pts = f.projection || [];
+  const pts = f.projection || [], FD = f.fundamentals || {}, FF = FD.factors || {};
+  const fx = v => v == null ? "–" : "×" + v.toFixed(2);
   const nowPt = [end, S.price[S.price.length - 1][1]];
   const at = p => Math.floor(new Date(p.date + "T00:00:00Z").getTime() / 1000);
   const ws = [];                                        // empty days to the last scenario date, so the axis is to scale in time
@@ -480,12 +481,16 @@ function coinCharts(f, px, r1) {
     ...linesChart([{ name: "Price", points: S.price, color: css("--s1") },
       ...(pts.length ? [{ name: "Base", points: [nowPt, ...pts.map(p => [at(p), p.base])], color: css("--s2"), width: 3 },
         { name: "Bull", points: [nowPt, ...pts.map(p => [at(p), p.bull])], dashed: true, color: css("--up") },
-        { name: "Bear", points: [nowPt, ...pts.map(p => [at(p), p.bear])], dashed: true, color: css("--down") }] : [])],
+        { name: "Bear", points: [nowPt, ...pts.map(p => [at(p), p.bear])], dashed: true, color: css("--down") },
+        ...(pts.some(p => p.factor != null && Math.abs(p.factor - 1) > 0.005) ? [{ name: "Base, BTC beta only", points: [nowPt, ...pts.map(p => [at(p), p.base_beta_only])], color: css("--hold"), width: 1 }] : [])] : [])],
       px, { log: true, whitespace: ws, sync: false }),
-    el("div", { class: "scroll", style: "margin-top:8px" }, el("table", {}, el("tr", {}, ...["Scenario", "Bear", "Base", "Bull", "Implied market cap (base)"].map(h => el("th", {}, h))),
-      ...pts.map((p, i) => el("tr", {}, el("td", {}, p.label), el("td", {}, px(p.bear)), el("td", {}, px(p.base)), el("td", {}, px(p.bull)), el("td", {}, usdBig((f.implied_mcap_base[i] || {}).mcap)))))),
+    el("div", { class: "scroll", style: "margin-top:8px" }, el("table", {},
+      el("tr", {}, ...["Scenario", "Bear", "Base", "Bull", "Base, BTC beta only", "× Dilution", "× Valuation", "Implied market cap (base)"].map((h, i) => el("th", { style: i ? "text-align:right" : "" }, h))),
+      ...pts.map((p, i) => el("tr", {}, el("td", {}, p.label), ...[px(p.bear), px(p.base), px(p.bull), px(p.base_beta_only), fx(p.dilution), fx(p.valuation), usdBig((f.implied_mcap_base[i] || {}).mcap)]
+        .map(v => el("td", { style: "text-align:right" }, v)))))),
     f.notes && f.notes.thesis ? el("div", { style: "margin-top:8px;font-size:13px" }, el("b", {}, "Thesis behind the projection: "), f.notes.thesis) : null,
-    note("Price now × (BTC scenario ÷ BTC now) ^ beta. Mechanical; it says nothing about the coin's own fundamentals, unlocks or survival."));
+    note("Price now × (BTC scenario ÷ BTC now) ^ beta, then × dilution (supply now ÷ supply at that date: " + (FF.dilution_basis || "no supply data, so 1") +
+      ") × valuation (half-way back to the coin's own 1-year median " + (FF.valuation_basis || "multiple; no fees or TVL, so 1") + ", within 0.67-1.5). Mechanical; it says nothing about survival or the coin's own news."));
   const big = proj.querySelector(".chart"); if (big) big.style.height = "460px";            // the projection gets the full width and height
   const last = pts.length ? at(pts[pts.length - 1]) : end;
   let tries = 0;
@@ -495,7 +500,37 @@ function coinCharts(f, px, r1) {
     try { c.timeScale().setVisibleRange({ from: end - 365 * 86400, to: last + 20 * 86400 }); } catch (e) { c.timeScale().fitContent(); }
   };
   setTimeout(frame, 150);
-  return [el("div", { style: "margin-top:8px" }, proj), el("div", { class: "grid2", style: "margin-top:8px" }, price, rsi, mcap), stale(f)].filter(Boolean);
+  return [el("div", { style: "margin-top:8px" }, proj), fundamentalsCard(f, px), el("div", { class: "grid2", style: "margin-top:8px" }, price, rsi, mcap), stale(f)].filter(Boolean);
+}
+
+// fees, TVL and supply against price, each rebased to 100 at the start of the year, plus the multiples and the unlock schedule
+function fundamentalsCard(f, px) {
+  const FD = f.fundamentals || {}, FS = FD.series || {}, K = FD.kpi || {}, S = f.series;
+  const t0 = S.price[0][0];
+  const rebase = pts => { const q = (pts || []).filter(p => p[0] >= t0 - 7 * 86400 && p[1] > 0); return q.length > 1 ? q.map(p => [p[0], p[1] / q[0][1] * 100]) : null; };
+  const lines = [["Price", S.price, css("--s1")], ["Fees, 30 days", FS.fees_30d, css("--s2")], ["TVL", FS.tvl, css("--s3")], ["Circulating supply", FS.supply, css("--s4")]]
+    .map(([n, pts, color]) => { const r = rebase(pts); return r ? { name: n, points: r, color, width: n === "Price" ? 2.5 : 1.5 } : null; }).filter(Boolean);
+  const rel = (a, b) => a == null || b == null ? "" : " (1-year median " + (b >= 10 ? num(b, 0) : b.toFixed(2)) + "×)";
+  const m = v => v == null ? "–" : (v >= 10 ? num(v, 0) : v.toFixed(2)) + "×";
+  const kp = el("div", { class: "kpis" },
+    kpi("Fees, last 30 days", usdBig(K.fees_30d)), kpi("Price-to-fees (annualised)" + rel(K.p_fees, K.p_fees_median), m(K.p_fees), K.p_fees != null && K.p_fees_median != null ? (K.p_fees < K.p_fees_median ? "up" : "down") : ""),
+    kpi("TVL", usdBig(K.tvl)), kpi("Market cap ÷ TVL" + rel(K.p_tvl, K.p_tvl_median), m(K.p_tvl), K.p_tvl != null && K.p_tvl_median != null ? (K.p_tvl < K.p_tvl_median ? "up" : "down") : ""),
+    kpi("Unlocked (of max supply)", K.unlocked_share == null ? "–" : pct(K.unlocked_share, 0).replace("+", "")),
+    kpi("Supply added, next 12 months", K.unlock_12m == null ? "–" : pct(K.unlock_12m, 1), K.unlock_12m > 0.05 ? "down" : ""));
+  const kids = [kp];
+  if (lines.length > 1) kids.push(...linesChart(lines, v => v == null ? "–" : v.toFixed(0), { log: true, small: true, sync: false }),
+    note("Each line ÷ its value a year ago × 100. Price rising faster than fees or TVL = the multiple expanding; supply rising = dilution from unlocks and emissions."));
+  if (FS.schedule && FS.schedule.length > 3) {
+    const now = S.price[S.price.length - 1][0];
+    kids.push(el("div", { style: "margin-top:10px" }, el("b", {}, "Unlock schedule: total unlocked supply, past and scheduled (DefiLlama)")),
+      ...linesChart([{ name: "Unlocked", points: FS.schedule.filter(p => p[0] <= now + 3 * 365 * 86400) }], v => v == null ? "–" : big(v), { small: true, sync: false }));
+  }
+  const src = Object.entries(FD.sources || {}).map(([k, u]) => k + ": [" + host(u) + "](" + u + ")").join(" · ");
+  const miss = Object.entries(FD.errors || {}).map(([k, e]) => k + " (" + e.split(":")[0] + ")").join(", ");
+  kids.push(note(FD.updated ? "" : "Fundamentals are fetched by the background job with the prices; this coin has not been reached yet."),
+    src ? el("div", { class: "muted", style: "margin-top:4px;font-size:12px" }, ...md("Sources: " + src)) : null,
+    miss ? note("Not available for this coin: " + miss + ".") : null);
+  return el("div", { style: "margin-top:8px" }, card("Fundamentals against price: fees, TVL, supply and unlocks", ...kids.filter(Boolean)));
 }
 
 // horizontal-ish bars on a log scale for multiples: one row per sector/coin, label left, bar + value right

@@ -511,7 +511,7 @@ def test_btc_cycles_coins(snapdir, monkeypatch):
     monkeypatch.setattr(B, "_download", lambda url, *a, **k: _json.dumps(charts["btc"] if "coins/bitcoin/" in url else charts["coin"]))
     monkeypatch.setattr(C, "PACE", 0)
     assert C._coins_now()["coins"][0]["error"].startswith("loading")          # before the background fill: pending, not an error
-    assert set(C.fill_coins().values()) == {"ok"}
+    assert {v for k, v in C.fill_coins().items() if ":" not in k} == {"ok"}          # prices; ":fundamentals" entries are optional parts
     k = C._coins_now()
     B.json_safe(k)
     assert len(k["coins"]) == len(C.coins_list()) == 30 and all("kpi" in c for c in k["coins"]) and k["btc_now"] > 0
@@ -1100,3 +1100,45 @@ def test_btc_readings(snapdir, monkeypatch):
     assert r["btc_vs_200d"]["lean"] == 1 and r["halving_clock"]["lean"] == 1 and r["etf_5d"]["value"] == 25 and r["mnav"]["lean"] == -1
     assert r["mstr_bought_week"]["value"] == 10 and r["rsi_breadth"]["value"] == "2/3" and r["strongest"]["value"] == "A" and r["weakest"]["value"] == "B"
     assert r["sector:1"]["lean"] == 1 and r["sig:Stablecoin supply rising"]["lean"] == 1 and {x["tab"] for x in r.values()} >= {"cycles", "signals", "etf", "mstr", "candidates", "sectors"}
+
+
+def test_btc_fundamentals_parse_and_factors(snapdir, monkeypatch):
+    from app.topics import btc_cycles as C
+    day = 86400
+    t0 = int(pd.Timestamp("2025-10-20").timestamp())
+    tvl = C.parse_tvl({"tvl": [{"date": t0 + i * day, "totalLiquidityUSD": 1e9 + i * 1e6} for i in range(400)]})
+    chain = C.parse_tvl([{"date": t0 + i * day, "tvl": 5e8} for i in range(10)])
+    fees = C.parse_fees({"totalDataChart": [[t0 + i * day, 1e5] for i in range(400)]})
+    assert len(tvl) == 400 and tvl.iloc[-1] == pytest.approx(1.399e9) and len(chain) == 10 and fees.sum() == pytest.approx(4e7)
+    em = {"documentedData": {"data": [{"label": "Team", "data": [{"timestamp": t0 + i * 30 * day, "unlocked": i * 10.0} for i in range(40)]},
+                                      {"label": "Airdrop", "data": [{"timestamp": t0 + i * 30 * day, "unlocked": 500.0} for i in range(40)]}]}}
+    sched = C.parse_emissions(em)
+    assert sched.iloc[0] == 500 and sched.iloc[-1] == 890
+    with pytest.raises(ValueError):
+        C.parse_emissions({"documentedData": {"data": []}})
+    # factors: price-to-fees now 10x vs a 1-year median of 40x -> valuation sqrt(4) = 2, clamped to 1.5; schedule doubles supply by T
+    idx = pd.date_range("2025-10-27", periods=365, freq="D")
+    px = pd.Series(1.0, index=idx)
+    mc = pd.Series(np.r_[np.full(300, 4e7 * 40 / 1), np.full(65, 4e7 * 10)][:365] / 12.1666 * 1.0, index=idx)
+    fd = {"fees": [[int(t.timestamp()), 1e5 * 365 / 365] for t in idx], "tvl": [[int(t.timestamp()), 1e9] for t in idx],
+          "schedule": [[int((idx[-1] + pd.Timedelta(days=d)).timestamp()), 1000.0 + max(0, d) * 1000.0 / 800] for d in range(-60, 900, 7)],
+          "supply": {"circulating_supply": 1000, "total_supply": 2000, "max_supply": 2000}}
+    F = C.fund_factors(fd, px, mc, ["2027-12-31"])
+    assert F["factors"]["valuation_basis"] == "price-to-fees" and F["factors"]["valuation"] == pytest.approx(1.5)
+    assert F["factors"]["dilution_basis"].startswith("unlock schedule") and 0.4 < F["factors"]["dilution"]["2027-12-31"] < 0.7
+    assert F["kpi"]["p_fees"] < F["kpi"]["p_fees_median"] and F["kpi"]["unlock_12m"] > 0.3 and "fees_30d" in F["series"]
+    # no fees, no TVL, no schedule, flat supply: both factors 1
+    G = C.fund_factors({}, px, pd.Series(1e6, index=idx), ["2027-12-31"])
+    assert G["factors"]["valuation"] == 1.0 and G["factors"]["dilution"]["2027-12-31"] == pytest.approx(1.0)
+    # the coin payload applies them: adjusted = beta-only x dilution x valuation
+    import json as _json
+    charts = _chart(mult=2.0)
+    monkeypatch.setattr(B, "_download", lambda url, *a, **k: _json.dumps(charts["btc"] if "coins/bitcoin/" in url else charts["coin"]))
+    monkeypatch.setattr(C, "PACE", 0)
+    C.fill_coins()
+    C.FUND_DIR.mkdir(parents=True, exist_ok=True)
+    (C.FUND_DIR / "HYPE.json").write_text(_json.dumps({"schedule": [[int((pd.Timestamp.now() + pd.Timedelta(days=d)).timestamp()), 1000.0 + max(0, d)] for d in range(-400, 1200, 7)]}))
+    f = C._coin_now("HYPE")
+    p0 = f["projection"][0]
+    assert p0["dilution"] < 1 and p0["base"] == pytest.approx(p0["base_beta_only"] * p0["dilution"] * p0["valuation"], rel=1e-3)
+    assert f["kpi"]["base_2027"] == p0["base"] and f["fundamentals"]["factors"]["dilution_basis"].startswith("unlock schedule")
