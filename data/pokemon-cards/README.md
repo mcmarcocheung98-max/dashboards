@@ -45,6 +45,8 @@ eBay sold listings, Cardmarket's own pages, Google Trends, PSA and Snkrdunk usua
 | Snkrdunk | 200 for the English home page; no price feed found | no |
 | tcgcsv.com | 200 (TCGplayer groups) | not used; a possible source for sealed TCGplayer prices |
 
+First live reading after the fill (2026-10-26): heat score −0.17 (neutral), down from +0.84 in March 2026; 9 of 12 signals scored. live-check drew all six tabs from live data. `/api/health` lists only sources downloaded since the last restart, so right after a redeploy that finds fresh snapshots on the volume it can show 0 sources for this dashboard: that is not a failure.
+
 ## The basket (`basket.csv`)
 
 30 bellwethers: 8 vintage WotC holos (Base Set Charizard, Blastoise, Venusaur, Mewtwo; Fossil Gengar; Team Rocket Dark Charizard; Neo Genesis Lugia; Neo Destiny Shining Charizard), 11 modern chase and alt-art cards (Evolving Skies Umbreon and Rayquaza VMAX, Fusion Strike Gengar VMAX, Brilliant Stars Charizard V, Lost Origin Giratina V, Obsidian Flames and 151 Charizard ex, 151 Mew ex, Twilight Masquerade Greninja ex, Surging Sparks Pikachu ex, Prismatic Evolutions Umbreon ex) and 11 sealed products (booster boxes and elite trainer boxes from Base Set to Mega Evolution, each with its MSRP).

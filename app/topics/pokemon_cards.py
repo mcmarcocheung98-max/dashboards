@@ -442,7 +442,7 @@ def fill() -> dict:
                 d = parse_tcg_details(json.loads(polite(TCG_DETAILS.format(pid=pid), "tcg", MAX_AGE["tcg"], headers=TCG_HEADERS, min_bytes=20)))
                 log.extend((i["key"], k, d.get(k)) for k in ("listings", "sellers", "market"))
             step(f"tcg listings {i['key']}", det)
-    _save_resolved(res)
+        _save_resolved(res)              # after each item: a redeploy mid-fill keeps what was found
     try:
         done["log"] = f"{log_today(log)} rows"
     except OSError as e:

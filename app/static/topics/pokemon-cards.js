@@ -9,6 +9,9 @@ const SEGCOL = { "Vintage WotC holos": "--s4", "Modern chase / alt-art": "--s1",
 const VERDICT_COL = s => s >= 0.5 ? "var(--down)" : s <= -0.5 ? "var(--s1)" : "var(--muted)";
 const FMT = { mom30: pct, mom90: pct, breadth: pc0, sealed_msrp: xm, new_set: xm, psa10_ratio: xm, psa_volume: v => big(v), search: f0, sales: f0, news: f0, reprints: f0, overhang: pct };
 const fmtSig = (k, v) => (FMT[k] || f2)(v);
+// hand-entered series can be quarterly: monthly blank points let the chart follow the shared date axis to the month
+const monthly = pts => { if (!pts || pts.length < 2) return []; const out = [], d = new Date(pts[0][0] * 1000), end = pts[pts.length - 1][0];
+  for (let t = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) / 1000; t <= end; ) { out.push(t); const x = new Date(t * 1000); t = Date.UTC(x.getUTCFullYear(), x.getUTCMonth() + 1, 1) / 1000; } return out; };
 
 // a gauge from -2 (cold, blue) to +2 (overheated, red) with a marker at v
 function gauge(v, o = {}) {
@@ -100,7 +103,7 @@ const VIEWS = {
       ["psa_volume", "PSA grading volume (Pokémon cards per month, 3-month average)", big, "--s4", "Hand-entered (psa.csv) from GemRate or PSA. Grading floods follow price spikes: people grade to sell."],
       ["sales", "TCGplayer units sold per week, basket cards", f0, "--s6", "Sum of every condition and printing. Rising sales with rising prices is real demand; rising prices on falling sales is thin."],
       ["news", "Sell-out, purchase-limit and scalping reports in the last 90 days", f0, "--down", "Count of dated, cited rows in events.csv."]]
-      .map(([k, t, f, c, n]) => Z[k] ? card(t, ...linesChart([{ name: t.split(":")[0], points: Z[k], color: css(c) }], f, { small: true }), note(n)) : card(t, el("div", { class: "muted" }, "No data yet. " + n)));
+      .map(([k, t, f, c, n]) => Z[k] ? card(t, ...linesChart([{ name: t.split(":")[0], points: Z[k], color: css(c) }], f, { small: true, whitespace: k === "sales" ? [] : monthly(Z[k]) }), note(n)) : card(t, el("div", { class: "muted" }, "No data yet. " + n)));
     const news = (d.news || []).length ? card("Sell-outs, limits and scalping (dated, cited)", table(["Date", "Where", "What", "Source"], d.news.map(r => el("tr", {}, el("td", {}, r.date), el("td", {}, r.region),
       el("td", { class: "wrap" }, r.event + (r.note ? " (" + r.note + ")" : "")), el("td", {}, link(host(r.source), r.source))))), note("data/pokemon-cards/events.csv. Rows marked verify were entered from memory.")) : null;
     return [head, signalCards(S, Z), el("div", { class: "grid2" }, mom, br), el("div", { class: "grid2" }, sm, ns), el("div", { class: "grid2" }, ...hand), news, cite(d.cited)];
@@ -124,7 +127,7 @@ const VIEWS = {
       card("Supply overhang", el("div", { class: "muted" }, "Builds up from the daily log of TCGplayer listings: it needs 31 days."));
     const pr = Z.psa10_ratio ? card("PSA 10 premium over raw (median ratio)", ...linesChart([{ name: "PSA 10 / raw", points: Z.psa10_ratio, color: css("--s4") }], xm, { small: true }),
       note("Speculators pay most for perfect grades at the top; the ratio thinning means that money is leaving.")) : null;
-    const se = Z.search ? card("Search interest fading", ...linesChart([{ name: "Google Trends", points: Z.search, color: css("--s5") }], f0, { small: true }), note("Hand-entered monthly (trends.csv).")) : null;
+    const se = Z.search ? card("Search interest fading", ...linesChart([{ name: "Google Trends", points: Z.search, color: css("--s5") }], f0, { small: true, whitespace: monthly(Z.search) }), note("Hand-entered monthly (trends.csv).")) : null;
     const rep = card("Reprint and restock announcements (dated, cited)", (d.reprints || []).length ? table(["Date", "Where", "What", "Source"], d.reprints.map(r => el("tr", {}, el("td", {}, r.date), el("td", {}, r.region),
       el("td", { class: "wrap" }, r.event + (r.note ? " (" + r.note + ")" : "")), el("td", {}, link(host(r.source), r.source))))) : el("div", { class: "muted" }, "None entered yet."),
       note("Reprints add supply to exactly the products speculators hold; they are the clearest cooling trigger for sealed. data/pokemon-cards/events.csv."));
