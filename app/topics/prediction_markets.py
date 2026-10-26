@@ -43,7 +43,7 @@ POLY_TOP = GAMMA + "/events?closed=false&order=volume24hr&ascending=false&limit=
 POLY_PAGES = 3                     # the 300 open events with the most volume in the last 24 hours
 POLY_TAG = GAMMA + "/events?closed=false&tag_slug={tag}&order=volume24hr&ascending=false&limit=50"
 POLY_TAGS = ("fed-rates", "economy", "inflation", "uk", "china", "hong-kong", "taiwan", "ai", "geopolitics")   # so smaller regional markets are in the pool
-POLY_CLOSED = GAMMA + "/markets?closed=true&order=volumeNum&ascending=false&limit=100&offset={offset}&end_date_min={since}"
+POLY_CLOSED = GAMMA + "/events?closed=true&order=volume&ascending=false&limit=50&offset={offset}&end_date_min={since}"   # events carry the tags; /markets does not
 CLOB = "https://clob.polymarket.com"
 CLOB_HIST = CLOB + "/prices-history?market={token}&interval=max&fidelity=1440"
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
@@ -252,17 +252,20 @@ def parse_predictit(j: dict) -> list[dict]:
     return out
 
 
-def parse_closed(markets: list) -> list[dict]:
-    """Resolved binary Gamma markets -> [{id, q, closed (unix s), outcome 1/0, vol, token}]; markets whose final price is not 1 or 0 are left out."""
+def parse_closed(items: list) -> list[dict]:
+    """Resolved binary Gamma markets, or closed events with their markets -> [{id, q, closed (unix s), outcome 1/0, vol, token, cat}]; markets
+    whose final price is not 1 or 0 are left out. An event's tags give its markets' category."""
     out = []
-    for m in markets or []:
+    pairs = [(m, e.get("tags")) for e in items or [] if isinstance(e, dict) and "markets" in e for m in e.get("markets") or []]
+    pairs += [(m, [t for ev in m.get("events") or [] for t in ev.get("tags") or []]) for m in items or [] if isinstance(m, dict) and "markets" not in m]
+    for m, etags in pairs:
         outs, prices, toks = _jlist(m.get("outcomes")), [_f(p) for p in _jlist(m.get("outcomePrices"))], _jlist(m.get("clobTokenIds"))
         if [str(o).lower() for o in outs] != ["yes", "no"] or len(prices) != 2 or len(toks) < 1 or prices[0] not in (0.0, 1.0) or prices[0] + prices[1] != 1:
             continue
         t = pd.to_datetime(m.get("closedTime") or m.get("umaEndDate") or m.get("endDate"), utc=True, errors="coerce")
         if pd.isna(t):
             continue
-        tags = [x.get("slug") for e in m.get("events") or [] for x in e.get("tags") or [] if isinstance(x, dict)]
+        tags = [x.get("slug") for x in etags or [] if isinstance(x, dict)]
         out.append({"id": str(m.get("id")), "q": m.get("question") or "", "closed": int(t.timestamp()), "outcome": int(prices[0]),
                     "vol": _f(m.get("volumeNum")) or _f(m.get("volume")) or 0.0, "token": toks[0], "cat": category(tags)})
     return out
@@ -470,14 +473,19 @@ def fill_accuracy(max_new: int = ACC_PER_RUN) -> dict:
     have = {r["id"]: r for r in read_resolved()}
     since = (_now() - pd.Timedelta(days=365)).strftime("%Y-%m-%d")
     cands = []
-    for k in range(3):
+    for k in range(4):
         try:
-            page = get_json(POLY_CLOSED.format(offset=k * 100, since=since), DAY, min_bytes=20, timeout=40)
+            page = get_json(POLY_CLOSED.format(offset=k * 50, since=since), DAY, min_bytes=20, timeout=40)
         except Exception:
             break
         cands += parse_closed(page if isinstance(page, list) else [])
-        if not isinstance(page, list) or len(page) < 100:
+        if not isinstance(page, list) or len(page) < 50:
             break
+    fixed = 0
+    for c in cands:                  # records saved before the events carried their tags: fill in the category
+        r = have.get(c["id"])
+        if r and r.get("cat") in (None, "other") and c["cat"] != "other":
+            r["cat"], fixed = c["cat"], fixed + 1
     todo = [c for c in cands if c["id"] not in have and c["vol"] >= ACC_MIN_VOLUME][:max_new]
     added = 0
     for c in todo:
@@ -488,12 +496,12 @@ def fill_accuracy(max_new: int = ACC_PER_RUN) -> dict:
         rec = {k: c[k] for k in ("id", "q", "closed", "outcome", "vol", "cat")} | {"p30": price_before(h, c["closed"], 30), "p7": price_before(h, c["closed"], 7)}
         have[c["id"]] = rec
         added += 1
-    if added:
+    if added or fixed:
         _acc_file().parent.mkdir(parents=True, exist_ok=True)
         tmp = _acc_file().with_suffix(".tmp")
         tmp.write_text(json.dumps(sorted(have.values(), key=lambda r: -r["closed"])))
         tmp.replace(_acc_file())
-    return {"resolved": f"{added} added, {len(have)} kept"}
+    return {"resolved": f"{added} added, {len(have)} kept" + (f", {fixed} categorised" if fixed else "")}
 
 
 def calibration(recs: list[dict], key: str, bins: int = 10) -> dict:
@@ -698,7 +706,7 @@ def _layout_now() -> dict:
     except Exception:
         pass
     urls = {"polymarket events": POLY_TOP.format(offset=0).replace("limit=100", "limit=1"), "polymarket tag fed-rates": POLY_TAG.format(tag="fed-rates").replace("limit=50", "limit=1"),
-            "polymarket closed": POLY_CLOSED.format(offset=0, since="2026-01-01").replace("limit=100", "limit=1"), "clob time": CLOB + "/time",
+            "polymarket closed": POLY_CLOSED.format(offset=0, since="2026-01-01").replace("limit=50", "limit=1"), "clob time": CLOB + "/time",
             "kalshi KXFEDDECISION": KALSHI_SERIES.format(series="KXFEDDECISION").replace("limit=200", "limit=1"),
             "manifold search": MANIFOLD.format(term="fed").replace("limit=20", "limit=1"), "predictit all": PREDICTIT}
     if tok:

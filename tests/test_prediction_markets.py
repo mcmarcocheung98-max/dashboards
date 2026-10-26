@@ -97,6 +97,18 @@ def closed_markets() -> list:
     return out
 
 
+def closed_events() -> list:
+    """Closed Gamma events (the accuracy job's source): each event's tags, then its resolved markets."""
+    ms = closed_markets()
+    cats = {"politics": "politics", "crypto": "crypto", "sports": "sports"}
+    out = []
+    for slug in cats:
+        group = [m for m in ms if (m.get("events") or [{"tags": [{"slug": "x"}]}])[0]["tags"][0]["slug"] == slug]
+        out.append({"slug": f"closed-{slug}", "title": slug, "tags": [{"slug": slug}], "markets": [{k: v for k, v in m.items() if k != "events"} for m in group]})
+    out.append({"slug": "closed-other", "title": "other", "tags": [], "markets": [m for m in ms if not m.get("events")]})
+    return out
+
+
 def kalshi_json(series: str) -> dict:
     def mk(t, sub, price, prev, vol, close):
         return {"ticker": t, "event_ticker": t.rsplit("-", 1)[0], "title": f"{series} {sub}", "yes_sub_title": sub, "status": "active",
@@ -142,6 +154,8 @@ def predictit_json() -> dict:
 
 
 def fake_fetch_json(url, ttl=0, **k):
+    if "gamma-api.polymarket.com/events" in url and "closed=true" in url:
+        return closed_events() if "offset=0" in url else []
     if "gamma-api.polymarket.com/events" in url:
         evs = poly_events()
         if "tag_slug=" in url:
@@ -149,8 +163,6 @@ def fake_fetch_json(url, ttl=0, **k):
             return [e for e in evs if any(t["slug"] == tag for t in e["tags"])]
         off = int(url.split("offset=")[1].split("&")[0])
         return evs if off == 0 else []
-    if "gamma-api.polymarket.com/markets" in url:
-        return closed_markets() if "offset=0" in url else []
     if "prices-history" in url:
         assert "startTs=" not in url                   # Polymarket answers 400 to a 40-day window
         return clob_json(url.split("market=")[1].split("&")[0])
@@ -310,6 +322,20 @@ def test_accuracy_fill_is_paced_in_batches_and_accumulates(mocked):
     assert M.fill_accuracy() == {"resolved": "0 added, 60 kept"}
     recs = M.read_resolved()
     assert all(r["p7"] is not None and r["p30"] is not None for r in recs)
+    assert {r["cat"] for r in recs} == {"politics", "crypto", "sports"}
+
+
+def test_closed_parser_takes_events_with_tags_and_old_records_get_a_category(mocked):
+    c = M.parse_closed(closed_events())
+    assert len(c) == 60 and {r["cat"] for r in c} == {"politics", "crypto", "sports"}
+    assert len(M.parse_closed(closed_markets())) == 60                         # a bare /markets list still parses
+    M.fill_accuracy(max_new=60)
+    recs = M.read_resolved()
+    for r in recs:
+        r["cat"] = "other"                                                      # as saved before the events source
+    M._acc_file().write_text(json.dumps(recs))
+    assert M.fill_accuracy() == {"resolved": "0 added, 60 kept, 60 categorised"}
+    assert {r["cat"] for r in M.read_resolved()} == {"politics", "crypto", "sports"}
 
 
 def test_log_today_once_a_day(mocked):
