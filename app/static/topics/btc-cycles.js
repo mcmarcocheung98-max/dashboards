@@ -69,6 +69,66 @@ const table = (cols, rows, opts = {}) => el("div", { class: "scroll" }, el("tabl
 const docLink = r => el("div", { class: "src", style: "margin-top:6px" }, "From the research doc, as of " + r.as_of + ": ", link("open it", r.doc_url), ".");
 const pill = state => el("span", { class: "pill " + ({ firing: "ok", "not yet": "", watch: "", "no data": "bad" }[state] || "") }, state);
 
+// Every chart opens on the last year unless the reader already picked a range on this page (the range bar's own memory).
+try { if (!sessionStorage.getItem("range:" + location.pathname)) RANGE = "1y"; } catch (e) { RANGE = "1y"; }
+
+// the value of a [[t, v], ...] series on date t: the last point at or before it
+const asof = (pts, t) => {
+  if (!pts || !pts.length || t < pts[0][0]) return null;
+  let lo = 0, hi = pts.length - 1;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (pts[mid][0] <= t) lo = mid; else hi = mid - 1; }
+  return pts[lo][1];
+};
+const dateOf = t => new Date(t * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+// A top card that follows the charts: hover a date on any chart inside `scope` (the whole tab when no scope) to see that day's figures,
+// click to keep that date, "Back to latest" to return. items: [{ label: t => text, value: t => [text, class] }], t = null for the latest.
+function datedHead(items, opts = {}) {
+  let pinned = null;
+  const cells = items.map(it => { const k = kpi("", ""); return { it, v: k.querySelector(".v"), l: k.querySelector(".l"), k }; });
+  const status = el("span", { class: "muted" }), back = el("button", { class: "pill", style: "cursor:pointer;border:0;font:inherit;display:none", onclick: () => { pinned = null; show(null); } }, "Back to latest");
+  const bar = el("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px;min-height:24px" }, status, back);
+  const show = t => {
+    for (const c of cells) {
+      const [txt, cl] = c.it.value(t); c.v.textContent = txt; c.v.className = "v " + (cl || ""); c.l.textContent = c.it.label(t);
+    }
+    status.textContent = t == null ? (opts.latest || "Latest figures") + " · hover a chart to see any date, click to keep it" : (t === pinned ? "Kept: " : "On ") + dateOf(t);
+    back.style.display = pinned == null ? "none" : "";
+  };
+  const root = el("div", {}, bar, el("div", { class: "kpis" }, ...cells.map(c => c.k)));
+  const hooked = new WeakSet();
+  const scan = setInterval(() => {                     // charts are created after the tab is laid out, and a coin's charts only when opened
+    if (root.isConnected) scan.seen = true;
+    else if (scan.seen) { clearInterval(scan); return; }                 // the tab was left
+    for (const c of charts) {
+      if (hooked.has(c)) continue;
+      const host = c.chartElement && c.chartElement();
+      if (!host || !host.isConnected) continue;
+      const own = host.closest("[data-follow]");
+      const scope = typeof opts.scope === "function" ? opts.scope() : opts.scope;
+      if (scope ? !scope.contains(host) : own) continue;                  // a coin's charts drive that coin's strip, not the tab's head
+      hooked.add(c);
+      c.subscribeCrosshairMove(p => show(p && p.time != null ? Number(p.time) : pinned));
+      c.subscribeClick(p => { if (p && p.time != null) { pinned = Number(p.time); show(pinned); } });
+    }
+  }, 400);
+  show(null);
+  return root;
+}
+
+// A card whose body folds away: click the title. Each reader's choice is remembered in this browser (when storage allows).
+function fold(title, open, ...kids) {
+  const key = "fold:" + location.pathname + ":" + title.slice(0, 60);
+  try { const v = localStorage.getItem(key); if (v != null) open = v === "1"; } catch (e) {}
+  const body = el("div", { style: open ? "" : "display:none" }, ...kids.filter(Boolean));
+  const mark = el("span", { class: "muted", style: "display:inline-block;width:16px" }, open ? "▾" : "▸");
+  const h = el("h2", { style: "cursor:pointer;user-select:none", title: "Click to fold or unfold", onclick: () => {
+    open = !open; body.style.display = open ? "" : "none"; mark.textContent = open ? "▾" : "▸";
+    try { localStorage.setItem(key, open ? "1" : "0"); } catch (e) {}
+    if (open) requestAnimationFrame(() => { try { applyAll(); } catch (e) {} });     // charts drawn while folded had no width: re-apply the date range
+  } }, mark, title);
+  return el("div", { class: "card" }, h, body);
+}
+
 // mNAV strategies and the exit window: today's checklist, the rule backtests (recomputed from the live data), and how people value MSTR
 function strategiesCards(S) {
   if (!S) return [];
@@ -96,7 +156,7 @@ function strategiesCards(S) {
       "old issuance tiers sat, 1.25× near where Chanos covered), not fitted to this data. One cycle and a half is a small sample: the BTC-trend filter is the robust result " +
       "(it cut the worst drawdown from about −86% to about −50% in every variant and out of sample in 2024-26); the divergence rule's edge comes from a single episode (2025). Not advice."));
   const R = S.research || {};
-  const research = R.sections ? card("How people value MSTR and its bitcoin",
+  const research = R.sections ? fold("How people value MSTR and its bitcoin", false,
     ...R.sections.flatMap(s => [el("h3", { style: "margin:10px 0 4px;font-size:14px" }, s.title), el("ul", { style: "margin:0;padding-left:18px" }, ...s.points.map(p => el("li", { class: "muted", style: "margin:3px 0" }, ...md(p))))]),
     note(R.about || "")) : null;
   return [check, curves, research];
@@ -105,12 +165,20 @@ function strategiesCards(S) {
 const VIEWS = {
   async cycles() {
     const d = await api("cycles"), R = d.research, n = d.now;
-    const head = card(null, n ? el("div", { class: "kpis" }, kpi("BTC (" + n.date + ")", usd(n.price)), kpi("vs Oct 2025 peak", pct(n.vs_peak, 0), cls(n.vs_peak)),
-      kpi("vs Jun 2026 low", pct(n.vs_low, 0), cls(n.vs_low)), kpi("vs 200-day average", pct(n.vs_ma200, 0), cls(n.vs_ma200)),
-      kpi("Days since the 2024 halving", num(n.days_since_halving)), kpi("Days to the next (~" + d.next_halving.slice(0, 7) + ")", num(n.days_to_next_halving)))
+    const peak = n && n.price / (1 + n.vs_peak), low = n && n.price / (1 + n.vs_low), H = d.halvings || [], nextH = d.next_halving ? Date.parse(d.next_halving + "T00:00:00Z") / 1000 : null;
+    const at = (t, latest, f) => t == null ? latest : f(t);
+    const since = t => { const h = H.filter(x => x <= t).pop(); return h == null ? null : Math.floor((t - h) / 86400); };
+    const head = card(null, n ? datedHead([
+      { label: t => "BTC (" + (t == null ? n.date : dateOf(t)) + ")", value: t => [usd(at(t, n.price, t => asof(d.price, t)))] },
+      { label: () => "vs Oct 2025 peak", value: t => { const v = at(t, n.vs_peak, t => asof(d.price, t) / peak - 1); return [pct(v, 0), cls(v)]; } },
+      { label: () => "vs Jun 2026 low", value: t => { const v = at(t, n.vs_low, t => asof(d.price, t) / low - 1); return [pct(v, 0), cls(v)]; } },
+      { label: () => "vs 200-day average", value: t => { const v = at(t, n.vs_ma200, t => { const m = asof(d.ma200, t); return m ? asof(d.price, t) / m - 1 : null; }); return [pct(v, 0), cls(v)]; } },
+      { label: t => t == null ? "Days since the 2024 halving" : "Days since the last halving", value: t => [num(at(t, n.days_since_halving, since))] },
+      { label: () => "Days to the next (~" + d.next_halving.slice(0, 7) + ")", value: t => [num(at(t, n.days_to_next_halving, t => nextH && t <= nextH ? Math.ceil((nextH - t) / 86400) : null))] },
+    ], { latest: "Latest close" })
       : el("div", { class: "muted" }, "Live price not available right now (" + (d.price_error || "no data") + "); the research below still stands."),
       stale(d), docLink(R));
-    const bottom = card("Bottom line", ...R.bottom_line.map(p => para(p, "")));
+    const bottom = fold("Bottom line", true, ...R.bottom_line.map(p => para(p, "")));
     const hl = (d.halvings || []).map((t, i) => ({ x: t, label: "Halving " + (i + 1) }));
     const priceCard = d.price ? card("BTC price since 2010 (log scale), with halvings and the doc's peaks and lows",
       ...linesChart([{ name: "BTC", points: d.price }, { name: "200-day average", points: d.ma200 || [], dashed: true, color: css("--hold") }], v => usd(v), { log: true }),
@@ -122,7 +190,7 @@ const VIEWS = {
       note("The doc's shape: bottom 12–18 months before the halving, peak 12–18 months after, then a one-year bear, with the multiple shrinking each time.")) : null;
     const dd = d.drawdown ? card("Drawdown from the running high", ...linesChart([{ name: "Drawdown", points: d.drawdown, color: css("--down") }], v => pct(v, 0), { small: true }),
       note("Cycle 4's -53% against -77% to -87% in the three before it.")) : null;
-    const anat = card("BTC cycle anatomy, 2011–2026", para(R.anatomy.intro), table(R.anatomy.columns, R.anatomy.rows), para(R.anatomy.after));
+    const anat = fold("BTC cycle anatomy, 2011–2026", true, para(R.anatomy.intro), table(R.anatomy.columns, R.anatomy.rows), para(R.anatomy.after));
     return [head, bottom, priceCard, ov, dd, anat];
   },
   async sectors() {
@@ -133,7 +201,7 @@ const VIEWS = {
     const bars = c.rows.flatMap(r => r._multiples.filter(m => m.x > 0).map(m => ({ cat: (m.label ? m.label + " · " : "") + r[sectorCol].split(" (")[0].slice(0, 22), x: m.x })));
     const mult = bars.length ? card("Peak multiples in this cycle (log scale)", ...svgBarsLog(bars)) : null;
     const tbl = card(c.heading, para(c.intro), table(c.columns, c.rows), para(c.after));
-    const cross = card("Cross-cycle comparison", para(d.cross_cycle.intro), table(d.cross_cycle.columns, d.cross_cycle.rows));
+    const cross = fold("Cross-cycle comparison", true, para(d.cross_cycle.intro), table(d.cross_cycle.columns, d.cross_cycle.rows));
     return [card(null, seg, el("div", { class: "muted" }, "Pick a cycle. Figures are the doc's, approximate before 2024.")), tbl, mult, cross];
   },
   async metrics() {
@@ -150,7 +218,7 @@ const VIEWS = {
       live("hl_fees_30d", "Hyperliquid fees, rolling 30 days", "Perp activity on the largest perp DEX; DefiLlama's all-perp volume became a paid endpoint in 2026. The doc: perp DEXs went from 0.1% of global futures (2023) to 12.3% (Oct 2026)."),
       live("dex_volume_30d", "DEX volume (spot), rolling 30 days", "All chains, spot DEXs only (DefiLlama)."));
     const top = d.dex_top && d.dex_top.length ? card("Spot DEXs by 30-day volume (DefiLlama)", table(["Protocol", "Volume, 30 days", "Share of top 8"], d.dex_top.map(p => [p.name, usdBig(p.volume_30d), pct(p.share_30d, 0)]))) : null;
-    const tbl = card("Common metrics of cycle winners", para(R.intro), table(R.columns, R.rows), para(R.after));
+    const tbl = fold("Common metrics of cycle winners", true, para(R.intro), table(R.columns, R.rows), para(R.after));
     return [head, grid, top, tbl];
   },
   async candidates() {
@@ -165,33 +233,62 @@ const VIEWS = {
     const body = el("div", { style: "display:none;margin-top:10px" }, para(R.intro), table(R.columns, R.rows), para(R.after), docLink({ as_of: d.as_of, doc_url: "https://claude.ai/artifact/5Z9ca6X7eka9R3XdxZKcb3" }));
     docCard.append(body);
     // method card
-    const method = card("Projection method (mechanical, not a forecast)", el("div", { class: "muted" }, sc.method || ""),
+    const method = fold("Projection method (mechanical, not a forecast)", false, el("div", { class: "muted" }, sc.method || ""),
       el("div", { class: "scroll", style: "margin-top:8px" }, el("table", {}, el("tr", {}, ...["Scenario", "Bear BTC", "Base BTC", "Bull BTC"].map(h => el("th", {}, h))),
         ...(sc.scenarios || []).map(s => el("tr", {}, el("td", {}, s.label), ...["bear", "base", "bull"].map(x => el("td", { title: s[x].why }, usd(s[x].btc))))))),
       note("Hover a BTC level for the reasoning. BTC now: " + usd(k.btc_now) + ". Edit data/btc-cycles/scenarios.json to change the levels."),
       k.notes_about ? note("Coin notes: " + k.notes_about + " The \"Today\" line is computed from live data.") : null, stale(k));
-    // one row per coin, grouped by the doc's rank
-    const byRank = {};
-    for (const c of k.coins || []) (byRank[c.rank] = byRank[c.rank] || []).push(c);
-    const sections = Object.keys(byRank).sort((a, b) => a - b).map(rank => {
-      const rows = byRank[rank].map(c => coinRow(c, px, r1, rsiCls));
-      return card(rank + " · " + byRank[rank][0].sector, ...rows);
-    });
-    if (!k.coins || !k.coins.length) sections.push(card("Candidate coins", el("div", { class: "err" }, "Not available right now (" + (k.btc_error || "no data") + ").")));
+    // one card per coin; the index on top sorts them and jumps to any of them
+    const coins = k.coins || [], rows = {};
+    for (const c of coins) rows[c.ticker] = coinRow(c, px, r1, rsiCls);
+    const SORTS = [
+      ["rank", "Doc rank", c => c.rank, 1, null], ["name", "Name", c => c.name.toLowerCase(), 1, null],
+      ["change_1y", "1 year", c => c.kpi && c.kpi.change_1y, -1, v => pct(v, 0)], ["vs_btc_90d", "90 days vs BTC", c => c.kpi && c.kpi.vs_btc_90d, -1, v => pct(v, 0)],
+      ["rsi_vs_btc", "RSI vs BTC", c => c.kpi && c.kpi.rsi_vs_btc, -1, v => v.toFixed(0)], ["market_cap", "Market cap", c => c.kpi && c.kpi.market_cap, -1, v => usdBig(v)],
+      ["upside", "Upside to base end-2027", c => c.kpi && c.kpi.price && c.kpi.base_2027 ? c.kpi.base_2027 / c.kpi.price - 1 : null, -1, v => pct(v, 0)]];
+    let sortKey = (() => { try { return sessionStorage.getItem("coin-sort") || "rank"; } catch (e) { return "rank"; } })();
+    const seg = el("div", { class: "seg" }), chips = el("div", { class: "chips", style: "margin-top:8px;display:flex;flex-wrap:wrap;gap:6px" });
+    const list = el("div", {});
+    const layout = () => {
+      const [key, label, get, dir, f] = SORTS.find(x => x[0] === sortKey) || SORTS[0];
+      seg.replaceChildren(...SORTS.map(([k2, l2]) => el("button", { class: k2 === key ? "on" : "", onclick: () => { sortKey = k2; try { sessionStorage.setItem("coin-sort", k2); } catch (e) {} layout(); } }, l2)));
+      const val = c => { const v = get(c); return v == null || Number.isNaN(v) ? null : v; };
+      const order = coins.slice().sort((a, b) => { const x = val(a), y = val(b); if (x == null) return y == null ? 0 : 1; if (y == null) return -1; return (x < y ? -1 : x > y ? 1 : 0) * dir || a.rank - b.rank; });
+      chips.replaceChildren(...order.map(c => { const v = val(c);
+        return el("button", { class: "pill", style: "cursor:pointer;border:0;font:inherit", title: c.name + (c.sector ? " · " + c.sector : ""), onclick: () => rows[c.ticker].scrollIntoView({ behavior: "smooth", block: "start" }) },
+          el("b", {}, c.ticker), f && v != null ? el("span", { class: "muted" }, " " + f(v)) : null); }));
+      if (key === "rank") {
+        const byRank = {};
+        for (const c of order) (byRank[c.rank] = byRank[c.rank] || []).push(c);
+        list.replaceChildren(...Object.keys(byRank).sort((a, b) => a - b).map(r => fold(r + " · " + byRank[r][0].sector + " (" + byRank[r].length + ")", true, ...byRank[r].map(c => rows[c.ticker]))));
+      } else list.replaceChildren(card("All " + coins.length + " candidates by " + label.toLowerCase() + (dir < 0 ? ", highest first" : ""), ...order.map(c => rows[c.ticker])));
+    };
+    const index = coins.length ? card("Candidate coins: sort and jump", seg, chips, note("Click a coin to jump to it. Sorting by doc rank groups them by the doc's sectors; any other sort lists all " + coins.length + " in one column.")) : null;
+    const sections = coins.length ? [list] : [card("Candidate coins", el("div", { class: "err" }, "Not available right now (" + (k.btc_error || "no data") + ")."))];
+    if (coins.length) layout();
     const ev = d.evidence || {};
     const evCards = [["3 · RWA on-chain value ex-stablecoins", ev["RWA on-chain value ex-stablecoins (USD)"], usdBig], ["4 · Prediction-market monthly volume", (ev["Prediction-market monthly volume (USD)"] || []).filter(p => p[1] > 0), usdBig],
       ["5 · x402 cumulative payment volume", ev["x402 cumulative payment volume (USD)"], usdBig], ["1 · Perp-DEX share of global futures", ev["Perp-DEX share of global futures (%)"], v => v == null ? "–" : v.toFixed(1) + "%"]]
       .map(([t, pts, f]) => pts && pts.length ? card(t, ...linesChart([{ name: t.slice(4), points: pts }], f, { small: true })) : null).filter(Boolean);
-    const evidence = card("Sector evidence without a liquid token (hand-entered; sources in data/btc-cycles/evidence.csv)", el("div", { class: "grid2" }, ...evCards));
-    return [docCard, method, ...sections, evidence];
+    const evidence = fold("Sector evidence without a liquid token (hand-entered; sources in data/btc-cycles/evidence.csv)", false, el("div", { class: "grid2" }, ...evCards));
+    return [index, docCard, method, ...sections, evidence];
   },
   async etf() {
     const d = await api("etf"), K = d.kpi || {};
     const m = v => v == null ? "–" : (v < 0 ? "−" : "") + "$" + big(Math.abs(v) * 1e6);
-    const head = card(null, el("div", { class: "kpis" }, kpi("Net flows since launch", m(K.since_launch_usd_m), cls(K.since_launch_usd_m)),
-      kpi("BTC taken in since launch", K.since_launch_btc == null ? "–" : num(K.since_launch_btc) + " BTC"), kpi("Last 30 days", m(K.last_30d_usd_m), cls(K.last_30d_usd_m)),
-      kpi("Last day (" + (K.last_day || "–") + ")", m(K.last_day_usd_m), cls(K.last_day_usd_m)), kpi("Streak", K.streak == null ? "–" : Math.abs(K.streak) + (K.streak >= 0 ? " days in" : " days out"), cls(K.streak)),
-      kpi("BlackRock IBIT share of net flows", pct(K.ibit_share, 0))),
+    const D = d.daily_usd_m || [], ibit = (d.cum_by_issuer || {}).IBIT;
+    const dayAt = t => { let i = D.length - 1; while (i >= 0 && D[i][0] > t) i--; return i; };
+    const streakAt = t => { let i = dayAt(t); if (i < 0) return null; const sg = Math.sign(D[i][1]); let k = 0; while (i >= 0 && Math.sign(D[i][1]) === sg && sg) { k++; i--; } return k * sg; };
+    const pick = (t, latest, f) => t == null ? latest : f(t);
+    const head = card(null, datedHead([
+      { label: t => t == null ? "Net flows since launch" : "Net flows, launch to then", value: t => { const v = pick(t, K.since_launch_usd_m, t => asof(d.cum_usd_m, t)); return [m(v), cls(v)]; } },
+      { label: () => "BTC taken in since launch", value: t => { const v = pick(t, K.since_launch_btc, t => asof(d.cum_btc, t)); return [v == null ? "–" : num(v) + " BTC"]; } },
+      { label: () => "Last 30 days", value: t => { const v = pick(t, K.last_30d_usd_m, t => asof(d.roll30_usd_m, t)); return [m(v), cls(v)]; } },
+      { label: t => { const i = t == null ? -1 : dayAt(t); return "Day's flow (" + (t == null ? K.last_day || "–" : i >= 0 ? dateOf(D[i][0]) : "–") + ")"; },
+        value: t => { const v = pick(t, K.last_day_usd_m, t => asof(D, t)); return [m(v), cls(v)]; } },
+      { label: () => "Streak", value: t => { const v = pick(t, K.streak, streakAt); return [v == null ? "–" : Math.abs(v) + (v >= 0 ? " days in" : " days out"), cls(v)]; } },
+      { label: () => "BlackRock IBIT share of net flows", value: t => [pct(pick(t, K.ibit_share, t => { const a = asof(ibit, t), b = asof(d.cum_usd_m, t); return a != null && b ? a / b : null; }), 0)] },
+    ], { latest: "Latest day" }),
       el("div", { class: "muted", style: "margin-top:6px" }, "US spot bitcoin ETFs since they began trading on 11 Jan 2024. Best day " + m(K.best_day_usd_m) + " (" + (K.best_day || "–") + "), worst " + m(K.worst_day_usd_m) + " (" + (K.worst_day || "–") + ")."),
       missing(d, "farside", "Per-issuer flows (Farside)"), missing(d, "bitbo", "Flows in BTC (bitbo)"), asOf(d), stale(d));
     const daily = d.daily_usd_m ? card("Daily net flows, all US spot ETFs (US$)", ...linesChart([{ name: "Net flow", points: d.daily_usd_m.map(p => [p[0], p[1] * 1e6]), bar: true }], v => usdBig(v), { small: true })) : null;
@@ -203,20 +300,33 @@ const VIEWS = {
     const roll = d.roll30_usd_m ? card("Rolling 30-trading-day net flows (US$)", ...linesChart([{ name: "30-day flows", points: d.roll30_usd_m.map(p => [p[0], p[1] * 1e6]), bar: true }], v => usdBig(v), { small: true })) : null;
     const issuers = d.cum_by_issuer ? card("Cumulative net flows by issuer (US$)", ...linesChart(Object.entries(d.cum_by_issuer).map(([k, pts]) => ({ name: k + (d.issuers[k] ? " · " + d.issuers[k] : ""), points: pts.map(p => [p[0], p[1] * 1e6]) })), v => usdBig(v)),
       note("GBTC's line falls because it converted from a trust with a high fee; most of its outflow moved to the other funds.")) : null;
-    const tbl = d.table ? card("By issuer", table(["Ticker", "Issuer", "Since launch", "Last 30 trading days", "Last day", "Best day", "Worst day"],
+    const tbl = d.table ? fold("By issuer", true, table(["Ticker", "Issuer", "Since launch", "Last 30 trading days", "Last day", "Best day", "Worst day"],
       d.table.map(r => [r.ticker, r.issuer, m(r.since_launch), m(r.last_30d), m(r.last_day), m(r.best_day), m(r.worst_day)])), note("US$; Farside's daily table, net of creations and redemptions.")) : null;
     const intl = Object.keys(d.intl || {}).length ? card("Hong Kong ETFs and UK ETNs: BTC held (hand-entered)", ...linesChart(Object.entries(d.intl).map(([k, pts]) => ({ name: k, points: pts })), v => num(v) + " BTC", { small: true }),
       table(["Date", "Market", "BTC", "Source"], d.intl_rows.map(r => [r.date, r.series, num(+r.value), "[" + host(r.source) + "](" + r.source + ")" + (r.note ? " · " + r.note : "")])),
       note("No free daily feed for these: add a row to data/btc-cycles/etf_holdings.csv from the issuers' holdings pages.")) : null;
-    const ms = card("Milestones", table(["Date", "Market", "What happened", "Source"], (d.milestones || []).map(r => [r.date, r.market, r.event, "[" + host(r.source) + "](" + r.source + ")"])));
+    const ms = fold("Milestones", true, table(["Date", "Market", "What happened", "Source"], (d.milestones || []).map(r => [r.date, r.market, r.event, "[" + host(r.source) + "](" + r.source + ")"])));
     return [head, daily, cum, cumBtc, roll, issuers, tbl, intl, ms];
   },
   async mstr() {
     const d = await api("mstr"), K = d.kpi || {};
-    const head = card(null, el("div", { class: "kpis" }, kpi("BTC held", num(K.held)), kpi("Share of 21m supply", K.share_of_supply == null ? "–" : (K.share_of_supply * 100).toFixed(2) + "%"), kpi("Value of the BTC", usdBig(K.value_usd)),
-      kpi("Approx. average cost", usd(K.approx_avg_cost)), kpi("mNAV", K.mnav == null ? "–" : K.mnav.toFixed(2) + "×"), kpi("MSTR", usd(K.mstr, 2)),
-      kpi("90-day correlation with BTC", K.corr90 == null ? "–" : K.corr90.toFixed(2)), kpi("90-day beta to BTC", K.beta90 == null ? "–" : K.beta90.toFixed(2)),
-      kpi("Purchases recorded", num(K.purchases)), kpi("Last purchase", K.last_purchase || "–")),
+    const buyList = (d.purchases || []).slice().reverse(), day = s => Date.parse(s + "T00:00:00Z") / 1000;       // oldest first
+    const cost0 = (K.approx_cost_usd || 0) - buyList.reduce((a, b) => a + (b.approx_usd || 0), 0);              // the holding before the first recorded buy
+    const upto = t => buyList.filter(b => day(b.date) <= t);
+    const pk = (t, latest, f) => t == null ? latest : f(t);
+    const heldAt = t => pk(t, K.held, t => asof(d.held, t));
+    const head = card(null, datedHead([
+      { label: t => "BTC held" + (t == null ? "" : " on " + dateOf(t)), value: t => [num(heldAt(t))] },
+      { label: () => "Share of 21m supply", value: t => { const h = heldAt(t); return [h == null ? "–" : (h / 21e6 * 100).toFixed(2) + "%"]; } },
+      { label: () => "Value of the BTC", value: t => [usdBig(pk(t, K.value_usd, t => { const h = heldAt(t), b = asof(d.btc, t); return h && b ? h * b : null; }))] },
+      { label: () => "Approx. average cost", value: t => [usd(pk(t, K.approx_avg_cost, t => { const h = heldAt(t); return h ? (cost0 + upto(t).reduce((a, b) => a + (b.approx_usd || 0), 0)) / h : null; }))] },
+      { label: () => "mNAV", value: t => { const v = pk(t, K.mnav, t => asof(d.mnav, t)); return [v == null ? "–" : v.toFixed(2) + "×", v == null ? "" : v >= 1 ? "down" : "up"]; } },
+      { label: () => "MSTR", value: t => [usd(pk(t, K.mstr, t => asof(d.mstr, t)), 2)] },
+      { label: () => "90-day correlation with BTC", value: t => { const v = pk(t, K.corr90, t => asof(d.corr90, t)); return [v == null ? "–" : v.toFixed(2)]; } },
+      { label: () => "90-day beta to BTC", value: t => { const v = pk(t, K.beta90, t => asof(d.beta90, t)); return [v == null ? "–" : v.toFixed(2)]; } },
+      { label: () => "Purchases recorded", value: t => [num(pk(t, K.purchases, t => upto(t).length))] },
+      { label: () => "Last purchase", value: t => { const u = t == null ? null : upto(t); return [t == null ? K.last_purchase || "–" : u.length ? u[u.length - 1].date : "–"]; } },
+    ], { latest: "Latest (" + (d.as_of || "–") + ")" }),
       note(d.note || ""), note("Prices: " + (d.price_source || "–") + "."), asOf(d), stale(d));
     const held = card("BTC held", ...linesChart([{ name: "BTC held", points: d.held }], v => num(v), { small: true }));
     const px = card("MSTR vs BTC, both rebased to Aug 2020 (log)", ...linesChart([{ name: "MSTR", points: d.mstr_rebased }, { name: "BTC", points: d.btc_rebased, color: css("--hold"), dashed: true }], v => xf(v), { log: true }));
@@ -226,7 +336,7 @@ const VIEWS = {
     const cb = card("Correlation and beta of daily returns with BTC (rolling 90 trading days)", ...linesChart([{ name: "Correlation", points: d.corr90 }, { name: "Beta", points: d.beta90, axis: "left", dashed: true }], v => v == null ? "–" : v.toFixed(2), { small: true }));
     const bps = card("BTC per 1,000 MSTR shares", ...linesChart([{ name: "BTC per 1,000 shares", points: d.btc_per_1000_shares }], v => v == null ? "–" : v.toFixed(3), { small: true }),
       note("Rising = purchases added more bitcoin than new shares diluted; falling = dilution outran buying."));
-    const buys = card("Every recorded purchase (newest first)", table(["Date", "BTC added", "Held after", "BTC price that day", "Approx. US$"],
+    const buys = fold("Every recorded purchase (newest first, " + (d.purchases || []).length + ")", false, table(["Date", "BTC added", "Held after", "BTC price that day", "Approx. US$"],
       (d.purchases || []).map(b => [b.date, num(b.btc), num(b.held_after), usd(b.btc_price), usdBig(b.approx_usd)])));
     const tre = (d.treasuries || []).map(t => card(t.company + " (" + t.country + ", " + t.yahoo + ")",
       t.held && t.held.length ? note("Latest disclosed holding: " + num(t.held[t.held.length - 1][1]) + " BTC" + (t.held_value_usd ? ", worth " + usdBig(t.held_value_usd) + " at today's BTC price" : "") + ".") : null,
@@ -242,9 +352,9 @@ const VIEWS = {
     const rows = d.status.map((s, i) => el("tr", {}, el("td", {}, i + 1), el("td", { class: "wrap" }, s.signal), el("td", {}, pill(s.state)), el("td", { class: "wrap" }, s.reading), el("td", { class: "wrap" }, s.note)));
     const status = card("The six signals, read mechanically today (" + d.as_of + ")", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["#", "Signal", "Status", "Reading", "How"].map(h => el("th", {}, h))), ...rows)),
       note("Firing = the doc's condition is met on today's data. These are rules applied to public data, not a recommendation."));
-    const doc = card("What the doc says to watch, in order", para(R.intro, ""), el("ol", { style: "margin:6px 0 0 18px;padding:0" }, ...R.items.map(s => el("li", { style: "margin:4px 0" }, ...md(s)))));
-    const timing = card("Timing on the halving clock", para(R.timing, ""));
-    const breakers = card("What could break the four-year pattern", para(R.breakers, ""));
+    const doc = fold("What the doc says to watch, in order", true, para(R.intro, ""), el("ol", { style: "margin:6px 0 0 18px;padding:0" }, ...R.items.map(s => el("li", { style: "margin:4px 0" }, ...md(s)))));
+    const timing = fold("Timing on the halving clock", true, para(R.timing, ""));
+    const breakers = fold("What could break the four-year pattern", true, para(R.breakers, ""));
     const charts = [];
     if (d.volume && d.volume.length) charts.push(card("BTC spot volume, 30-day average (CoinGecko)", ...linesChart([{ name: "Volume", points: d.volume }, { name: "$10bn threshold", points: d.volume.map(p => [p[0], 10e9]), dashed: true, color: css("--hold") }], v => usdBig(v), { small: true })));
     if (d.dominance_log && d.dominance_log.length > 1) charts.push(card("BTC dominance, logged daily since deploy", ...linesChart([{ name: "Dominance", points: d.dominance_log }], v => v == null ? "–" : v.toFixed(1) + "%", { small: true })));
@@ -262,12 +372,26 @@ function coinRow(c, px, r1, rsiCls) {
   const notes = N.narrative ? el("div", { class: "notes", style: "margin-top:8px;display:grid;gap:4px;font-size:13px" },
     el("div", {}, el("b", {}, "Why it fits: "), N.narrative), el("div", {}, el("b", {}, "What stands out: "), N.standout),
     c.now && c.now.length ? el("div", {}, el("b", {}, "Today: "), c.now.join(" ")) : null) : null;
-  if (c.error) return el("div", { class: "card", style: "margin-top:8px;opacity:.7" }, head, notes, el("div", { class: "muted" }, "Not available right now (" + c.error + ")."));
-  const K = c.kpi;
-  const strip = el("div", { class: "kpis", style: "margin-top:8px" }, kpi("Price", px(K.price)), kpi("24h", pct(K.change_24h, 1), cls(K.change_24h)), kpi("1 year", pct(K.change_1y, 0), cls(K.change_1y)),
-    kpi("Market cap", usdBig(K.market_cap)), kpi("RSI 14", r1(K.rsi), rsiCls(K.rsi)), kpi("RSI vs BTC", r1(K.rsi_vs_btc), rsiCls(K.rsi_vs_btc)),
-    kpi("Beta to BTC", K.beta == null ? "–" : K.beta.toFixed(2)), kpi("90d vs BTC", pct(K.vs_btc_90d, 0), cls(K.vs_btc_90d)),
-    kpi("Base end-2027", px(K.base_2027)), kpi("Base end-2028", px(K.base_2028)));
+  if (c.error) return el("div", { class: "card", style: "margin-top:8px;opacity:.7;scroll-margin-top:56px", "data-follow": c.ticker }, head, notes, el("div", { class: "muted" }, "Not available right now (" + c.error + ")."));
+  const K = c.kpi, src = { spark: c.spark || [], S: null };          // S: the full series, once "Show charts" has loaded them
+  let cardEl = null;
+  const series = name => src.S && src.S[name] && src.S[name].length ? src.S[name] : name === "price" ? src.spark : null;
+  const pk = (t, latest, f) => t == null ? latest : f(t);
+  const ratio90 = t => {                                               // the coin ÷ BTC over the 90 days to t
+    const P = series("price"), B = src.S && src.S.btc_indexed; if (!P || !B) return null;
+    const a = asof(P, t), b = asof(B, t), a0 = asof(P, t - 90 * 86400), b0 = asof(B, t - 90 * 86400);
+    return a && b && a0 && b0 ? (a / b) / (a0 / b0) - 1 : null; };
+  const strip = el("div", { style: "margin-top:8px" }, datedHead([
+    { label: t => t == null ? "Price" : "Price on " + dateOf(t), value: t => [px(pk(t, K.price, t => asof(series("price"), t)))] },
+    { label: () => "24h", value: t => { const v = pk(t, K.change_24h, t => { const P = series("price"), a = asof(P, t), b = asof(P, t - 86400); return a && b ? a / b - 1 : null; }); return [pct(v, 1), cls(v)]; } },
+    { label: () => "1 year", value: t => { const v = pk(t, K.change_1y, t => { const P = series("price"), a = asof(P, t), b = asof(P, t - 365 * 86400); return a && b ? a / b - 1 : null; }); return [pct(v, 0), cls(v)]; } },
+    { label: () => "Market cap", value: t => [usdBig(pk(t, K.market_cap, t => asof(series("market_cap"), t)))] },
+    { label: () => "RSI 14", value: t => { const v = pk(t, K.rsi, t => asof(series("rsi"), t)); return [r1(v), rsiCls(v)]; } },
+    { label: () => "RSI vs BTC", value: t => { const v = pk(t, K.rsi_vs_btc, t => asof(series("rsi_vs_btc"), t)); return [r1(v), rsiCls(v)]; } },
+    { label: () => "Beta to BTC", value: () => [K.beta == null ? "–" : K.beta.toFixed(2)] },
+    { label: () => "90d vs BTC", value: t => { const v = pk(t, K.vs_btc_90d, ratio90); return [pct(v, 0), cls(v)]; } },
+    { label: () => "Base end-2027", value: () => [px(K.base_2027)] }, { label: () => "Base end-2028", value: () => [px(K.base_2028)] },
+  ], { scope: () => cardEl, latest: "Today" }));
   const spark = el("div", { style: "margin-top:6px" }, ...linesChart([{ name: "90 days", points: c.spark || [] }], px, { small: true, sync: false }));
   spark.querySelector(".chart").style.height = "120px";
   const more = el("div", {});
@@ -275,10 +399,11 @@ function coinRow(c, px, r1, rsiCls) {
   const btn = el("button", { class: "pill", style: "cursor:pointer;border:0;font:inherit;margin-top:6px", onclick: async () => {
     if (loaded) { more.style.display = more.style.display === "none" ? "" : "none"; btn.textContent = more.style.display === "none" ? "Show charts" : "Hide charts"; return; }
     btn.textContent = "Loading…";
-    try { const f = await api("coin-" + c.ticker.toLowerCase()); more.replaceChildren(...coinCharts(f, px, r1)); loaded = true; btn.textContent = "Hide charts"; }
+    try { const f = await api("coin-" + c.ticker.toLowerCase()); src.S = f.series; more.replaceChildren(...coinCharts(f, px, r1)); loaded = true; btn.textContent = "Hide charts"; }
     catch (err) { more.replaceChildren(el("div", { class: "err" }, "Could not load: " + err.message)); btn.textContent = "Retry"; }
   } }, "Show charts");
-  return el("div", { class: "card", style: "margin-top:8px" }, head, notes, strip, spark, btn, more);
+  cardEl = el("div", { class: "card", style: "margin-top:8px;scroll-margin-top:56px", "data-follow": c.ticker }, head, notes, strip, spark, btn, more);
+  return cardEl;
 }
 
 function coinCharts(f, px, r1) {
@@ -293,16 +418,26 @@ function coinCharts(f, px, r1) {
   const ws = [];                                        // empty days to the last scenario date, so the axis is to scale in time
   if (pts.length) for (let t = end + 86400; t <= at(pts[pts.length - 1]); t += 86400) ws.push(t);
   const proj = card("Projection: bear / base / bull at end-2027 and end-2028 (beta " + (f.kpi.beta == null ? "–" : f.kpi.beta.toFixed(2)) + ")",
-    ...linesChart([{ name: "Price", points: S.price },
-      ...(pts.length ? [{ name: "Base", points: [nowPt, ...pts.map(p => [at(p), p.base])], color: css("--s1"), width: 3 },
+    // its own window, off the tab's shared date axis: the last year of price, then on to the last scenario date
+    ...linesChart([{ name: "Price", points: S.price, color: css("--s1") },
+      ...(pts.length ? [{ name: "Base", points: [nowPt, ...pts.map(p => [at(p), p.base])], color: css("--s2"), width: 3 },
         { name: "Bull", points: [nowPt, ...pts.map(p => [at(p), p.bull])], dashed: true, color: css("--up") },
         { name: "Bear", points: [nowPt, ...pts.map(p => [at(p), p.bear])], dashed: true, color: css("--down") }] : [])],
-      px, { log: true, extend: true, whitespace: ws }),
+      px, { log: true, whitespace: ws, sync: false }),
     el("div", { class: "scroll", style: "margin-top:8px" }, el("table", {}, el("tr", {}, ...["Scenario", "Bear", "Base", "Bull", "Implied market cap (base)"].map(h => el("th", {}, h))),
       ...pts.map((p, i) => el("tr", {}, el("td", {}, p.label), el("td", {}, px(p.bear)), el("td", {}, px(p.base)), el("td", {}, px(p.bull)), el("td", {}, usdBig((f.implied_mcap_base[i] || {}).mcap)))))),
     f.notes && f.notes.thesis ? el("div", { style: "margin-top:8px;font-size:13px" }, el("b", {}, "Thesis behind the projection: "), f.notes.thesis) : null,
     note("Price now × (BTC scenario ÷ BTC now) ^ beta. Mechanical; it says nothing about the coin's own fundamentals, unlocks or survival."));
-  return [el("div", { class: "grid2", style: "margin-top:8px" }, price, rsi, mcap, proj), stale(f)];
+  const big = proj.querySelector(".chart"); if (big) big.style.height = "460px";            // the projection gets the full width and height
+  const last = pts.length ? at(pts[pts.length - 1]) : end;
+  let tries = 0;
+  const frame = () => {
+    const c = charts.find(x => x.chartElement && proj.contains(x.chartElement()));
+    if (!c || !c.timeScale().width()) { if (tries++ < 40) setTimeout(frame, 100); return; }
+    try { c.timeScale().setVisibleRange({ from: end - 365 * 86400, to: last + 20 * 86400 }); } catch (e) { c.timeScale().fitContent(); }
+  };
+  setTimeout(frame, 150);
+  return [el("div", { style: "margin-top:8px" }, proj), el("div", { class: "grid2", style: "margin-top:8px" }, price, rsi, mcap), stale(f)].filter(Boolean);
 }
 
 // horizontal-ish bars on a log scale for multiples: one row per sector/coin, label left, bar + value right
