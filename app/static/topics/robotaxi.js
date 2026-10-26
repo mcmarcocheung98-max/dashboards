@@ -1,4 +1,4 @@
-// Autonomous car adoption: tabs and cards. Data from /api/robotaxi/<rides|footprint|safety>.
+// Autonomous cars and the energy transition: tabs and cards. Data from /api/robotaxi/<rides|footprint|safety|tesla|energy>.
 (() => {
 const dateOf = s => new Date(s).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 const q = ts => { const d = new Date(ts * 1000); return "Q" + (Math.floor(d.getUTCMonth() / 3) + 1) + " " + d.getUTCFullYear(); };
@@ -84,6 +84,30 @@ const VIEWS = {
         st.years + " years and " + st.periods + " calls: too few to tell skill from luck, and the rule was chosen after seeing the data, so read it as a description, not a forecast."))
       : d.signal_error ? card("Fundamentals signal", el("div", { class: "err" }, "Not available right now (" + d.signal_error + ").")) : null;
     return [head, px, el("div", { class: "grid2" }, qc, fsd), sig, corr, ms];
+  },
+  async energy() {
+    const d = await api("energy"), E = d.ev || {}, P = d.power || {};
+    const short = k => k.split(" (")[0];
+    const head = card(null, el("div", { class: "kpis" },
+      ...Object.entries(E.latest || {}).filter(([k]) => !k.includes("plug-in (")).map(([k, v]) => kpi(short(k) + " share of new cars, " + v.year + (k.startsWith("UK: battery") && v.year === 2026 ? " (Jan–Sep)" : ""), v.share.toFixed(1) + "%")),
+      ...Object.entries(P.latest || {}).map(([m, v]) => kpi(m + ": wind + solar share of electricity, " + v.year, v.share.toFixed(1) + "%"))), asOf(d), stale(d));
+    const ev = card("Electric share of new cars, by year", ...linesChart(Object.entries(E.yearly || {}).map(([k, pts]) => ({ name: short(k), points: pts })), v => v.toFixed(1) + "%", { sync: false }),
+      note("Definitions differ: UK battery-electric and plug-in (SMMT registrations); China new energy vehicles including plug-in hybrids and range-extenders (CPCA retail); US battery-electric (Cox Automotive / Kelley Blue Book) and plug-in (DOE / Argonne); Hong Kong electric share of newly registered private cars (government papers). UK 2026 is January to September. Hong Kong 2026 is left out: the figures since its EV tax concession ended on 31 March conflict."),
+      el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Latest", "Market", "Measure", "Share", "Source"].map(h => el("th", {}, h))),
+        ...(E.months || []).map(r => el("tr", {}, el("td", {}, dateOf(r.date)), el("td", {}, r.market), el("td", { class: "wrap" }, r.measure), el("td", {}, (+r.value).toFixed(1) + "%"),
+          el("td", { class: "wrap" }, link(host(r.source), r.source), r.note ? " · " + r.note : ""))))));
+    const py = Object.entries(P.yearly || {});
+    const pw = py.length ? card("Wind and solar share of electricity generation, by year (Ember)", ...linesChart(py.map(([m, pts]) => ({ name: m, points: pts })), v => v.toFixed(1) + "%", { sync: false }),
+      note("Ember's yearly electricity data (CC BY 4.0): solar + wind generation as a share of all generation. Batteries store rather than generate, so they are not in it. The yearly charts show every year whatever the date buttons say."), stale(d))
+      : card("Wind and solar share of electricity", el("div", { class: "err" }, "Not available right now (" + (d.power_error || "no data") + ")."), stale(d));
+    const pm = Object.entries(P.monthly || {});
+    const monthly = pm.length ? card("Wind and solar share, by month (Ember, last five years)", ...linesChart(pm.map(([m, pts]) => ({ name: m, points: pts })), v => v.toFixed(1) + "%", { small: true }),
+      note("Monthly shares swing with the seasons (more solar in summer, more wind in winter): compare a month with the same month a year earlier.")) : null;
+    const checks = card("Cross-checks: the official figures", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Year", "Market", "Measure", "Value", "Source"].map(h => el("th", {}, h))),
+      ...(d.checks || []).map(r => el("tr", {}, el("td", {}, r.date.slice(0, 4)), el("td", {}, r.market), el("td", { class: "wrap" }, r.measure), el("td", {}, r.value + "%"),
+        el("td", { class: "wrap" }, link(host(r.source), r.source), r.note ? " · " + r.note : ""))))),
+      note("EIA (US), DESNZ Energy Trends (UK), Ember's Global Electricity Review (China) and the Hong Kong government, which publishes a zero-carbon share rather than wind and solar. Kept in data/robotaxi/power_checks.csv."));
+    return [head, ev, pw, monthly, checks];
   },
 };
 window.TOPIC = { VIEWS };

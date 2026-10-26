@@ -1,0 +1,6 @@
+date,market,measure,value,source,note
+# Official figures to check Ember's wind and solar shares against (date = the year). Value in % of electricity generation unless the measure says otherwise.
+2025-01-01,US,Wind + solar share of utility-scale generation,17,https://www.eia.gov/todayinenergy/detail.php?id=67367,EIA; about 19% with small-scale solar (wind 464 TWh; utility solar 296 TWh; small-scale 93 TWh)
+2025-01-01,UK,Wind + solar share of generation,36.9,https://assets.publishing.service.gov.uk/media/69cd1451b5210036050bc625/Energy_Trends_March_2026.pdf,DESNZ Energy Trends: wind 30.0 + solar 6.9; all renewables 52.5
+2025-01-01,China,Wind + solar share of generation,22,https://ember-energy.org/latest-insights/global-electricity-review-2026/major-countries-and-regions/,Ember Global Electricity Review 2026: wind 11 + solar 11.1
+2025-01-01,Hong Kong,Zero-carbon share of the fuel mix (nuclear + renewables),25,https://www.info.gov.hk/gia/general/202604/29/P2026042900391.htm,"HK government: ""about one-quarter""; gas over half, coal under a fifth; no published wind + solar share (renewables target 7.5-10% by 2035)"

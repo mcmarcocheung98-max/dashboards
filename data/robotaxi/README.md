@@ -1,4 +1,4 @@
-# Autonomous Car Adoption (`/robotaxi`)
+# Autonomous Cars & Energy Transition (`/robotaxi`)
 
 Driverless ride-hailing: how many paid rides operators give, where they run a public service, and the crash reports they file. Operators announce numbers rather than publish feeds, so most of this page is hand-entered with a source per point; the safety data is automated from NHTSA.
 
@@ -60,6 +60,23 @@ Checked on 25 Oct 2026: Waymo's 50,000 is dated to its 9 May 2024 post. The 175,
 **Tesla vs the share price** (Tesla tab, last card): Pearson correlations between each quarterly series in `tesla.csv` and TSLA, computed by `tesla_vs_price` in `robotaxi.py`. Four comparisons: level against the quarter-end close; change on a year against TSLA's change on a year; change on the quarter against that quarter's return; and, for figures in the production and deliveries release (deliveries, production, storage), the change against TSLA's close-to-close move on release day (the 2nd of the following month, or the next trading day). Volumes and revenue are compared by % change; margins, EPS and cash flow, which can be negative, by change in level. A comparison needs 6 quarters. Add a metric by adding its rows to `tesla.csv` and a line to `CORR_METRICS`.
 
 **Fundamentals signal and backtest** (Tesla tab): `tesla_signal` in `robotaxi.py`. Every series in `CORR_METRICS` votes +1 when its latest quarter beats the same quarter a year earlier and −1 when it is worse (deliveries, production, storage, revenue and FSD subscriptions by % change; margins, EPS and free cash flow by level). The signal is the mean of the votes, rebuilt on each day a figure becomes public, using only what was public that day: deliveries, production and storage on the 2nd of the month after the quarter, the financials 35 days after the quarter (`FIN_LAG`, later than Tesla's results, which come about 20–29 days after). Backtest: hold TSLA from the next trading day while the signal is above 0, otherwise cash earning nothing, 0.1% per switch (`COST`); against buy-and-hold from the same day. "Calls right" counts the periods where holding was followed by a rise, or cash by a fall. With about ten quarters of signal this describes what happened; it cannot show that the rule works, and the rule was picked after seeing the data.
+
+## Energy tab
+
+Code in `app/topics/robotaxi_energy.py` (a helper module of this dashboard; `ENDPOINTS["energy"]` in `robotaxi.py` calls it).
+
+| Card | Source | How |
+|---|---|---|
+| Electric share of new cars, by year | SMMT (UK), CPCA (China), Cox Automotive / Kelley Blue Book and DOE / Argonne (US), HK government papers to LegCo and press releases | Hand-entered: `ev_share.csv`, one series per market and definition |
+| Latest month or quarter | Same publishers | Hand-entered: `ev_latest.csv` |
+| Wind and solar share of electricity, by year and by month | [Ember yearly](https://ember-energy.org/data/yearly-electricity-data/) and [monthly](https://ember-energy.org/data/monthly-electricity-data/) electricity data, CSV, CC BY 4.0 | Automated: `release_generation_yearly_global.csv` and `release_generation_monthly_global.csv`, daily |
+| Cross-checks | EIA (US), DESNZ Energy Trends (UK), Ember's Global Electricity Review (China), HK government | Hand-entered: `power_checks.csv` |
+
+- **Ember layout** (July 2026): one row per area, period (`Year` or `Date`) and `Electricity source`, with `Share of generation (%)` as a column. The parser keeps the rows for United States, United Kingdom, China and any area named Hong Kong, and adds Solar and Wind. If Ember renames a column, the card says "not available right now (ValueError)".
+- **EV shares are not like for like:** the UK counts registrations, China counts retail sales including plug-in hybrids and range-extenders, the US counts light vehicles (Cox: battery-electric only), and Hong Kong counts private cars only. The series names say which.
+- **Batteries** store electricity rather than generate it, so they are not in the generation shares. EIA's Electric Power Annual table 3.27 has US battery net generation (negative: charging losses) if a storage card is wanted later.
+- **To update:** SMMT publishes on about the 5th of each month, CPCA in the second week, and Cox each quarter. Add the latest to `ev_latest.csv`, and in January add the full year to `ev_share.csv`. Hong Kong's 2026 figures should come from the Transport Department's monthly first-registration tables; the press figures since the tax concession ended on 31 Mar 2026 conflict.
+- **Energy readings:** `ev_uk_bev`, `ev_china_nev`, `ws_china` and `ws_us` are +1 when the latest year's share is above the year before, and −1 when below.
 
 ## What changed since yesterday (READINGS)
 

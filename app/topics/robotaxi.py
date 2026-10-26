@@ -16,14 +16,22 @@ from io import StringIO
 
 import pandas as pd
 
+from . import Topic
 from . import _base as B
+from . import robotaxi_energy as E
 from ._base import DAY, _part, _pts, _r, fetch, fetch_json, manual, manual_rows, manual_sources, payload, stale_info
 
+CPUC_PAGE_URL = "https://www.cpuc.ca.gov/regulatory-services/licensing/transportation-licensing-and-analysis-branch/autonomous-vehicle-programs/quarterly-reporting"
 SGO = "https://static.nhtsa.gov/odi/ffdd/sgo-2021-01/SGO-2021-01_Incident_Reports_ADS.csv"
 SGO_ARCHIVE = "https://static.nhtsa.gov/odi/ffdd/sgo-2021-01/Archive-2021-2025/SGO-2021-01_Incident_Reports_ADS.csv"   # Jul 2021 to Jun 2025
 SLUG = "robotaxi"
+TOPIC = Topic("robotaxi", "Autonomous Cars & Energy Transition", "Driverless ride-hailing, Tesla and the move to electric cars and wind and solar power: paid rides, where they operate in the US, UK, Hong Kong and China, safety per mile, Tesla against its share price, and EV and renewable shares in the same four markets.",
+              "robotaxi", (("rides", "Rides"), ("footprint", "Footprint & rules"), ("safety", "Safety"), ("tesla", "Tesla"), ("energy", "Energy")),
+              ("safety", "tesla", "energy", "footprint"))
 SOURCES = [{"name": "Operator announcements and press reports (hand-entered, cited per point)", "url": "", "cadence": "as announced"},
-           {"name": "NHTSA Standing General Order crash reports, ADS", "url": "https://www.nhtsa.gov/laws-regulations/standing-general-order-crash-reporting", "cadence": "monthly"}]
+           {"name": "NHTSA Standing General Order crash reports, ADS", "url": "https://www.nhtsa.gov/laws-regulations/standing-general-order-crash-reporting", "cadence": "monthly"},
+           {"name": "Ember yearly and monthly electricity data (CC BY 4.0)", "url": "https://ember-energy.org/data/yearly-electricity-data/", "cadence": "monthly"},
+           {"name": "CPUC AV programme quarterly reports", "url": CPUC_PAGE_URL, "cadence": "quarterly"}]
 NOTES = "Rides are operator-reported paid, fully driverless trips. Crash reports are all incidents an operator had to report under the Standing General Order (including minor ones and those caused by other road users); more rides mean more reports, so read them with the ride counts."
 TTL = DAY
 
@@ -465,7 +473,11 @@ def readings(got) -> list[dict]:
     if ev:
         out.append({"tab": "tesla", "key": "fundamentals_signal", "label": "Tesla fundamentals signal (mean of yearly votes)", "value": ev[-1]["signal"],
                     "lean": 1 if ev[-1]["long"] else -1 if ev[-1]["signal"] < 0 else 0, "note": f"as of {ev[-1]['date']}"})
-    return out
+    try:
+        energy = got("energy")
+    except Exception:                                       # a tab that never loaded reads as no readings, not an error
+        energy = {}
+    return out + E.readings(energy or {})
 
 
 def READINGS() -> list[dict]:
@@ -479,4 +491,5 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 
 
 ENDPOINTS = {"rides": _cached_ep("rides", _rides_now, 600), "footprint": _cached_ep("footprint", _footprint_now, 600), "safety": _cached_ep("safety", _safety_now),
-             "tesla": _cached_ep("tesla", _tesla_now), "energy_probe": _cached_ep("energy_probe", _energy_probe, 3600)}
+             "tesla": _cached_ep("tesla", _tesla_now), "energy_probe": _cached_ep("energy_probe", _energy_probe, 3600),
+             "energy": _cached_ep("energy", lambda: E.energy_now())}
