@@ -22,9 +22,13 @@ const handNote = (cites) => {
 const VIEWS = {
   async debt() {
     const d = await api("debt"), u = d.us_now || {}, t = d.table || [], Y = d.years || {};
-    const head = card(null, el("div", { class: "kpis" },
-      kpi("US federal debt (" + (u.date || "–") + ")", tn(u.total)), kpi("Added a day, last 12 months", u.per_day_bn == null ? "–" : "$" + u.per_day_bn.toFixed(1) + "bn"),
-      ...t.map(r => kpi(r.country + ", debt % of GDP " + (Y.now || ""), pc(r.now, 0)))), asOf(d), stale(d));
+    // the top card follows the date hovered or clicked on any chart (followHead, topic.html)
+    const head = card(null, followHead([
+      { label: "US federal debt", points: d.us_total || [], fmt: v => tn(v), delta: { lag: "1y" } },
+      { label: "US bills share of marketable debt", points: (d.maturity || {}).bills_share || [], fmt: v => pc(v, 1) },
+      ...Object.entries(d.imf || {}).map(([k, v]) => ({ label: k + ", debt % of GDP (IMF)", points: v.actual || [], fmt: x => pc(x, 0) }))],
+      { latest: "Latest: " + (u.date || "–") }),
+      el("div", { class: "kpis", style: "margin-top:8px" }, kpi("Added a day, last 12 months", u.per_day_bn == null ? "–" : "$" + u.per_day_bn.toFixed(1) + "bn")), asOf(d), stale(d));
     const imfCard = card("General government gross debt, % of GDP",
       ...linesChart(imfLines(d.imf), v => pc(v, 0), { extend: true, hlines: [100] }), missing(d, "imf", "IMF debt"),
       note("IMF World Economic Outlook, general government (all levels: federal, state, local), so the US figure is higher than federal debt held by the public. Dashed: IMF projections. imf.org refuses this server, so the page reads a copy of the IMF values (US and UK copied exactly; China and Hong Kong headline years entered by hand and marked verify; see data/debt-rates/imf.csv). Hong Kong's government has almost no debt; its fiscal reserves are larger than its borrowing. China's figure excludes local-government financing vehicles (the IMF's 'augmented' measure is far higher)."),
@@ -60,10 +64,13 @@ const VIEWS = {
   async interest() {
     const d = await api("interest"), us = d.us || {}, r = us.rolling || {}, last = p => p && p.length ? p[p.length - 1][1] : null;
     const cross = us.cross || {}, cy = v => v == null ? "not yet" : v === "always" ? "throughout the data" : "FY" + v;
-    const head = card(null, el("div", { class: "kpis" },
-      kpi("US net interest, last 12 months", bn(last(r.interest))), kpi("US defence, last 12 months", bn(last(r.defence))),
-      kpi("US interest, % of federal receipts", pc(last(us.share))), kpi("Interest above defence since", cy(cross.defence)),
-      kpi("UK debt interest, % of receipts", pc(last(d.uk_share)))), asOf(d), stale(d));
+    const head = card(null, followHead([
+      { label: "US net interest, last 12 months", points: r.interest || [], fmt: bn, delta: { lag: "1y" } },
+      { label: "US defence, last 12 months", points: r.defence || [], fmt: bn, delta: { lag: "1y" } },
+      { label: "US interest, % of federal receipts", points: us.share || [], fmt: v => pc(v) },
+      { label: "UK debt interest, % of receipts", points: d.uk_share || [], fmt: v => pc(v) },
+      { label: "Average rate on US marketable debt", points: d.us_avg_rate || [], fmt: v => pc(v, 2) }], { latest: "Latest: " + (us.month || "–") }),
+      el("div", { class: "kpis", style: "margin-top:8px" }, kpi("Interest above defence since", cy(cross.defence))), asOf(d), stale(d));
     const usCard = card("US federal spending: net interest vs defence vs education, rolling 12 months ($bn)",
       ...linesChart([{ name: "Net interest", points: r.interest || [], color: css("--down"), width: 3 }, { name: "National defense", points: r.defence || [], color: col("US") },
         { name: "Education, training, employment, social services", points: r.education || [], color: css("--hold"), dashed: true }], v => bn(v)),
@@ -112,7 +119,8 @@ const VIEWS = {
 
   async yields() {
     const d = await api("yields"), n = d.now || {};
-    const head = card(null, el("div", { class: "kpis" }, ...Object.entries(n).map(([k, v]) => kpi(k + " 10-year (" + v.t + ")", pc(v.v, 2)))), asOf(d), stale(d));
+    const head = card(null, followHead([...Object.entries(d.nominal || {}).map(([k, pts]) => ({ label: k + " 10-year", points: pts, fmt: v => pc(v, 2), delta: { lag: "1y", abs: true, fmt: x => sgn(x * 100, 0) + " bp" } })),
+      ...Object.entries(d.real || {}).map(([k, pts]) => ({ label: k + " (real)", points: pts, fmt: v => pc(v, 2) }))], { latest: "Latest: " + (d.as_of || "–") }), asOf(d), stale(d));
     const nom = card("10-year government bond yields (%)", ...linesChart(lines(d.nominal), v => pc(v, 2)), missing(d, "nominal", "10-year yields"),
       Object.keys(d.missing || {}).length ? el("div", { class: "muted" }, "Not available right now: " + Object.entries(d.missing).map(([k, v]) => k + " (" + v + ")").join(", ") + ".") : null,
       note("US: Treasury par yield curve, month-end. UK: Bank of England 10-year nominal gilt yield, month-end. Hong Kong: HKMA Exchange Fund Note 10-year yield to 2015 (copied from the HKMA API, which refuses this server), then HKGB 10-year yields (hand-entered). China: ChinaBond 10-year, year-end (hand-entered). Hong Kong's yield tracks the US because of the dollar peg; China's moves with its own deflation."),
@@ -126,7 +134,9 @@ const VIEWS = {
 
   async policy() {
     const d = await api("policy"), n = d.now || {}, f = d.fed || {}, pb = d.pboc || {};
-    const head = card(null, el("div", { class: "kpis" }, ...Object.entries(n).map(([k, v]) => kpi(k, pc(v, 2)))), stale(d));
+    const head = card(null, followHead([{ label: "Fed funds (top of range)", points: f.upper || [], fmt: v => pc(v, 2) }, { label: "Bank of England", points: d.boe || [], fmt: v => pc(v, 2) },
+      { label: "HKMA base rate", points: d.hk || [], fmt: v => pc(v, 2) }, { label: "PBoC 7-day reverse repo", points: pb["7-day reverse repo"] || [], fmt: v => pc(v, 2) },
+      ...["US", "UK"].map(k => ({ label: k + " CPI, year on year", points: (d.cpi || {})[k] || [], fmt: v => pc(v, 1) }))], { latest: "Latest: " + (d.as_of || "–") }), stale(d));
     const all = card("Policy rates (%)", ...linesChart([{ name: "Fed funds (top of range)", points: f.upper || [], color: col("US") },
       { name: "Bank of England Bank Rate", points: d.boe || [], color: col("UK") }, { name: "HKMA base rate", points: d.hk || [], color: col("Hong Kong") },
       { name: "PBoC 7-day reverse repo", points: pb["7-day reverse repo"] || [], color: col("China") }, { name: "PBoC 1-year LPR", points: pb["1-year LPR"] || [], color: col("China"), dashed: true }],
@@ -224,8 +234,10 @@ const VIEWS = {
   async qe() {
     const d = await api("qe"), h = d.holdings || {}, b = d.buybacks || {}, pr = d.programmes || [];
     const last = p => p && p.length ? p[p.length - 1][1] : null;
-    const head = card(null, el("div", { class: "kpis" }, kpi("Fed holdings of Treasuries", tn(last(h.treasuries))), kpi("Fed holdings of MBS", tn(last(h.mbs))),
-      kpi("Fed share of marketable Treasuries", pc(last(d.share), 1)), kpi("Treasury buybacks since " + (b.first || "2024").slice(0, 7), b.total == null ? "–" : "$" + num(b.total, 0) + "bn")), stale(d));
+    const head = card(null, followHead([{ label: "Fed holdings of Treasuries", points: h.treasuries || [], fmt: v => tn(v), delta: { lag: "1y" } },
+      { label: "Fed holdings of MBS", points: h.mbs || [], fmt: v => tn(v), delta: { lag: "1y" } }, { label: "Fed share of marketable Treasuries", points: d.share || [], fmt: v => pc(v, 1) }],
+      { latest: "Latest: " + (d.as_of || "–") }),
+      el("div", { class: "kpis", style: "margin-top:8px" }, kpi("Treasury buybacks since " + (b.first || "2024").slice(0, 7), b.total == null ? "–" : "$" + num(b.total, 0) + "bn")), stale(d));
     const hold = card("What the Fed owns: Treasuries and mortgage-backed securities ($ trillion, weekly)",
       ...linesChart([{ name: "Treasuries", points: h.treasuries || [], color: col("US") }, { name: "Mortgage-backed securities", points: h.mbs || [], color: css("--s2") },
         { name: "of which bills", points: h.bills || [], color: css("--hold"), dashed: true }], v => tn(v)), missing(d, "holdings", "SOMA holdings"),
@@ -281,7 +293,9 @@ const VIEWS = {
       el("div", {}, link(e.event, e.source), e.note ? el("span", { class: "muted" }, " (" + e.note + ")") : null)])),
       note("An auction 'tails' when it clears at a higher yield than the market traded just before it (the when-issued yield). The tail is the size of that gap and a sign that buyers had to be paid more. Treasury publishes results at TreasuryDirect but not the when-issued yield, so tails are listed here as notes, not computed."),
       ask("Do the notes cluster? Several tails and downgrades within months of each other, before a budget, is the pattern to watch."));
-    return [answer, spread, slope, ev];
+    const head = card(null, followHead([...Object.entries(d.spread || {}).map(([k, pts]) => ({ label: k + ": 10-year minus policy rate", points: pts, fmt: v => sgn(v, 2) + " pts" })),
+      { label: "US 10y − 2y", points: d.us_slope || [], fmt: v => sgn(v, 2) + " pts" }], { latest: "Latest: " + (d.as_of || "–") }));
+    return [answer, head, spread, slope, ev];
   },
 };
 // "What each number means": one plain-language entry per metric on each tab, folded under its card

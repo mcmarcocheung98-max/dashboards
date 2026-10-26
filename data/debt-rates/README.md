@@ -73,10 +73,10 @@ number on this tab means", a folded glossary of every metric on it (in `app/stat
 
 ## What changed since yesterday (READINGS)
 
-`READINGS()` reports the headline readings from the cached tab payloads. **lean +1 means more fiscal stress, -1 less**: US and UK debt % of GDP (+1 at 100% or more, -1 at 60% or less; China and HK lean 0), US debt added a day (+1 at $6bn or more, -1 at $3bn or less), US interest
-share of receipts (+1 at 15% or more, -1 at 10% or less), US interest above defence (+1), UK interest share (+1 at 10%, -1 at 7%),
-US and UK 10-year yields (+1 at 4.5% or more, -1 at 3% or less), each country's stress gap (+1 above +0.5 points of GDP, -1 below
--0.5) and the US and UK 10-year minus policy spread (+1 at 1.5 points or more, -1 at zero or below). US and UK CPI inflation (+1 at 3% or more, -1 at 2% or less), the US bills share (+1 at 22% or more, -1 at 15% or less), the Fed's share of marketable Treasuries (+1 at 15% or less, -1 at 20% or more). Policy rates, the Polymarket odds for the next Fed decision, the HK and China CPI and the HK and China
+`READINGS()` reports the headline readings from the cached tab payloads. **lean +1 means less fiscal stress (shown green by the shared card), -1 more (red)**: US and UK debt % of GDP (-1 at 100% or more, +1 at 60% or less; China and HK lean 0), US debt added a day (-1 at $6bn or more, +1 at $3bn or less), US interest
+share of receipts (-1 at 15% or more, +1 at 10% or less), US interest above defence (-1), UK interest share (-1 at 10%, +1 at 7%),
+US and UK 10-year yields (-1 at 4.5% or more, +1 at 3% or less), each country's stress gap (-1 above +0.5 points of GDP, +1 below
+-0.5) and the US and UK 10-year minus policy spread (-1 at 1.5 points or more, +1 at zero or below). US and UK CPI inflation (-1 at 3% or more, +1 at 2% or less), the US bills share (-1 at 22% or more, +1 at 15% or less), the Fed's share of marketable Treasuries (-1 at 15% or less, +1 at 20% or more). Policy rates, the Polymarket odds for the next Fed decision, the HK and China CPI and the HK and China
 yields are reported with lean 0.
 
 ## Caveats

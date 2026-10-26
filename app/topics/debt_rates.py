@@ -1075,7 +1075,8 @@ def _layout_now() -> dict:
 
 
 def READINGS() -> list[dict]:
-    """Headline readings for 'what changed since yesterday', from cached payloads only. lean +1 = more fiscal stress, -1 = less."""
+    """Headline readings for 'what changed since yesterday', from cached payloads only. lean +1 = less fiscal stress (the shared card shows it
+    green), -1 = more. The bands below are written as stress (+1 = more) and flipped once in add()."""
     from ..cache import _cache
     got = lambda name: (_cache.get(f"topic:{SLUG}:{name}") or (0, {}))[1] or {}
     last = lambda p: p[-1][1] if p else None
@@ -1084,7 +1085,7 @@ def READINGS() -> list[dict]:
 
     def add(tab, key, label, value, lean, note=None):
         if value is not None:
-            out.append({"tab": tab, "key": key, "label": label, "value": value, "lean": lean or 0, **({"note": note} if note else {})})
+            out.append({"tab": tab, "key": key, "label": label, "value": value, "lean": -(lean or 0), **({"note": note} if note else {})})
     d = got("debt")
     for row in d.get("table") or []:
         add("debt", f"debt_{row['country']}", f"{row['country']}: debt, % of GDP (IMF, latest year)", row.get("now"),
@@ -1093,7 +1094,7 @@ def READINGS() -> list[dict]:
         band((d.get("us_now") or {}).get("per_day_bn"), 6, 3))
     us = got("interest").get("us") or {}
     share, r = last(us.get("share")), us.get("rolling") or {}
-    add("interest", "us_int_share", "US net interest, % of federal receipts", share, band(share, 15, 10), "+1 at 15% or more, -1 at 10% or less")
+    add("interest", "us_int_share", "US net interest, % of federal receipts", share, band(share, 15, 10), "-1 at 15% or more, +1 at 10% or less")
     i, dfn = last(r.get("interest")), last(r.get("defence"))
     if None not in (i, dfn):
         add("interest", "us_int_vs_def", "US net interest minus defence, last 12 months ($bn)", round(i - dfn, 1), 1 if i > dfn else -1)
@@ -1104,14 +1105,14 @@ def READINGS() -> list[dict]:
         add("policy", f"rate_{k}", f"{k} (%)", v, 0)
     for k, v in (got("policy").get("cpi_now") or {}).items():
         add("policy", f"cpi_{k}", f"{k} CPI inflation, year on year (%)", v.get("v"), band(v.get("v"), 3, 2) if k in ("US", "UK") else 0,
-            "+1 at 3% or more, -1 at 2% or less" if k in ("US", "UK") else None)
+            "-1 at 3% or more, +1 at 2% or less" if k in ("US", "UK") else None)
     q = got("qe")
     sh = last(q.get("share"))
     add("qe", "fed_share", "Fed share of marketable Treasuries (%)", sh, band(-sh if sh is not None else None, -15, -20),
-        "+1 at 15% or less (private buyers must take more), -1 at 20% or more")
+        "-1 at 15% or less (private buyers must take more), +1 at 20% or more")
     add("qe", "fed_treasuries", "Fed holdings of Treasuries ($tn)", last((q.get("holdings") or {}).get("treasuries")), 0)
     add("debt", "us_bills_share", "US bills as a share of marketable debt (%)", ((d.get("maturity") or {}).get("now") or {}).get("bills_share"),
-        band(((d.get("maturity") or {}).get("now") or {}).get("bills_share"), 22, 15), "+1 at 22% or more (fast repricing), -1 at 15% or less")
+        band(((d.get("maturity") or {}).get("now") or {}).get("bills_share"), 22, 15), "-1 at 22% or more (fast repricing), +1 at 15% or less")
     od = got("odds")
     hist = (od.get("history") or {}).get("lines") or {}
     for k, pts in list(hist.items())[:3]:

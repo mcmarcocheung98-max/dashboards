@@ -454,6 +454,9 @@ def test_readings_come_from_the_cached_payloads(fixtures):
     assert {"cpi_US", "next_25 bps decrease", "kalshi_hold", "fed_share", "us_bills_share"} <= keys
     assert {"debt_US", "us_per_day", "us_int_share", "us_int_vs_def", "y10_US", "gap_US", "spread_US"} <= keys
     assert all(r["lean"] in (-1, 0, 1) and r["tab"] in {"debt", "interest", "yields", "policy", "odds", "qe", "stress"} for r in rows)
+    by = {r["key"]: r for r in rows}
+    assert by["us_int_vs_def"]["lean"] == -1                # interest above defence is more stress: -1 (red) since +1 now means easing
+    assert by["kalshi_hold"]["lean"] == 0
     B.json_safe(rows)
 
 
