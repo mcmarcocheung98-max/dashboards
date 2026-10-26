@@ -24,7 +24,7 @@ Code: `app/topics/compute_chips.py` (data), `app/static/topics/compute-chips.js`
 
 How the numbers are built:
 
-- **EDGAR quarters.** Cash flows are filed year to date, so a quarter is the year-to-date figure minus the one a quarter shorter with the same start; Q4 is the 10-K year minus nine months. A later filing (a restatement) replaces an earlier one. Fiscal quarters are placed in the calendar quarter that holds most of them (period end minus 45 days): Oracle's quarter to end-August is Q3, Nvidia's to late October Q3. The SEC asks for a User-Agent naming the requester; set `SEC_UA` on Railway to override the default.
+- **EDGAR quarters.** Cash flows are filed year to date, so a quarter is the year-to-date figure minus the one a quarter shorter with the same start; Q4 is the 10-K year minus nine months. A later filing (a restatement) replaces an earlier one. Fiscal quarters are placed in the calendar quarter that holds most of them (period end minus 45 days): Oracle's quarter to end-August is Q3, Nvidia's to late October Q3. The SEC answers 403 unless the User-Agent has the form `Name email`. From Railway, `Dashboards admin@<site domain>` answers and a descriptive User-Agent with a URL does not. Set `SEC_UA` on Railway to use a real contact address.
 - **Frontier models.** A model counts as frontier when it is in the top ten by training compute of everything released up to its date. Growth a year is the slope of log10(compute) of frontier models since 2018.
 - **Share of electricity.** Data-centre TWh ÷ total demand for the same year. Ember wins over `demand.csv` for every year it has.
 

@@ -39,8 +39,9 @@ EMBER = "https://storage.googleapis.com/emb-prod-bkt-publicdata/public-downloads
 EPOCH = "https://epoch.ai/data/notable_ai_models.csv"
 EPOCH_CLUSTERS = "https://epoch.ai/data/gpu_clusters.csv"
 EDGAR = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
-# The SEC asks for a User-Agent naming the requester; SEC_UA overrides it on the server
-SEC_HEADERS = {"User-Agent": os.environ.get("SEC_UA", "Dashboards public-data site (github.com/mcmarcocheung98-max/dashboards) dashboards-research@users.noreply.github.com"),
+# The SEC asks for a User-Agent of the form "Name email" and answers 403 to anything else (a descriptive one with a URL was refused
+# from Railway, this form answered 200); SEC_UA overrides it on the server
+SEC_HEADERS = {"User-Agent": os.environ.get("SEC_UA", "Dashboards admin@dashboards-production-bde6.up.railway.app"),
                "Accept": "application/json"}
 HYPERSCALERS = {"Microsoft": 789019, "Alphabet": 1652044, "Amazon": 1018724, "Meta": 1326801, "Oracle": 1341439}
 CHIPMAKERS = {"Nvidia": 1045810, "AMD": 2488}
@@ -402,22 +403,6 @@ def _overview_now() -> dict:
     return out
 
 
-def _sec_probe() -> dict:
-    """/api/compute-chips/sec_probe: what SEC EDGAR answers this server with each kind of User-Agent (it refuses Railway with 403 so far).
-    Not a tab; read it with the show-json workflow."""
-    url = EDGAR.format(cik=CHIPMAKERS["AMD"])
-    variants = {"configured": SEC_HEADERS, "name and site": {"User-Agent": "Dashboards admin@dashboards-production-bde6.up.railway.app"},
-                "browser": {"User-Agent": B.UA["User-Agent"]}, "python-requests": {}}
-    out = {}
-    for name, h in variants.items():
-        try:
-            r = requests.get(url, headers=h, timeout=20)
-            out[name] = {"status": r.status_code, "bytes": len(r.content), "start": r.text[:160]}
-        except Exception as e:
-            out[name] = {"error": f"{type(e).__name__}: {str(e)[:120]}"}
-    return out
-
-
 def _cached_ep(name, fn, ttl=6 * 3600):
     from ..cache import _cached
     return lambda: _cached(f"topic:{SLUG}:{name}", ttl, fn)
@@ -425,5 +410,4 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 
 _power, _capex, _compute, _chips, _supply = (_cached_ep("power", _power_now), _cached_ep("capex", _capex_now), _cached_ep("compute", _compute_now),
                                              _cached_ep("chips", _chips_now), _cached_ep("supply", _supply_now, 600))
-ENDPOINTS = {"overview": _cached_ep("overview", _overview_now, 600), "power": _power, "capex": _capex, "compute": _compute, "chips": _chips, "supply": _supply,
-             "sec_probe": _cached_ep("sec_probe", _sec_probe, 600)}
+ENDPOINTS = {"overview": _cached_ep("overview", _overview_now, 600), "power": _power, "capex": _capex, "compute": _compute, "chips": _chips, "supply": _supply}
