@@ -377,6 +377,33 @@ def cpuc_trips(max_new: int = 3) -> dict[str, pd.Series]:
     return out
 
 
+ENERGY_PROBES = {
+    "ember yearly": "https://storage.googleapis.com/emb-prod-bkt-publicdata/public-downloads/yearly_full_release_long_format.csv",
+    "ember monthly": "https://storage.googleapis.com/emb-prod-bkt-publicdata/public-downloads/monthly_full_release_long_format.csv",
+    "ember page": "https://ember-energy.org/data/yearly-electricity-data/",
+    "iea evs csv": "https://api.iea.org/evs?parameters=EV%20sales%20share&category=Historical&mode=Cars&csv=true",
+    "iea evs json": "https://api.iea.org/evs/?parameters=EV%20sales%20share&category=Historical&mode=Cars",
+}
+
+
+def _energy_probe() -> dict:
+    """Not a tab: status, type, size and the first bytes of each candidate Energy source as this server sees them
+    (/api/robotaxi/energy_probe), to write the parsers against the real layouts."""
+    import re
+    import requests
+    out = {}
+    for k, u in ENERGY_PROBES.items():
+        try:
+            r = requests.get(u, headers=UA, timeout=40, stream=True)
+            head = r.raw.read(4000, decode_content=True).decode("utf-8", "replace")
+            r.close()
+            out[k] = {"status": r.status_code, "type": r.headers.get("content-type", ""), "length": r.headers.get("content-length"),
+                      "start": head[:1200], "csv_links": sorted(set(re.findall(r'https?://[^"\' ]+\.csv', head)))[:20]}
+        except Exception as e:
+            out[k] = {"error": f"{type(e).__name__}: {str(e)[:160]}"}
+    return out
+
+
 # ------------------------------------------------------------------ READINGS
 def _cached_payload(name: str) -> dict:
     from ..cache import _cache
@@ -449,4 +476,4 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 
 
 ENDPOINTS = {"rides": _cached_ep("rides", _rides_now, 600), "footprint": _cached_ep("footprint", _footprint_now, 600), "safety": _cached_ep("safety", _safety_now),
-             "tesla": _cached_ep("tesla", _tesla_now)}
+             "tesla": _cached_ep("tesla", _tesla_now), "energy_probe": _cached_ep("energy_probe", _energy_probe, 3600)}
