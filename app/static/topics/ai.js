@@ -82,7 +82,7 @@ const VIEWS = {
       kpi("UK businesses using AI (ONS)", sh((d.uk_hk_latest || {})["UK: all businesses (ONS BICS)"]?.value))), asOf(d), stale(d));
     const btos = card("Share of US businesses that used AI in the last two weeks",
       ...linesChart([{ name: "All businesses (Census BTOS)", points: d.btos_us || [] }, { name: "Paying for AI tools (Ramp AI Index)", points: d.ramp || [], color: css("--s2") }], sh),
-      note("US Census Bureau Business Trends and Outlook Survey, asked every two weeks of about 1.2 million businesses; Ramp's index counts businesses on its card platform with a paid AI subscription."), cite(d.cited));
+      note("US Census Bureau Business Trends and Outlook Survey, asked every two weeks of about 1.2 million businesses: 'use Super Intelligence or SI (formerly AI) in any of its business functions', the wording since the period ending 16 Nov 2025, where the line starts. Ramp's index counts businesses on its card platform that paid for an AI product that month."), cite(d.cited));
     const expect = (d.btos_expect || []).length ? card("Using AI now vs expecting to within six months (US, Census BTOS)",
       ...linesChart([{ name: "Using now", points: d.btos_us || [] }, { name: "Expect to use within 6 months", points: d.btos_expect, color: css("--s4"), dashed: true }], sh, { small: true }),
       note("The gap between the two lines is intent not yet acted on.")) : card("Expect to use AI within six months", el("div", { class: "muted" }, "Not read yet: the Census workbook was not reachable or its layout changed; add points to data/ai/btos_ai_expect_us.csv."));

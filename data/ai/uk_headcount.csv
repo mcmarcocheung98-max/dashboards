@@ -1,4 +1,2 @@
 date,series,value,source,note
-# ONS Workforce jobs by industry (JOBS03), UK, thousands, seasonally adjusted. Add a row per quarter: date = quarter start month. Values below are placeholders copied from memory: replace with the published figures before relying on them.
-2023-03-01,Legal activities,,https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/workforcejobsbyindustryjobs03,fill in
-2023-03-01,Financial & insurance,,https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/workforcejobsbyindustryjobs03,fill in
+# ONS Workforce jobs by industry (JOBS03), UK, thousands, seasonally adjusted. Add a row per quarter: date = quarter start month; series "Legal activities" or "Financial & insurance"; source = the JOBS03 release used. Empty until filled from the source.

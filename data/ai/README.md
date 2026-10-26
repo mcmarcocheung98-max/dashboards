@@ -74,7 +74,7 @@ Indeed data is CC BY 4.0 and must credit Indeed Hiring Lab (the footer does). BL
 2025-06-01,Legal activities,360,https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/workforcejobsbyindustryjobs03,Jun 2025 release
 ```
 
-The two seed rows have empty values on purpose and are ignored until filled.
+The file has no rows yet.
 
 ### Checking it
 
@@ -133,13 +133,9 @@ US federal data is public domain. Indeed data must be credited to Indeed Hiring 
 
 **Automated:** the Indeed tracker and the BTOS workbook are fetched daily. The BTOS workbook parser looks for the AI question's "Yes" row; if Census changes the layout, the automated part silently drops out and the hand-entered file carries the chart, so keep that file current anyway.
 
-**`btos_ai_use_us.csv`** (`date,value,source,note`): every fortnight, open [census.gov/hfp/btos](https://www.census.gov/hfp/btos/) → Survey Data → National, find the AI question, copy the "Yes" percentage for the latest reference period. Date = the reference period's end date. Example:
+**`btos_ai_use_us.csv`** (`date,value,source,note`): only for a period the National workbook lacks; copy the "Yes" share from a Census release and cite it. Date = the reference period's end date.
 
-```
-2025-09-07,9.7,https://www.census.gov/hfp/btos/,
-```
-
-The seed rows all carry `seed value - verify` in `note`: they are rounded figures from Census releases and press coverage. Replace each with the workbook's exact value and clear the note.
+The nine seed rows (Sep 2023 to Sep 2025, 3.7% to 9.7%) were removed in Oct 2026. They were rounded figures from memory, and they belong to the earlier wording ("use Artificial Intelligence in producing goods or services"). The live workbook has only the current wording ("Super Intelligence or SI (formerly ... AI) in any of its business functions"), from the period ending 16 Nov 2025, at 17.3% and rising to 24.6% (period ending 4 Oct 2026). The two wordings are not one series, so the chart starts in Nov 2025, and "a year earlier" appears once a year of the new wording exists.
 
 **`btos_ai_use_by_sector.csv`** (`date,series,value,source,note`): same workbook, Sector tab; `series` is the sector name as Census writes it (e.g. `Information`, `Professional, Scientific, and Technical Services`). Empty on purpose until filled.
 
@@ -159,7 +155,7 @@ Local preview: `python -m app.server`, then open `/ai`.
 
 ### Known gaps
 
-- The BTOS workbook parser is best-effort and was written without access to the live workbook; until it is confirmed on Railway, treat the national chart as hand-entered.
+- The BTOS workbook parser was rewritten against the live workbook (Oct 2026, via `/api/ai/layout`): sheet `Response Estimates`, period codes as columns, dates from `Collection and Reference Dates`.
 - Ramp and sector files are empty; their cards say so.
 - Usage surveys with a consistent series (Stanford AI Index, McKinsey's annual survey) are not included; they would fit `users.csv` or a new file with the same format.
 - "Agent adoption" has no public time series yet; the timeline is a list of launches, not a measure of use.

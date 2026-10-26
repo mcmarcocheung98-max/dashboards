@@ -253,13 +253,19 @@ def test_ai_jobs_payloads(snapdir, monkeypatch):
 
 def test_ai_adoption_payloads(snapdir, monkeypatch):
     from app.topics import ai_adoption as A, ai_jobs as J
-    monkeypatch.setattr(A, "fetch", lambda url, ttl, **k: (_ for _ in ()).throw(ConnectionError("blocked")))    # BTOS workbook unreachable: hand-entered points carry the chart
+    pytest.importorskip("openpyxl")
+    def fake(url, ttl, **k):
+        if url == A.BTOS_XLSX:
+            return btos_national_xlsx().decode("latin-1")
+        raise ConnectionError("blocked")                                         # ONS unreachable: the UK card says so
+    monkeypatch.setattr(A, "fetch", fake)
     monkeypatch.setattr(J, "fetch", lambda url, ttl, **k: AIS)
     f, u, g, s = A._firms_now(), A._users_now(), A._agents_now(), A._skills_now()
     for d in (f, u, g, s):
         B.json_safe(d)
         assert not [k for k in d if k.endswith("_error")], d
-    assert f["btos_us"] and f["now"]["btos"] and f["cited"]
+    assert f["now"]["btos"] == 24.6 and f["as_of"] == "2026-10-11" and f["now"]["btos_year_ago"] is None and f["btos_expect"][-1][1] == 28.6
+    assert f["uk_hk"] == {} and not [r for r in B.manual_rows("ai", "btos_ai_use_us") if "verify" in r.get("note", "")]
     assert u["rows"][0]["date"] >= u["rows"][-1]["date"] and any(v for v in u["series"].values())
     assert g["rows"] and g["by_year"] and set(s["share"]) == {"US", "GB", "DE"}
 

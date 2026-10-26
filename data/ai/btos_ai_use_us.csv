@@ -1,11 +1,2 @@
 date,value,source,note
-# US Census Bureau BTOS: % of businesses that used AI in producing goods or services in the last two weeks (national). Add a row per fortnight from https://www.census.gov/hfp/btos/ (Survey Data -> National). Seed values are rounded headline figures from Census releases and press coverage: verify against the workbook.
-2023-09-10,3.7,https://www.census.gov/hfp/btos/,seed value - verify
-2023-12-03,3.9,https://www.census.gov/hfp/btos/,seed value - verify
-2024-02-25,5.4,https://www.census.gov/hfp/btos/,seed value - verify
-2024-06-16,5.9,https://www.census.gov/hfp/btos/,seed value - verify
-2024-09-08,6.1,https://www.census.gov/hfp/btos/,seed value - verify
-2024-12-01,6.5,https://www.census.gov/hfp/btos/,seed value - verify
-2025-02-23,7.0,https://www.census.gov/hfp/btos/,seed value - verify
-2025-06-15,9.2,https://www.census.gov/hfp/btos/,seed value - verify
-2025-09-07,9.7,https://www.census.gov/hfp/btos/,seed value - verify
+# US Census Bureau BTOS: % of businesses that used AI in any business function in the last two weeks (national). Read automatically from the National workbook (https://www.census.gov/hfp/btos/downloads/National.xlsx), which carries the question as worded since the 16 Nov 2025 period. Add a row here only for a period the workbook lacks, copied from a Census release, with its URL. A hand-entered date wins over the workbook.

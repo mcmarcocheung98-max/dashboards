@@ -1,8 +1,7 @@
 """AI tool & agent adoption: the adoption half of /ai. Free data where it exists; the rest hand-entered with its source.
 
 firms    share of US businesses using AI in the last two weeks, national and by sector (US Census Bureau Business Trends and Outlook
-         Survey, every two weeks; the national workbook is parsed when reachable, and data/ai-adoption/btos_ai_use_us.csv holds
-         the headline figures by hand so the chart survives a layout change); Ramp AI Index (share of US businesses paying for AI tools,
+         Survey, every two weeks, from the National workbook; data/ai/btos_ai_use_us.csv adds periods by hand if it lacks one); Ramp AI Index (share of US businesses paying for AI tools,
          monthly, hand-entered); UK share of firms using AI (ONS BICS, quarterly, newest wave workbook that carries the AI questions)
 users    consumer reach: weekly active users of ChatGPT and other reported milestones (hand-entered, each with its source)
 agents   a dated timeline of agent products and protocols (hand-entered)
@@ -29,7 +28,7 @@ SOURCES = [{"name": "US Census Bureau, Business Trends and Outlook Survey (AI qu
            {"name": "Ramp AI Index (hand-entered)", "url": "https://ramp.com/data", "cadence": "monthly"},
            {"name": "Indeed Hiring Lab AI tracker", "url": "https://github.com/hiring-lab/ai-tracker", "cadence": "monthly"},
            {"name": "Company announcements and press reports (hand-entered, cited per point)", "url": "", "cadence": "as announced"}]
-NOTES = "Survey shares are the percentage of responding businesses answering yes. Hand-entered points carry the source they were copied from; a point marked 'verify' in its note is a seed value to be checked against the source."
+NOTES = "Survey shares are the percentage of responding businesses answering yes. Hand-entered points carry the source they were copied from; Census reworded its AI question for the period ending 16 Nov 2025 (now 'Super Intelligence or SI (formerly AI) in any of its business functions'); the US line starts there."
 TTL = DAY
 
 
@@ -171,7 +170,7 @@ def _firms_now() -> dict:
                   sources=[BTOS_XLSX, BICS_PAGE])
     b = out.get("btos_us") or []
     out["now"] = {"btos": b[-1][1] if b else None, "btos_date": pd.Timestamp(b[-1][0], unit="s").strftime("%Y-%m-%d") if b else None,
-                  "btos_year_ago": next((v for t, v in reversed(b) if t <= b[-1][0] - 365 * 86400), None) if b else None,
+                  "btos_year_ago": _year_ago(b),
                   "ramp": out["ramp"][-1][1] if out.get("ramp") else None}
     out["as_of"] = out["now"]["btos_date"]
     out["cited"] = manual_sources(SLUG, "btos_ai_use_us")[:3] + manual_sources(SLUG, "ramp_ai_index")[:3]
