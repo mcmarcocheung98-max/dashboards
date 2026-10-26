@@ -1,0 +1,11 @@
+date,series,value,country,kind,price_musd,leo_kg,source,note
+1967-11-09,Saturn V,5400,US,flown,,140000,https://aerospace.csis.org/data/space-launch-to-low-earth-orbit-how-much-does-it-cost/,CSIS estimate in 2021 USD per kg; from memory; verify
+1981-04-12,Space Shuttle,54500,US,flown,,27500,https://aerospace.csis.org/data/space-launch-to-low-earth-orbit-how-much-does-it-cost/,CSIS estimate in 2021 USD per kg; from memory; verify
+1996-06-04,Ariane 5,9100,Europe,flown,,20000,https://aerospace.csis.org/data/space-launch-to-low-earth-orbit-how-much-does-it-cost/,CSIS estimate in 2021 USD per kg; from memory; verify
+2002-08-21,Atlas V,13000,US,flown,,18800,https://aerospace.csis.org/data/space-launch-to-low-earth-orbit-how-much-does-it-cost/,CSIS estimate in 2021 USD per kg; from memory; verify
+2004-12-21,Delta IV Heavy,14000,US,flown,,28800,https://aerospace.csis.org/data/space-launch-to-low-earth-orbit-how-much-does-it-cost/,CSIS estimate in 2021 USD per kg; from memory; verify
+2010-06-04,Falcon 9,2600,US,flown,62,22800,https://aerospace.csis.org/data/space-launch-to-low-earth-orbit-how-much-does-it-cost/,CSIS estimate in 2021 USD per kg (expendable capacity at list price); from memory; verify
+2017-05-25,Electron,23000,US,flown,7.5,300,https://www.rocketlabusa.com/launch/electron/,list price about USD 7.5m for about 300 kg to LEO; from memory; verify
+2018-02-06,Falcon Heavy,1500,US,flown,97,63800,https://aerospace.csis.org/data/space-launch-to-low-earth-orbit-how-much-does-it-cost/,CSIS estimate in 2021 USD per kg (expendable capacity at list price); from memory; verify
+2024-07-09,Ariane 6,8000,Europe,flown,80,10350,https://www.esa.int/Enabling_Support/Space_Transportation/Ariane/Ariane_6,price about EUR 75m for an Ariane 62 (10.35 t to LEO); press estimate; from memory; verify
+2030-01-01,Starship (SpaceX goal),100,US,target,10,100000,https://www.spacex.com/vehicles/starship/,stated goal of about USD 10m per flight for 100 t; not achieved; from memory; verify
