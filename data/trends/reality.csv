@@ -1,0 +1,10 @@
+theme,slug,endpoint,path,label,log,source,note
+bitcoin,btc-cycles,cycles,price,BTC price (USD),y,/api/btc-cycles/cycles,weekly closes from the BTC Cycles dashboard
+pokemon,pokemon-cards,prices,all,Pokémon card price index (whole basket),y,/api/pokemon-cards/prices,monthly equal-weight index from the Pokémon Card Market dashboard
+robotaxi,robotaxi,tesla,tsla,Tesla share price (USD),y,/api/robotaxi/tesla,daily closes from the Autonomous Car Adoption dashboard
+housing,housing,prices,london_avg,London average house price (GBP),,/api/housing/prices,UK House Price Index via the Housing dashboard
+ai,ai,openings,US.all,US AI job postings (Indeed index),,/api/ai/openings,"verify: path; Indeed Hiring Lab via the AI dashboard"
+climate,climate,temperature,monthly.*,Global temperature anomaly (°C),,/api/climate/temperature,first monthly series of the Climate dashboard
+chips,compute-chips,overview,*,Compute & chips headline series,,/api/compute-chips/overview,verify: path; first time series found
+space,space,launches,*,Launches,,/api/space/launches,verify: path; first time series found
+rates,debt-rates,yields,*,US yields,,/api/debt-rates/yields,verify: path; first time series found

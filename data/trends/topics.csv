@@ -1,0 +1,56 @@
+key,label,theme,region,lang,article,query,social,source,note
+chatgpt,ChatGPT,ai,global,en,ChatGPT,ChatGPT,y,https://en.wikipedia.org/wiki/ChatGPT,
+ai,Artificial intelligence,ai,global,en,Artificial intelligence,AI,y,https://en.wikipedia.org/wiki/Artificial_intelligence,
+openai,OpenAI,ai,global,en,OpenAI,OpenAI,,https://en.wikipedia.org/wiki/OpenAI,
+anthropic,Anthropic,ai,global,en,Anthropic,Anthropic,,https://en.wikipedia.org/wiki/Anthropic,
+gemini,Google Gemini,ai,global,en,Gemini (language model),Gemini,,https://en.wikipedia.org/wiki/Gemini_(language_model),
+llm,Large language models,ai,global,en,Large language model,LLM,,https://en.wikipedia.org/wiki/Large_language_model,
+agents,AI agents,ai,global,en,AI agent,AI agents,y,https://en.wikipedia.org/wiki/AI_agent,verify: the article title may redirect; the server resolves redirects
+bitcoin,Bitcoin,bitcoin,global,en,Bitcoin,bitcoin,y,https://en.wikipedia.org/wiki/Bitcoin,
+ethereum,Ethereum,bitcoin,global,en,Ethereum,ethereum,,https://en.wikipedia.org/wiki/Ethereum,
+crypto,Cryptocurrency,bitcoin,global,en,Cryptocurrency,crypto,,https://en.wikipedia.org/wiki/Cryptocurrency,
+solana,Solana,bitcoin,global,en,Solana (blockchain platform),solana,,https://en.wikipedia.org/wiki/Solana_(blockchain_platform),verify: title
+ptcg,Pokémon cards (TCG),pokemon,global,en,Pokémon Trading Card Game,pokemon cards,y,https://en.wikipedia.org/wiki/Pok%C3%A9mon_Trading_Card_Game,
+pokemon,Pokémon,pokemon,global,en,Pokémon,pokemon,,https://en.wikipedia.org/wiki/Pok%C3%A9mon,
+waymo,Waymo,robotaxi,global,en,Waymo,waymo,y,https://en.wikipedia.org/wiki/Waymo,
+selfdriving,Self-driving cars,robotaxi,global,en,Self-driving car,self-driving,,https://en.wikipedia.org/wiki/Self-driving_car,
+tesla,Tesla,robotaxi,global,en,"Tesla, Inc.",tesla,y,"https://en.wikipedia.org/wiki/Tesla,_Inc.",
+zoox,Zoox,robotaxi,global,en,Zoox (company),zoox,,https://en.wikipedia.org/wiki/Zoox_(company),verify: title
+mortgage,Mortgages,housing,global,en,Mortgage loan,mortgage,,https://en.wikipedia.org/wiki/Mortgage_loan,
+climate,Climate change,climate,global,en,Climate change,climate change,y,https://en.wikipedia.org/wiki/Climate_change,
+elnino,El Niño,climate,global,en,El Niño–Southern Oscillation,El Nino,,https://en.wikipedia.org/wiki/El_Ni%C3%B1o%E2%80%93Southern_Oscillation,
+heatwave,Heat waves,climate,global,en,Heat wave,heatwave,,https://en.wikipedia.org/wiki/Heat_wave,
+polymarket,Polymarket,prediction,global,en,Polymarket,polymarket,y,https://en.wikipedia.org/wiki/Polymarket,
+kalshi,Kalshi,prediction,global,en,Kalshi,kalshi,,https://en.wikipedia.org/wiki/Kalshi,
+predmkt,Prediction markets,prediction,global,en,Prediction market,prediction market,,https://en.wikipedia.org/wiki/Prediction_market,
+spacex,SpaceX,space,global,en,SpaceX,spacex,,https://en.wikipedia.org/wiki/SpaceX,
+starship,Starship,space,global,en,SpaceX Starship,starship,y,https://en.wikipedia.org/wiki/SpaceX_Starship,
+starlink,Starlink,space,global,en,Starlink,starlink,,https://en.wikipedia.org/wiki/Starlink,
+nvidia,Nvidia,chips,global,en,Nvidia,nvidia,y,https://en.wikipedia.org/wiki/Nvidia,
+tsmc,TSMC,chips,global,en,TSMC,TSMC,,https://en.wikipedia.org/wiki/TSMC,
+datacenter,Data centres,chips,global,en,Data center,data center,,https://en.wikipedia.org/wiki/Data_center,
+deepseek,DeepSeek,china,global,en,DeepSeek,deepseek,y,https://en.wikipedia.org/wiki/DeepSeek,
+huawei,Huawei,china,global,en,Huawei,huawei,,https://en.wikipedia.org/wiki/Huawei,
+byd,BYD,china,global,en,BYD Auto,BYD,,https://en.wikipedia.org/wiki/BYD_Auto,
+semaglutide,Semaglutide (Ozempic),longevity,global,en,Semaglutide,ozempic,y,https://en.wikipedia.org/wiki/Semaglutide,
+tirzepatide,Tirzepatide (Mounjaro),longevity,global,en,Tirzepatide,tirzepatide,,https://en.wikipedia.org/wiki/Tirzepatide,
+fed,Federal Reserve,rates,global,en,Federal Reserve,federal reserve,,https://en.wikipedia.org/wiki/Federal_Reserve,
+inflation,Inflation,rates,global,en,Inflation,inflation,,https://en.wikipedia.org/wiki/Inflation,
+recession,Recession,rates,global,en,Recession,recession,y,https://en.wikipedia.org/wiki/Recession,
+fertility,Fertility rate,demographics,global,en,Total fertility rate,birth rate,,https://en.wikipedia.org/wiki/Total_fertility_rate,
+uk_boe,Bank of England,rates,uk,en,Bank of England,Bank of England,,https://en.wikipedia.org/wiki/Bank_of_England,UK-specific page
+uk_rightmove,Rightmove,housing,uk,en,Rightmove,rightmove,,https://en.wikipedia.org/wiki/Rightmove,UK-specific page
+uk_zoopla,Zoopla,housing,uk,en,Zoopla,,,https://en.wikipedia.org/wiki/Zoopla,UK-specific page
+uk_sdlt,Stamp Duty Land Tax,housing,uk,en,Stamp Duty Land Tax,stamp duty,,https://en.wikipedia.org/wiki/Stamp_Duty_Land_Tax,UK-specific page
+uk_housing,UK housing crisis,housing,uk,en,Housing crisis in the United Kingdom,,,https://en.wikipedia.org/wiki/Housing_crisis_in_the_United_Kingdom,verify: title; UK-specific page
+zh_bitcoin,比特币 Bitcoin,bitcoin,zh,zh,比特币,,,https://zh.wikipedia.org/wiki/%E6%AF%94%E7%89%B9%E5%B8%81,Chinese Wikipedia; the server converts the title to the stored script variant
+zh_ai,人工智能 AI,ai,zh,zh,人工智能,,,https://zh.wikipedia.org/wiki/%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD,Chinese Wikipedia
+zh_chatgpt,ChatGPT (zh),ai,zh,zh,ChatGPT,,,https://zh.wikipedia.org/wiki/ChatGPT,Chinese Wikipedia
+zh_deepseek,深度求索 DeepSeek,china,zh,zh,深度求索,,,https://zh.wikipedia.org/wiki/%E6%B7%B1%E5%BA%A6%E6%B1%82%E7%B4%A2,verify: title (may be DeepSeek)
+zh_pokemon,宝可梦 Pokémon,pokemon,zh,zh,宝可梦,,,https://zh.wikipedia.org/wiki/%E5%AE%9D%E5%8F%AF%E6%A2%A6,verify: title
+zh_ptcg,宝可梦集换式卡牌游戏 Pokémon TCG,pokemon,zh,zh,宝可梦集换式卡牌游戏,,,https://zh.wikipedia.org/wiki/%E5%AE%9D%E5%8F%AF%E6%A2%A6%E9%9B%86%E6%8D%A2%E5%BC%8F%E5%8D%A1%E7%89%8C%E6%B8%B8%E6%88%8F,verify: title
+zh_tesla,特斯拉 Tesla,robotaxi,zh,zh,特斯拉公司,,,https://zh.wikipedia.org/wiki/%E7%89%B9%E6%96%AF%E6%8B%89%E5%85%AC%E5%8F%B8,verify: title
+zh_nvidia,英伟达 Nvidia,chips,zh,zh,英伟达,,,https://zh.wikipedia.org/wiki/%E8%8B%B1%E4%BC%9F%E8%BE%BE,verify: title
+zh_climate,气候变化 Climate change,climate,zh,zh,气候变化,,,https://zh.wikipedia.org/wiki/%E6%B0%94%E5%80%99%E5%8F%98%E5%8C%96,verify: title
+zh_hkproperty,香港房地产 HK property,housing,zh,zh,香港房地產,,,https://zh.wikipedia.org/wiki/%E9%A6%99%E6%B8%AF%E6%88%BF%E5%9C%B0%E7%94%A2,verify: title
+zh_hsi,恒生指数 Hang Seng Index,rates,zh,zh,恒生指数,,,https://zh.wikipedia.org/wiki/%E6%81%92%E7%94%9F%E6%8C%87%E6%95%B0,verify: title
