@@ -263,6 +263,17 @@ def leader_ids() -> list[str]:
     return sorted({i for s in cfg["sectors"] for i in s.get("benchmarks", [])})
 
 
+def sector_check(rank: int, categories: list[str]) -> dict | None:
+    """Does CoinGecko file the coin under its sector? {ok, matched, categories}; None when the categories are not fetched yet.
+    A sector's `cg_match` (sector_status.json) lists substrings of CoinGecko category names that count as that sector."""
+    if not categories:
+        return None
+    cfg = json.loads((DATA_DIR / SLUG / "sector_status.json").read_text(encoding="utf-8"))
+    keys = next((s.get("cg_match", []) for s in cfg["sectors"] if s["rank"] == rank), [])
+    hit = [c for c in categories if any(k.lower() in c.lower() for k in keys)]
+    return {"ok": bool(hit), "matched": hit[:4], "categories": [c for c in categories if not c.lower().endswith(" ecosystem") and "portfolio" not in c.lower()][:12]}
+
+
 def sector_leaders(coins: list[dict]) -> dict:
     """{rank: {name, symbol, market_cap, candidate}}: the largest market cap among a sector's candidates and its benchmark tokens.
     Benchmarks come from one CoinGecko markets call made by the background fill; without it, the largest candidate."""
@@ -389,8 +400,10 @@ def fill_fundamentals(c: dict) -> dict:
             if wait > 0:
                 time.sleep(wait)
             _last_download[0] = time.time()
-        md = fetch_json(url, TTL, min_bytes=500).get("market_data") or {}
+        j = fetch_json(url, TTL, min_bytes=500)
+        md = j.get("market_data") or {}
         out["supply"] = {k: md.get(k) for k in ("circulating_supply", "total_supply", "max_supply")}
+        out["categories"] = [c for c in (j.get("categories") or []) if c][:40]          # CoinGecko's own classification, checked against the sector
         out["sources"]["supply"] = f"https://www.coingecko.com/en/coins/{c['coingecko_id']}"
     except Exception as e:
         err["supply"] = f"{type(e).__name__}: {str(e)[:80]}"
@@ -507,7 +520,8 @@ def fill_coins(pause_on_limit: float = 75.0) -> dict:
                 else:
                     break
         if tick in by_tick:                               # then that coin's fees, TVL, unlocks and supply, unless fetched in the last 20 hours,
-            if time.time() - (fundamentals(tick).get("updated") or 0) < 20 * 3600:    # so a redeploy mid-fill resumes instead of starting over
+            fd0 = fundamentals(tick)                          # (a file from before categories were kept is refetched once)
+            if time.time() - (fd0.get("updated") or 0) < 20 * 3600 and "categories" in fd0:    # so a redeploy mid-fill resumes instead of starting over
                 done[tick + ":fundamentals"] = "fresh"
                 continue
             try:
@@ -614,7 +628,9 @@ def _coins_now() -> dict:
     for c in coins_list():
         try:
             full = _coin_full(c, btc)
-            out["coins"].append({k: full[k] for k in ("ticker", "name", "rank", "sector", "note", "links", "kpi", "spark", "notes")})
+            row = {k: full[k] for k in ("ticker", "name", "rank", "sector", "note", "links", "kpi", "spark", "notes")}
+            row["cg_check"] = sector_check(int(c["rank"]), fundamentals(c["ticker"]).get("categories") or [])
+            out["coins"].append(row)
         except Exception as e:
             out["coins"].append({"ticker": c["ticker"], "name": c["name"], "rank": int(c["rank"]), "sector": c["sector"], "note": c.get("note", ""),
                                  "error": "loading in the background, back in a few minutes" if isinstance(e, LookupError) else type(e).__name__,

@@ -64,7 +64,7 @@ function premiumChart(d) {
   }
   return [now, legend, host];
 }
-const table = (cols, rows, opts = {}) => el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...cols.map(h => el("th", {}, h))),
+const table = (cols, rows, opts = {}) => el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...cols.map(h => el("th", { style: "text-align:left;vertical-align:bottom" }, h))),
   ...rows.map(r => el("tr", {}, ...cols.map((c, i) => { const v = Array.isArray(r) ? r[i] : r[c]; return el("td", { class: i === 0 ? "" : "wrap" }, ...md(String(v ?? ""))); })))));
 const docLink = r => el("div", { class: "src", style: "margin-top:6px" }, "From the research doc, as of " + r.as_of + ": ", link("open it", r.doc_url), ".");
 const pill = state => el("span", { class: "pill " + ({ firing: "ok", "not yet": "", watch: "", "no data": "bad" }[state] || "") }, state);
@@ -167,16 +167,18 @@ function statusCard(R) {
   const col = { Undervalued: css("--up"), "Awaiting rotation": css("--accent"), Neutral: css("--muted"), "Priced in": css("--s2"), Overvalued: css("--down") };
   const p0 = v => v == null ? "–" : pct(v, 0);
   const head = ["Sector", "Status", "Representatives (90 days vs BTC)", "90d vs BTC", "RSI vs BTC", "From 1-year high", "Usage, ~90 days", "Past bursts (months after halving)"];
+  const align = ["left", "left", "left", "right", "right", "right", "left", "left"];
   const rows = (R.status || []).map(s => el("tr", {},
     el("td", {}, el("b", {}, s.rank + " · " + s.sector)),
     el("td", {}, el("span", { class: "pill " + (tone[s.status] || ""), style: "color:" + col[s.status] + ";white-space:nowrap" }, s.status)),
-    el("td", { class: "wrap", style: "max-width:320px" }, ...(s.reps.length ? s.reps.map((c, i) => el("span", { style: "white-space:nowrap" }, (i ? " · " : ""), el("b", {}, c.ticker), " ", el("span", { class: cls(c.vs_btc_90d) }, p0(c.vs_btc_90d))))
-      : [el("span", { class: "muted" }, "No liquid token: " + (s.no_token || []).join(", "))])),
-    el("td", { class: cls(s.vs_btc_90d) }, p0(s.vs_btc_90d)), el("td", {}, s.rsi_vs_btc == null ? "–" : s.rsi_vs_btc.toFixed(0)), el("td", {}, p0(s.from_high)),
+    el("td", { class: "wrap", style: "min-width:260px;max-width:340px" }, s.reps.length
+      ? el("div", { style: "display:flex;flex-wrap:wrap;gap:2px 10px" }, ...s.reps.map(c => el("span", { style: "white-space:nowrap" }, el("b", {}, c.ticker), " ", el("span", { class: cls(c.vs_btc_90d) }, p0(c.vs_btc_90d)))))
+      : el("span", { class: "muted" }, "No liquid token: " + (s.no_token || []).join(", "))),
+    el("td", { class: cls(s.vs_btc_90d), style: "text-align:right" }, p0(s.vs_btc_90d)), el("td", { style: "text-align:right" }, s.rsi_vs_btc == null ? "–" : s.rsi_vs_btc.toFixed(0)), el("td", { style: "text-align:right" }, p0(s.from_high)),
     el("td", { class: "wrap" }, s.usage == null ? el("span", { class: "muted" }, s.usage_label ? "no recent reading" : "no usage series") : el("span", {}, el("span", { class: cls(s.usage) }, p0(s.usage)), el("span", { class: "muted" }, " " + s.usage_label))),
     el("td", { class: "wrap muted" }, s.past.length ? s.past.map(h => "C" + h.cycle + " " + Math.round(h.m_start) + "–" + Math.round(h.m_end)).join(", ") : "none")));
   return card("Where each 2026-27 candidate sector stands today",
-    el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...head.map(h => el("th", {}, h))), ...rows)),
+    el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...head.map((h, i) => el("th", { style: "text-align:" + align[i] + ";vertical-align:bottom" }, h))), ...rows)),
     el("ul", { class: "muted", style: "margin:8px 0 0;padding-left:18px;font-size:12.5px" }, ...(R.rules || []).map(([n, t]) => el("li", {}, el("b", { style: "color:" + col[n] }, n + ": "), t))),
     note("Medians of the representatives (coins.csv); rules checked in the order listed. Mechanical readings of price against BTC and of usage, not a view on any coin. Today: " +
       Math.round(R.months_now) + " months after the 2024 halving; past bursts mostly ran 6-18 months after one."));
@@ -198,6 +200,7 @@ function candidatesTable(k, rot, px, jump) {
     ["Coin", r => r.c.name.toLowerCase()], ["Sector", r => r.rank], ["Status", r => r.status], ["Price", r => r.price], ["90 days", r => r.K.vs_btc_90d],
     ["Market cap", r => r.mcap], ["vs sector leader", r => r.share], ["RSI vs BTC", r => r.K.rsi_vs_btc],
     ["End-2027 bear / base / bull", r => r.up27], ["End-2028 bear / base / bull", r => r.up28], ["Base 2028 cap vs leader today", r => r.vsLeader28]];
+  const AL = ["left", "left", "left", "right", "left", "right", "left", "right", "left", "left", "left"];
   let sortI = 1, dir = 1, sector = "all", q = "";
   const open = new Set();
   const tbody = el("tbody"), count = el("span", { class: "muted" });
@@ -212,7 +215,7 @@ function candidatesTable(k, rot, px, jump) {
   };
   const cases = (K, y) => el("span", { style: "white-space:nowrap" }, el("span", { class: "down" }, px(K["bear_" + y])), " / ", el("b", {}, px(K["base_" + y])), " / ", el("span", { class: "up" }, px(K["bull_" + y])));
   const draw = () => {
-    head.replaceChildren(...COLS.map(([n], i) => el("th", { style: "cursor:pointer;user-select:none;white-space:nowrap;position:sticky;top:0;background:var(--card, var(--bg));z-index:1" + (i ? "" : ";left:0;z-index:2"),
+    head.replaceChildren(...COLS.map(([n], i) => el("th", { style: "text-align:" + AL[i] + ";cursor:pointer;user-select:none;white-space:nowrap;position:sticky;top:0;background:var(--card, var(--bg));z-index:1" + (i ? "" : ";left:0;z-index:2"),
       onclick: () => { if (sortI === i) dir = -dir; else { sortI = i; dir = i <= 2 ? 1 : -1; } draw(); } }, n + (sortI === i ? (dir > 0 ? " ▲" : " ▼") : ""))));
     const get = COLS[sortI][1];
     const list = rows.filter(r => (sector === "all" || String(r.rank) === sector) && (!q || (r.c.name + " " + r.c.ticker).toLowerCase().includes(q)))
@@ -235,6 +238,7 @@ function candidatesTable(k, rot, px, jump) {
         el("td", {}, cases(K, "2027"), el("div", { class: cls(r.up27), style: "font-size:12px" }, r.up27 == null ? "" : "base " + pct(r.up27, 0))),
         el("td", {}, cases(K, "2028"), el("div", { class: cls(r.up28), style: "font-size:12px" }, r.up28 == null ? "" : "base " + pct(r.up28, 0) + (K.factor_2028 != null && Math.abs(K.factor_2028 - 1) > 0.005 ? " · fundamentals ×" + K.factor_2028.toFixed(2) : ""))),
         el("td", { style: "white-space:nowrap" }, r.vsLeader28 == null ? "–" : (r.vsLeader28 >= 1 ? el("b", { class: "up" }, "×" + r.vsLeader28.toFixed(1) + " the leader") : (r.vsLeader28 * 100).toFixed(0) + "% of " + r.ld.symbol)));
+      [...tr.children].forEach((td, i) => { if (!td.style.textAlign) td.style.textAlign = AL[i]; });
       if (!isOpen) return [tr];
       return [tr, el("tr", {}, el("td", { colspan: COLS.length, style: "background:var(--chip);font-size:13px;white-space:normal;padding:0" },
         el("div", { style: "position:sticky;left:0;max-width:min(900px, 86vw);padding:8px 10px" },
@@ -277,7 +281,7 @@ function strategiesCards(S) {
   const tone = { exit: "bad", caution: "bad", watch: "", clear: "ok" };
   const label = { exit: "exit signal", caution: "caution", watch: "in window", clear: "clear" };
   const rows = (S.checklist || []).map(c => el("tr", {}, el("td", {}, el("b", {}, c.rule)), el("td", { class: "wrap" }, c.test), el("td", { class: "wrap" }, c.now),
-    el("td", {}, el("span", { class: "pill " + (tone[c.state] || "") }, label[c.state] || c.state)), el("td", { class: "wrap muted" }, c.why)));
+    el("td", { style: "text-align:left" }, el("span", { class: "pill " + (tone[c.state] || "") }, label[c.state] || c.state)), el("td", { class: "wrap muted" }, c.why)));
   const exits = (S.checklist || []).filter(c => c.state === "exit").length, cautions = (S.checklist || []).filter(c => c.state === "caution").length;
   const verdict = exits ? exits + " exit signal" + (exits > 1 ? "s" : "") + " on" : cautions ? "No exit signal; " + cautions + " caution flag" + (cautions > 1 ? "s" : "") : "No exit signal";
   const check = card("Exit window for MSTR: the checklist on today's data",
@@ -285,7 +289,7 @@ function strategiesCards(S) {
       kpi("Checklist", verdict, exits ? "down" : cautions ? "" : "up")),
     note("Enterprise value = diluted market cap + debt + preferreds − cash" + (M.ev_inputs_date ? " (balance sheet as of " + M.ev_inputs_date + ")" : "") +
       ". Strategy's own figure since 23 Jul 2026 is price ÷ net bitcoin per share, which runs higher; the levels below are basic mNAV, the series with history."),
-    el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Rule", "Test", "Now", "Status", "Why it matters"].map(h => el("th", {}, h))), ...rows)));
+    el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Rule", "Test", "Now", "Status", "Why it matters"].map(h => el("th", { style: "text-align:left;vertical-align:bottom" }, h))), ...rows)));
   const T = S.backtests || [];
   const curves = card("mNAV strategies backtested, since " + (S.since || "2021").slice(0, 4) + " (weekly, log)",
     ...linesChart(T.map((t, i) => ({ name: t.rule, points: t.equity, color: i === 1 ? css("--hold") : undefined, dashed: i === 1 })), xf, { log: true }),
@@ -377,7 +381,7 @@ const VIEWS = {
     docCard.append(body);
     // method card
     const method = fold("Projection method (mechanical, not a forecast)", false, el("div", { class: "muted" }, sc.method || ""),
-      el("div", { class: "scroll", style: "margin-top:8px" }, el("table", {}, el("tr", {}, ...["Scenario", "Bear BTC", "Base BTC", "Bull BTC"].map(h => el("th", {}, h))),
+      el("div", { class: "scroll", style: "margin-top:8px" }, el("table", {}, el("tr", {}, ...["Scenario", "Bear BTC", "Base BTC", "Bull BTC"].map((h, i) => el("th", { style: i ? "text-align:right" : "" }, h))),
         ...(sc.scenarios || []).map(s => el("tr", {}, el("td", {}, s.label), ...["bear", "base", "bull"].map(x => el("td", { title: s[x].why }, usd(s[x].btc))))))),
       note("Hover a BTC level for the reasoning. BTC now: " + usd(k.btc_now) + ". Edit data/btc-cycles/scenarios.json to change the levels."),
       k.notes_about ? note("Coin notes: " + k.notes_about + " The \"Today\" line is computed from live data.") : null, stale(k));
@@ -494,8 +498,8 @@ const VIEWS = {
   },
   async signals() {
     const d = await api("signals"), R = d.research;
-    const rows = d.status.map((s, i) => el("tr", {}, el("td", {}, i + 1), el("td", { class: "wrap" }, s.signal), el("td", {}, pill(s.state)), el("td", { class: "wrap" }, s.reading), el("td", { class: "wrap" }, s.note)));
-    const status = card("The six signals, read mechanically today (" + d.as_of + ")", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["#", "Signal", "Status", "Reading", "How"].map(h => el("th", {}, h))), ...rows)),
+    const rows = d.status.map((s, i) => el("tr", {}, el("td", { style: "text-align:left" }, i + 1), el("td", { class: "wrap" }, s.signal), el("td", { style: "text-align:left" }, pill(s.state)), el("td", { class: "wrap" }, s.reading), el("td", { class: "wrap" }, s.note)));
+    const status = card("The six signals, read mechanically today (" + d.as_of + ")", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["#", "Signal", "Status", "Reading", "How"].map(h => el("th", { style: "text-align:left;vertical-align:bottom" }, h))), ...rows)),
       note("Firing = the doc's condition is met on today's data. These are rules applied to public data, not a recommendation."));
     const doc = fold("What the doc says to watch, in order", true, para(R.intro, ""), el("ol", { style: "margin:6px 0 0 18px;padding:0" }, ...R.items.map(s => el("li", { style: "margin:4px 0" }, ...md(s)))));
     const timing = fold("Timing on the halving clock", true, para(R.timing, ""));

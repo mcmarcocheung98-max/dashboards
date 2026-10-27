@@ -1205,3 +1205,12 @@ def test_btc_sector_leaders_and_case_fields(snapdir, monkeypatch):
     assert L[1]["candidate"] is True                                     # Uniswap's tiny cap loses to the candidates
     K = next(c for c in k["coins"] if c["ticker"] == "SOL")["kpi"]
     assert K["bear_2027"] < K["base_2027"] < K["bull_2027"] and K["bear_2028"] < K["base_2028"] < K["bull_2028"] and K["mcap_base_2028"] > 0
+
+
+def test_btc_sector_check_against_coingecko():
+    from app.topics import btc_cycles as C
+    assert C.sector_check(3, []) is None
+    ok = C.sector_check(3, ["Oracle", "Real World Assets (RWA)", "Ethereum Ecosystem"])
+    assert ok["ok"] and ok["matched"] == ["Real World Assets (RWA)"] and "Ethereum Ecosystem" not in ok["categories"]
+    assert C.sector_check(3, ["Oracle", "Infrastructure"])["ok"] is False
+    assert C.sector_check(6, ["Layer 1 (L1)", "Smart Contract Platform"])["ok"]

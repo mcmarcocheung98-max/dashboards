@@ -43,6 +43,15 @@
     "hyperliquid",
     "uniswap",
     "aave"
+   ],
+   "cg_match": [
+    "Decentralized Finance",
+    "Derivatives",
+    "Perpetuals",
+    "Decentralized Exchange",
+    "Lending/Borrowing",
+    "Yield",
+    "DEX Aggregator"
    ]
   },
   {
@@ -63,6 +72,10 @@
    "benchmarks": [
     "tron",
     "ethena"
+   ],
+   "cg_match": [
+    "Stablecoin",
+    "Payment"
    ]
   },
   {
@@ -84,6 +97,11 @@
    "benchmarks": [
     "chainlink",
     "ondo-finance"
+   ],
+   "cg_match": [
+    "Real World Assets",
+    "RWA",
+    "Tokenized"
    ]
   },
   {
@@ -102,7 +120,10 @@
     "key": "Prediction-market monthly volume (USD)",
     "label": "Prediction-market monthly volume (hand-entered)"
    },
-   "benchmarks": []
+   "benchmarks": [],
+   "cg_match": [
+    "Prediction Markets"
+   ]
   },
   {
    "rank": 5,
@@ -120,6 +141,14 @@
     "bittensor",
     "near",
     "render-token"
+   ],
+   "cg_match": [
+    "Artificial Intelligence",
+    "AI Agent",
+    "AI Framework",
+    "DePIN",
+    "Data Availability",
+    "Big Data"
    ]
   },
   {
@@ -139,6 +168,10 @@
    "benchmarks": [
     "ethereum",
     "solana"
+   ],
+   "cg_match": [
+    "Layer 1",
+    "Smart Contract Platform"
    ]
   },
   {
@@ -154,6 +187,10 @@
    "benchmarks": [
     "monero",
     "zcash"
+   ],
+   "cg_match": [
+    "Privacy",
+    "Zero Knowledge"
    ]
   },
   {
@@ -170,6 +207,13 @@
     "blockstack",
     "coredaoorg",
     "babylon"
+   ],
+   "cg_match": [
+    "Bitcoin Ecosystem",
+    "BTCfi",
+    "Bitcoin Sidechain",
+    "Bitcoin Layer 2",
+    "Liquid Staking"
    ]
   }
  ]
