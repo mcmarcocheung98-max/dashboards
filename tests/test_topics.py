@@ -767,6 +767,17 @@ def test_ai_readings_from_cached_payloads(snapdir, monkeypatch):
     B.json_safe(r)
 
 
+def test_ai_layout_probe_reports_errors_instead_of_failing(monkeypatch):
+    import requests
+    from app.topics import ai
+    def down(*a, **k):
+        raise requests.ConnectionError("offline")
+    monkeypatch.setattr(requests, "get", down)
+    out = ai._layout_now()
+    B.json_safe(out)
+    assert all("error" in v for v in out.values()) and {"NM_189_1", "NM_172_1"} <= set(out)
+
+
 def test_ramp_ai_index_parser():
     from app.topics.ai_adoption import parse_ramp
     s = parse_ramp(ramp_page())

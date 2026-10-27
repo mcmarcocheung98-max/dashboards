@@ -86,6 +86,50 @@ def READINGS() -> list[dict]:
             1 if up > len(moves) / 2 else -1 if up < len(moves) / 2 else 0, "+1 if more than half rose, -1 if more than half fell")
     return out
 
-ENDPOINTS = {**ai_jobs.ENDPOINTS, **ai_adoption.ENDPOINTS}
+NOMIS = "https://www.nomisweb.co.uk/api/v01/dataset/"
+
+
+def _layout_now() -> dict:
+    """Not a tab: what the server sees at Nomis for BRES (employment by London borough and industry), so the London heatmap is
+    written against the real codes. Read with Actions > show-json on /api/ai/layout."""
+    import re
+    import requests
+    from ._base import UA
+    want = re.compile(r"legal|financial service|insurance|auxiliary to financial|computer programming|information service|accounting", re.I)
+    out: dict = {}
+    jget = lambda path: requests.get(NOMIS + path, headers=UA, timeout=60).json()
+    codes = lambda path: [f"{c['value']} {c['description']['value']}" for c in jget(path)["structure"]["codelists"]["codelist"][0]["code"]]
+    for ds in ("NM_189_1", "NM_172_1"):
+        row: dict = {}
+        try:
+            kf = jget(ds + ".def.sdmx.json")["structure"]["keyfamilies"]["keyfamily"][0]
+            row = {"name": kf.get("name", {}).get("value"), "dims": [d.get("conceptref") for d in kf["components"]["dimension"]]}
+            ind = codes(ds + "/industry.def.sdmx.json")
+            row.update(industry_n=len(ind), industry_first=ind[:12], industry_hits=[c for c in ind if want.search(c)][:40])
+            for dim in ("employment_status", "measure", "date"):
+                try:
+                    cs = codes(ds + f"/{dim}.def.sdmx.json")
+                    row[dim] = cs[-12:] if dim == "date" else cs[:12]
+                except Exception as e:
+                    row[dim] = f"{type(e).__name__}: {str(e)[:100]}"
+        except Exception as e:
+            row["error"] = f"{type(e).__name__}: {str(e)[:160]}"
+        out[ds] = row
+    for g in ("2013265927TYPE432", "2013265927TYPE424", "2013265927TYPE434", "2013265927TYPE431"):
+        try:
+            r = requests.get(NOMIS + "NM_189_1.data.csv?geography=" + g + "&date=latest&industry=37748736&employment_status=1&measure=1&measures=20100"
+                             "&select=date_name,geography_name,geography_code,industry_name,employment_status_name,measure_name,obs_value", headers=UA, timeout=40)
+            out["geo " + g] = {"status": r.status_code, "rows": r.text.count("\n"), "start": r.text[:700]}
+        except Exception as e:
+            out["geo " + g] = {"error": f"{type(e).__name__}: {str(e)[:160]}"}
+    return out
+
+
+def _cached_layout():
+    from ..cache import _cached
+    return _cached("topic:ai:layout:nomis", 1800, _layout_now)
+
+
+ENDPOINTS = {**ai_jobs.ENDPOINTS, **ai_adoption.ENDPOINTS, "layout": _cached_layout}
 SOURCES = ai_jobs.SOURCES + [s for s in ai_adoption.SOURCES if s["url"] not in {x["url"] for x in ai_jobs.SOURCES}]
 NOTES = ai_jobs.NOTES + " " + ai_adoption.NOTES
