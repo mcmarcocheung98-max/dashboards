@@ -139,7 +139,6 @@
    "usage": null,
    "benchmarks": [
     "bittensor",
-    "near",
     "render-token"
    ],
    "cg_match": [
@@ -158,7 +157,8 @@
    "reps": [
     "SOL",
     "SUI",
-    "TON"
+    "TON",
+    "NEAR"
    ],
    "usage": {
     "source": "metrics",
@@ -167,7 +167,8 @@
    },
    "benchmarks": [
     "ethereum",
-    "solana"
+    "solana",
+    "near"
    ],
    "cg_match": [
     "Layer 1",

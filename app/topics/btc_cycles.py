@@ -263,6 +263,11 @@ def leader_ids() -> list[str]:
     return sorted({i for s in cfg["sectors"] for i in s.get("benchmarks", [])})
 
 
+def classification() -> dict:
+    f = DATA_DIR / SLUG / "classification.json"
+    return json.loads(f.read_text(encoding="utf-8")).get("coins", {}) if f.exists() else {}
+
+
 def sector_check(rank: int, categories: list[str]) -> dict | None:
     """Does CoinGecko file the coin under its sector? {ok, matched, categories}; None when the categories are not fetched yet.
     A sector's `cg_match` (sector_status.json) lists substrings of CoinGecko category names that count as that sector."""
@@ -630,6 +635,7 @@ def _coins_now() -> dict:
             full = _coin_full(c, btc)
             row = {k: full[k] for k in ("ticker", "name", "rank", "sector", "note", "links", "kpi", "spark", "notes")}
             row["cg_check"] = sector_check(int(c["rank"]), fundamentals(c["ticker"]).get("categories") or [])
+            row["classification"] = classification().get(c["ticker"])
             out["coins"].append(row)
         except Exception as e:
             out["coins"].append({"ticker": c["ticker"], "name": c["name"], "rank": int(c["rank"]), "sector": c["sector"], "note": c.get("note", ""),
@@ -813,6 +819,7 @@ def sector_status(coins: list[dict], metrics: dict, evidence: dict) -> list[dict
     cfg = json.loads(SECTOR_STATUS.read_text(encoding="utf-8"))
     by = {c["ticker"]: c for c in coins if "kpi" in c}
     hist = rotation_rows()
+    cls_ = classification()
     med = lambda xs: float(np.median(xs)) if xs else None
     rows = []
     for s in cfg["sectors"]:
@@ -843,7 +850,8 @@ def sector_status(coins: list[dict], metrics: dict, evidence: dict) -> list[dict
         past = [h for h in hist if h["family"] == s["family"]]
         rows.append({"rank": s["rank"], "sector": s["sector"], "status": st,
                      "reps": [{"ticker": c["ticker"], "name": c["name"], "vs_btc_90d": c["kpi"].get("vs_btc_90d"), "rsi_vs_btc": c["kpi"].get("rsi_vs_btc"),
-                               "from_high": c["kpi"].get("from_high")} for c in reps],
+                               "from_high": c["kpi"].get("from_high"),
+                               "secondary": cls_.get(c["ticker"], {}).get("classifiers") if cls_.get(c["ticker"], {}).get("doc_sector") == "secondary" else None} for c in reps],
                      "no_token": s.get("no_token", []), "vs_btc_90d": _r(rel, 3), "rsi_vs_btc": _r(rsi_b, 1), "from_high": _r(high, 3),
                      "usage": _r(usage, 3), "usage_label": u["label"] if u else None,
                      "past": [{"cycle": h["cycle"], "sector": h["sector"], "m_start": h["m_start"], "m_end": h["m_end"]} for h in past]})

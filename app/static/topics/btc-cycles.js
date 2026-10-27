@@ -170,9 +170,9 @@ function statusCard(R) {
   const align = ["left", "left", "left", "right", "right", "right", "left", "left"];
   const rows = (R.status || []).map(s => el("tr", {},
     el("td", {}, el("b", {}, s.rank + " · " + s.sector)),
-    el("td", {}, el("span", { class: "pill " + (tone[s.status] || ""), style: "color:" + col[s.status] + ";white-space:nowrap" }, s.status)),
+    el("td", { style: "text-align:left" }, el("span", { class: "pill " + (tone[s.status] || ""), style: "color:" + col[s.status] + ";white-space:nowrap" }, s.status)),
     el("td", { class: "wrap", style: "min-width:260px;max-width:340px" }, s.reps.length
-      ? el("div", { style: "display:flex;flex-wrap:wrap;gap:2px 10px" }, ...s.reps.map(c => el("span", { style: "white-space:nowrap" }, el("b", {}, c.ticker), " ", el("span", { class: cls(c.vs_btc_90d) }, p0(c.vs_btc_90d)))))
+      ? el("div", { style: "display:flex;flex-wrap:wrap;gap:2px 10px" }, ...s.reps.map(c => el("span", { style: "white-space:nowrap" }, el("b", c.secondary ? { style: "text-decoration:underline dotted", title: "The doc's sector is this coin's secondary classification: " + c.secondary } : {}, c.ticker + (c.secondary ? "†" : "")), " ", el("span", { class: cls(c.vs_btc_90d) }, p0(c.vs_btc_90d)))))
       : el("span", { class: "muted" }, "No liquid token: " + (s.no_token || []).join(", "))),
     el("td", { class: cls(s.vs_btc_90d), style: "text-align:right" }, p0(s.vs_btc_90d)), el("td", { style: "text-align:right" }, s.rsi_vs_btc == null ? "–" : s.rsi_vs_btc.toFixed(0)), el("td", { style: "text-align:right" }, p0(s.from_high)),
     el("td", { class: "wrap" }, s.usage == null ? el("span", { class: "muted" }, s.usage_label ? "no recent reading" : "no usage series") : el("span", {}, el("span", { class: cls(s.usage) }, p0(s.usage)), el("span", { class: "muted" }, " " + s.usage_label))),
@@ -180,8 +180,19 @@ function statusCard(R) {
   return card("Where each 2026-27 candidate sector stands today",
     el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...head.map((h, i) => el("th", { style: "text-align:" + align[i] + ";vertical-align:bottom" }, h))), ...rows)),
     el("ul", { class: "muted", style: "margin:8px 0 0;padding-left:18px;font-size:12.5px" }, ...(R.rules || []).map(([n, t]) => el("li", {}, el("b", { style: "color:" + col[n] }, n + ": "), t))),
+    note("† = the sector is a secondary classification for that coin on CoinGecko, CoinMarketCap and Messari (hover it); see the Candidates table for sources."),
     note("Medians of the representatives (coins.csv); rules checked in the order listed. Mechanical readings of price against BTC and of usage, not a view on any coin. Today: " +
       Math.round(R.months_now) + " months after the 2024 halving; past bursts mostly ran 6-18 months after one."));
+}
+
+// Is the doc's sector how the classifiers file the coin? "primary" / "secondary" from classification.json (with sources), plus the live
+// CoinGecko check when its categories have been fetched (a warning when none of them matches the sector).
+function classCell(c) {
+  const C = c.classification, G = c.cg_check;
+  const tip = (C ? "Classifiers: " + C.classifiers + (C.note ? " (" + C.note + ")" : "") : "") + (G ? "\nCoinGecko today: " + (G.categories.join(", ") || "–") : "");
+  const main = !C ? el("span", { class: "muted" }, "–") : C.doc_sector === "primary" ? el("span", { class: "up", style: "white-space:nowrap" }, "✓ primary")
+    : el("span", { class: "pill", style: "white-space:nowrap;color:" + css("--s2") }, "secondary");
+  return el("span", { title: tip, style: "white-space:nowrap" }, main, G && !G.ok ? el("span", { class: "down", style: "margin-left:4px", title: "CoinGecko files none of its categories under this sector" }, "⚠") : null);
 }
 
 // ---------- every candidate in one table: thesis, price cases, market cap against the sector's largest token
@@ -197,10 +208,10 @@ function candidatesTable(k, rot, px, jump) {
       vsLeader28: ld && K.mcap_base_2028 ? K.mcap_base_2028 / ld.market_cap : null };
   });
   const COLS = [
-    ["Coin", r => r.c.name.toLowerCase()], ["Sector", r => r.rank], ["Status", r => r.status], ["Price", r => r.price], ["90 days", r => r.K.vs_btc_90d],
+    ["Coin", r => r.c.name.toLowerCase()], ["Sector", r => r.rank], ["Classifiers", r => (r.c.classification || {}).doc_sector || "~"], ["Status", r => r.status], ["Price", r => r.price], ["90 days", r => r.K.vs_btc_90d],
     ["Market cap", r => r.mcap], ["vs sector leader", r => r.share], ["RSI vs BTC", r => r.K.rsi_vs_btc],
     ["End-2027 bear / base / bull", r => r.up27], ["End-2028 bear / base / bull", r => r.up28], ["Base 2028 cap vs leader today", r => r.vsLeader28]];
-  const AL = ["left", "left", "left", "right", "left", "right", "left", "right", "left", "left", "left"];
+  const AL = ["left", "left", "left", "left", "right", "left", "right", "left", "right", "left", "left", "left"];
   let sortI = 1, dir = 1, sector = "all", q = "";
   const open = new Set();
   const tbody = el("tbody"), count = el("span", { class: "muted" });
@@ -226,6 +237,7 @@ function candidatesTable(k, rot, px, jump) {
       const tr = el("tr", { style: "cursor:pointer", title: "Click for the thesis", onclick: () => { isOpen ? open.delete(r.c.ticker) : open.add(r.c.ticker); draw(); } },
         el("td", { style: "position:sticky;left:0;background:var(--card, var(--bg));white-space:nowrap" }, el("span", { class: "muted" }, isOpen ? "▾ " : "▸ "), el("b", {}, r.c.ticker), " ", el("span", { class: "muted" }, r.c.name)),
         el("td", { class: "muted", style: "white-space:nowrap" }, r.rank + " · " + r.sector.split(" (")[0].split(" / ")[0]),
+        el("td", {}, classCell(r.c)),
         el("td", {}, el("span", { class: "pill", style: "white-space:nowrap;color:" + css(stCol[r.status] || "--muted") }, r.status)),
         el("td", { style: "text-align:right;white-space:nowrap" }, px(K.price)),
         el("td", {}, el("div", { style: "display:flex;gap:6px;align-items:center" }, spark(r.c.spark), el("span", { class: cls(K.vs_btc_90d), style: "white-space:nowrap", title: "against BTC over 90 days" }, pct(K.vs_btc_90d, 0)))),
@@ -244,6 +256,9 @@ function candidatesTable(k, rot, px, jump) {
         el("div", { style: "position:sticky;left:0;max-width:min(900px, 86vw);padding:8px 10px" },
         N.narrative ? el("div", {}, el("b", {}, "Why it fits: "), N.narrative) : null, N.standout ? el("div", { style: "margin-top:3px" }, el("b", {}, "What stands out: "), N.standout) : null,
         N.thesis ? el("div", { style: "margin-top:3px" }, el("b", {}, "Thesis: "), N.thesis) : null,
+        r.c.classification ? el("div", { style: "margin-top:3px" }, el("b", {}, "How classifiers file it: "), r.c.classification.classifiers + (r.c.classification.note ? " (" + r.c.classification.note + ")" : "") + ". ",
+          ...md(r.c.classification.sources.map(u => "[" + host(u) + "](" + u + ")").join(" · "))) : null,
+        r.c.cg_check ? el("div", { style: "margin-top:3px" }, el("b", {}, "CoinGecko today: "), r.c.cg_check.categories.join(", ") || "–") : null,
         el("div", { style: "margin-top:4px" }, el("button", { class: "pill", style: "cursor:pointer;border:0;font:inherit", onclick: e => { e.stopPropagation(); jump(r.c.ticker); } }, "Open " + r.c.ticker + "'s card and charts ↓"),
           r.ld && r.share < 0.999 ? el("span", { class: "muted", style: "margin-left:8px" }, "To reach " + r.ld.name + "'s market cap (" + usdBig(r.ld.market_cap) + "): ×" + (r.toLeader >= 100 ? num(r.toLeader, 0) : r.toLeader.toFixed(1)) + ".") : null))))];
     }));
@@ -257,10 +272,10 @@ function candidatesTable(k, rot, px, jump) {
     oninput: e => { q = e.target.value.trim().toLowerCase(); draw(); } });
   const csv = el("button", { class: "pill", style: "cursor:pointer;border:0;font:inherit", onclick: () => {
     const hd = ["ticker", "name", "sector", "status", "price", "vs_btc_90d", "market_cap", "sector_leader", "leader_market_cap", "share_of_leader", "rsi_vs_btc",
-      "bear_2027", "base_2027", "bull_2027", "bear_2028", "base_2028", "bull_2028", "base_2028_mcap", "thesis"];
+      "bear_2027", "base_2027", "bull_2027", "bear_2028", "base_2028", "bull_2028", "base_2028_mcap", "doc_sector_is", "classifiers", "thesis"];
     const esc = v => v == null ? "" : /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
     const lines = [hd.join(",")].concat(rows.map(r => [r.c.ticker, r.c.name, r.sector, r.status, r.price, r.K.vs_btc_90d, r.mcap, r.ld && r.ld.symbol, r.ld && r.ld.market_cap, r.share, r.K.rsi_vs_btc,
-      r.K.bear_2027, r.K.base_2027, r.K.bull_2027, r.K.bear_2028, r.K.base_2028, r.K.bull_2028, r.K.mcap_base_2028, (r.c.notes || {}).thesis].map(esc).join(",")));
+      r.K.bear_2027, r.K.base_2027, r.K.bull_2027, r.K.bear_2028, r.K.base_2028, r.K.bull_2028, r.K.mcap_base_2028, (r.c.classification || {}).doc_sector, (r.c.classification || {}).classifiers, (r.c.notes || {}).thesis].map(esc).join(",")));
     const a = el("a", { href: URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" })), download: "btc-cycles-candidates-" + (k.as_of || "") + ".csv" });
     document.body.append(a); a.click(); a.remove();
   } }, "Download CSV");
@@ -269,6 +284,7 @@ function candidatesTable(k, rot, px, jump) {
   return card("All candidates at a glance",
     el("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px" }, search, count, csv),
     filt, el("div", { class: "scroll", style: "max-height:72vh;overflow:auto;margin-top:8px" }, el("table", {}, el("thead", {}, head), tbody)),
+    note("Classifiers: ✓ primary = CoinGecko, CoinMarketCap and Messari file the coin under the doc's sector first; secondary = a common second label (e.g. Chainlink is an oracle first, RWA infrastructure second); ⚠ = none of the coin's live CoinGecko categories matches the sector. Hover for the details, click the row for sources."),
     note("Click a column to sort, a row for the thesis. Price cases are the projection (BTC scenario × beta × unlock dilution × valuation; see a coin's chart for the method); " +
       "the status is its sector's (Sectors tab). \"vs sector leader\" = the coin's market cap ÷ the largest in its sector, the bar on a square-root scale so small caps stay visible. " +
       "Sector leaders: " + (lead || "–") + " (* not a candidate)."));

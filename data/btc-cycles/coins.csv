@@ -30,3 +30,4 @@ rank,sector,ticker,name,coingecko_id,cmc_slug,defillama_slug,note,llama_chain
 8,BTC-fi / Bitcoin L2s,STX,Stacks,blockstack,stacks,,,
 7,Privacy / ZK,DASH,Dash,dash,dash,,,
 8,BTC-fi / Bitcoin L2s,BABY,Babylon,babylon,babylon,babylon,verify id,
+6,High-throughput L1s / app-chains,NEAR,NEAR Protocol,near,near-protocol,,not in the doc's list,Near

@@ -1,0 +1,256 @@
+{
+ "about": "How the public classifiers (CoinGecko categories, CoinMarketCap tags, Messari sectors) file each candidate, and whether the doc's sector is the coin's primary classification or a common secondary one. From search snapshots of those pages on 27 Oct 2026; tags change, and the live CoinGecko check on each coin is the up-to-date version. None of the doc's sectors is outside what the classifiers use.",
+ "as_of": "2026-10-27",
+ "coins": {
+  "HYPE": {
+   "classifiers": "Perp DEX (DeFi); CoinGecko also L1",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/hyperliquid",
+    "https://coinmarketcap.com/currencies/hyperliquid/"
+   ]
+  },
+  "ASTER": {
+   "classifiers": "Perp DEX (DeFi)",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/aster-2",
+    "https://coinmarketcap.com/currencies/aster/"
+   ]
+  },
+  "LIT": {
+   "classifiers": "Perp DEX (DeFi)",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/lighter",
+    "https://coinmarketcap.com/currencies/lighter/"
+   ]
+  },
+  "JUP": {
+   "classifiers": "DEX aggregator, perps (DeFi)",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/jupiter",
+    "https://coinmarketcap.com/currencies/jupiter-ag/"
+   ]
+  },
+  "AAVE": {
+   "classifiers": "Lending (DeFi)",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/aave",
+    "https://coinmarketcap.com/currencies/aave/"
+   ]
+  },
+  "PENDLE": {
+   "classifiers": "Yield tokenization (DeFi); CMC also tags RWA",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/pendle",
+    "https://coinmarketcap.com/currencies/pendle/"
+   ]
+  },
+  "ENA": {
+   "classifiers": "DeFi, stablecoin issuer (Messari: decentralized issuer)",
+   "doc_sector": "secondary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/ethena",
+    "https://coinmarketcap.com/currencies/ethena/",
+    "https://messari.io/project/ethena"
+   ],
+   "note": "stablecoin issuer fits; no classifier calls it payments"
+  },
+  "XPL": {
+   "classifiers": "L1 built for stablecoins (CoinGecko: L1, Neobank; CMC: stablecoin protocol)",
+   "doc_sector": "secondary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/plasma",
+    "https://coinmarketcap.com/view/stablecoin-protocol/"
+   ]
+  },
+  "TRX": {
+   "classifiers": "L1 (CoinGecko); payments (CMC lists it in both)",
+   "doc_sector": "secondary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/tron",
+    "https://coinmarketcap.com/currencies/tron/",
+    "https://coinmarketcap.com/view/payments/"
+   ]
+  },
+  "SKY": {
+   "classifiers": "DeFi, stablecoin issuer governance; CMC also tags RWA",
+   "doc_sector": "secondary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/sky",
+    "https://coinmarketcap.com/currencies/sky/"
+   ],
+   "note": "stablecoin issuer fits; no classifier calls it payments"
+  },
+  "ONDO": {
+   "classifiers": "RWA",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/ondo",
+    "https://coinmarketcap.com/currencies/ondo-finance/"
+   ]
+  },
+  "LINK": {
+   "classifiers": "Oracle / infrastructure; in CoinGecko's RWA and RWA Protocol categories and CMC's RWA tag as a secondary label",
+   "doc_sector": "secondary",
+   "sources": [
+    "https://www.coingecko.com/en/categories/oracle",
+    "https://www.coingecko.com/en/categories/rwa-protocol",
+    "https://coinmarketcap.com/currencies/chainlink/",
+    "https://messari.io/project/chainlink"
+   ],
+   "note": "RWA infrastructure, not a tokenized asset"
+  },
+  "SYRUP": {
+   "classifiers": "Lending, RWA / private credit",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/maple-finance",
+    "https://coinmarketcap.com/currencies/maple-finance/"
+   ]
+  },
+  "PLUME": {
+   "classifiers": "RWA chain (L1, RWA Protocol)",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/plume"
+   ]
+  },
+  "CFG": {
+   "classifiers": "RWA",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/centrifuge",
+    "https://coinmarketcap.com/currencies/centrifuge/"
+   ]
+  },
+  "TAO": {
+   "classifiers": "AI (also DePIN, L1)",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/bittensor",
+    "https://coinmarketcap.com/currencies/bittensor/"
+   ]
+  },
+  "VIRTUAL": {
+   "classifiers": "AI agents",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/virtual-protocol"
+   ]
+  },
+  "RENDER": {
+   "classifiers": "AI, DePIN (GPU rendering)",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/render",
+    "https://coinmarketcap.com/currencies/render/"
+   ]
+  },
+  "AKT": {
+   "classifiers": "AI, DePIN (compute)",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/akash-network",
+    "https://coinmarketcap.com/currencies/akash-network/"
+   ]
+  },
+  "GRASS": {
+   "classifiers": "AI, DePIN (data)",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/grass",
+    "https://coinmarketcap.com/currencies/grass/"
+   ]
+  },
+  "IO": {
+   "classifiers": "AI, DePIN (GPU compute)",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/io-net",
+    "https://coinmarketcap.com/currencies/io-net/"
+   ]
+  },
+  "NEAR": {
+   "classifiers": "L1 first (Messari: Networks / Layer-1); AI second (CoinGecko's AI category)",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/near",
+    "https://messari.io/project/near-protocol"
+   ]
+  },
+  "SOL": {
+   "classifiers": "L1",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/solana"
+   ]
+  },
+  "SUI": {
+   "classifiers": "L1",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/sui"
+   ]
+  },
+  "TON": {
+   "classifiers": "L1 (CMC now lists it as Gram, previously Toncoin)",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/toncoin",
+    "https://coinmarketcap.com/currencies/gram/"
+   ]
+  },
+  "ZEC": {
+   "classifiers": "Privacy",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/categories/privacy-coins",
+    "https://coinmarketcap.com/view/privacy/"
+   ]
+  },
+  "XMR": {
+   "classifiers": "Privacy",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/categories/privacy-coins",
+    "https://coinmarketcap.com/view/privacy/"
+   ]
+  },
+  "DASH": {
+   "classifiers": "Privacy (CMC); CoinGecko describes a shift to payments",
+   "doc_sector": "secondary",
+   "sources": [
+    "https://coinmarketcap.com/view/privacy/",
+    "https://www.coingecko.com/learn/3-most-popular-privacy-coins-and-the-tech-behind-them"
+   ]
+  },
+  "CORE": {
+   "classifiers": "L1 / Bitcoin sidechain (CoinGecko); BTCfi (CMC, unconfirmed)",
+   "doc_sector": "secondary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/core",
+    "https://coinmarketcap.com/currencies/core-dao/"
+   ]
+  },
+  "STX": {
+   "classifiers": "Bitcoin L2 / sidechain",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/stacks",
+    "https://coinmarketcap.com/currencies/stacks/"
+   ]
+  },
+  "BABY": {
+   "classifiers": "BTCfi, Bitcoin staking",
+   "doc_sector": "primary",
+   "sources": [
+    "https://www.coingecko.com/en/coins/babylon"
+   ]
+  }
+ }
+}

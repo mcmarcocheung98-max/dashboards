@@ -151,6 +151,11 @@
    "narrative": "Babylon lets bitcoin be staked to secure other chains, the doc's rank-8 BTC-fi idea of making the largest asset productive.",
    "standout": "Named by the doc as a rank-8 play; the doc's case is that ETF-era holders want yield on BTC.",
    "thesis": "Projection is beta-scaled. The doc's caveat: 2024's BTC-layer tokens all failed to hold, and value tends to accrue to BTC, not the layer."
+  },
+  "NEAR": {
+   "narrative": "NEAR is a sharded proof-of-stake L1 that markets itself as the chain for AI agents; classifiers file it as an L1 first and AI second, so it sits with the doc's rank-6 high-throughput L1s.",
+   "standout": "Not in the research doc's candidate table (added on request); the doc's case for the sector is its own: L1 narrative +80% in 2025, and L1s led every mid-cycle recovery.",
+   "thesis": "Projection is BTC beta with NEAR's own fees, TVL and unlocks; no doc figures. Breaks if the AI-chain positioning does not turn into fees, or activity stays on the larger L1s."
   }
  }
 }

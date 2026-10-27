@@ -518,7 +518,7 @@ def test_btc_cycles_coins(snapdir, monkeypatch):
     assert {v for k, v in C.fill_coins().items() if ":" not in k} == {"ok"}          # prices; ":fundamentals" entries are optional parts
     k = C._coins_now()
     B.json_safe(k)
-    assert len(k["coins"]) == len(C.coins_list()) == 30 and all("kpi" in c for c in k["coins"]) and k["btc_now"] > 0
+    assert len(k["coins"]) == len(C.coins_list()) == 31 and all("kpi" in c for c in k["coins"]) and k["btc_now"] > 0
     hype = next(c for c in k["coins"] if c["ticker"] == "HYPE")
     assert hype["links"]["coinmarketcap"].endswith("/hyperliquid/") and hype["links"]["defillama"].endswith("/hyperliquid") and len(hype["spark"]) == 90
     assert abs(hype["kpi"]["beta"] - 2.0) < 0.05 and 0 <= hype["kpi"]["rsi"] <= 100 and 0 <= hype["kpi"]["rsi_vs_btc"] <= 100
@@ -546,7 +546,7 @@ def test_btc_cycles_coins(snapdir, monkeypatch):
     assert res["ZEC"].startswith("RuntimeError") and res["SOL"] == "ok"
     k2 = C._coins_now()
     zec = next(c for c in k2["coins"] if c["ticker"] == "ZEC")
-    assert zec["error"].startswith("loading") and sum("kpi" in c for c in k2["coins"]) == 29
+    assert zec["error"].startswith("loading") and sum("kpi" in c for c in k2["coins"]) == 30
 
 
 def test_btc_cycles_rsi_and_beta_edges():
@@ -1214,3 +1214,11 @@ def test_btc_sector_check_against_coingecko():
     assert ok["ok"] and ok["matched"] == ["Real World Assets (RWA)"] and "Ethereum Ecosystem" not in ok["categories"]
     assert C.sector_check(3, ["Oracle", "Infrastructure"])["ok"] is False
     assert C.sector_check(6, ["Layer 1 (L1)", "Smart Contract Platform"])["ok"]
+
+
+def test_btc_classification_covers_every_coin():
+    import json as _json
+    from app.topics import btc_cycles as C
+    cl = C.classification()
+    assert {c["ticker"] for c in C.coins_list()} <= set(cl) and all(v["doc_sector"] in ("primary", "secondary") and v["sources"] for v in cl.values())
+    assert cl["LINK"]["doc_sector"] == "secondary" and "NEAR" in _json.loads(C.SECTOR_STATUS.read_text())["sectors"][5]["reps"]
