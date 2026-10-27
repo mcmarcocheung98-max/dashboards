@@ -94,15 +94,15 @@ const VIEWS = {
   async ratio() {
     const d = await api("ratio"), c = d[cc];
     if (!c) return [card(null, seg(render)), card("AI vs the professions", el("div", { class: "err" }, "Not available right now (" + (d[cc + "_error"] || "no data") + ")."), stale(d))];
-    const aiPts = wide ? c.ai_wide_index : c.ai_index, rPts = wide ? c.ai_wide_over_professions : c.ai_over_professions, aiName = wide ? "Software + data + IT systems" : "Software + data";
+    const aiPts = wide ? c.ai_wide_index : c.ai_index, rPts = wide ? c.ai_wide_over_professions : c.ai_over_professions, aiName = wide ? "Software + data + IT systems + R&D" : "Software + data";
     const head = card(null, seg(render), followOr([{ label: aiName + " postings", points: aiPts, fmt: i1, delta: { lag: "1y" } },
       { label: "Law & finance postings", points: c.professions_index, fmt: i1, delta: { lag: "1y" } },
       { label: "Ratio", points: rPts, fmt: v => v.toFixed(2) + "×", delta: { lag: "1y" } },
       { label: "Postings mentioning AI", points: c.ai_share, fmt: sh, delta: ppY }], { latest: "Postings indexes, 1 Feb 2020 = 100" }), asOf(d), stale(d));
-    const tog = el("div", { class: "seg" }, ...[[false, "Software + data"], [true, "+ IT systems & solutions"]].map(([k, l]) => el("button", { class: k === wide ? "on" : "", onclick: () => { wide = k; render(); } }, l)));
+    const tog = el("div", { class: "seg" }, ...[[false, "Software + data"], [true, "+ IT systems & scientific R&D"]].map(([k, l]) => el("button", { class: k === wide ? "on" : "", onclick: () => { wide = k; render(); } }, l)));
     const both = card("AI-related postings vs law & finance postings (1 Feb 2020 = 100)", tog,
       ...linesChart([{ name: aiName + " (AI roles)", points: aiPts }, { name: "Legal + finance + accounting + insurance", points: c.professions_index, color: css("--s2") }], i1),
-      note("Averages of the sector indexes on the Openings tab. The toggle widens the AI group to Indeed's IT Systems & Solutions sector."));
+      note("Averages of the sector indexes on the Openings tab. The toggle widens the AI group to Indeed's IT Systems & Solutions and Scientific Research & Development sectors."));
     const ratio = card("The ratio: AI-role postings per profession posting (relative to Feb 2020)", ...linesChart([{ name: aiName + " ÷ professions", points: rPts, color: css("--s4") }], v => v == null ? "–" : v.toFixed(2) + "×", { small: true }),
       note("Above 1 means software and data hiring has held up better than the professions since Feb 2020; below 1 the opposite."));
     const share = card("AI mentions as a share of all postings", ...linesChart([{ name: "AI share", points: c.ai_share, color: css("--s3") }], sh, { small: true }),
