@@ -108,6 +108,20 @@ def mock_discovered() -> None:
             tm.smoke_patch()
 
 
+def ask_check(pg, first: dict | None) -> dict:
+    """The Ask Claude panel (or, on a narrow screen, its pill) is fixed at the top right and stays put across tabs and scrolling."""
+    box = pg.evaluate("""() => { const a = document.getElementById('ask'), p = document.getElementById('askpill');
+      const v = a && !a.hidden ? a : p; if (!v) return null; const r = v.getBoundingClientRect();
+      return { id: v.id, fixed: getComputedStyle(v).position === 'fixed', top: Math.round(r.top), right: Math.round(innerWidth - r.right) }; }""")
+    if not box:
+        return {"ok": False, "why": "no panel"}
+    pg.mouse.wheel(0, 600); time.sleep(0.2)
+    after = pg.evaluate("() => { const v = document.getElementById('" + box["id"] + "'); return Math.round(v.getBoundingClientRect().top); }")
+    pg.mouse.wheel(0, -600)
+    ok = box["fixed"] and after == box["top"] and box["right"] < 40 and (first is None or (first["id"], first["top"]) == (box["id"], box["top"]))
+    return {"ok": ok, **box}
+
+
 def follow_check(pg) -> dict | None:
     """On a tab whose top card follows the timeline (data-follow-head): hover the first chart, the head must show a date; click keeps
     it after the mouse leaves; 'Back to latest' returns. None when the tab has no such head or no chart under it."""
@@ -166,6 +180,7 @@ def main() -> int:
             pg.goto(base + "/"); pg.wait_for_selector("a.tile", timeout=30000)
             for slug in slugs:
                 pg.goto(f"{base}/{slug}"); pg.wait_for_selector("nav button", timeout=30000)
+                ask_first = None
                 for i in range(pg.locator("nav button").count()):
                     pg.locator("nav button").nth(i).click()
                     pg.wait_for_function("document.getElementById('stamp').textContent.startsWith('Updated')", timeout=180000)
@@ -174,10 +189,12 @@ def main() -> int:
                     text = pg.locator("#view").inner_text()
                     sync = pg.evaluate(SYNC_CHECK) if theme == "light" else {"n": "-", "ok": None}
                     follow = follow_check(pg) if theme == "light" else None
+                    askp = ask_check(pg, ask_first)
+                    ask_first = ask_first or askp
                     line = (f"{theme:5} {slug:12} {key:11} cards={pg.locator('#view .card').count():3} charts={pg.locator('#view .chart').count():3} "
-                            f"unavailable={text.count('not available'):2} could-not-load={'Could not load' in text} sync={sync}" + (f" follow={follow}" if follow else ""))
+                            f"unavailable={text.count('not available'):2} could-not-load={'Could not load' in text} sync={sync}" + (f" follow={follow}" if follow else "") + ("" if askp["ok"] else f" ask={askp}"))
                     print(line, flush=True)
-                    if "Could not load" in text or sync.get("ok") is False or (follow and follow.get("ok") is False):
+                    if "Could not load" in text or sync.get("ok") is False or (follow and follow.get("ok") is False) or not askp["ok"]:
                         bad.append(line)
                     if theme == "light":
                         pg.screenshot(path=str(out / f"{slug}-{key}.png"), full_page=True)

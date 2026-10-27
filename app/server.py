@@ -8,6 +8,8 @@ GET /api/<slug>/meta  title, tabs, sources
 GET /api/<slug>/changes  what changed since yesterday (topics/_daily.py): flipped readings and each tab's lean day by day
 GET /api/<slug>/<n>   that dashboard's data (JSON); 404 unknown, 503 when the source is down and no snapshot exists
 GET /healthz          'ok'
+POST /api/ask         Ask Claude about the tab you are on (app/ask.py): {slug, tab, question, history?, date?}; limited per visitor and per day
+GET /api/ask/status   whether Ask Claude is set up and how many questions this visitor has left
 GET /api/archive.zip  every dashboard's data, daily snapshots and hand-entered files in one zip (app/archive.py), built at most every 6 hours
 GET /api/probe        tries a fixed list of the sources from this server (status, size, start of body), cached 10 minutes
 GET /api/health       every data source used since start, per dashboard: fresh / stale (serving a snapshot) / failing, with alerts
@@ -61,6 +63,8 @@ def make_app() -> web.Application:
     async def api_health(request):
         from . import archive
         h = topics.health()
+        from . import ask
+        h["ask"] = ask.health()
         try:
             h["archive"] = await asyncio.to_thread(archive.health)
         except Exception as e:
@@ -98,6 +102,39 @@ def make_app() -> web.Application:
         return web.Response(body=data, content_type="application/zip",
                             headers={**HEADERS, "Content-Disposition": "attachment; filename=dashboards-archive.zip"})
 
+    def client_ip(request) -> str:
+        fwd = request.headers.get("X-Forwarded-For", "")
+        return fwd.split(",")[0].strip() or (request.remote or "")
+
+    async def api_ask(request):
+        from . import ask
+        try:
+            body = await request.json()
+            if not isinstance(body, dict):
+                raise ValueError
+        except Exception:
+            return _json({"error": "bad request"}, 400)
+        try:
+            data = await asyncio.to_thread(ask.ask, str(body.get("slug") or ""), str(body.get("tab") or "")[:40], str(body.get("question") or ""),
+                                           body.get("history") if isinstance(body.get("history"), list) else None,
+                                           str(body.get("date") or "")[:20] or None, client_ip(request))
+        except ValueError as e:
+            return _json({"error": str(e)}, 400)
+        except KeyError:
+            return _json({"error": "unknown dashboard"}, 404)
+        except ask.Limit as e:
+            return _json({"error": str(e), "limit": True}, 429)
+        except ask.NotSetUp as e:
+            return _json({"error": str(e)}, 503)
+        except Exception as e:
+            log.warning("ask failed (%s)", type(e).__name__)
+            return _json({"error": "Claude could not answer right now; please try again in a minute."}, 502)
+        return _json(data)
+
+    async def api_ask_status(request):
+        from . import ask
+        return _json(await asyncio.to_thread(ask.status, client_ip(request)))
+
     async def healthz(request):
         return web.Response(text="ok")
 
@@ -108,6 +145,8 @@ def make_app() -> web.Application:
     app.router.add_get("/api/health", api_health)
     app.router.add_get("/api/probe", api_probe)
     app.router.add_get("/api/archive.zip", api_archive)
+    app.router.add_get("/api/ask/status", api_ask_status)
+    app.router.add_post("/api/ask", api_ask)
     app.router.add_get("/api/{slug}/{name}", api)
     app.router.add_get("/{slug}", page)
     return app

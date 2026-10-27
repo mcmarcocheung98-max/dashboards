@@ -75,6 +75,29 @@
   .tl { display: grid; grid-template-columns: 90px 1fr; gap: 6px 12px; font-size: 13px; }
   .tl .d { color: var(--muted); font-variant-numeric: tabular-nums; }
   .tl a { color: var(--ink); text-decoration: none; border-bottom: 1px dotted var(--line); }
+  /* Ask Claude: fixed at the top right on every tab (the page makes room for it on wide screens); a pill that opens it on narrow ones */
+  #ask { position: fixed; top: 12px; right: 12px; width: 340px; max-height: calc(100vh - 24px); z-index: 50; display: flex; flex-direction: column;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.12); font-size: 13px; }
+  #ask .ah { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  #ask .ah b { font-size: 13.5px; } #ask .ah .t { color: var(--muted); font-size: 12px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #ask .ah button { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; font-size: 16px; padding: 0 4px; }
+  #ask .msgs { overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 60px; }
+  #ask .m { padding: 8px 10px; border-radius: 10px; line-height: 1.45; }
+  #ask .m.q { background: var(--chip); align-self: flex-end; max-width: 90%; }
+  #ask .m.a { border: 1px solid var(--line); }
+  #ask .m.a p { margin: 0 0 6px; } #ask .m.a p:last-child { margin: 0; } #ask .m.a ul { margin: 0 0 6px; padding-left: 18px; }
+  #ask .m.err { color: var(--down); border: 1px dashed var(--line); }
+  #ask .sugg { display: flex; flex-wrap: wrap; gap: 6px; }
+  #ask .sugg button { border: 1px solid var(--line); background: var(--surface); color: var(--ink2); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer; text-align: left; }
+  #ask form { display: flex; gap: 6px; padding: 8px 12px 4px; border-top: 1px solid var(--line); }
+  #ask textarea { flex: 1; resize: none; height: 54px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: inherit; background: var(--bg); color: var(--ink); }
+  #ask form button { border: 0; background: var(--accent); color: #fff; border-radius: 8px; padding: 0 12px; font: inherit; cursor: pointer; }
+  #ask form button:disabled { opacity: .5; cursor: default; }
+  #ask .foot { color: var(--muted); font-size: 11.5px; padding: 0 12px 10px; }
+  #askpill { position: fixed; top: 10px; right: 12px; z-index: 50; border: 0; background: var(--accent); color: #fff; border-radius: 999px; padding: 7px 14px;
+    font: inherit; font-size: 13px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.15); }
+  @media (min-width: 1180px) { body.askopen { padding-right: 364px; } }
+  @media (max-width: 1179px) { #ask { top: auto; bottom: 12px; left: 12px; width: auto; max-width: 480px; margin-left: auto; max-height: 62vh; } }
 </style>
 </head>
 <body>
@@ -469,6 +492,97 @@ function changesCard(tab, first) {
   });
 }
 
+// ---- Ask Claude (app/ask.py): one panel for the whole page, created once, so it stays put while you scroll and switch tabs. It knows the
+// tab you are on and the date kept on the top card. The conversation is kept for this dashboard in this browser tab (sessionStorage).
+const ASK = { box: null, pill: null, msgs: null, title: null, input: null, send: null, foot: null, hist: [], busy: false };
+const askStore = { get(k, d) { try { const v = sessionStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+const wide = () => window.matchMedia("(min-width: 1180px)").matches;
+function askText(t) {                                    // light formatting from text nodes only: paragraphs, "- " bullets, **bold**
+  const box = el("div");
+  for (const block of String(t).split(/\n{2,}/)) {
+    const lines = block.split("\n");
+    const inline = line => line.split(/(\*\*[^*]+\*\*)/).map(x => x.startsWith("**") && x.endsWith("**") && x.length > 4 ? el("b", {}, x.slice(2, -2)) : x);
+    if (lines.every(l => /^\s*[-•*]\s+/.test(l))) box.append(el("ul", {}, ...lines.map(l => el("li", {}, ...inline(l.replace(/^\s*[-•*]\s+/, ""))))));
+    else box.append(el("p", {}, ...lines.flatMap((l, i) => [i ? el("br") : null, ...inline(l)])));
+  }
+  return box;
+}
+function askMsg(kind, text) {
+  const m = el("div", { class: "m " + kind }, kind === "a" ? askText(text) : text);
+  ASK.msgs.append(m); ASK.msgs.scrollTop = ASK.msgs.scrollHeight; return m;
+}
+function askKeptDate() {
+  const s = document.querySelector("#view [data-follow-head] span.muted");
+  return s && s.textContent.startsWith("Kept: ") ? s.textContent.slice(6).trim() : null;
+}
+function askSuggest() {
+  const lab = (TABS.find(t => t[0] === current) || [current, current])[1];
+  const qs = ["What does the " + lab + " tab show right now?", "What changed here recently, and why does it matter?", "What would signal that this trend is turning?"];
+  return el("div", { class: "sugg" }, ...qs.map(q => el("button", { onclick: () => askSend(q) }, q)));
+}
+function askTab() {                                      // called on every tab change: the panel stays, only its subject changes
+  if (!ASK.box) return;
+  const lab = (TABS.find(t => t[0] === current) || [current, current])[1];
+  ASK.title.textContent = "about " + lab;
+  const old = ASK.msgs.querySelector(".sugg"); if (old) old.remove();
+  if (!ASK.hist.length) ASK.msgs.append(askSuggest());
+}
+function askQuota(st) {
+  if (!st) return;
+  if (st.set_up === false) { ASK.foot.textContent = "Ask Claude is not set up yet."; ASK.send.disabled = true; return; }
+  const l = st.left || {};
+  ASK.foot.textContent = l.site_paused ? "Paused until tomorrow: the site's daily limit is used up." :
+    (l.hour != null ? l.hour + " question" + (l.hour === 1 ? "" : "s") + " left this hour · " : "") + "answers use this page's data; not advice.";
+}
+async function askSend(q) {
+  q = (q || ASK.input.value).trim();
+  if (!q || ASK.busy) return;
+  ASK.busy = true; ASK.send.disabled = true; ASK.input.value = "";
+  const s = ASK.msgs.querySelector(".sugg"); if (s) s.remove();
+  const date = askKeptDate();
+  askMsg("q", q + (date ? "  (" + date + ")" : ""));
+  const wait = askMsg("a", "Thinking…");
+  try {
+    const r = await fetch("/api/ask", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ slug: SLUG, tab: current, question: q, date, history: ASK.hist.slice(-3) }) });
+    const j = await r.json().catch(() => ({ error: "bad response" }));
+    wait.remove();
+    if (!r.ok) { askMsg("err", j.error || r.statusText); }
+    else { askMsg("a", j.answer); ASK.hist.push({ q, a: j.answer, tab: current }); ASK.hist = ASK.hist.slice(-12); askStore.set("ask:" + SLUG, ASK.hist); askQuota({ left: j.left }); }
+  } catch (e) { wait.remove(); askMsg("err", "Could not reach Claude: " + e.message); }
+  ASK.busy = false; ASK.send.disabled = false; ASK.input.focus();
+}
+function askOpen(open) {
+  ASK.box.hidden = !open; ASK.pill.hidden = open;
+  document.body.classList.toggle("askopen", open && wide());
+  try { localStorage.setItem("ask:closed", open ? "0" : "1"); } catch (e) {}
+  if (open) ASK.input.focus({ preventScroll: true });
+}
+function askPanel() {
+  ASK.title = el("span", { class: "t" });
+  ASK.msgs = el("div", { class: "msgs" });
+  ASK.input = el("textarea", { placeholder: "Ask about this tab…", maxlength: "1000", "aria-label": "Your question" });
+  ASK.input.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); askSend(); } });
+  ASK.send = el("button", { type: "submit" }, "Ask");
+  ASK.foot = el("div", { class: "foot" }, "Answers use this page's data; not advice.");
+  const form = el("form", {}, ASK.input, ASK.send); form.addEventListener("submit", e => { e.preventDefault(); askSend(); });
+  ASK.box = el("aside", { id: "ask", "aria-label": "Ask Claude" },
+    el("div", { class: "ah" }, el("b", {}, "Ask Claude"), ASK.title, el("button", { title: "Clear the conversation", onclick: () => { ASK.hist = []; askStore.set("ask:" + SLUG, []); ASK.msgs.replaceChildren(); askTab(); } }, "↺"),
+      el("button", { title: "Minimise (Esc)", onclick: () => askOpen(false) }, "–")),
+    ASK.msgs, form, ASK.foot);
+  ASK.pill = el("button", { id: "askpill", onclick: () => askOpen(true) }, "Ask Claude");
+  document.body.append(ASK.box, ASK.pill);
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !ASK.box.hidden) askOpen(false); });
+  window.matchMedia("(min-width: 1180px)").addEventListener("change", () => document.body.classList.toggle("askopen", !ASK.box.hidden && wide()));
+  ASK.hist = askStore.get("ask:" + SLUG, []);
+  for (const h of ASK.hist) { askMsg("q", h.q); askMsg("a", h.a); }
+  let closed = false; try { closed = localStorage.getItem("ask:closed") === "1"; } catch (e) {}
+  askOpen(wide() && !closed);                             // open by default on wide screens, a pill on phones
+  askTab();
+  fetch("/api/ask/status").then(r => r.json()).then(askQuota).catch(() => {});
+}
+
 function tabs() {
   document.getElementById("tabs").replaceChildren(...TABS.map(([k, l]) => el("button", { class: k === current ? "on" : "", onclick: () => { current = k; location.hash = k; tabs(); render(); } }, l)));
 }
@@ -491,6 +605,7 @@ async function render() {
   view.style.opacity = "";
   document.getElementById("stamp").textContent = "Updated " + new Date().toLocaleTimeString();
   rangeBar();
+  askTab();
 }
 function footer() {
   const f = document.getElementById("foot");
@@ -509,6 +624,7 @@ async function boot() {
   await new Promise((ok, bad) => { const s = document.createElement("script"); s.src = "/" + SLUG + ".js"; s.onload = ok; s.onerror = () => bad(new Error("dashboard script failed to load")); document.head.append(s); });
   window.addEventListener("hashchange", () => { const h = location.hash.slice(1); if (TABS.some(t => t[0] === h) && h !== current) { current = h; tabs(); render(); } });
   tabs();
+  askPanel();
   render();
 }
 boot().catch(e => document.getElementById("view").replaceChildren(card(null, el("div", { class: "err" }, "Could not load: " + e.message))));

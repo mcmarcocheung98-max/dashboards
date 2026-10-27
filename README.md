@@ -41,6 +41,11 @@ pytest -m network tests/test_sources.py     # fetches every live source: run by 
 - `/api/health` on the site lists every data source used since the last restart, per dashboard: fresh, stale (serving its last good copy) or failing. The index page shows the counts under each dashboard.
 - Actions → **source-health** runs daily at 07:17 UTC and keeps one issue labelled `source-health` open while any source has served a copy older than 3 days or failed for more than a day with nothing to show; it closes the issue when all are healthy. Set the repository variable `DASHBOARDS_URL` if the domain changes.
 
+## Ask Claude
+
+Every tab has an Ask Claude panel at the top right that answers from the page's own data. Anyone can ask, within per-visitor
+limits and a daily spend cap; it needs `ANTHROPIC_API_KEY` on the Railway service. See [docs/ASK.md](docs/ASK.md).
+
 ## Month-end archive
 
 On the last day of every month the server copies one zip of every dashboard (all data, the daily snapshots, the hand-entered
