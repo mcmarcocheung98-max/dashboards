@@ -1,6 +1,6 @@
 // AI: Jobs & Adoption. Tabs and cards for /ai; data from /api/ai/<openings|headcount|wages|ratio|firms|users|agents|skills>.
 (() => {
-let cc = "US", wide = false;
+let cc = "US", wide = false, lyear = null, lmode = "jobs";
 const AI = ["Software Development", "Data & Analytics"], PRO = ["Legal", "Banking & Finance", "Accounting", "Insurance"];
 const COL = { "Software Development": "--s1", "Data & Analytics": "--s6", "Legal": "--s2", "Banking & Finance": "--s3", "Accounting": "--s4", "Insurance": "--s5" };
 const seg = rerender => el("div", { class: "seg" }, ...[["US", "United States"], ["GB", "United Kingdom"]].map(([k, l]) => el("button", { class: k === cc ? "on" : "", onclick: () => { cc = k; rerender(); } }, l)));
@@ -19,6 +19,40 @@ const table = (cols, rows) => {
     ...rows.map(r => el("tr", {}, ...r.map((v, i) => { const s = String(v ?? ""), m = s.match(/^\[([^\]]+)\]\(([^)]+)\)(.*)$/); return el("td", { class: text[i] ? "wrap" : "" }, ...(m ? [link(m[1], m[2]), m[3]] : [s])); })))));
 };
 const dateOf = s => new Date(s).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+// London heatmap (ONS BRES): boroughs x sectors for one year; shade = employees within each sector's column, or the change in green / red
+function londonHeat(L) {
+  const box = el("div");
+  const yrs = L.years, base = yrs.indexOf(2019);
+  const draw = () => {
+    const yi = lyear == null || !yrs.includes(lyear) ? yrs.length - 1 : yrs.indexOf(lyear);
+    const prev = lmode === "yoy" ? yi - 1 : lmode === "since" ? base : null;
+    const pill = (on, label, fn) => el("button", { class: on ? "on" : "", onclick: fn }, label);
+    const ctl = el("div", { style: "display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px" },
+      el("div", { class: "seg" }, ...yrs.map((y, i) => pill(i === yi, String(y), () => { lyear = y; draw(); }))),
+      el("div", { class: "seg" }, pill(lmode === "jobs", "Employees", () => { lmode = "jobs"; draw(); }),
+        pill(lmode === "yoy", "Change on a year", () => { lmode = "yoy"; draw(); }), ...(base >= 0 ? [pill(lmode === "since", "Change since 2019", () => { lmode = "since"; draw(); })] : [])));
+    const colMax = Object.fromEntries(L.sectors.map(sec => [sec, Math.max(1, ...L.boroughs.map(b => L.values[b][sec][yi] || 0))]));
+    const cell = (b, sec) => {
+      const v = L.values[b][sec][yi], w = prev != null && prev >= 0 ? L.values[b][sec][prev] : null;
+      if (v == null) return el("td", { class: "muted", title: "suppressed or not published" }, "–");
+      if (lmode === "jobs") {
+        const a = Math.round(8 + 72 * Math.sqrt(v / colMax[sec]));
+        return el("td", { style: `background:color-mix(in srgb, var(--s1) ${a}%, transparent)`, title: `${b} · ${sec} · ${yrs[yi]}: ${num(v)} employees` }, big(v));
+      }
+      if (!w) return el("td", { class: "muted" }, "–");
+      const ch = v / w - 1, a = Math.round(Math.min(80, Math.abs(ch) * 320));
+      return el("td", { style: `background:color-mix(in srgb, var(${ch >= 0 ? "--up" : "--down"}) ${a}%, transparent)`,
+        title: `${b} · ${sec}: ${num(w)} in ${yrs[prev]} → ${num(v)} in ${yrs[yi]}` }, (ch > 0 ? "+" : "") + (ch * 100).toFixed(0) + "%");
+    };
+    const grid = el("div", { class: "scroll" }, el("table", { class: "heat" },
+      el("tr", {}, el("th", { style: "position:sticky;left:0;background:var(--surface)" }, "Borough"), ...L.sectors.map(sec => el("th", {}, sec))),
+      ...L.boroughs.map(b => el("tr", {}, el("td", { style: "position:sticky;left:0;background:var(--surface)" }, b), ...L.sectors.map(sec => cell(b, sec))))));
+    const what = lmode === "jobs" ? "Shade: employees, relative to the largest borough in each column." : lmode === "yoy" ? `Change from ${yrs[yi - 1] ?? "–"} to ${yrs[yi]}.` : `Change from 2019 to ${yrs[yi]}.`;
+    box.replaceChildren(ctl, grid, note(what + " ONS Business Register and Employment Survey (open access, via Nomis): employees by workplace, rounded by ONS; '–' where ONS suppresses a figure. Software & IT is SIC 62, information services SIC 63 (incl. data processing), finance support SIC 66 (incl. fund management)."));
+  };
+  draw();
+  return box;
+}
 const VIEWS = {
   async openings() {
     const d = await api("openings"), c = d[cc] || {};
@@ -53,7 +87,9 @@ const VIEWS = {
     const hkc = hk.length ? card("Hong Kong persons engaged (C&SD, thousands)", ...linesChart(hk.map(([k, pts]) => ({ name: k, points: pts })), v => num(v), { sync: false }),
         note("C&SD Quarterly Survey of Employment and Vacancies, table 215-16001: persons engaged at the end of each quarter, civil service excluded. Professional, scientific & technical services include legal and accounting firms."))
       : card("Hong Kong headcount", el("div", { class: "muted" }, "Not available right now (" + (d.HK_error || "no data") + ")."), stale(d));
-    return [...us, ukc, hkc];
+    const lon = d.London && (d.London.boroughs || []).length ? card("London: employees by borough and sector (heatmap)", londonHeat(d.London), stale(d))
+      : card("London: employees by borough and sector", el("div", { class: "muted" }, "Not available right now (" + (d.London_error || "no data") + ")."));
+    return [...us, lon, ukc, hkc];
   },
   async ratio() {
     const d = await api("ratio"), c = d[cc];

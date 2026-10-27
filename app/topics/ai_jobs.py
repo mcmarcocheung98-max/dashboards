@@ -7,6 +7,8 @@ headcount  US payroll employment (BLS via FRED, monthly, thousands): legal servi
            computer systems design. BLS.gov itself blocks automated downloads, so FRED's CSV is used (through curl, see _base._download)
 ratio      the AI share of postings against the professions' postings index, and headcount growth since 2020 side by side
 
+london     employees by London borough and industry, yearly (ONS BRES via Nomis): legal, accounting, financial services, insurance,
+           finance support, software & IT, information services, all jobs; drawn as a heatmap
 hk headcount  C&SD table 215-16001 (quarterly persons engaged by industry section, JSON API): financing & insurance, professional,
            scientific & technical, information & communications
 
@@ -32,6 +34,11 @@ FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}"     # kept for
 BLS = "https://api.bls.gov/publicAPI/v1/timeseries/data/"            # BLS public API v1: no key, 25 queries a day, 10 years per query
 CSD = "https://www.censtatd.gov.hk/api/get.php?id=215-16001&lang=en&full_series=1"   # C&SD web table 215-16001, quarterly, JSON
 HK_INDUSTRIES = {"ind_K": "Financing & insurance", "ind_M": "Professional, scientific & technical", "ind_J": "Information & communications"}
+# ONS Business Register and Employment Survey (open access) via Nomis: employees by London borough and industry, yearly from 2015
+BRES = ("https://www.nomisweb.co.uk/api/v01/dataset/NM_189_1.data.csv?geography=2013265927TYPE424&date=2015-latest&industry={ind}"
+        "&employment_status=1&measure=1&measures=20100&select=date_name,geography_name,geography_code,industry,obs_value")
+LONDON_SECTORS = {142607027: "Legal", 142607028: "Accounting", 146800704: "Financial services", 146800705: "Insurance",
+                  146800706: "Finance support", 146800702: "Software & IT", 146800703: "Information services", 37748736: "All jobs"}
 SECTORS = {"ai": ["Software Development", "Data & Analytics"], "ai_wide": ["IT Systems & Solutions"], "professions": ["Legal", "Banking & Finance", "Accounting", "Insurance"]}
 US_SERIES = {"Legal services": "CES6054110001", "Finance & insurance": "CES5552000001", "Securities & investments": "CES5552300001",
              "Computer systems design": "CES6054150001", "All private": "CES0500000001"}
@@ -41,6 +48,7 @@ SOURCES = [{"name": "Indeed Hiring Lab job postings index", "url": "https://gith
            {"name": "Indeed Hiring Lab AI tracker", "url": "https://github.com/hiring-lab/ai-tracker", "cadence": "monthly"},
            {"name": "US employment and pay by industry (BLS Current Employment Statistics, public API)", "url": "https://www.bls.gov/ces/", "cadence": "monthly"},
            {"name": "Hong Kong persons engaged by industry (C&SD table 215-16001)", "url": "https://www.censtatd.gov.hk/en/web_table.html?id=215-16001", "cadence": "quarterly"},
+           {"name": "London employees by borough and industry (ONS Business Register and Employment Survey, via Nomis)", "url": "https://www.nomisweb.co.uk/datasets/newbrespub", "cadence": "yearly"},
            {"name": "UK workforce jobs (ONS JOBS03, hand-entered)", "url": "https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/workforcejobsbyindustryjobs03", "cadence": "quarterly"}]
 NOTES = "Postings indexes are Indeed's seasonally adjusted counts relative to 1 February 2020 (= 100), 7-day average. 'AI share' counts postings whose text mentions AI terms (machine learning, data science, generative AI...), not only AI engineering jobs. Headcount is payroll employment, thousands."
 TTL = DAY
@@ -86,6 +94,30 @@ def parse_csd_persons(j: dict) -> dict[str, pd.Series]:
     if not out:
         raise ValueError("C&SD 215-16001: no persons-engaged rows for the chosen industries")
     return {n: pd.Series(v, dtype=float).sort_index() for n, v in out.items()}
+
+
+def parse_bres(text: str) -> dict:
+    """Nomis BRES CSV (DATE_NAME, GEOGRAPHY_NAME, GEOGRAPHY_CODE, INDUSTRY, OBS_VALUE) -> {"years", "sectors", "boroughs",
+    "values": {borough: {sector: [employees per year, None where suppressed]}}}. Boroughs are sorted by all jobs in the latest year."""
+    d = pd.read_csv(StringIO(text))
+    d.columns = [c.lower() for c in d.columns]
+    d = d[d["industry"].isin(LONDON_SECTORS)]
+    if d.empty:
+        raise ValueError("BRES: no rows for the London sectors")
+    d["sector"] = d["industry"].map(LONDON_SECTORS)
+    d["year"] = pd.to_numeric(d["date_name"], errors="coerce").astype("Int64")
+    years = sorted(int(y) for y in d["year"].dropna().unique())
+    sectors = [n for n in LONDON_SECTORS.values() if n in set(d["sector"])]
+    piv = d.pivot_table(index=["geography_name", "sector"], columns="year", values="obs_value", aggfunc="first")
+    boroughs = sorted(set(d["geography_name"]))
+    values = {b: {sec: [None if pd.isna(v) else int(v) for v in (piv.loc[(b, sec)].reindex(years) if (b, sec) in piv.index else [None] * len(years))]
+                  for sec in sectors} for b in boroughs}
+    last = lambda b: (values[b].get("All jobs") or [None])[-1] or 0
+    return {"years": years, "sectors": sectors, "boroughs": sorted(boroughs, key=last, reverse=True), "values": values}
+
+
+def london() -> dict:
+    return parse_bres(fetch(BRES.format(ind=",".join(str(k) for k in LONDON_SECTORS)), TTL, min_bytes=2000))
 
 
 # ------------------------------------------------------------------ data
@@ -190,7 +222,7 @@ def _headcount_now() -> dict:
             x = pd.concat([series.get(n, pd.Series(dtype=float)), v])
             series[n] = x[~x.index.duplicated(keep="last")].sort_index()
         return {n: _pts(s[s.index >= "2010-01-01"], 1) for n, s in series.items()}
-    out = payload({"US": us, "UK": uk, "HK": hk}, sources=[BLS, CSD])
+    out = payload({"US": us, "UK": uk, "HK": hk, "London": london}, sources=[BLS, CSD, BRES.format(ind=",".join(str(k) for k in LONDON_SECTORS))])
     try:
         out["as_of"] = (out.get("US") or {}).get("latest", {}).get("Legal services", {}).get("date")
     except Exception:

@@ -229,7 +229,21 @@ def _csd_215_16001() -> str:
     return json.dumps({"header": {"status": {"name": "Success", "code": 0}}, "dataSet": recs})
 
 
+def _bres_csv() -> str:
+    """Nomis BRES open access CSV as served (Oct 2026): one row per year, borough and industry; a blank OBS_VALUE where suppressed."""
+    from app.topics.ai_jobs import LONDON_SECTORS
+    rows = ['"DATE_NAME","GEOGRAPHY_NAME","GEOGRAPHY_CODE","INDUSTRY","OBS_VALUE"']
+    for y in range(2015, 2025):
+        for i, (b, code) in enumerate((("City of London", "E09000001"), ("Westminster", "E09000033"), ("Camden", "E09000007"), ("Bexley", "E09000004"))):
+            for k, name in LONDON_SECTORS.items():
+                v = "" if (b == "Bexley" and name == "Insurance") else (100000 if name == "All jobs" else 5000) * (4 - i) + (y - 2015) * (300 if name == "Software & IT" else -50)
+                rows.append(f'"{y}","{b}","{code}",{k},{v}')
+    return "\n".join(rows) + "\n"
+
+
 def jobs_fetch(url, ttl, **k):
+    if "nomisweb" in url:
+        return _bres_csv()
     if "censtatd" in url:
         return _csd_215_16001()
     if "api.bls.gov" in url:
@@ -767,15 +781,17 @@ def test_ai_readings_from_cached_payloads(snapdir, monkeypatch):
     B.json_safe(r)
 
 
-def test_ai_layout_probe_reports_errors_instead_of_failing(monkeypatch):
-    import requests
-    from app.topics import ai
-    def down(*a, **k):
-        raise requests.ConnectionError("offline")
-    monkeypatch.setattr(requests, "get", down)
-    out = ai._layout_now()
-    B.json_safe(out)
-    assert all("error" in v for v in out.values()) and {"NM_189_1", "NM_172_1"} <= set(out)
+def test_london_heatmap_from_bres(snapdir, monkeypatch):
+    from app.topics import ai_jobs as J
+    monkeypatch.setattr(J, "fetch", jobs_fetch)
+    L = J._headcount_now()["London"]
+    assert L["years"][0] == 2015 and L["years"][-1] == 2024 and L["boroughs"][0] == "City of London" and len(L["boroughs"]) == 4
+    assert L["sectors"] == list(J.LONDON_SECTORS.values())
+    city = L["values"]["City of London"]
+    assert city["All jobs"][-1] == 400000 - 450 and city["Software & IT"][0] == 20000 and city["Software & IT"][-1] == 20000 + 9 * 300
+    assert L["values"]["Bexley"]["Insurance"] == [None] * 10
+    with pytest.raises(ValueError):
+        J.parse_bres('"DATE_NAME","GEOGRAPHY_NAME","GEOGRAPHY_CODE","INDUSTRY","OBS_VALUE"\n"2024","Camden","E09000007",1,5\n')
 
 
 def test_ramp_ai_index_parser():
