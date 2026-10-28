@@ -69,7 +69,9 @@ Every card with graded prices (the basket's cards and the character cards, each 
 | 12-month return | PriceCharting's monthly series per grade |
 | PSA 9 sales per PSA 10 sale, PSA 10 / PSA 9 price | the two above |
 
-**Which grade to trade:** PSA 10 when it sells at least twice a week (8+ a month); PSA 9 when it sells at least twice as often as PSA 10 and at least weekly (4+ a month); otherwise "thin" (neither sells weekly). The tab's answer counts the cards each way and gives the median card's turnover ratio and price ratio. PriceCharting's "Grade 9" is any grader's 9 (mostly PSA), and its volumes are its own estimates from the listings it tracks. Server check (2026-10-28): Base Set Charizard showed Grade 9 at 1 sale a day and PSA 10 at 1 a month. Not investment advice.
+**Which grade to trade:** PSA 10 when it sells at least twice a week (8+ a month); PSA 9 when it sells at least twice as often as PSA 10 and at least weekly (4+ a month); otherwise "thin" (neither sells weekly). The tab's answer counts the cards each way and gives the median card's turnover ratio and price ratio. PriceCharting's "Grade 9" is any grader's 9 (mostly PSA), and its volumes are its own estimates from the listings it tracks. The answer is split by era (release before 2010 = vintage).
+
+First live reading (2026-10-28, 27 cards): **vintage → PSA 9** (PSA 10s of Base Set, Neo and Fossil holos sell about once a month or less; Base Set Charizard Grade 9 about once a day against PSA 10 once a month); **modern → PSA 10** (modern PSA 10s sell as often as PSA 9 or more, e.g. Evolving Skies alt arts about twice as often, with less price noise between sales). Across all cards the median PSA 9 sold 2.2x as often as its PSA 10 at 5.1x less money. Not investment advice.
 
 ## The basket (`basket.csv`)
 

@@ -369,6 +369,7 @@ def test_character_and_psa9_tabs(mocked):
     keys = [r["key"] for r in P["rows"]]
     assert len(keys) == len(set(keys)) and not any(k == "zard-base" for k in keys)       # Base Charizard once (same page as the basket's)
     assert P["summary"]["picks"]["PSA 9"] == len(P["rows"]) and P["answer"].startswith("PSA 9 is the better market") and P["history"]
+    assert set(P["summary"]["eras"]) == {"vintage", "modern"} and "By era: Vintage (before 2010): PSA 9" in P["answer"]
     assert M.ENDPOINTS["prices"]()["units"]
     for name in ("psa9", "pikachu", "charizard", "psyduck"):
         M.ENDPOINTS[name]()

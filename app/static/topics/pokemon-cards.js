@@ -204,6 +204,9 @@ const VIEWS = {
         kpi("Yearly volatility: PSA 9 vs 10", pct(S.p9_volatility, 0).replace("+", "") + " vs " + pct(S.p10_volatility, 0).replace("+", "")),
         kpi("12-month return: PSA 9 vs 10", pct(S.p9_m12, 0) + " vs " + pct(S.p10_m12, 0)),
         kpi("Cards: PSA 9 / PSA 10 / thin", [S.picks && S.picks["PSA 9"], S.picks && S.picks["PSA 10"], S.picks && S.picks.thin].map(f0).join(" / "))),
+      Object.keys(S.eras || {}).length ? table(["Era", "Cards", "PSA 9 / PSA 10 / thin", "Sales per month: PSA 9 vs PSA 10", "PSA 9 sales per PSA 10 sale"],
+        Object.entries(S.eras).map(([k, e]) => el("tr", {}, el("td", {}, k === "vintage" ? "Vintage (before 2010)" : "Modern"), el("td", {}, f0(e.n)),
+          el("td", {}, [e.picks["PSA 9"], e.picks["PSA 10"], e.picks.thin].map(f0).join(" / ")), el("td", {}, perMo(e.p9_per_month) + " vs " + perMo(e.p10_per_month)), el("td", {}, num_x(e.liq_ratio))))) : null,
       note("Liquidity is how fast you can sell near the quoted price. Sales per month is PriceCharting's stated volume per grade (eBay, TCGplayer, Fanatics, Goldin and others). " +
         "Price noise is how far individual sales land from the 90-day median (a stand-in for the bid-ask spread: wider means you give up more to sell now). " +
         "The rule: PSA 10 when it sells at least twice a week; PSA 9 when it sells twice as often as PSA 10 and at least weekly; otherwise thin. " +

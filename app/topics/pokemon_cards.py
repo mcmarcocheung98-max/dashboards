@@ -1096,6 +1096,7 @@ def _psa9_now() -> dict:
         if g9["price"] is None and g10["price"] is None:
             continue
         rows_.append({"key": c["key"], "name": c["name"], "set": c["set"], "url": c["url"], "who": i.get("character") or i["segment"],
+                      "era": "vintage" if str(i.get("date") or "9999") < "2010" else "modern",
                       **{f"{p}_{k}": g.get(k) for p, g in (("raw", gr), ("p9", g9), ("p10", g10))
                          for k in ("price", "per_month", "listed_rate", "noise", "volatility", "m12", "dollar_month", "n_listed")},
                       "p9_last": g9["last"], "p10_last": g10["last"], "verdict": c["verdict"]})
@@ -1106,11 +1107,29 @@ def _psa9_now() -> dict:
                "premium": _r(float(np.median([r["verdict"]["premium"] for r in rows_ if r["verdict"]["premium"]])), 2) if any(r["verdict"]["premium"] for r in rows_) else None,
                "p9_per_month": med("p9_per_month"), "p10_per_month": med("p10_per_month"), "p9_noise": med("p9_noise"), "p10_noise": med("p10_noise"),
                "p9_volatility": med("p9_volatility"), "p10_volatility": med("p10_volatility"), "p9_m12": med("p9_m12"), "p10_m12": med("p10_m12")}
+    eras = {}
+    for era in ("vintage", "modern"):
+        rs = [r for r in rows_ if r["era"] == era]
+        rr = [r["verdict"]["ratio"] for r in rs if r["verdict"]["ratio"]]
+        if rs:
+            eras[era] = {"n": len(rs), "picks": {p: sum(1 for r in rs if r["verdict"]["pick"] == p) for p in ("PSA 9", "PSA 10", "thin")},
+                         "liq_ratio": _r(float(np.median(rr)), 2) if rr else None,
+                         "p9_per_month": _r(float(np.median([r["p9_per_month"] for r in rs if r["p9_per_month"] is not None])), 2) if any(r["p9_per_month"] is not None for r in rs) else None,
+                         "p10_per_month": _r(float(np.median([r["p10_per_month"] for r in rs if r["p10_per_month"] is not None])), 2) if any(r["p10_per_month"] is not None for r in rs) else None}
+    summary["eras"] = eras
     answer = None
     if ratios:
         lead = "PSA 9" if picks["PSA 9"] > picks["PSA 10"] else "PSA 10" if picks["PSA 10"] > picks["PSA 9"] else None
         answer = (f"{lead} is the better market to trade on {picks[lead]} of {len(rows_)} cards" if lead else "Neither grade wins on most cards") + \
                  f": the median card's PSA 9 sells {num_x(summary['liq_ratio'])} as often as its PSA 10, at {num_x(summary['premium'])} less money per copy."
+        parts = []
+        for era, lab in (("vintage", "Vintage (before 2010)"), ("modern", "Modern")):
+            e = eras.get(era)
+            if e and e["liq_ratio"]:
+                best = "PSA 9" if e["picks"]["PSA 9"] > e["picks"]["PSA 10"] else "PSA 10" if e["picks"]["PSA 10"] > e["picks"]["PSA 9"] else "either"
+                parts.append(f"{lab}: {best} ({e['picks'][best] if best != 'either' else e['n']} of {e['n']} cards; PSA 9 sells {num_x(e['liq_ratio'])} as often as PSA 10)")
+        if parts:
+            answer += " By era: " + "; ".join(parts) + "."
     L = daily_log()
     hist = {}
     for fld, lab in (("vol_9", "PSA 9"), ("vol_10", "PSA 10"), ("vol_raw", "Raw")):
