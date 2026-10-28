@@ -105,7 +105,7 @@ How fast businesses and people are taking up AI tools and agents: the Census Bur
 | | By sector | Latest BTOS share per sector (empty until the sector file is filled) |
 | Users | Reported users | One line per product, joining announcements |
 | | Announcements | Every row of `users.csv` with its source |
-| Agents | Launches by year | Count of rows in `agent_milestones.csv` per year |
+| Agents | Launches by year | Count of rows in `agent_milestones.csv` per year; a filter above it (All, or one `kind`: agents, coding agents, protocol, tools…, with counts) narrows the bars and the timeline |
 | | Timeline | Agent products and protocols, newest first, each linked to its announcement |
 | Skills demand | Share of job postings mentioning AI, by country | Indeed AI Tracker, monthly average |
 | | Latest | Share now, a year ago, two years ago, per country |

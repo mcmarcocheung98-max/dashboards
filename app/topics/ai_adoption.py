@@ -227,7 +227,9 @@ def _users_now() -> dict:
 
 def _agents_now() -> dict:
     rows = sorted(manual_rows(SLUG, "agent_milestones"), key=lambda r: r["date"], reverse=True)
-    out = payload({"rows": lambda: rows, "by_year": lambda: pd.Series([r["date"][:4] for r in rows]).value_counts().sort_index().to_dict()})
+    kinds = pd.Series([r.get("kind") or "other" for r in rows]).value_counts()            # most common first, for the page's filter
+    out = payload({"rows": lambda: rows, "by_year": lambda: pd.Series([r["date"][:4] for r in rows]).value_counts().sort_index().to_dict(),
+                   "kinds": lambda: {k: int(v) for k, v in kinds.items()}})
     out["as_of"] = rows[0]["date"] if rows else None
     return out
 

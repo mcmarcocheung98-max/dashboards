@@ -1,6 +1,6 @@
 // AI: Jobs & Adoption. Tabs and cards for /ai; data from /api/ai/<openings|headcount|wages|ratio|firms|users|agents|skills>.
 (() => {
-let cc = "US", wide = false, lyear = null, lmode = "jobs";
+let cc = "US", wide = false, lyear = null, lmode = "jobs", akind = null;
 const AI = ["Software Development", "Data & Analytics"], PRO = ["Legal", "Banking & Finance", "Accounting", "Insurance"];
 const COL = { "Software Development": "--s1", "Data & Analytics": "--s6", "Legal": "--s2", "Banking & Finance": "--s3", "Accounting": "--s4", "Insurance": "--s5" };
 const seg = rerender => el("div", { class: "seg" }, ...[["US", "United States"], ["GB", "United Kingdom"]].map(([k, l]) => el("button", { class: k === cc ? "on" : "", onclick: () => { cc = k; rerender(); } }, l)));
@@ -156,12 +156,20 @@ const VIEWS = {
     return [chart, table];
   },
   async agents() {
-    const d = await api("agents");
-    const years = Object.keys(d.by_year || {});
-    const bars = years.length ? card("Agent launches by year (from the list below)", ...svgBars(years, [{ name: "Launches", values: years.map(y => d.by_year[y]), color: css("--s1") }], { yFmt: v => Math.round(v), h: 160 })) : null;
-    const tl = card("Timeline: agent products and protocols", el("div", { class: "tl" }, ...(d.rows || []).flatMap(r => [el("div", { class: "d" }, dateOf(r.date)),
+    const d = await api("agents"), kinds = Object.keys(d.kinds || {});
+    if (akind && !kinds.includes(akind)) akind = null;
+    const rows = (d.rows || []).filter(r => !akind || (r.kind || "other") === akind);
+    const byYear = {};
+    rows.forEach(r => { const y = r.date.slice(0, 4); byYear[y] = (byYear[y] || 0) + 1; });
+    const years = Object.keys(byYear).sort();
+    // Kind filter: All plus each kind in the CSV (with its count); it narrows both the bars and the timeline
+    const pill = (k, l) => el("button", { class: k === akind ? "on" : "", onclick: () => { akind = k; render(); } }, l);
+    const filt = kinds.length > 1 ? el("div", { class: "seg", style: "flex-wrap:wrap" }, pill(null, `All (${(d.rows || []).length})`), ...kinds.map(k => pill(k, `${k} (${d.kinds[k]})`))) : null;
+    const what = akind ? `"${akind}"` : "Agent";
+    const bars = years.length ? card(`${what} launches by year (from the list below)`, filt, ...svgBars(years, [{ name: "Launches", values: years.map(y => byYear[y]), color: css("--s1") }], { yFmt: v => v % 1 ? "" : String(v), h: 160 })) : null;   // whole launches only on the axis
+    const tl = card("Timeline: agent products and protocols" + (akind ? ` (${akind})` : ""), bars ? null : filt, el("div", { class: "tl" }, ...rows.flatMap(r => [el("div", { class: "d" }, dateOf(r.date)),
       el("div", {}, link(r.event, r.source), " · ", el("span", { class: "muted" }, r.company + (r.kind ? " · " + r.kind : "") + (r.note ? " · " + r.note : "")))])), asOf(d),
-      note("Hand-kept list, one row per launch, in data/ai/agent_milestones.csv."));
+      note("Hand-kept list, one row per launch, in data/ai/agent_milestones.csv; the filter uses its kind column."));
     return [bars, tl];
   },
   async skills() {
