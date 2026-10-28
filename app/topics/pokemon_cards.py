@@ -994,8 +994,17 @@ def _layout_now() -> dict:
         h = {**B.UA, **(TCG_HEADERS if "tcgplayer" in k and "link" not in k else PC_HEADERS if "pricecharting" in k or k in ("yuyutei", "snkrdunk") else {})}
         try:
             r = requests.get(u, headers=h, timeout=30, stream=True, allow_redirects=True)
-            head = r.raw.read(200000, decode_content=True).decode("utf-8", "replace")
+            head = r.raw.read(2000000 if "pricecharting card" in k else 200000, decode_content=True).decode("utf-8", "replace")
             r.close()
+            sold = {}
+            if k == "pricecharting card":       # the sold-listings tables per grade, for a sales-volume parser
+                for m in re.finditer(r'<div[^>]+(?:id|class)="[^"]*completed-auctions-([\w-]+)[^"]*"', head):
+                    seg = head[m.start():m.start() + 60000]
+                    end = seg.find("completed-auctions-", 40)
+                    seg = seg[:end] if end > 0 else seg
+                    sold[m.group(1)] = {"rows": seg.count("<tr"), "head": seg[:700], "first_row": (re.search(r"<tr[^>]*>(?:(?!</tr>).){0,1500}</tr>", seg[300:], re.S) or [""])[0][:1500]}
+                sold["_ids"] = sorted(set(re.findall(r'id="([^"]*(?:auction|sold|sales|volume)[^"]*)"', head)))[:40]
+                sold["_volume_text"] = re.findall(r"[^<>]{0,80}(?:[Vv]olume|sales per)[^<>]{0,120}", head)[:8]
             chart = re.search(r"VGPC\.chart_data\s*=\s*(\{.{0,300})", head, re.S)
             try:
                 j = json.loads(head)
@@ -1007,7 +1016,7 @@ def _layout_now() -> dict:
             yen = re.findall(r"([0-9,]{3,9})\s*円", head)[:10] if k == "yuyutei" else None
             return k, {"status": r.status_code, "final": r.url, "type": r.headers.get("content-type", ""), "bytes_read": len(head), "start": head[:600], **keys,
                        **({"yen": yen, "card_blocks": re.findall(r'<div[^>]+class="[^"]*card-product[^"]*"[^>]*>.{0,600}', head, re.S)[:2]} if k == "yuyutei" else {}),
-                       **({"chart_data": chart.group(1)} if chart else {}), **({"search_first": parse_pc_search(head)} if "search" in k else {})}
+                       **({"chart_data": chart.group(1), "chart_keys": re.findall(r'"(\w+)":\[\[', head[chart.start():chart.start() + 400000])} if chart else {}), **({"sold": sold} if sold else {}), **({"search_first": parse_pc_search(head)} if "search" in k else {})}
         except Exception as e:
             return k, {"error": f"{type(e).__name__}: {str(e)[:160]}"}
     with ThreadPoolExecutor(max_workers=8) as ex:
