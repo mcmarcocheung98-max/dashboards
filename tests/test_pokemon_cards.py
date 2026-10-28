@@ -21,7 +21,7 @@ def _path(t: pd.Timestamp, seg: str, k: int) -> float:
     trend = 1 + 0.08 * (y - 2015)
     bubble = 1.2 * math.exp(-((y - 2021.2) ** 2) / 0.15) + 0.7 * math.exp(-((y - 2026.6) ** 2) / 0.4)
     wiggle = 0.03 * math.sin(k + y * 3)
-    base = {"vintage": 300, "modern": 120, "sealed": 200}[seg] * (1 + 0.15 * k)
+    base = {"vintage": 300, "modern": 120, "sealed": 200}.get(seg, 150) * (1 + 0.15 * k)
     return base * (trend + bubble + wiggle) * (1.1 if seg == "sealed" else 1)
 
 
@@ -35,7 +35,28 @@ def pc_html(item, k=0):
     used = [[int(t.timestamp() * 1000), int(_path(t, item["segment"], k) * 100)] for t in ms]
     psa = [[a, int(v * (4 + 2 * math.exp(-((t.year - 2021) ** 2)))) if item["segment"] != "sealed" else 0] for (a, v), t in zip(used, ms)]
     data = {"used": used, "cib": [[a, 0] for a, _ in used], "graded": [[a, v * 2] for a, v in used], "manualonly": psa}
-    return f"<html><script>VGPC.product = {{id: 1}};\nVGPC.chart_data = {json.dumps(data)};\nVGPC.other = 1;</script></html>"
+    return (f"<html><script>VGPC.product = {{id: 1}};\nVGPC.chart_data = {json.dumps(data)};\nVGPC.other = 1;</script>"
+            + pc_volume_html(("1 sale per week", "2 sales per day", "3 sales per day", f"{1 + k % 3} sales per day", "1 sale per week", "1 sale per month"))
+            + pc_sales_html({"used": (7, 300), "graded": (1, 900 + k), "manual-only": (30, 5000)}) + "</html>")
+
+
+def pc_volume_html(texts):
+    """PriceCharting's live layout (2026-10-28): one td per grade tab under the price table."""
+    tabs = ("used", "cib", "new", "graded", "box-only", "manual-only")
+    cells = "".join(f'<td class="js-show-tab" data-show-tab="completed-auctions-{t}"> <span class="tablet-portrait-hidden">volume:&nbsp;</span> <a href="#">{x}</a> </td>'
+                    for t, x in zip(tabs, texts))
+    return f'<table id="price_data"><tbody><tr class="sales_volume">{cells}</tr></tbody></table>'
+
+
+def pc_sales_html(spec):
+    """Sold-listing tables: {grade tab: (days between sales, price)}, 12 sales each, the newest on TODAY, as on the live page."""
+    out = []
+    for tab, (gap, price) in spec.items():
+        rows = "".join(f'<tr id="ebay-{n}"> <td class="date">{(TODAY - pd.Timedelta(days=gap * n)).date()}</td> <td class="image"></td> <td class="title"> <a href="#"> a card</a> [{"eBay" if n % 3 else "Goldin"}] </td>'
+                       f' <td class="numeric"> <span class="js-price" >${price * (1 + (n % 4 - 1.5) / 50):,.2f}</span> </td> </tr>' for n in range(12))
+        out.append(f'<div class="completed-auctions-{tab}"><table class="hoverable-rows sortable"><thead><tr><th class="date">Sale Date</th></tr></thead><tbody>{rows}</tbody></table></div>')
+    out.append('<div class="completed-auctions-box-only"> <p>No sales data for this card and grade</p> </div>')
+    return "".join(out)
 
 
 def ptcg_json():
@@ -76,11 +97,11 @@ FX_JSON = {"amount": 1.0, "base": "USD", "date": "2026-10-23", "rates": {"EUR": 
 
 def fake_fetch(url, ttl=0, **k):
     if "pricecharting.com/game/" in url:
-        items = M.basket()
+        items = M.all_items()
         n = next((n for n, i in enumerate(items) if url.endswith(i["pricecharting"])), 0)
         return pc_html(items[n], n)
     if "api.tcgdex.net" in url:
-        items = M.basket()
+        items = M.all_items()
         n, item = next((n, i) for n, i in enumerate(items) if url.endswith("/" + (i.get("tcgdex_id") or i.get("ptcg_id") or "\0")))
         return json.dumps(tcgdex_json(item, n))
     if "api.pokemontcg.io" in url:
@@ -118,7 +139,7 @@ def seed_log(days=60):
         for k, i in enumerate(items):
             if i.get("ptcg_id"):
                 rows += [(i["key"], "tcg", 100 + k + (d - TODAY).days * 0.1), (i["key"], "cm_trend", 90 + k + (d - TODAY).days * 0.05),
-                         (i["key"], "listings", 40 + k + (d - TODAY).days * 0.5)]
+                         (i["key"], "listings", 40 + k + (d - TODAY).days * 0.5), (i["key"], "vol_9", 30.0), (i["key"], "vol_10", 1.0 + (d - TODAY).days * 0.01)]
         M.log_today(rows, str(d.date()))
 
 
@@ -174,6 +195,31 @@ def test_ptcg_parser_picks_the_variant():
     assert p["base1-4"]["tcg"] == 400 and p["base1-4"]["tcg_variant"] == "unlimitedHolofoil" and p["base1-4"]["cm_trend"] == 350.5
     assert M.parse_ptcg(j, {"base1-4": "1stEditionHolofoil"})["base1-4"]["tcg"] == 9000
     assert p["x-1"]["tcg"] is None and p["x-1"]["cm_trend"] is None
+
+
+def test_pricecharting_volume_and_sales_parsers():
+    html = pc_html(M.basket()[0], 1)
+    v = M.parse_pc_volume(html)
+    assert v["used"] == pytest.approx(30.44 / 7, rel=1e-3) and v["graded"] == pytest.approx(2 * 30.44) and v["manual-only"] == 1.0
+    sales = M.parse_pc_sales(html)
+    assert set(sales) == {"used", "graded", "manual-only"} and len(sales["graded"]) == 12          # the empty box-only table is left out
+    assert sales["graded"][0] == {"date": str(TODAY.date()), "price": pytest.approx(901 * (1 + (0 - 1.5) / 50), rel=1e-4), "source": "Goldin"}
+    assert sales["used"][1]["source"] == "eBay" and sales["manual-only"][1]["date"] == str((TODAY - pd.Timedelta(days=30)).date())
+    live = ('<tr id="ebay-377585910336"> <td class="date">2026-10-28</td> <td class="image"> <div class="image"></div> </td> <td class="title"> <a target="_blank" '
+            'class="js-ebay-completed-sale" href="https://www.ebay.com/itm/1"> Pokemon TCG Charizard Base Set 4/102</a> [eBay] </td> <td class="numeric"> '
+            '<span class="js-price" >$1,335.00</span> </td> <td class="numeric listed-price">&nbsp;</td> </tr>')
+    assert M.parse_pc_sales('<div class="completed-auctions-graded"><table>' + live + "</table></div>") == {"graded": [{"date": "2026-10-28", "price": 1335.0, "source": "eBay"}]}
+
+
+def test_liquidity_and_verdict():
+    sales = [{"date": str((TODAY - pd.Timedelta(days=d)).date()), "price": 100 + d % 3, "source": "eBay"} for d in range(0, 30, 3)]
+    l = M.liquidity(sales, 30.0, TODAY)
+    assert l["per_month"] == 30 and l["listed_rate"] == pytest.approx(10 / 27 * 30.44, rel=1e-3) and l["noise"] is not None and l["last"]["date"] == str(TODAY.date())
+    v = M.verdict_grade({"per_month": 30}, {"per_month": 1}, 900, 5000)
+    assert v["pick"] == "PSA 9" and v["ratio"] == 30 and v["premium"] == pytest.approx(5.56, abs=0.01) and "30x" in v["why"]
+    assert M.verdict_grade({"per_month": 30}, {"per_month": 10}, 1, 2)["pick"] == "PSA 10"
+    assert M.verdict_grade({"per_month": 2}, {"per_month": 1}, 1, 2)["pick"] == "thin"
+    assert M.verdict_grade({}, {}, None, None)["pick"] is None
 
 
 def test_tcgdex_parser():
@@ -306,6 +352,36 @@ def test_readings_from_cached_payloads(mocked):
     assert len({x["key"] for x in r}) == len(r)
 
 
+def test_character_and_psa9_tabs(mocked):
+    seed_log()
+    M.fill()
+    for who, lab in M.CHARACTERS:
+        d = M.ENDPOINTS[who]()
+        B.json_safe(d)
+        assert d["cards"] and len(d["cards"]) == len(M.characters(who)) and d["index"] and d["kpi"]["m12"] is not None
+        c = d["cards"][0]
+        assert set(c["grades"]) == {"Raw", "PSA 9", "PSA 10"} and c["grades"]["PSA 9"]["per_month"] and c["grades"]["PSA 10"]["last"]
+        assert c["verdict"]["pick"] == "PSA 9"
+        if who != "psyduck" or any(i.get("ptcg_id") for i in M.characters(who)):
+            assert d["units"] and any(x["weekly"] for x in d["cards"])          # price paired with TCGplayer units sold
+    P = M.ENDPOINTS["psa9"]()
+    B.json_safe(P)
+    keys = [r["key"] for r in P["rows"]]
+    assert len(keys) == len(set(keys)) and not any(k == "zard-base" for k in keys)       # Base Charizard once (same page as the basket's)
+    assert P["summary"]["picks"]["PSA 9"] == len(P["rows"]) and P["answer"].startswith("PSA 9 is the better market") and P["history"]
+    assert M.ENDPOINTS["prices"]()["units"]
+    for name in ("psa9", "pikachu", "charizard", "psyduck"):
+        M.ENDPOINTS[name]()
+    r = {x["key"]: x for x in M.READINGS()}
+    assert {"pikachu_3m", "charizard_3m", "psyduck_3m", "psa9_liquidity"} <= set(r) and r["psa9_liquidity"]["lean"] == 0
+
+
+def test_basket_signals_ignore_character_cards(mocked):
+    M.fill()
+    assert set(M.basket_log().get("tcg", pd.DataFrame()).columns) <= {i["key"] for i in M.basket()}
+    assert {"pika-base", "psy-151-ir"} <= set(M.daily_log()["vol_9"].columns)
+
+
 def test_empty_basket_does_not_crash(mocked, monkeypatch):
     monkeypatch.setattr(M, "basket", lambda: [])
     for name in M.ENDPOINTS:
@@ -321,7 +397,9 @@ def test_registered_and_seed_files():
     assert 20 <= len(items) <= 35 and len({i["key"] for i in items}) == len(items)
     assert {i["segment"] for i in items} == {"vintage", "modern", "sealed"}
     assert all(i["msrp"] for i in items if i["segment"] == "sealed") and all(i.get("ptcg_id") for i in items if i["segment"] != "sealed")
-    for name in ("basket", "events", "trends", "pop", "psa", "newset", "japan", "hk"):
+    chars = M.characters()
+    assert {i["character"] for i in chars} == {"pikachu", "charizard", "psyduck"} and len({i["key"] for i in chars + items}) == len(chars) + len(items)
+    for name in ("basket", "characters", "events", "trends", "pop", "psa", "newset", "japan", "hk"):
         for r in M.rows(name):
             pd.Timestamp(r["date"])
             assert r.get("source"), (name, r)

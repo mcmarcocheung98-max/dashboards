@@ -2,7 +2,7 @@
 
 **The question:** is the Pokémon card market overheating or cooling?
 
-Six tabs. Data at `/api/pokemon-cards/<heat|prices|overheat|cooldown|grading|regions>`. `/api/pokemon-cards/basket` lists the basket and the product addresses the server found for each item. `/api/pokemon-cards/layout` (not a tab) shows what the server gets back from every source, PriceCharting, pokemontcg.io, TCGplayer, Cardmarket, Yuyutei, Snkrdunk, eBay, Google Trends, PSA and GemRate included (status, final address, the first 600 characters, and the start of PriceCharting's `chart_data`). Read it with Actions → show-json.
+Ten tabs. Data at `/api/pokemon-cards/<heat|prices|overheat|cooldown|grading|psa9|pikachu|charizard|psyduck|regions>`. `/api/pokemon-cards/basket` lists the basket and the product addresses the server found for each item. `/api/pokemon-cards/layout` (not a tab) shows what the server gets back from every source, PriceCharting, pokemontcg.io, TCGplayer, Cardmarket, Yuyutei, Snkrdunk, eBay, Google Trends, PSA and GemRate included (status, final address, the first 600 characters, and the start of PriceCharting's `chart_data`). Read it with Actions → show-json.
 
 Not investment advice.
 
@@ -46,6 +46,30 @@ eBay sold listings, Cardmarket's own pages, Google Trends, PSA and Snkrdunk usua
 | tcgcsv.com | 200 (TCGplayer groups) | not used; a possible source for sealed TCGplayer prices |
 
 First live reading after the fill (2026-10-26): heat score −0.17 (neutral), down from +0.84 in March 2026; 9 of 12 signals scored. live-check drew all six tabs from live data. `/api/health` lists only sources downloaded since the last restart, so right after a redeploy that finds fresh snapshots on the volume it can show 0 sources for this dashboard: that is not a failure.
+
+## Price paired with volume
+
+Volume comes from two places. **TCGplayer units sold** per week (raw copies, one year, from the price-history API) is drawn as bars under the price line on the Prices tab (whole basket) and on every card of the character tabs. **PriceCharting's stated sales per month** for each grade (the `volume: N sales per day|week|month|year` row under its price table, which counts eBay, TCGplayer, Fanatics, Goldin and other sold listings) is shown per card and per grade, and logged once a day (`vol_raw`, `vol_9`, `vol_10` in `daily.csv`) so a volume history builds up from launch.
+
+## Character tabs: Pikachu, Charizard, Psyduck (`characters.csv`)
+
+Columns: `date` (release), `key`, `character` (`pikachu`, `charizard` or `psyduck`), `name`, `set`, `pricecharting`, `ptcg_id`, `tcgdex_id`, `tcgplayer_id`, `source`, `note`. Five Pikachu cards (Base Set, Jungle, Vivid Voltage VMAX rainbow, 151 illustration rare, Surging Sparks SIR), seven Charizard (Base Set, Team Rocket Dark, Neo Destiny Shining, Skyridge, Brilliant Stars alt art, Obsidian Flames and 151 SIRs) and three Psyduck (Fossil unlimited and 1st Edition, 151 illustration rare). All ids and paths are from memory and marked `verify`; a wrong PriceCharting path falls back to PriceCharting search (see `/api/pokemon-cards/basket` → `resolved`). Add a row to add a card. These cards are not in the heat-score basket.
+
+Each tab shows a chain-linked raw index of its cards with the summed TCGplayer units per week, and per card: raw, Grade 9 and PSA 10 prices (monthly, log scale), sales per month per grade, the last PSA 9 and PSA 10 sale, raw TCGplayer price with units per week, and which grade is the better market to trade.
+
+## PSA 9 vs PSA 10 (`psa9` tab)
+
+Every card with graded prices (the basket's cards and the character cards, each PriceCharting page once):
+
+| Measure | From |
+|---|---|
+| Sales per month per grade | PriceCharting's volume row; when missing, the rate implied by its listed sold sales (count over the days they span) |
+| Price noise | median absolute log distance of each sold price in the last 90 days from their median: a stand-in for the bid-ask spread |
+| Volatility | standard deviation of monthly log changes over the last 2 years, annualised |
+| 12-month return | PriceCharting's monthly series per grade |
+| PSA 9 sales per PSA 10 sale, PSA 10 / PSA 9 price | the two above |
+
+**Which grade to trade:** PSA 10 when it sells at least twice a week (8+ a month); PSA 9 when it sells at least twice as often as PSA 10 and at least weekly (4+ a month); otherwise "thin" (neither sells weekly). The tab's answer counts the cards each way and gives the median card's turnover ratio and price ratio. PriceCharting's "Grade 9" is any grader's 9 (mostly PSA), and its volumes are its own estimates from the listings it tracks. Server check (2026-10-28): Base Set Charizard showed Grade 9 at 1 sale a day and PSA 10 at 1 a month. Not investment advice.
 
 ## The basket (`basket.csv`)
 
@@ -97,6 +121,9 @@ GBP and EUR come from TCGdex's Cardmarket prices; Cardmarket itself refuses the 
 | prices | `index_3m` | whole-basket 3-month change | +5% or more | −5% or less |
 | prices | `vintage_12m`, `modern_12m`, `sealed_12m` | each basket's 12-month change | +10% or more | −10% or less |
 | regions | `mom_us`, `mom_uk`, `mom_japan` | each region's momentum | +3% or more | −3% or less |
+| pikachu, charizard, psyduck | `<who>_3m` | that character's raw index, 3-month change | +5% or more | −5% or less |
+| pikachu, charizard, psyduck | `<who>_units` | TCGplayer units sold, last 4 weeks | 15% more than the 4 weeks before | 15% fewer |
+| psa9 | `psa9_liquidity`, `psa10_premium` | PSA 9 sales per PSA 10 sale; PSA 10 / PSA 9 price (median card) | always 0: liquidity, not heat | always 0 |
 
 ## Hand-entered rows: all marked `verify`
 

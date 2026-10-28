@@ -37,8 +37,10 @@ TOPIC = Topic(SLUG, "Pokémon Card Market",
               "Is the Pokémon card market overheating or cooling? A composite heat score from momentum, breadth, sealed premiums, grading, "
               "search interest and sales, with price indices for vintage, modern and sealed, grading ratios, and the US, UK/EU and Japan/HK.",
               "pokemon_cards", (("heat", "Heat gauge"), ("prices", "Prices"), ("overheat", "Overheat signals"), ("cooldown", "Cooldown signals"),
-                                ("grading", "Grading"), ("regions", "US / UK / HK")),
-              ("heat", "prices", "overheat", "cooldown", "grading", "regions"), icon="cards", order=35)
+                                ("grading", "Grading"), ("psa9", "PSA 9 vs 10"), ("pikachu", "Pikachu"), ("charizard", "Charizard"),
+                                ("psyduck", "Psyduck"), ("regions", "US / UK / HK")),
+              ("heat", "prices", "overheat", "cooldown", "grading", "psa9", "pikachu", "charizard", "psyduck", "regions"), icon="cards", order=35)
+CHARACTERS = (("pikachu", "Pikachu"), ("charizard", "Charizard"), ("psyduck", "Psyduck"))
 
 PC_BASE = "https://www.pricecharting.com"
 PC_SEARCH = PC_BASE + "/search-products?type=prices&q={q}"
@@ -115,6 +117,19 @@ def basket() -> list[dict]:
     return out
 
 
+def characters(who: str | None = None) -> list[dict]:
+    """The character tabs' cards (characters.csv), shaped like basket items (segment 'character', no MSRP)."""
+    out = []
+    for r in manual_rows(SLUG, "characters"):
+        if r.get("key") and r.get("character") in dict(CHARACTERS) and (who is None or r["character"] == who):
+            out.append({**r, "segment": "character", "kind": "card", "msrp": None})
+    return out
+
+
+def all_items() -> list[dict]:
+    return basket() + characters()
+
+
 def rows(name: str) -> list[dict]:
     return sorted(manual_rows(SLUG, name), key=lambda r: r["date"])
 
@@ -144,6 +159,54 @@ def parse_pc_chart(html: str) -> dict[str, pd.Series]:
             out[k] = s[~s.index.duplicated(keep="last")].sort_index()
     if not out:
         raise ValueError("PriceCharting: chart_data is empty")
+    return out
+
+
+# PriceCharting grade columns: the page's tab key, the chart_data key, and the label used here. 'Grade 9' is any grader's 9 (mostly PSA).
+PC_GRADES = (("used", "used", "Raw"), ("graded", "graded", "PSA 9"), ("manual-only", "manualonly", "PSA 10"))
+PER_MONTH = {"day": 30.44, "week": 30.44 / 7, "month": 1.0, "year": 1 / 12}
+
+
+def parse_pc_volume(html: str) -> dict[str, float]:
+    """The 'volume: N sales per day|week|month|year' row under PriceCharting's price table, as sales per month per grade tab
+    ({'used': .., 'graded': .., 'manual-only': ..})."""
+    out = {}
+    for m in re.finditer(r'data-show-tab="completed-auctions-([\w-]+)"[^>]*>(?:(?!</td>).)*?<a[^>]*>\s*([\d.,]+)\s+sales?\s+per\s+(day|week|month|year)', html, re.S):
+        out.setdefault(m.group(1), _r(float(m.group(2).replace(",", "")) * PER_MONTH[m.group(3)], 3))
+    return out
+
+
+def parse_pc_sales(html: str) -> dict[str, list[dict]]:
+    """PriceCharting's sold listings per grade tab (div.completed-auctions-<grade>): [{date, price, source}], newest first."""
+    out = {}
+    parts = re.split(r'<div class="completed-auctions-([\w-]+)', html)
+    for key, seg in zip(parts[1::2], parts[2::2]):
+        sales = []
+        for row in re.findall(r"<tr id=\"[^\"]*\">(.*?)</tr>", seg, re.S):
+            d = re.search(r'<td class="date">\s*(\d{4}-\d{2}-\d{2})\s*</td>', row)
+            p = re.search(r'<span class="js-price"\s*>\s*\$([\d,]+(?:\.\d+)?)', row)
+            if d and p:
+                src = re.search(r"\[([A-Za-z][\w .]*)\]\s*</td>", row)
+                sales.append({"date": d.group(1), "price": float(p.group(1).replace(",", "")), "source": src.group(1) if src else None})
+        if sales:
+            out[key] = sales
+    return out
+
+
+def liquidity(sales: list[dict], per_month: float | None, today: pd.Timestamp) -> dict:
+    """One grade's liquidity: PriceCharting's stated sales per month, the rate implied by the listed sales (n over the days they span),
+    the price noise (median absolute log distance of each sale from the median of the last 90 days: a bid-ask proxy) and the last sale."""
+    s = sorted(sales or [], key=lambda x: x["date"], reverse=True)
+    out = {"per_month": per_month, "n_listed": len(s), "listed_rate": None, "noise": None, "last": s[0] if s else None, "venues": {}}
+    if len(s) >= 2:
+        span = max(1, (pd.Timestamp(s[0]["date"]) - pd.Timestamp(s[-1]["date"])).days)
+        out["listed_rate"] = _r(len(s) / span * 30.44, 3)
+    recent = [x["price"] for x in s if pd.Timestamp(x["date"]) >= today - pd.Timedelta(days=90) and x["price"] > 0]
+    if len(recent) >= 3:
+        lp = np.log(recent)
+        out["noise"] = _r(float(np.median(np.abs(lp - np.median(lp)))), 4)
+    for x in s:
+        out["venues"][x["source"] or "other"] = out["venues"].get(x["source"] or "other", 0) + 1
     return out
 
 
@@ -383,8 +446,8 @@ def log_today(rows_: list[tuple], today: str | None = None) -> int:
     return len(new)
 
 
-def daily_log() -> dict[str, pd.DataFrame]:
-    """field -> DataFrame (date x item key) from the daily log."""
+def daily_log(keys=None) -> dict[str, pd.DataFrame]:
+    """field -> DataFrame (date x item key) from the daily log; keys limits the columns (the basket signals read only basket items)."""
     f = _log_file()
     if not f.exists():
         return {}
@@ -392,13 +455,19 @@ def daily_log() -> dict[str, pd.DataFrame]:
     if d.empty:
         return {}
     d["date"] = pd.to_datetime(d["date"])
+    if keys is not None:
+        d = d[d["key"].isin(set(keys))]
     return {fld: g.pivot_table(index="date", columns="key", values="value", aggfunc="last").sort_index() for fld, g in d.groupby("field")}
+
+
+def basket_log() -> dict[str, pd.DataFrame]:
+    return daily_log([i["key"] for i in basket()])
 
 
 def fill() -> dict:
     """Background job: FX, TCGdex (one call per card; pokemontcg.io in one call when TCGdex misses most), then each item's PriceCharting page and TCGplayer history and
     listings, one at a time. Logs today's prices and listings. Returns {what: 'ok' | error}."""
-    done, items, res = {}, basket(), _resolved()
+    done, items, res = {}, all_items(), _resolved()
 
     def step(name, fn):
         try:
@@ -432,7 +501,10 @@ def fill() -> dict:
             u = _resolve_pc(i, res)
             if not u:
                 raise LookupError("no PriceCharting page")
-            parse_pc_chart(polite(u, "pc", MAX_AGE["pc"], min_bytes=500, headers=PC_HEADERS))
+            html = polite(u, "pc", MAX_AGE["pc"], min_bytes=500, headers=PC_HEADERS)
+            parse_pc_chart(html)
+            vol = parse_pc_volume(html)
+            log.extend((i["key"], "vol_" + lab.split()[-1].lower(), vol.get(tab)) for tab, _, lab in PC_GRADES)     # vol_raw, vol_9, vol_10
         step(f"pc {i['key']}", pc)
         pid = _resolve_tcg(i, ptcg, res)
         if pid:
@@ -475,7 +547,8 @@ def item_series(item: dict) -> dict:
             field = (item.get("pc_field") or "used").strip()
             raw = ch.get(field) if field in ch else next((ch[k] for k in ("used", "new", "cib") if k in ch), None)
             if raw is not None and len(raw):
-                return {"raw": raw, "psa10": ch.get("manualonly") if item["segment"] != "sealed" else None, "src": "PriceCharting", "url": u}
+                card = item["segment"] != "sealed"
+                return {"raw": raw, "psa10": ch.get("manualonly") if card else None, "psa9": ch.get("graded") if card else None, "src": "PriceCharting", "url": u}
         except (LookupError, ValueError):
             pass
     pid = tcg_id(item)
@@ -484,10 +557,10 @@ def item_series(item: dict) -> dict:
             h = parse_tcg_history(json.loads(read(TCG_HISTORY.format(pid=pid))))
             raw = h["price"].dropna().resample("MS").last().dropna()
             if len(raw):
-                return {"raw": raw, "psa10": None, "src": "TCGplayer", "url": f"https://www.tcgplayer.com/product/{pid}"}
+                return {"raw": raw, "psa10": None, "psa9": None, "src": "TCGplayer", "url": f"https://www.tcgplayer.com/product/{pid}"}
         except (LookupError, ValueError):
             pass
-    return {"raw": pd.Series(dtype=float), "psa10": None, "src": None, "url": u}
+    return {"raw": pd.Series(dtype=float), "psa10": None, "psa9": None, "src": None, "url": u}
 
 
 def tcg_weekly(item: dict) -> pd.DataFrame | None:
@@ -642,7 +715,7 @@ def signal_series() -> dict:
     rep = _events(("reprint", "restock"), months)
     if len(rep):
         sig["reprints"] = rep
-    L = daily_log()
+    L = basket_log()
     if "listings" in L and len(L["listings"]) >= 31:
         li = L["listings"].sum(axis=1, min_count=1)
         sold = pd.concat([w["qty"] for w in weekly], axis=1).sum(axis=1).resample("D").ffill() / 7 if weekly else None
@@ -755,13 +828,13 @@ def _prices_now() -> dict:
             if s is not None and len(s) > 12:
                 k[key + "_m12"] = _r(s.iloc[-1] / s.iloc[-13] - 1, 4)
                 k[key + "_m3"] = _r(s.iloc[-1] / s.iloc[-4] - 1, 4)
-    L = daily_log()
+    L = basket_log()
     daily = {}
     if "tcg" in L and len(L["tcg"]) >= 2:
         daily["TCGplayer market (US, basket median vs first day)"] = _pts((L["tcg"] / L["tcg"].bfill().iloc[0]).median(axis=1) * 100, 2)
     if "cm_trend" in L and len(L["cm_trend"]) >= 2:
         daily["Cardmarket trend (EU, basket median vs first day)"] = _pts((L["cm_trend"] / L["cm_trend"].bfill().iloc[0]).median(axis=1) * 100, 2)
-    return {"all": _pts(idx, 2), "segments": seg, "kpi": k, "table": _price_table(S), "daily": daily,
+    return {"all": _pts(idx, 2), "segments": seg, "kpi": k, "table": _price_table(S), "daily": daily, "units": _pts(S["sig"].get("sales", pd.Series(dtype=float)), 0),
             "as_of": str(idx.index[-1].date()) if len(idx) else None, "stale": B.stale_info([pc_url(i) for i in basket() if pc_url(i)])}
 
 
@@ -866,7 +939,7 @@ def _regions_now() -> dict:
         fx = _fx()
     except LookupError:
         fx = None
-    L = daily_log()
+    L = basket_log()
     logged = {k: v.ffill().iloc[-1] for k, v in L.get("market", pd.DataFrame()).items()} if "market" in L else {}
     cards = []
     for i in items:
@@ -916,6 +989,137 @@ def _regions_now() -> dict:
             "as_of": next((c for c in [(P.get(i.get("ptcg_id")) or {}).get("tcg_updated") for i in items] if c), None)}
 
 
+def pc_page(item: dict) -> dict:
+    """What the item's PriceCharting page says beyond the chart: sales per month and sold listings per grade (empty when not fetched)."""
+    u = pc_url(item)
+    try:
+        html = read(u) if u else ""
+    except LookupError:
+        html = ""
+    return {"volume": parse_pc_volume(html), "sales": parse_pc_sales(html)} if html else {"volume": {}, "sales": {}}
+
+
+def _change_m(s: pd.Series | None, months: int):
+    if s is None or len(s.dropna()) < 2:
+        return None
+    s = s.dropna()
+    p = s[s.index <= s.index[-1] - pd.DateOffset(months=months)]
+    return _r(s.iloc[-1] / p.iloc[-1] - 1, 4) if len(p) and p.iloc[-1] else None
+
+
+def verdict_grade(l9: dict, l10: dict, p9, p10) -> dict:
+    """Which grade is the better market to trade: PSA 10 when it sells at least twice a week; PSA 9 when it sells at least twice as
+    often as PSA 10 and at least weekly; otherwise neither is liquid (thin)."""
+    v9, v10 = (l9 or {}).get("per_month") or (l9 or {}).get("listed_rate"), (l10 or {}).get("per_month") or (l10 or {}).get("listed_rate")
+    ratio = _r(v9 / v10, 2) if v9 and v10 else None
+    if v10 is not None and v10 >= 8:
+        pick, why = "PSA 10", "PSA 10 sells at least twice a week: liquid enough to trade, and it carries the scarcity premium"
+    elif v9 and (v10 is None or v9 >= 2 * v10) and v9 >= 4:
+        pick, why = "PSA 9", f"PSA 9 sells {num_x(ratio)} as often as PSA 10" if ratio else "PSA 9 sells; PSA 10 shows no sales volume"
+    elif v9 is None and v10 is None:
+        pick, why = None, "no sales volume on PriceCharting yet"
+    else:
+        pick, why = "thin", "neither grade sells weekly: expect to wait or give up price to exit"
+    return {"pick": pick, "why": why, "ratio": ratio, "premium": _r(p10 / p9, 2) if p9 and p10 else None}
+
+
+def num_x(v) -> str:
+    return "–" if v is None else (f"{v:.0f}x" if v >= 10 else f"{v:.1f}x")
+
+
+def card_detail(item: dict, dex: dict | None = None) -> dict:
+    """Everything the character and PSA 9 tabs show for one card."""
+    s = item_series(item)
+    page = pc_page(item)
+    today = _now()
+    grades = {}
+    for tab, field, lab in PC_GRADES:
+        ser = s.get({"used": "raw", "graded": "psa9", "manual-only": "psa10"}[tab])
+        ser = ser.dropna() if ser is not None else None
+        rets = np.log(ser[ser.index >= today - pd.DateOffset(months=25)]).diff().dropna() if ser is not None and len(ser) else pd.Series(dtype=float)
+        grades[lab] = {"price": _r(ser.iloc[-1], 2) if ser is not None and len(ser) else None, "m3": _change_m(ser, 3), "m12": _change_m(ser, 12),
+                       "volatility": _r(float(rets.std() * np.sqrt(12)), 3) if len(rets) >= 6 else None, "points": _pts(ser, 2) if ser is not None else [],
+                       **liquidity(page["sales"].get(tab), page["volume"].get(tab), today)}
+        g = grades[lab]
+        g["dollar_month"] = _r(g["price"] * g["per_month"], 0) if g["price"] and g["per_month"] else None
+    w = tcg_weekly(item)
+    weekly = {}
+    if w is not None and len(w):
+        w = w.iloc[:-1] if len(w) > 2 else w          # the current week is not over
+        weekly = {"price": _pts(w["price"], 2), "units": _pts(w["qty"], 0), "units_4w": int(w["qty"].iloc[-4:].sum()), "price_now": _r(w["price"].dropna().iloc[-1], 2) if w["price"].notna().any() else None}
+    d = dex or {}
+    return {"key": item["key"], "name": item["name"], "set": item.get("set"), "release": item.get("date"), "url": s["url"], "src": s["src"],
+            "grades": grades, "weekly": weekly, "tcg_url": d.get("tcg_url") or (f"https://www.tcgplayer.com/product/{tcg_id(item)}" if tcg_id(item) else None),
+            "tcg": d.get("tcg"), "cm_trend": d.get("cm_trend"), "note": item.get("note", ""),
+            "verdict": verdict_grade(grades["PSA 9"], grades["PSA 10"], grades["PSA 9"]["price"], grades["PSA 10"]["price"])}
+
+
+def _dex_for(items: list[dict]) -> dict:
+    out = {}
+    for i in items:
+        try:
+            out[i["key"]] = parse_tcgdex(json.loads(read(tcgdex_url(i))), i.get("variant") or None) if tcgdex_url(i) else {}
+        except (LookupError, ValueError):
+            out[i["key"]] = {}
+    return out
+
+
+def _character_now(who: str) -> dict:
+    items = characters(who)
+    dex = _dex_for(items)
+    cards = [card_detail(i, dex.get(i["key"])) for i in items]
+    raw = pd.DataFrame({c["key"]: pd.Series({pd.to_datetime(t, unit="s"): v for t, v in c["grades"]["Raw"]["points"]}, dtype=float) for c in cards
+                        if c["grades"]["Raw"]["points"]}).sort_index()
+    idx = chain_index(raw.ffill(limit=2), min(2, max(1, raw.shape[1]))) if not raw.empty else pd.Series(dtype=float)
+    units = [pd.Series({pd.to_datetime(t, unit="s"): v for t, v in c["weekly"]["units"]}, dtype=float) for c in cards if c["weekly"].get("units")]
+    u = pd.concat(units, axis=1).sum(axis=1, min_count=1).dropna() if units else pd.Series(dtype=float)
+    k = {"m1": _change_m(idx, 1), "m3": _change_m(idx, 3), "m12": _change_m(idx, 12), "units_4w": int(u.iloc[-4:].sum()) if len(u) else None,
+         "units_prev_4w": int(u.iloc[-8:-4].sum()) if len(u) >= 8 else None, "n": len(cards),
+         "psa9_picks": sum(1 for c in cards if c["verdict"]["pick"] == "PSA 9"), "psa10_picks": sum(1 for c in cards if c["verdict"]["pick"] == "PSA 10")}
+    return {"who": who, "label": dict(CHARACTERS)[who], "index": _pts(idx, 2), "units": _pts(u, 0), "kpi": k, "cards": cards,
+            "as_of": str(idx.index[-1].date()) if len(idx) else None, "stale": B.stale_info([pc_url(i) for i in items if pc_url(i)])}
+
+
+def _psa9_now() -> dict:
+    """PSA 9 vs PSA 10 for every card with graded prices (the basket's cards and the character tabs), one row each, deduplicated by page."""
+    seen, items = set(), []
+    for i in all_items():
+        u = pc_url(i)
+        if i["segment"] != "sealed" and u and u not in seen:
+            seen.add(u)
+            items.append(i)
+    dex = _dex_for(items)
+    rows_ = []
+    for i in items:
+        c = card_detail(i, dex.get(i["key"]))
+        g9, g10, gr = c["grades"]["PSA 9"], c["grades"]["PSA 10"], c["grades"]["Raw"]
+        if g9["price"] is None and g10["price"] is None:
+            continue
+        rows_.append({"key": c["key"], "name": c["name"], "set": c["set"], "url": c["url"], "who": i.get("character") or i["segment"],
+                      **{f"{p}_{k}": g.get(k) for p, g in (("raw", gr), ("p9", g9), ("p10", g10))
+                         for k in ("price", "per_month", "listed_rate", "noise", "volatility", "m12", "dollar_month", "n_listed")},
+                      "p9_last": g9["last"], "p10_last": g10["last"], "verdict": c["verdict"]})
+    med = lambda k: _r(float(np.median([r[k] for r in rows_ if r[k] is not None])), 4) if any(r[k] is not None for r in rows_) else None
+    ratios = [r["verdict"]["ratio"] for r in rows_ if r["verdict"]["ratio"]]
+    picks = {p: sum(1 for r in rows_ if r["verdict"]["pick"] == p) for p in ("PSA 9", "PSA 10", "thin")}
+    summary = {"n": len(rows_), "picks": picks, "liq_ratio": _r(float(np.median(ratios)), 2) if ratios else None,
+               "premium": _r(float(np.median([r["verdict"]["premium"] for r in rows_ if r["verdict"]["premium"]])), 2) if any(r["verdict"]["premium"] for r in rows_) else None,
+               "p9_per_month": med("p9_per_month"), "p10_per_month": med("p10_per_month"), "p9_noise": med("p9_noise"), "p10_noise": med("p10_noise"),
+               "p9_volatility": med("p9_volatility"), "p10_volatility": med("p10_volatility"), "p9_m12": med("p9_m12"), "p10_m12": med("p10_m12")}
+    answer = None
+    if ratios:
+        lead = "PSA 9" if picks["PSA 9"] > picks["PSA 10"] else "PSA 10" if picks["PSA 10"] > picks["PSA 9"] else None
+        answer = (f"{lead} is the better market to trade on {picks[lead]} of {len(rows_)} cards" if lead else "Neither grade wins on most cards") + \
+                 f": the median card's PSA 9 sells {num_x(summary['liq_ratio'])} as often as its PSA 10, at {num_x(summary['premium'])} less money per copy."
+    L = daily_log()
+    hist = {}
+    for fld, lab in (("vol_9", "PSA 9"), ("vol_10", "PSA 10"), ("vol_raw", "Raw")):
+        if fld in L and len(L[fld]) >= 2:
+            hist[lab + " sales per month (all cards)"] = _pts(L[fld].sum(axis=1, min_count=1), 1)
+    return {"rows": sorted(rows_, key=lambda r: -(r["verdict"]["ratio"] or 0)), "summary": summary, "answer": answer, "history": hist,
+            "as_of": str(_now().date())}
+
+
 def _basket_now() -> dict:
     return {"items": [{k: i.get(k) for k in ("key", "name", "set", "segment", "kind", "date", "msrp_usd", "pricecharting", "ptcg_id", "tcgdex_id", "tcgplayer_id", "source", "note")}
                       for i in basket()], "resolved": _resolved()}
@@ -957,6 +1161,15 @@ def readings(got) -> list[dict]:
         if r["mom"] is not None:
             add("regions", "mom_" + r["region"].split()[0].lower().replace("/", ""), r["region"] + ": momentum", r["mom"], lean(r["mom"], 0.03),
                 r["basis"] + "; +1 at +3% or more, -1 at -3% or less")
+    for who, lab in CHARACTERS:
+        K = got(who).get("kpi") or {}
+        add(who, f"{who}_3m", f"{lab} cards (raw) index, 3-month change", K.get("m3"), lean(K.get("m3"), 0.05), "+1 when up 5% or more in three months, -1 when down 5% or more")
+        if K.get("units_prev_4w"):
+            ch = K["units_4w"] / K["units_prev_4w"] - 1
+            add(who, f"{who}_units", f"{lab} cards: TCGplayer units sold, last 4 weeks", K["units_4w"], lean(ch, 0.15), "+1 when 15% more than the 4 weeks before, -1 when 15% fewer")
+    P = got("psa9").get("summary") or {}
+    add("psa9", "psa9_liquidity", "PSA 9 sales per PSA 10 sale (median card)", P.get("liq_ratio"), 0, "how many times more often PSA 9 trades; a liquidity measure, so neutral")
+    add("psa9", "psa10_premium", "PSA 10 price / PSA 9 price (median card)", P.get("premium"), 0, "the price of perfection; neutral")
     return out
 
 
@@ -1040,4 +1253,5 @@ def _cached_ep(name, fn, ttl=3600):
 
 ENDPOINTS = {"heat": _cached_ep("heat", _heat_now), "prices": _cached_ep("prices", _prices_now), "overheat": _cached_ep("overheat", _overheat_now),
              "cooldown": _cached_ep("cooldown", _cooldown_now), "grading": _cached_ep("grading", _grading_now), "regions": _cached_ep("regions", _regions_now),
-             "basket": _cached_ep("basket", _basket_now, 600), "layout": _cached_ep("layout", _layout_now, 1800)}
+             "basket": _cached_ep("basket", _basket_now, 600), "psa9": _cached_ep("psa9", _psa9_now),
+             **{who: _cached_ep(who, lambda who=who: _character_now(who)) for who, _ in CHARACTERS}, "layout": _cached_ep("layout", _layout_now, 1800)}

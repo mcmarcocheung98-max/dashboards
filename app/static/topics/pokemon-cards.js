@@ -2,6 +2,7 @@
 (() => {
 const f0 = v => v == null ? "–" : num(v, 0), f2 = v => v == null ? "–" : num(v, 2);
 const xm = v => v == null ? "–" : num(v, 2) + "x";
+const num_x = v => v == null ? "–" : v >= 10 ? num(v, 0) + "x" : num(v, 1) + "x";
 const zf = v => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2);
 const pc0 = v => pct(v, 0).replace("+", "");
 const table = (head, rows) => el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...head.map(h => el("th", {}, h))), ...rows));
@@ -10,7 +11,11 @@ const VERDICT_COL = s => s >= 0.5 ? "var(--down)" : s <= -0.5 ? "var(--s1)" : "v
 const FMT = { mom30: pct, mom90: pct, breadth: pc0, sealed_msrp: xm, new_set: xm, psa10_ratio: xm, psa_volume: v => big(v), search: f0, sales: f0, news: f0, reprints: f0, overhang: pct };
 const fmtSig = (k, v) => (FMT[k] || f2)(v);
 // hand-entered series can be quarterly: monthly blank points let the chart follow the shared date axis to the month
-const monthly = pts => { if (!pts || pts.length < 2) return []; const out = [], d = new Date(pts[0][0] * 1000), end = pts[pts.length - 1][0];
+// (through today, so a series that stopped early still follows a range set after its last point)
+// an invisible, unnamed line carrying the last value to today: the chart library will not scroll past a series' last real point
+const toToday = pts => { const m = monthly(pts), last = pts && pts.length ? pts[pts.length - 1] : null;
+  return last ? { points: [[last[0], last[1]], ...m.filter(t => t > last[0]).map(t => [t, last[1]])], color: "rgba(0,0,0,0)", width: 1 } : null; };
+const monthly = pts => { if (!pts || pts.length < 2) return []; const out = [], d = new Date(pts[0][0] * 1000), end = Math.max(pts[pts.length - 1][0], Date.now() / 1000);
   for (let t = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) / 1000; t <= end; ) { out.push(t); const x = new Date(t * 1000); t = Date.UTC(x.getUTCFullYear(), x.getUTCMonth() + 1, 1) / 1000; } return out; };
 
 // a gauge from -2 (cold, blue) to +2 (overheated, red) with a marker at v
@@ -36,6 +41,41 @@ function signalCards(list, zmap) {
     c.heat == null ? el("div", { class: "muted" }, c.status === "building history" ? "Building history: needs at least a year of readings before it can be scored."
       : c.status.startsWith("last reading") ? "Not scored: the " + c.status + "; add newer rows." : "No data yet.") : null,
     note(c.words + (c.sign < 0 ? " This one counts against the heat score: a high reading means cooling." : "")))));
+}
+
+// price (line, right axis) paired with units sold (bars, left axis) on one time axis
+const priceVol = (price, units, fmt, o = {}) => linesChart([{ name: o.priceName || "Price", points: price, color: o.color || css("--s1") },
+  { name: o.unitsName || "Units sold / week", points: units || [], bar: true, axis: "left", color: css("--hold"), fmt: f0 }], fmt, { small: o.small, log: o.log });
+const perMo = v => v == null ? "–" : v >= 10 ? num(v, 0) + "/mo" : num(v, 1) + "/mo";
+const pickPill = v => !v || !v.pick ? el("span", { class: "pill" }, "no data") : el("span", { class: "pill " + (v.pick === "PSA 9" ? "ok" : v.pick === "PSA 10" ? "" : "bad") }, v.pick === "thin" ? "thin both" : v.pick);
+const lastSale = l => l ? usd(l.price, l.price < 100 ? 2 : 0) + " on " + l.date + (l.source ? " (" + l.source + ")" : "") : "–";
+const GCOL = { Raw: "--s1", "PSA 9": "--s3", "PSA 10": "--s5" };
+
+async function character(who) {
+  const d = await api(who), K = d.kpi || {}, C = d.cards || [];
+  const head = card(d.label + " cards", el("div", { class: "kpis" },
+    kpi("Raw index, 1 month", pct(K.m1), cls(K.m1)), kpi("3 months", pct(K.m3), cls(K.m3)), kpi("12 months", pct(K.m12), cls(K.m12)),
+    kpi("TCGplayer units sold, last 4 weeks (4 before)", K.units_4w == null ? "–" : f0(K.units_4w) + (K.units_prev_4w == null ? "" : " (" + f0(K.units_prev_4w) + ")"),
+      K.units_prev_4w ? cls(K.units_4w - K.units_prev_4w) : ""),
+    kpi("Cards where PSA 9 is the better market", f0(K.psa9_picks) + " of " + f0(K.n))), asOf(d), stale(d),
+    note("Cards are listed in data/pokemon-cards/characters.csv. Prices are PriceCharting's monthly ungraded, Grade 9 and PSA 10 values; volume is TCGplayer units sold per week " +
+      "(raw copies) and PriceCharting's stated sales per month for each grade."));
+  const idx = (d.index || []).length ? card(d.label + ": raw price index with units sold per week",
+    ...priceVol(d.index, d.units, f0, { priceName: "Raw index (100 at start)", unitsName: "TCGplayer units / week" }),
+    note("The line is an equal-weight, chain-linked index of the raw cards; the bars are units sold of those cards on TCGplayer each week (one year of history). " +
+      "Price rising on rising units is demand; price rising on thinning units is a few buyers chasing, which reverses more easily.")) : null;
+  const cards = C.map(c => {
+    const G = c.grades || {}, W = c.weekly || {};
+    const lines = ["Raw", "PSA 9", "PSA 10"].filter(g => (G[g] || {}).points && G[g].points.length).map(g => ({ name: g, points: G[g].points, color: css(GCOL[g]) }));
+    return card(c.name + " · " + (c.set || ""),
+      el("div", { class: "kpis" }, ...["Raw", "PSA 9", "PSA 10"].map(g => kpi(g + " · " + perMo((G[g] || {}).per_month), usd((G[g] || {}).price, (G[g] || {}).price < 100 ? 2 : 0))),
+        el("div", { class: "kpi" }, el("div", { class: "v" }, pickPill(c.verdict)), el("div", { class: "l" }, "better grade to trade"))),
+      lines.length ? linesChart(lines, v => usd(v, v < 100 ? 2 : 0), { small: true, log: true }) : el("div", { class: "muted" }, "No PriceCharting history yet."),
+      (W.price || []).length ? [el("div", { class: "muted", style: "margin-top:8px" }, "Raw on TCGplayer: market price and units sold per week"), ...priceVol(W.price, W.units, v => usd(v, 2), { small: true })] : null,
+      note(c.verdict.why + ". Last sales: PSA 9 " + lastSale((G["PSA 9"] || {}).last) + "; PSA 10 " + lastSale((G["PSA 10"] || {}).last) + "."),
+      el("div", { class: "src" }, link("PriceCharting", c.url), c.tcg_url ? [" · ", link("TCGplayer", c.tcg_url)] : null, c.note ? " · " + c.note : ""));
+  });
+  return [head, idx, el("div", { class: "grid2" }, ...cards)];
 }
 
 const VIEWS = {
@@ -82,7 +122,10 @@ const VIEWS = {
       el("td", { class: "muted" }, [r.ptcg_id, r.tcgplayer_id ? "tcg " + r.tcgplayer_id : null].filter(Boolean).join(" · "))));
     const tbl = card("The basket", table(["Card / product", "Set", "Basket", "Price (USD)", "1m", "3m", "12m", "vs 200-day", "x MSRP / PSA 10", "From", "Ids"], rows),
       note("Kept in data/pokemon-cards/basket.csv with each item's PriceCharting page, pokemontcg.io / TCGdex id and (found automatically) TCGplayer product id. 'vs 200-day' is the price against its average of the last 7 months."));
-    return [head, seg, daily, tbl];
+    const vol = (d.units || []).length && (d.all || []).length ? card("Whole basket: price index with TCGplayer units sold per week",
+      ...priceVol(d.all, d.units, f0, { priceName: "Basket index", unitsName: "TCGplayer units / week (basket cards)" }),
+      note("Price (monthly, PriceCharting) against turnover (weekly units of the basket's cards sold on TCGplayer, one year). Rises on rising volume are broad demand; rises on falling volume are thin.")) : null;
+    return [head, seg, vol, daily, tbl];
   },
   async overheat() {
     const d = await api("overheat"), S = d.signals || [], Z = d.series || {};
@@ -103,7 +146,7 @@ const VIEWS = {
       ["psa_volume", "PSA grading volume (Pokémon cards per month, 3-month average)", big, "--s4", "Hand-entered (psa.csv) from GemRate or PSA. Grading floods follow price spikes: people grade to sell."],
       ["sales", "TCGplayer units sold per week, basket cards", f0, "--s6", "Sum of every condition and printing. Rising sales with rising prices is real demand; rising prices on falling sales is thin."],
       ["news", "Sell-out, purchase-limit and scalping reports in the last 90 days", f0, "--down", "Count of dated, cited rows in events.csv."]]
-      .map(([k, t, f, c, n]) => Z[k] ? card(t, ...linesChart([{ name: t.split(":")[0], points: Z[k], color: css(c) }], f, { small: true, whitespace: k === "sales" ? [] : monthly(Z[k]) }), note(n)) : card(t, el("div", { class: "muted" }, "No data yet. " + n)));
+      .map(([k, t, f, c, n]) => Z[k] ? card(t, ...linesChart([{ name: t.split(":")[0], points: Z[k], color: css(c) }, k === "sales" ? null : toToday(Z[k])].filter(Boolean), f, { small: true, whitespace: k === "sales" ? [] : monthly(Z[k]) }), note(n)) : card(t, el("div", { class: "muted" }, "No data yet. " + n)));
     const news = (d.news || []).length ? card("Sell-outs, limits and scalping (dated, cited)", table(["Date", "Where", "What", "Source"], d.news.map(r => el("tr", {}, el("td", {}, r.date), el("td", {}, r.region),
       el("td", { class: "wrap" }, r.event + (r.note ? " (" + r.note + ")" : "")), el("td", {}, link(host(r.source), r.source))))), note("data/pokemon-cards/events.csv. Rows marked verify were entered from memory.")) : null;
     return [head, signalCards(S, Z), el("div", { class: "grid2" }, mom, br), el("div", { class: "grid2" }, sm, ns), el("div", { class: "grid2" }, ...hand), news, cite(d.cited)];
@@ -127,7 +170,7 @@ const VIEWS = {
       card("Supply overhang", el("div", { class: "muted" }, "Builds up from the daily log of TCGplayer listings: it needs 31 days."));
     const pr = Z.psa10_ratio ? card("PSA 10 premium over raw (median ratio)", ...linesChart([{ name: "PSA 10 / raw", points: Z.psa10_ratio, color: css("--s4") }], xm, { small: true }),
       note("Speculators pay most for perfect grades at the top; the ratio thinning means that money is leaving.")) : null;
-    const se = Z.search ? card("Search interest fading", ...linesChart([{ name: "Google Trends", points: Z.search, color: css("--s5") }], f0, { small: true, whitespace: monthly(Z.search) }), note("Hand-entered monthly (trends.csv).")) : null;
+    const se = Z.search ? card("Search interest fading", ...linesChart([{ name: "Google Trends", points: Z.search, color: css("--s5") }, toToday(Z.search)].filter(Boolean), f0, { small: true, whitespace: monthly(Z.search) }), note("Hand-entered monthly (trends.csv).")) : null;
     const rep = card("Reprint and restock announcements (dated, cited)", (d.reprints || []).length ? table(["Date", "Where", "What", "Source"], d.reprints.map(r => el("tr", {}, el("td", {}, r.date), el("td", {}, r.region),
       el("td", { class: "wrap" }, r.event + (r.note ? " (" + r.note + ")" : "")), el("td", {}, link(host(r.source), r.source))))) : el("div", { class: "muted" }, "None entered yet."),
       note("Reprints add supply to exactly the products speculators hold; they are the clearest cooling trigger for sealed. data/pokemon-cards/events.csv."));
@@ -151,6 +194,40 @@ const VIEWS = {
       card("PSA volume and turnaround", el("div", { class: "muted" }, "No rows yet: add monthly 'PSA Pokémon cards graded' and turnaround rows to data/pokemon-cards/psa.csv (GemRate publishes monthly counts)."));
     return [ratio, tbl, el("div", { class: "grid2" }, pop, gt), psa, cite(d.cited)];
   },
+  async psa9() {
+    const d = await api("psa9"), S = d.summary || {}, R = d.rows || [];
+    const head = card("Is PSA 9 the better market to trade? " + (d.answer || "Not enough sales data yet."),
+      el("div", { class: "kpis" },
+        kpi("Sales per month, median card: PSA 9 vs PSA 10", perMo(S.p9_per_month) + " vs " + perMo(S.p10_per_month)),
+        kpi("PSA 9 sales per PSA 10 sale", num_x(S.liq_ratio)), kpi("PSA 10 costs (x PSA 9)", num_x(S.premium)),
+        kpi("Price noise between sales: PSA 9 vs 10", pct(S.p9_noise, 1).replace("+", "") + " vs " + pct(S.p10_noise, 1).replace("+", "")),
+        kpi("Yearly volatility: PSA 9 vs 10", pct(S.p9_volatility, 0).replace("+", "") + " vs " + pct(S.p10_volatility, 0).replace("+", "")),
+        kpi("12-month return: PSA 9 vs 10", pct(S.p9_m12, 0) + " vs " + pct(S.p10_m12, 0)),
+        kpi("Cards: PSA 9 / PSA 10 / thin", [S.picks && S.picks["PSA 9"], S.picks && S.picks["PSA 10"], S.picks && S.picks.thin].map(f0).join(" / "))),
+      note("Liquidity is how fast you can sell near the quoted price. Sales per month is PriceCharting's stated volume per grade (eBay, TCGplayer, Fanatics, Goldin and others). " +
+        "Price noise is how far individual sales land from the 90-day median (a stand-in for the bid-ask spread: wider means you give up more to sell now). " +
+        "The rule: PSA 10 when it sells at least twice a week; PSA 9 when it sells twice as often as PSA 10 and at least weekly; otherwise thin. " +
+        "PriceCharting's 'Grade 9' is any grader's 9, mostly PSA. Not investment advice."), asOf(d));
+    const named = R.filter(r => r.p9_per_month != null || r.p10_per_month != null);
+    const bars = named.length ? card("Sales per month by card: PSA 9 against PSA 10",
+      ...svgBars(named.map(r => r.name.split(" (")[0].split(" #")[0]), [{ name: "PSA 9", values: named.map(r => r.p9_per_month), color: css("--s3") },
+        { name: "PSA 10", values: named.map(r => r.p10_per_month), color: css("--s5") }],
+        { yFmt: v => num(v, 0), catName: i => named[i].name + " (" + named[i].set + ") · PSA 9 sells " + num_x(named[i].verdict.ratio) + " as often", labelW: 60, h: 240 }),
+      note("A tall green bar beside a short pink one is a card whose PSA 10 rarely trades: you can buy one, but selling may take months or a price cut.")) : null;
+    const hist = Object.keys(d.history || {}).length ? card("Sales per month, all cards, as logged each day", ...linesChart(Object.entries(d.history).map(([k, p], i) => ({ name: k, points: p, color: css(["--s3", "--s5", "--s1"][i % 3]) })), v => num(v, 0), { small: true }),
+      note("PriceCharting's stated volume summed over the cards, saved once a day from launch: whether graded turnover is rising or drying up.")) : null;
+    const rows = R.map(r => el("tr", {}, el("td", {}, link(r.name, r.url)), el("td", {}, r.set), el("td", {}, usd(r.p9_price)), el("td", {}, perMo(r.p9_per_month)),
+      el("td", {}, usd(r.p10_price)), el("td", {}, perMo(r.p10_per_month)), el("td", {}, num_x(r.verdict.ratio)), el("td", {}, num_x(r.verdict.premium)),
+      el("td", {}, pct(r.p9_noise, 1).replace("+", "") + " / " + pct(r.p10_noise, 1).replace("+", "")), el("td", {}, pct(r.p9_volatility, 0).replace("+", "") + " / " + pct(r.p10_volatility, 0).replace("+", "")),
+      el("td", {}, lastSale(r.p10_last)), el("td", {}, pickPill(r.verdict))));
+    const tbl = card("Every card", table(["Card", "Set", "PSA 9", "Sales", "PSA 10", "Sales", "9 per 10 sale", "10 / 9 price", "Noise 9 / 10", "Volatility 9 / 10", "Last PSA 10 sale", "Trade"], rows),
+      note("Sorted by how much more often PSA 9 trades. A card where PSA 10 sells under once a month is one where a PSA 10 holder sets no market: the quoted PSA 10 price is a few sales, " +
+        "and the next seller may have to undercut it. PSA 9 suits trading (turnover, tighter prices, less population risk); PSA 10 suits holding the very best copies."));
+    return [head, bars, hist, tbl];
+  },
+  async pikachu() { return character("pikachu"); },
+  async charizard() { return character("charizard"); },
+  async psyduck() { return character("psyduck"); },
   async regions() {
     const d = await api("regions"), K = d.kpi || {}, FX = d.fx || {};
     const head = card("Where is it hottest? " + (d.hottest || "not enough data yet"),
