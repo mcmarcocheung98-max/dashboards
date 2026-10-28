@@ -190,18 +190,23 @@ function syncAdd(c, series, pts, opts = {}) {
   c.subscribeCrosshairMove(p => {
     if (SYNCING || !SYNC.includes(e)) return;
     SYNCING = true;
-    SYNC.forEach(o => {
-      if (o === e || !o.series) return;
-      if (!p || p.time == null) { o.c.clearCrosshairPosition(); return; }
-      let t = p.time, v = o.map.get(t);
-      if (v == null && o.times.length) {             // nearest point on the other chart (weekly vs daily data)
-        let lo = 0, hi = o.times.length - 1;
-        while (lo < hi) { const mid = (lo + hi) >> 1; if (o.times[mid] < t) lo = mid + 1; else hi = mid; }
-        if (Math.abs(o.times[lo] - t) <= 8 * 86400) { t = o.times[lo]; v = o.map.get(t); }
-      }
-      if (v == null) o.c.clearCrosshairPosition(); else o.c.setCrosshairPosition(v, t, o.series);
-    });
-    SYNCING = false;
+    try {
+      SYNC.forEach(o => {
+        if (o === e || !o.series) return;
+        if (!p || p.time == null) { o.c.clearCrosshairPosition(); return; }
+        let t = p.time, v = o.map.get(t);
+        if (v == null && o.times.length) {             // nearest point on the other chart (weekly vs daily data)
+          let lo = 0, hi = o.times.length - 1;
+          while (lo < hi) { const mid = (lo + hi) >> 1; if (o.times[mid] < t) lo = mid + 1; else hi = mid; }
+          if (Math.abs(o.times[lo] - t) <= 8 * 86400) { t = o.times[lo]; v = o.map.get(t); }
+        }
+        // lightweight-charts throws "Value is null" when the other chart's price scale has no point in the
+        // visible range (a long series zoomed past a short one). Clear the marker instead of breaking the page.
+        if (v == null) { o.c.clearCrosshairPosition(); return; }
+        try { o.c.setCrosshairPosition(v, t, o.series); }
+        catch (err) { o.c.clearCrosshairPosition(); }
+      });
+    } finally { SYNCING = false; }
   });
   return e;
 }
