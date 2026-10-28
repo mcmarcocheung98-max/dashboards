@@ -39,7 +39,7 @@ BRES = ("https://www.nomisweb.co.uk/api/v01/dataset/NM_189_1.data.csv?geography=
         "&employment_status=1&measure=1&measures=20100&select=date_name,geography_name,geography_code,industry,obs_value")
 LONDON_SECTORS = {142607027: "Legal", 142607028: "Accounting", 146800704: "Financial services", 146800705: "Insurance",
                   146800706: "Finance support", 146800702: "Software & IT", 146800703: "Information services", 37748736: "All jobs"}
-SECTORS = {"ai": ["Software Development", "Data & Analytics"], "ai_wide": ["IT Systems & Solutions"], "professions": ["Legal", "Banking & Finance", "Accounting", "Insurance"]}
+SECTORS = {"ai": ["Software Development", "Data & Analytics"], "ai_wide": ["IT Systems & Solutions", "Scientific Research & Development"], "professions": ["Legal", "Banking & Finance", "Accounting", "Insurance"]}
 US_SERIES = {"Legal services": "CES6054110001", "Finance & insurance": "CES5552000001", "Securities & investments": "CES5552300001",
              "Computer systems design": "CES6054150001", "All private": "CES0500000001"}
 # average hourly earnings, all employees, same industries (the "...03" twin of each employment series)

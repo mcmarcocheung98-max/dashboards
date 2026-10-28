@@ -195,8 +195,9 @@ def test_housing_parsers_cope_with_layout_drift():
 
 
 IND = "date,jobcountry,indeed_job_postings_index,variable,display_name\n" + "\n".join(
-    f"{d.date()},US,{100 + i * (1 if n == 'Legal' else -1) * 0.1:.2f},{v},{n}" for i, d in enumerate(pd.date_range("2020-02-01", periods=800))
-    for n in ("Software Development", "Data & Analytics", "Legal", "Banking & Finance", "Accounting", "Insurance") for v in ("total postings", "new postings"))
+    f"{d.date()},US,{100 + i * {'Legal': 1, 'Scientific Research & Development': 2}.get(n, -1) * 0.1:.2f},{v},{n}" for i, d in enumerate(pd.date_range("2020-02-01", periods=800))
+    for n in ("Software Development", "Data & Analytics", "IT Systems & Solutions", "Scientific Research & Development", "Legal", "Banking & Finance", "Accounting", "Insurance")
+    for v in ("total postings", "new postings"))
 AGG = "date,jobcountry,indeed_job_postings_index_SA,indeed_job_postings_index_NSA,variable\n" + "\n".join(f"{d.date()},US,{100 + i * .01:.2f},100,total postings" for i, d in enumerate(pd.date_range("2020-02-01", periods=800)))
 AIS = "date,jobcountry,AI_share_postings\n" + "\n".join(f"{d.date()},{cc},{2 + i * .003 * (2 if cc == 'US' else 1):.3f}" for i, d in enumerate(pd.date_range("2019-01-01", periods=2800)) for cc in ("US", "GB", "DE"))
 FRED = "observation_date,CES6054110001\n" + "\n".join(f"{d.date()},{1100 + i * .5:.1f}" for i, d in enumerate(pd.date_range("2010-01-01", periods=190, freq="MS")))
@@ -258,7 +259,7 @@ def test_ai_jobs_payloads(snapdir, monkeypatch):
     for d in (o, h, r):
         B.json_safe(d)
         assert not [k for k in d if k.endswith("_error")], d
-    assert set(o["US"]["sectors"]) == set(J.SECTORS["ai"] + J.SECTORS["professions"]) and o["US"]["latest"]["Legal"]["index"] > 100 > o["US"]["latest"]["Software Development"]["index"]
+    assert set(o["US"]["sectors"]) == set(J.SECTORS["ai"] + J.SECTORS["ai_wide"] + J.SECTORS["professions"]) and o["US"]["latest"]["Legal"]["index"] > 100 > o["US"]["latest"]["Software Development"]["index"]
     assert o["ai_share_latest"]["US"]["share"] > o["ai_share_latest"]["US"]["year_ago"]
     assert set(h["US"]["levels"]) == set(J.US_SERIES) and h["US"]["latest"]["Legal services"]["since_2020"] > 0 and h["as_of"]
     assert r["US"]["ai_over_professions"][-1][1] < 1 < r["US"]["ai_over_professions"][0][1] + 0.01
@@ -706,6 +707,9 @@ def test_ai_merged_endpoints(snapdir, monkeypatch):
     assert hk["Financing & insurance"][-1] == [int(pd.Timestamp("2026-06-01").timestamp()), 246.5] and len(hk["Financing & insurance"]) == 34
     r = J._ratio_now()
     assert r["US"]["ai_wide_index"] and r["US"]["ai_wide_over_professions"]
+    assert J.SECTORS["ai_wide"] == ["IT Systems & Solutions", "Scientific Research & Development"]
+    # R&D rises in the fixture while software, data and IT fall, so the wider group sits above the narrow one: (3 x -1 + 2) / 4 vs -1 per day
+    assert r["US"]["ai_wide_index"][-1][1] > r["US"]["ai_index"][-1][1]
 
 
 def ramp_page(months: int = 39) -> str:
