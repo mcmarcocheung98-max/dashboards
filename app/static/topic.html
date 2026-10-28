@@ -75,10 +75,16 @@
   .tl { display: grid; grid-template-columns: 90px 1fr; gap: 6px 12px; font-size: 13px; }
   .tl .d { color: var(--muted); font-variant-numeric: tabular-nums; }
   .tl a { color: var(--ink); text-decoration: none; border-bottom: 1px dotted var(--line); }
-  /* Ask Claude: fixed at the top right on every tab (the page makes room for it on wide screens); a pill that opens it on narrow ones */
-  #ask { position: fixed; top: 12px; right: 12px; width: 340px; max-height: calc(100vh - 24px); z-index: 50; display: flex; flex-direction: column;
-    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.12); font-size: 13px; }
-  #ask .ah { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  /* Ask Claude: a round icon floating on the screen that you can drag anywhere (its place is remembered for every dashboard); a click
+     opens the chat next to it, which can be dragged by its header too */
+  #askfab { position: fixed; left: 0; top: 0; width: 52px; height: 52px; z-index: 60; border: 0; border-radius: 50%; background: var(--accent); color: #fff;
+    box-shadow: 0 6px 20px rgba(0,0,0,.22); cursor: grab; touch-action: none; display: grid; place-items: center; user-select: none; }
+  #askfab:active { cursor: grabbing; } #askfab svg { width: 24px; height: 24px; pointer-events: none; }
+  #askfab.on { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent), 0 6px 20px rgba(0,0,0,.22); }
+  #ask { position: fixed; left: 0; top: 0; width: 360px; height: min(520px, 70vh); z-index: 59; display: flex; flex-direction: column;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 32px rgba(0,0,0,.18); font-size: 13px; }
+  #ask[hidden] { display: none; }
+  #ask .ah { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); cursor: move; touch-action: none; user-select: none; }
   #ask .ah b { font-size: 13.5px; } #ask .ah .t { color: var(--muted); font-size: 12px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #ask .ah button { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; font-size: 16px; padding: 0 4px; }
   #ask .msgs { overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 60px; }
@@ -94,10 +100,8 @@
   #ask form button { border: 0; background: var(--accent); color: #fff; border-radius: 8px; padding: 0 12px; font: inherit; cursor: pointer; }
   #ask form button:disabled { opacity: .5; cursor: default; }
   #ask .foot { color: var(--muted); font-size: 11.5px; padding: 0 12px 10px; }
-  #askpill { position: fixed; top: 10px; right: 12px; z-index: 50; border: 0; background: var(--accent); color: #fff; border-radius: 999px; padding: 7px 14px;
-    font: inherit; font-size: 13px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.15); }
-  @media (min-width: 1180px) { body.askopen { padding-right: 364px; } }
-  @media (max-width: 1179px) { #ask { top: auto; bottom: 12px; left: 12px; width: auto; max-width: 480px; margin-left: auto; max-height: 62vh; } }
+  @media (max-width: 599px) { #ask { left: 8px !important; right: 8px; top: auto !important; bottom: 8px; width: auto; height: 62vh; } #ask .ah { cursor: default; }
+    #askfab.on { display: none; } }
 </style>
 </head>
 <body>
@@ -492,12 +496,46 @@ function changesCard(tab, first) {
   });
 }
 
-// ---- Ask Claude (app/ask.py): one panel for the whole page, created once, so it stays put while you scroll and switch tabs. It knows the
-// tab you are on and the date kept on the top card. The conversation is kept for this dashboard in this browser tab (sessionStorage).
-const ASK = { box: null, pill: null, msgs: null, title: null, input: null, send: null, foot: null, hist: [], busy: false };
+// ---- Ask Claude (app/ask.py): a floating icon you can drag anywhere on the screen; a click opens the chat beside it. Both are created
+// once, outside the tabs, so they stay put while you scroll and switch tabs. The icon's place is kept for every dashboard in this
+// browser (localStorage), the conversation for this dashboard in this browser tab (sessionStorage). Double-click the icon to send it
+// back to its corner. The chat knows the tab you are on and the date kept on the top card.
+const ASK = { box: null, fab: null, msgs: null, title: null, input: null, send: null, foot: null, hist: [], busy: false };
 const askStore = { get(k, d) { try { const v = sessionStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
-const wide = () => window.matchMedia("(min-width: 1180px)").matches;
+const FAB = 52, EDGE = 20;
+const phone = () => window.matchMedia("(max-width: 599px)").matches;
+function askPos() {                                      // the icon's top-left corner in pixels, from the saved fraction of the window
+  let p = null; try { p = JSON.parse(localStorage.getItem("ask:pos")); } catch (e) {}
+  const w = innerWidth - FAB, h = innerHeight - FAB;
+  const x = p && isFinite(p.x) ? p.x * w : w - EDGE, y = p && isFinite(p.y) ? p.y * h : h - EDGE;
+  return { x: Math.min(Math.max(x, 4), w - 4), y: Math.min(Math.max(y, 4), h - 4) };
+}
+function askPlace(x, y, save) {                          // move the icon (clamped to the window) and keep the chat beside it
+  const w = innerWidth - FAB, h = innerHeight - FAB;
+  x = Math.min(Math.max(x, 4), w - 4); y = Math.min(Math.max(y, 4), h - 4);
+  ASK.fab.style.left = x + "px"; ASK.fab.style.top = y + "px";
+  if (save) try { localStorage.setItem("ask:pos", JSON.stringify({ x: w > 0 ? x / w : 1, y: h > 0 ? y / h : 1 })); } catch (e) {}
+  if (!ASK.box.hidden && !phone()) {                     // the chat opens toward whichever side has room
+    const bw = ASK.box.offsetWidth || 360, bh = ASK.box.offsetHeight || 520, gap = 10;
+    let bx = x + FAB / 2 > innerWidth / 2 ? x - bw - gap : x + FAB + gap;
+    let by = y + FAB / 2 > innerHeight / 2 ? y + FAB - bh : y;
+    bx = Math.min(Math.max(bx, 8), innerWidth - bw - 8); by = Math.min(Math.max(by, 8), innerHeight - bh - 8);
+    ASK.box.style.left = bx + "px"; ASK.box.style.top = by + "px";
+  }
+}
+function askDrag(handle, onMove, onTap) {                // pointer drag (mouse and touch); a press that moves less than 5 px is a tap
+  handle.addEventListener("pointerdown", e => {
+    if (e.button !== 0 || e.target.closest("button:not(#askfab)")) return;
+    const sx = e.clientX, sy = e.clientY, f = ASK.fab.getBoundingClientRect();
+    let moved = false;
+    handle.setPointerCapture(e.pointerId);
+    const move = ev => { if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return; moved = true; onMove(f.left + ev.clientX - sx, f.top + ev.clientY - sy); };
+    const up = ev => { handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); handle.removeEventListener("pointercancel", up);
+      if (moved) askPlace(parseFloat(ASK.fab.style.left), parseFloat(ASK.fab.style.top), true); else if (onTap) onTap(ev); };
+    handle.addEventListener("pointermove", move); handle.addEventListener("pointerup", up); handle.addEventListener("pointercancel", up);
+  });
+}
 function askText(t) {                                    // light formatting from text nodes only: paragraphs, "- " bullets, **bold**
   const box = el("div");
   for (const block of String(t).split(/\n{2,}/)) {
@@ -554,10 +592,10 @@ async function askSend(q) {
   ASK.busy = false; ASK.send.disabled = false; ASK.input.focus();
 }
 function askOpen(open) {
-  ASK.box.hidden = !open; ASK.pill.hidden = open;
-  document.body.classList.toggle("askopen", open && wide());
+  ASK.box.hidden = !open; ASK.fab.classList.toggle("on", open);
+  ASK.fab.setAttribute("aria-expanded", open ? "true" : "false");
   try { localStorage.setItem("ask:closed", open ? "0" : "1"); } catch (e) {}
-  if (open) ASK.input.focus({ preventScroll: true });
+  if (open) { const p = askPos(); askPlace(p.x, p.y, false); ASK.input.focus({ preventScroll: true }); }
 }
 function askPanel() {
   ASK.title = el("span", { class: "t" });
@@ -571,14 +609,21 @@ function askPanel() {
     el("div", { class: "ah" }, el("b", {}, "Ask Claude"), ASK.title, el("button", { title: "Clear the conversation", onclick: () => { ASK.hist = []; askStore.set("ask:" + SLUG, []); ASK.msgs.replaceChildren(); askTab(); } }, "↺"),
       el("button", { title: "Minimise (Esc)", onclick: () => askOpen(false) }, "–")),
     ASK.msgs, form, ASK.foot);
-  ASK.pill = el("button", { id: "askpill", onclick: () => askOpen(true) }, "Ask Claude");
-  document.body.append(ASK.box, ASK.pill);
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && !ASK.box.hidden) askOpen(false); });
-  window.matchMedia("(min-width: 1180px)").addEventListener("change", () => document.body.classList.toggle("askopen", !ASK.box.hidden && wide()));
+  ASK.fab = el("button", { id: "askfab", title: "Ask Claude (drag to move, double-click to reset)", "aria-label": "Ask Claude", "aria-expanded": "false" });
+  ASK.fab.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/></svg>';
+  document.body.append(ASK.box, ASK.fab);
+  askDrag(ASK.fab, (x, y) => askPlace(x, y, false), () => askOpen(ASK.box.hidden));
+  askDrag(ASK.box.querySelector(".ah"), (x, y) => { if (!phone()) askPlace(x, y, false); });   // dragging the chat moves the icon with it
+  ASK.fab.addEventListener("dblclick", () => { try { localStorage.removeItem("ask:pos"); } catch (e) {} const p = askPos(); askPlace(p.x, p.y, false); });
+  ASK.fab.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); askOpen(ASK.box.hidden); } });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !ASK.box.hidden) { askOpen(false); ASK.fab.focus(); } });
+  window.addEventListener("resize", () => { const p = askPos(); askPlace(p.x, p.y, false); });
   ASK.hist = askStore.get("ask:" + SLUG, []);
   for (const h of ASK.hist) { askMsg("q", h.q); askMsg("a", h.a); }
-  let closed = false; try { closed = localStorage.getItem("ask:closed") === "1"; } catch (e) {}
-  askOpen(wide() && !closed);                             // open by default on wide screens, a pill on phones
+  let closed = true; try { closed = localStorage.getItem("ask:closed") !== "0"; } catch (e) {}
+  ASK.box.hidden = true;
+  const p0 = askPos(); askPlace(p0.x, p0.y, false);
+  askOpen(!closed);                                       // starts as just the icon unless the reader left the chat open
   askTab();
   fetch("/api/ask/status").then(r => r.json()).then(askQuota).catch(() => {});
 }

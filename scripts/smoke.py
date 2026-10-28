@@ -108,18 +108,37 @@ def mock_discovered() -> None:
             tm.smoke_patch()
 
 
-def ask_check(pg, first: dict | None) -> dict:
-    """The Ask Claude panel (or, on a narrow screen, its pill) is fixed at the top right and stays put across tabs and scrolling."""
-    box = pg.evaluate("""() => { const a = document.getElementById('ask'), p = document.getElementById('askpill');
-      const v = a && !a.hidden ? a : p; if (!v) return null; const r = v.getBoundingClientRect();
-      return { id: v.id, fixed: getComputedStyle(v).position === 'fixed', top: Math.round(r.top), right: Math.round(innerWidth - r.right) }; }""")
+FAB_JS = """() => { const f = document.getElementById('askfab'); if (!f) return null; const r = f.getBoundingClientRect();
+  return { fixed: getComputedStyle(f).position === 'fixed', x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width) }; }"""
+
+
+def ask_check(pg, first: dict | None, drag: bool = False) -> dict:
+    """The Ask Claude icon floats (fixed) and stays put across tabs and scrolling. With drag: it moves where it is dragged, a click
+    opens the chat beside it and Esc closes it, then it goes back to its corner (double-click)."""
+    box = pg.evaluate(FAB_JS)
     if not box:
-        return {"ok": False, "why": "no panel"}
+        return {"ok": False, "why": "no icon"}
     pg.mouse.wheel(0, 600); time.sleep(0.2)
-    after = pg.evaluate("() => { const v = document.getElementById('" + box["id"] + "'); return Math.round(v.getBoundingClientRect().top); }")
+    after = pg.evaluate(FAB_JS)
     pg.mouse.wheel(0, -600)
-    ok = box["fixed"] and after == box["top"] and box["right"] < 40 and (first is None or (first["id"], first["top"]) == (box["id"], box["top"]))
-    return {"ok": ok, **box}
+    ok = box["fixed"] and (after["x"], after["y"]) == (box["x"], box["y"]) and (first is None or (first["x"], first["y"]) == (box["x"], box["y"]))
+    out = {"ok": ok, **box}
+    if drag and ok:
+        cx, cy = box["x"] + box["w"] / 2, box["y"] + box["w"] / 2
+        pg.mouse.move(cx, cy); pg.mouse.down(); pg.mouse.move(cx - 100, cy - 75, steps=4); pg.mouse.move(cx - 200, cy - 150, steps=4); pg.mouse.up()
+        time.sleep(0.2)
+        moved = pg.evaluate(FAB_JS)
+        closed_after_drag = pg.evaluate("() => document.getElementById('ask').hidden")
+        pg.mouse.click(moved["x"] + 20, moved["y"] + 20); time.sleep(0.2)
+        opened = pg.evaluate("() => !document.getElementById('ask').hidden")
+        pg.keyboard.press("Escape"); time.sleep(0.1)
+        closed = pg.evaluate("() => document.getElementById('ask').hidden")
+        pg.dblclick("#askfab"); time.sleep(0.1)
+        back = pg.evaluate(FAB_JS)
+        out.update(dragged=(moved["x"] - box["x"], moved["y"] - box["y"]), opened=opened)
+        out["ok"] = (abs(moved["x"] - box["x"] + 200) <= 2 and abs(moved["y"] - box["y"] + 150) <= 2 and closed_after_drag and opened and closed
+                     and (back["x"], back["y"]) == (box["x"], box["y"]))
+    return out
 
 
 def follow_check(pg) -> dict | None:
@@ -201,7 +220,7 @@ def main() -> int:
                     text = pg.locator("#view").inner_text()
                     sync = pg.evaluate(SYNC_CHECK) if theme == "light" else {"n": "-", "ok": None}
                     follow = follow_check(pg) if theme == "light" else None
-                    askp = ask_check(pg, ask_first)
+                    askp = ask_check(pg, ask_first, drag=(i == 0 and theme == "light"))
                     ask_first = ask_first or askp
                     line = (f"{theme:5} {slug:12} {key:11} cards={pg.locator('#view .card').count():3} charts={pg.locator('#view .chart').count():3} "
                             f"unavailable={text.count('not available'):2} could-not-load={'Could not load' in text} sync={sync}" + (f" follow={follow}" if follow else "") + ("" if askp["ok"] else f" ask={askp}"))
