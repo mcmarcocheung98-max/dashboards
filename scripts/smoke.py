@@ -158,14 +158,22 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--live"); ap.add_argument("--out", default=str(ROOT / "smoke-shots")); ap.add_argument("--only"); ap.add_argument("--lwc")
     a = ap.parse_args()
+    import os
     if a.live:
         base = a.live.rstrip("/")
+        passcode = os.environ.get("SMOKE_PASSCODE", "")              # private dashboards are skipped without it
     else:
+        os.environ.setdefault("PRIVATE_PASSCODE", "smoke-passcode")
+        passcode = os.environ["PRIVATE_PASSCODE"]
         mock_sources(); mock_discovered(); base = serve_local()
     from playwright.sync_api import sync_playwright
     from app import topics
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     slugs = [a.only] if a.only else list(topics.REGISTRY)
+    private = {s for s, t in topics.REGISTRY.items() if t.private}
+    if not passcode and private & set(slugs):
+        print("skipping private dashboards (no SMOKE_PASSCODE):", ", ".join(sorted(private & set(slugs))))
+        slugs = [s for s in slugs if s not in private]
     bad = []
     with sync_playwright() as p:
         exe = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
@@ -178,6 +186,10 @@ def main() -> int:
             pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "Failed to load resource" not in m.text else None)
             pg.goto(base + "/"); pg.wait_for_selector("a.tile", timeout=30000)
+            if passcode and private & set(slugs):
+                r = pg.request.post(base + "/api/unlock", data={"passcode": passcode})
+                if not r.ok:
+                    bad.append(f"{theme}: unlock failed ({r.status})")
             for slug in slugs:
                 pg.goto(f"{base}/{slug}"); pg.wait_for_selector("nav button", timeout=30000)
                 ask_first = None

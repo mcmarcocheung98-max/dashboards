@@ -27,7 +27,7 @@ def _dump(obj) -> str:
     return json.dumps(obj, default=str, indent=1)
 
 
-def build() -> bytes:
+def build(include_private: bool = False) -> bytes:
     day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     root = f"archive-{day}/"
     buf = io.BytesIO()
@@ -37,7 +37,9 @@ def build() -> bytes:
             z.writestr(root + "health.json", _dump(topics.health()))
         except Exception as e:
             z.writestr(root + "health.error.txt", f"{type(e).__name__}: {e}")
-        for slug in topics.REGISTRY:
+        for slug, t in topics.REGISTRY.items():
+            if t.private and not include_private:
+                continue
             base = f"{root}{slug}/"
             z.writestr(base + "meta.json", _dump(topics.meta(slug)))
             jobs = {name: pool.submit(fn) for name, fn in topics.endpoints(slug).items()}
@@ -106,7 +108,7 @@ def run(now: datetime | None = None) -> dict:
         try:
             first = not st.get("first")
             label = now.strftime("%Y-%m") if (first or _month_end(now)) else _prev_month(now.strftime("%Y-%m"))   # a catch-up files under the month it stands for
-            data = build()
+            data = build(include_private=True)                    # the owner's own OneDrive: private dashboards too
             path = cloud.upload_bytes(data, f"Archive/{label}", f"dashboards-{now.strftime('%Y-%m-%d')}.zip")
             st.update(ok=True, error="", path=f"{cloud.folder()}/{path}", bytes=len(data), ts=now.timestamp())
             if first:

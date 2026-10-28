@@ -378,7 +378,7 @@ const tint = (v, scale, col) => v == null ? "" : "background:color-mix(in srgb, 
 const note = s => el("div", { class: "muted", style: "margin-top:6px" }, s);
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const api = p => fetch("/api/" + SLUG + "/" + p).then(async r => { const j = await r.json().catch(() => ({ error: "bad response" })); if (!r.ok) throw new Error(j.error || r.statusText); return j; });
+const api = p => fetch("/api/" + SLUG + "/" + p).then(async r => { const j = await r.json().catch(() => ({ error: "bad response" })); if (!r.ok) { const e = new Error(j.error || r.statusText); e.status = r.status; e.info = j; throw e; } return j; });
 const month = ts => new Date(ts * 1000).toLocaleDateString([], { month: "short", year: "numeric", timeZone: "UTC" });
 const num = (v, d = 0) => v == null ? "–" : Number(v).toLocaleString("en-GB", { maximumFractionDigits: d, minimumFractionDigits: d });
 const gbp = (v, d = 0) => v == null ? "–" : "£" + num(v, d);
@@ -610,7 +610,8 @@ async function render() {
 function footer() {
   const f = document.getElementById("foot");
   f.replaceChildren(el("div", {}, META.notes || ""), el("div", { style: "margin-top:6px" }, "Sources: ", ...META.sources.flatMap((s, i) => [i ? " · " : "", link(s.name, s.url), s.cadence ? " (" + s.cadence + ")" : ""])),
-    el("div", { style: "margin-top:6px" }, "Read-only. Nothing here is investment advice."));
+    el("div", { style: "margin-top:6px" }, "Read-only. Nothing here is investment advice.",
+      META.private ? el("span", {}, " · Private dashboard · ", el("a", { href: "#", onclick: e => { e.preventDefault(); fetch("/api/lock", { method: "POST" }).then(() => location.reload()); } }, "Lock")) : null));
 }
 async function boot() {
   META = await api("meta");
@@ -627,7 +628,24 @@ async function boot() {
   askPanel();
   render();
 }
-boot().catch(e => document.getElementById("view").replaceChildren(card(null, el("div", { class: "err" }, "Could not load: " + e.message))));
+// a private dashboard (app/auth.py): without the passcode cookie its data answers 401, so ask for the passcode once per browser
+function unlockCard(info) {
+  document.getElementById("title").textContent = "Private dashboard";
+  if (info && info.set_up === false) return card("Private dashboard", el("div", { class: "muted" }, "This dashboard is private and its passcode has not been set up yet (PRIVATE_PASSCODE on the server)."));
+  const input = el("input", { type: "password", placeholder: "Passcode", autocomplete: "current-password", style: "font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);min-width:220px" });
+  const msg = el("div", { class: "muted", style: "margin-top:8px" });
+  const go = async () => {
+    msg.textContent = "Checking…";
+    const r = await fetch("/api/unlock", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ passcode: input.value }) });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok) location.reload(); else { msg.textContent = j.error || "Wrong passcode."; input.select(); }
+  };
+  input.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
+  setTimeout(() => input.focus(), 50);
+  return card("Private dashboard", el("div", { class: "muted", style: "margin-bottom:8px" }, "Enter the passcode to open it. This browser stays unlocked for 30 days."),
+    el("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, input, el("button", { class: "pill", style: "cursor:pointer;border:0;font:inherit;padding:7px 14px", onclick: go }, "Unlock")), msg);
+}
+boot().catch(e => document.getElementById("view").replaceChildren(e.status === 401 ? unlockCard(e.info) : card(null, el("div", { class: "err" }, "Could not load: " + e.message))));
 </script>
 </body>
 </html>

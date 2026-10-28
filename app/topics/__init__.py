@@ -8,6 +8,9 @@ To add a dashboard: write topics/<name>.py with TOPIC = Topic(...), static/topic
 (optionally with smoke_patch(), which points the module's fetchers at fixtures for scripts/smoke.py). The module is found on its own:
 nothing shared changes. A helper module that only feeds a dashboard sets DASHBOARD = "<slug>" so /api/health files it there.
 
+Private dashboards: TOPIC = Topic(..., private=True) keeps it off the index and puts its page data, script and Ask Claude behind
+the PRIVATE_PASSCODE cookie (app/auth.py); /api/health shows only its counts and the public /api/archive.zip leaves it out.
+
 What changed since yesterday: a module may define READINGS() -> [{"tab", "key", "label", "value", "lean": +1/0/-1, "note"?}], its
 headline indicators as they read now (from cached data only). One snapshot a day is saved and the page shows what flipped and each
 tab's lean day by day (see _daily.py). Without READINGS the dashboard simply shows no such card.
@@ -33,6 +36,7 @@ class Topic:
     slow: tuple = ()                  # endpoints the background warmer keeps computed
     icon: str = "chart"
     order: int = 100                  # position on the index page
+    private: bool = False             # off the index; page, data and Ask Claude need the passcode (app/auth.py)
 
 
 BUILTIN = (
@@ -86,7 +90,7 @@ def endpoints(slug: str) -> dict:
 
 def meta(slug: str) -> dict:
     t, m = REGISTRY[slug], module(slug)
-    return {"slug": t.slug, "title": t.title, "blurb": t.blurb, "category": category(slug), "tabs": [list(x) for x in t.tabs], "sources": list(getattr(m, "SOURCES", [])),
+    return {"slug": t.slug, "title": t.title, "blurb": t.blurb, "category": category(slug), "private": t.private, "tabs": [list(x) for x in t.tabs], "sources": list(getattr(m, "SOURCES", [])),
             "notes": getattr(m, "NOTES", "")}
 
 
@@ -116,11 +120,16 @@ def category(slug: str) -> str:
     return next((name for name, _, slugs in CATEGORIES if slug in slugs), "More")
 
 
+def public() -> dict[str, Topic]:
+    return {s: t for s, t in REGISTRY.items() if not t.private}
+
+
 def index() -> dict:
     tile = lambda t: {"slug": t.slug, "title": t.title, "blurb": t.blurb, "icon": t.icon, "category": category(t.slug)}
-    groups = [{"name": n, "blurb": b, "dashboards": [tile(REGISTRY[s]) for s in slugs if s in REGISTRY]} for n, b, slugs in CATEGORIES]
+    pub = public()
+    groups = [{"name": n, "blurb": b, "dashboards": [tile(pub[s]) for s in slugs if s in pub]} for n, b, slugs in CATEGORIES]
     listed = {s for _, _, slugs in CATEGORIES for s in slugs}
-    groups.append({"name": "More", "blurb": "", "dashboards": [tile(t) for t in REGISTRY.values() if t.slug not in listed]})
+    groups.append({"name": "More", "blurb": "", "dashboards": [tile(t) for t in pub.values() if t.slug not in listed]})
     groups = [g for g in groups if g["dashboards"]]
     return {"categories": groups, "dashboards": [d for g in groups for d in g["dashboards"]]}
 
@@ -137,6 +146,10 @@ def health() -> dict:
     out = h(m2s)
     for t in REGISTRY.values():
         out["dashboards"].setdefault(t.slug, {"fresh": 0, "stale": 0, "failing": 0, "alerts": 0, "sources": []})
+    for t in REGISTRY.values():
+        if t.private and t.slug in out["dashboards"]:
+            d = out["dashboards"][t.slug]
+            out["dashboards"][t.slug] = {k: d.get(k, 0) for k in ("fresh", "stale", "failing", "alerts")} | {"sources": [], "private": True}
     return out
 
 

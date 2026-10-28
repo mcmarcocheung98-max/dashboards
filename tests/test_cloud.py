@@ -59,7 +59,7 @@ def test_due_month_end_first_copy_and_catch_up():
 
 def test_run_uploads_and_records(tmp_path, monkeypatch):
     monkeypatch.setattr(A, "STATUS", tmp_path / "status.json")
-    monkeypatch.setattr(A, "build", lambda: b"zipbytes")
+    monkeypatch.setattr(A, "build", lambda include_private=False: b"zipbytes")
     monkeypatch.setattr(C, "configured", lambda env=None: True)
     sent = []
     monkeypatch.setattr(C, "upload_bytes", lambda data, d, name: sent.append((d, name, data)) or f"{d}/{name}")

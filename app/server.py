@@ -8,6 +8,7 @@ GET /api/<slug>/meta  title, tabs, sources
 GET /api/<slug>/changes  what changed since yesterday (topics/_daily.py): flipped readings and each tab's lean day by day
 GET /api/<slug>/<n>   that dashboard's data (JSON); 404 unknown, 503 when the source is down and no snapshot exists
 GET /healthz          'ok'
+POST /api/unlock      {passcode}: opens private dashboards in this browser for 30 days (app/auth.py); POST /api/lock signs out
 POST /api/ask         Ask Claude about the tab you are on (app/ask.py): {slug, tab, question, history?, date?}; limited per visitor and per day
 GET /api/ask/status   whether Ask Claude is set up and how many questions this visitor has left
 GET /api/archive.zip  every dashboard's data, daily snapshots and hand-entered files in one zip (app/archive.py), built at most every 6 hours
@@ -39,7 +40,12 @@ def _json(obj, status: int = 200) -> web.Response:
     return web.Response(text=json.dumps(obj, default=str, allow_nan=False), status=status, content_type="application/json", headers=HEADERS)
 
 
+def _auth_cookie(request) -> str | None:
+    return request.cookies.get("dash_auth")
+
+
 def make_app() -> web.Application:
+    from . import auth
     async def index(request):
         return web.FileResponse(STATIC / "index.html", headers=HEADERS)
 
@@ -49,6 +55,8 @@ def make_app() -> web.Application:
             f = STATIC / "topics" / slug
             if slug[:-3] not in topics.REGISTRY or not f.exists():
                 raise web.HTTPNotFound()
+            if not auth.allowed(slug[:-3], _auth_cookie(request)):
+                raise web.HTTPUnauthorized()
             return web.FileResponse(f, headers={**HEADERS, "Cache-Control": "public, max-age=300"})
         if slug in topics.REDIRECTS:                          # merged dashboards keep their old links working
             to, tab = topics.REDIRECTS[slug]
@@ -79,6 +87,9 @@ def make_app() -> web.Application:
         slug, name = request.match_info["slug"], request.match_info["name"]
         if slug not in topics.REGISTRY:
             return _json({"error": "unknown dashboard"}, 404)
+        if not auth.allowed(slug, _auth_cookie(request)):
+            return _json({"error": "This dashboard is private." if auth.configured() else "This private dashboard is not set up yet (PRIVATE_PASSCODE).",
+                          "private": True, "set_up": auth.configured()}, 401)
         try:
             if name == "meta":
                 data = topics.meta(slug)
@@ -114,6 +125,8 @@ def make_app() -> web.Application:
                 raise ValueError
         except Exception:
             return _json({"error": "bad request"}, 400)
+        if not auth.allowed(str(body.get("slug") or ""), _auth_cookie(request)):
+            return _json({"error": "Unlock this dashboard first."}, 401)
         try:
             data = await asyncio.to_thread(ask.ask, str(body.get("slug") or ""), str(body.get("tab") or "")[:40], str(body.get("question") or ""),
                                            body.get("history") if isinstance(body.get("history"), list) else None,
@@ -131,6 +144,29 @@ def make_app() -> web.Application:
             return _json({"error": "Claude could not answer right now; please try again in a minute."}, 502)
         return _json(data)
 
+    async def api_unlock(request):
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        if not auth.configured():
+            return _json({"error": "Private dashboards are not set up yet (PRIVATE_PASSCODE)."}, 503)
+        try:
+            tok = auth.unlock(str((body or {}).get("passcode") or "")[:200], client_ip(request))
+        except auth.TooMany as e:
+            return _json({"error": str(e)}, 429)
+        if not tok:
+            return _json({"error": "Wrong passcode."}, 401)
+        resp = _json({"ok": True})
+        secure = request.secure or request.headers.get("X-Forwarded-Proto", "") == "https"
+        resp.set_cookie("dash_auth", tok, max_age=auth.DAYS * 86400, httponly=True, secure=secure, samesite="Strict", path="/")
+        return resp
+
+    async def api_lock(request):
+        resp = _json({"ok": True})
+        resp.del_cookie("dash_auth", path="/")
+        return resp
+
     async def api_ask_status(request):
         from . import ask
         return _json(await asyncio.to_thread(ask.status, client_ip(request)))
@@ -147,6 +183,8 @@ def make_app() -> web.Application:
     app.router.add_get("/api/archive.zip", api_archive)
     app.router.add_get("/api/ask/status", api_ask_status)
     app.router.add_post("/api/ask", api_ask)
+    app.router.add_post("/api/unlock", api_unlock)
+    app.router.add_post("/api/lock", api_lock)
     app.router.add_get("/api/{slug}/{name}", api)
     app.router.add_get("/{slug}", page)
     return app

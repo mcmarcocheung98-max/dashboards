@@ -41,6 +41,14 @@ pytest -m network tests/test_sources.py     # fetches every live source: run by 
 - `/api/health` on the site lists every data source used since the last restart, per dashboard: fresh, stale (serving its last good copy) or failing. The index page shows the counts under each dashboard.
 - Actions → **source-health** runs daily at 07:17 UTC and keeps one issue labelled `source-health` open while any source has served a copy older than 3 days or failed for more than a day with nothing to show; it closes the issue when all are healthy. Set the repository variable `DASHBOARDS_URL` if the domain changes.
 
+## Private dashboards
+
+A dashboard declared with `Topic(..., private=True)` is left off the index and opens only with a passcode: set
+`PRIVATE_PASSCODE` on the Railway service, open the page and type it once (the browser stays unlocked for 30 days; "Lock" in
+the footer signs out; changing the passcode signs every browser out). Its data, script and Ask Claude answers are refused
+without it, `/api/health` shows only its counts, and the public `/api/archive.zip` leaves it out (the OneDrive copy keeps it).
+Add the same value as the GitHub secret `PRIVATE_PASSCODE` so the live check can open it.
+
 ## Ask Claude
 
 Every tab has an Ask Claude panel at the top right that answers from the page's own data. Anyone can ask, within per-visitor

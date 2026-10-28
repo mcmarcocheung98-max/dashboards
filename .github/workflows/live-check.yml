@@ -29,6 +29,8 @@ jobs:
                       print('   ', s['status'], s['host'], s['since'], s['error'] or '')
           "
       - name: Every tab
+        env:
+          SMOKE_PASSCODE: ${{ secrets.PRIVATE_PASSCODE }}      # optional: without it the private dashboards are skipped
         run: python scripts/smoke.py --live "${{ inputs.url }}" --out smoke-shots
       - uses: actions/upload-artifact@v4
         if: always()
