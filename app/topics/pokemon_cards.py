@@ -1004,7 +1004,15 @@ def _layout_now() -> dict:
                     seg = seg[:end] if end > 0 else seg
                     sold[m.group(1)] = {"rows": seg.count("<tr"), "head": seg[:700], "first_row": (re.search(r"<tr[^>]*>(?:(?!</tr>).){0,1500}</tr>", seg[300:], re.S) or [""])[0][:1500]}
                 sold["_ids"] = sorted(set(re.findall(r'id="([^"]*(?:auction|sold|sales|volume)[^"]*)"', head)))[:40]
-                sold["_volume_text"] = re.findall(r"[^<>]{0,80}(?:[Vv]olume|sales per)[^<>]{0,120}", head)[:8]
+                i = head.find('class="sales_volume"')
+                sold["_volume_row"] = head[max(0, i - 300):i + 2500] if i >= 0 else None
+                g = head.find("completed-auctions-graded")
+                r9 = head.find('<td class="date"', g) if g >= 0 else -1
+                sold["_graded_row"] = head[max(0, r9 - 200):r9 + 2200] if r9 >= 0 else None
+                pr = head.find('class="population-report"')
+                sold["_pop"] = re.sub(r"\s+", " ", head[pr:pr + 6000]) if pr >= 0 else None
+                pt = head.find('id="price_data"')
+                sold["_price_table"] = re.sub(r"\s+", " ", head[pt:pt + 5000]) if pt >= 0 else None
             chart = re.search(r"VGPC\.chart_data\s*=\s*(\{.{0,300})", head, re.S)
             try:
                 j = json.loads(head)
