@@ -8,6 +8,9 @@ To add a dashboard: write topics/<name>.py with TOPIC = Topic(...), static/topic
 (optionally with smoke_patch(), which points the module's fetchers at fixtures for scripts/smoke.py). The module is found on its own:
 nothing shared changes. A helper module that only feeds a dashboard sets DASHBOARD = "<slug>" so /api/health files it there.
 
+Shared scripts: Topic(..., script="coin") serves static/topics/coin.js at /<slug>.js, for dashboards that are the same page on different
+data (the coin pages read SLUG to know which coin they show).
+
 Private dashboards: TOPIC = Topic(..., private=True) keeps it off the index and puts its page data, script and Ask Claude behind
 the PRIVATE_PASSCODE cookie (app/auth.py); /api/health shows only its counts and the public /api/archive.zip leaves it out.
 
@@ -37,6 +40,7 @@ class Topic:
     icon: str = "chart"
     order: int = 100                  # position on the index page
     private: bool = False             # off the index; page, data and Ask Claude need the passcode (app/auth.py)
+    script: str = ""                  # static/topics/<script>.js when several dashboards share one script (default: the slug)
 
 
 BUILTIN = (
@@ -78,6 +82,11 @@ def helpers() -> dict[str, str]:
 
 
 REGISTRY: dict[str, Topic] = {t.slug: t for t in sorted((*BUILTIN, *_discover()), key=lambda t: t.order)}
+
+
+def script(slug: str) -> str:
+    """The file name under static/topics/ that /<slug>.js serves."""
+    return (REGISTRY[slug].script or slug) + ".js"
 
 
 def module(slug: str):

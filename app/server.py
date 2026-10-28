@@ -52,8 +52,10 @@ def make_app() -> web.Application:
     async def page(request):
         slug = request.match_info["slug"]
         if slug.endswith(".js"):
-            f = STATIC / "topics" / slug
-            if slug[:-3] not in topics.REGISTRY or not f.exists():
+            if slug[:-3] not in topics.REGISTRY:
+                raise web.HTTPNotFound()
+            f = STATIC / "topics" / topics.script(slug[:-3])
+            if not f.exists():
                 raise web.HTTPNotFound()
             if not auth.allowed(slug[:-3], _auth_cookie(request)):
                 raise web.HTTPUnauthorized()
