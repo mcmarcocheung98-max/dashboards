@@ -285,6 +285,8 @@ def test_ai_adoption_payloads(snapdir, monkeypatch):
     assert f["uk_hk"] == {} and not [r for r in B.manual_rows("ai", "btos_ai_use_us") if "verify" in r.get("note", "")]
     assert u["rows"][0]["date"] >= u["rows"][-1]["date"] and any(v for v in u["series"].values())
     assert g["rows"] and g["by_year"] and set(s["share"]) == {"US", "GB", "DE"}
+    assert sum(g["kinds"].values()) == len(g["rows"]) == sum(g["by_year"].values())     # the page's kind filter covers every row
+    assert list(g["kinds"].values()) == sorted(g["kinds"].values(), reverse=True)
 
 
 def test_btos_workbook_parser():
