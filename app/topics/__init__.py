@@ -8,8 +8,8 @@ To add a dashboard: write topics/<name>.py with TOPIC = Topic(...), static/topic
 (optionally with smoke_patch(), which points the module's fetchers at fixtures for scripts/smoke.py). The module is found on its own:
 nothing shared changes. A helper module that only feeds a dashboard sets DASHBOARD = "<slug>" so /api/health files it there.
 
-Shared scripts: Topic(..., script="coin") serves static/topics/coin.js at /<slug>.js, for dashboards that are the same page on different
-data (the coin pages read SLUG to know which coin they show).
+Shared scripts: Topic(..., script="<name>") serves static/topics/<name>.js at /<slug>.js, for dashboards that are the same page on
+different data.
 
 Private dashboards: TOPIC = Topic(..., private=True) keeps it off the index and puts its page data, script and Ask Claude behind
 the PRIVATE_PASSCODE cookie (app/auth.py); /api/health shows only its counts and the public /api/archive.zip leaves it out.
@@ -118,7 +118,7 @@ def changes(slug: str) -> dict:
 
 # The index page groups dashboards under these headings, in this order. A dashboard not listed here goes under "More".
 CATEGORIES = (
-    ("Money & markets", "Prices, rates and where capital is flowing.", ("btc-cycles", "hype", "ena", "sol", "near", "memecoins", "debt-rates", "housing", "pokemon-cards")),
+    ("Money & markets", "Prices, rates and where capital is flowing.", ("btc-cycles", "altcoins", "debt-rates", "housing", "pokemon-cards")),
     ("AI & technology", "How fast AI, chips and machines are arriving, and who leads.", ("ai", "compute-chips", "china-us-tech", "robotaxi", "space")),
     ("People & planet", "The slow forces: population, health and climate.", ("demographics", "longevity", "climate")),
     ("Sentiment & attention", "What people are betting on and paying attention to.", ("prediction-markets", "trends")),
@@ -144,7 +144,8 @@ def index() -> dict:
 
 
 # old addresses of dashboards that were merged or renamed: slug -> (new slug, tab)
-REDIRECTS = {"ai-jobs": ("ai", "openings"), "ai-adoption": ("ai", "firms")}
+REDIRECTS = {"ai-jobs": ("ai", "openings"), "ai-adoption": ("ai", "firms"),
+             **{t: ("altcoins", t) for t in ("hype", "ena", "sol", "near")}, "memecoins": ("altcoins", "basket")}
 
 
 def health() -> dict:

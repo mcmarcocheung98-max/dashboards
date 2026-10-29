@@ -58,7 +58,8 @@ def test_basket_file():
     coins = M.coins_list()
     assert [c["ticker"] for c in coins] == ["DOGE", "SHIB", "PEPE", "BONK", "WIF", "TRUMP"]
     assert all(c["coingecko_id"] and c["chain"] for c in coins)
-    assert topics.REGISTRY["memecoins"].tabs == (("basket", "Basket"), ("season", "Meme season")) and topics.category("memecoins") == "Money & markets"
+    assert "memecoins" not in topics.REGISTRY and topics.REDIRECTS["memecoins"] == ("altcoins", "basket")       # now tabs of Altcoin Study
+    assert {"basket", "season"} <= {k for k, _ in topics.REGISTRY["altcoins"].tabs} and topics.helpers()["memecoins"] == "altcoins"
 
 
 def test_before_the_fill_the_page_says_loading(mocked):
@@ -105,12 +106,12 @@ def test_through_the_server(mocked):
 
     async def go():
         async with TestClient(TestServer(make_app())) as c:
-            for k, _ in topics.REGISTRY["memecoins"].tabs:
-                r = await c.get(f"/api/memecoins/{k}")
+            for k in ("basket", "season"):
+                r = await c.get(f"/api/altcoins/{k}")
                 assert r.status == 200, k
                 json.loads(await r.text())
-            assert (await c.get("/memecoins")).status == 200
-            assert (await c.get("/memecoins.js")).status == 200
+            r = await c.get("/memecoins", allow_redirects=False)
+            assert r.status == 301 and r.headers["Location"] == "/altcoins#basket"                  # old links keep working
     asyncio.run(go())
 
 

@@ -1,4 +1,6 @@
-# Memecoins (`/memecoins`)
+# Memecoins (the Memecoins and Meme season tabs of Altcoin Study, `/altcoins#basket`)
+
+Was its own dashboard at `/memecoins`, which now redirects. Buy zones for these coins are on the Buy zones tab (`data/altcoins/README.md`).
 
 The largest memecoins as one basket, measured against BTC: prices and momentum per coin, and a mechanical "meme season" reading.
 
