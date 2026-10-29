@@ -43,6 +43,8 @@
   .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 8px; font-size: 12.5px; }
   .legend button { border: 0; background: none; color: var(--ink2); font: inherit; padding: 2px 0; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
   .legend button.off { opacity: .4; }
+  .legend button.csv { margin-left: auto; color: var(--muted); font-size: 12px; }
+  .legend button.csv:hover { color: var(--ink); }
   .sw { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
   .sw.dash { background: repeating-linear-gradient(90deg, var(--hold) 0 4px, transparent 4px 7px) !important; }
   .scroll { overflow-x: auto; }
@@ -224,6 +226,25 @@ function rangeBar() {
 }
 const dedupe = pts => { const m = new Map(); pts.forEach(([t, v]) => m.set(Math.round(t), v)); return [...m].sort((a, b) => a[0] - b[0]).map(([time, value]) => ({ time, value })); };
 
+// ---------- "CSV" button on every chart's legend: the numbers the chart draws, as a file (one row per date or x value, one column per line)
+const csvCell = v => v == null || (typeof v === "number" && !isFinite(v)) ? "" : /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
+const csvText = (head, rows) => [head, ...rows].map(r => r.map(csvCell).join(",")).join("\n") + "\n";
+const csvName = what => [SLUG, current, what].filter(Boolean).join("-").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) + ".csv";
+const isoTime = t => t % 86400 ? new Date(t * 1000).toISOString().slice(0, 16).replace("T", " ") : new Date(t * 1000).toISOString().slice(0, 10);
+// series [{name, points: [[x, y], ...]}] -> CSV text; the x values of every series joined, a blank cell where a series has no point
+function seriesCsv(series, xHead, xFmt = v => v) {
+  const have = series.filter(s => s.points && s.points.length);
+  const xs = [...new Set(have.flatMap(s => s.points.map(p => p[0])))].sort((a, b) => a - b);
+  const maps = have.map(s => new Map(s.points.map(p => [p[0], p[1]])));
+  return csvText([xHead, ...have.map((s, i) => s.name || "line " + (i + 1))], xs.map(x => [xFmt(x), ...maps.map(m => m.get(x))]));
+}
+function csvButton(name, make) {
+  return el("button", { class: "csv", type: "button", title: "Download this chart's numbers as a CSV file", onclick: () => {
+    const a = el("a", { href: URL.createObjectURL(new Blob([make()], { type: "text/csv;charset=utf-8" })), download: name });
+    document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  } }, "CSV ↓");
+}
+
 // several lines on one axis, a legend that toggles each line, values shown under the crosshair
 function linesChart(series, fmt, opts = {}) {
   const host = el("div", { class: "chart" + (opts.small ? " small" : "") });
@@ -249,6 +270,10 @@ function linesChart(series, fmt, opts = {}) {
       const d = p && p.seriesData ? p.seriesData.get(m.line) : null;
       m.val.textContent = (m.s.fmt || fmt)(d ? d.value : m.s.points[m.s.points.length - 1][1]);
     }));
+    if (made.length && opts.csv !== false) {
+      const rows = made.map(m => ({ name: m.s.name, points: dedupe(m.s.points.filter(p => p[1] != null)).map(d => [d.time, d.value]) }));
+      legend.append(csvButton(csvName(made[0].s.name), () => seriesCsv(rows, "date", isoTime)));
+    }
     if (made.length && opts.hlines) opts.hlines.forEach(h => made[0].line.createPriceLine({ price: h, color: css("--muted"), lineWidth: 1, lineStyle: 2, axisLabelVisible: false }));
     if (opts.whitespace && opts.whitespace.length) c.addLineSeries({ visible: false, lastValueVisible: false, priceLineVisible: false }).setData(opts.whitespace.map(t => ({ time: t })));
     if (made.length && opts.sync !== false) syncAdd(c, made[0].line, dedupe(made[0].s.points.filter(p => p[1] != null)), { extend: opts.extend });
@@ -292,6 +317,11 @@ function svgLines(series, o = {}) {
   let redraw = () => {};
   const legend = el("div", { class: "legend" }, ...series.map((s, i) => !s.name ? null : el("button", { onclick: e => { e.currentTarget.classList.toggle("off") ? hidden.add(i) : hidden.delete(i); redraw(); } },
     el("span", { class: "sw" + (s.dashed ? " dash" : ""), style: "background:" + s.color }), s.name)));
+  if (o.csv !== false && series.some(s => s.points && s.points.length)) {
+    const cols = series.concat((o.bands || []).flatMap(b => [{ name: (b.name || "band") + " low", points: b.points.map(p => [p[0], p[1]]) },
+                                                               { name: (b.name || "band") + " high", points: b.points.map(p => [p[0], p[2]]) }]));
+    legend.append(csvButton(csvName(series.find(s => s.name) ? series.find(s => s.name).name : "chart"), () => seriesCsv(cols, o.xName || "x")));
+  }
   const box = svgBox(o.h || 260, (host, W, H) => { redraw = () => { host.replaceChildren(); paint(host, W, H); }; paint(host, W, H); });
   function paint(host, W, H) {
     const pad = { l: 6, r: 58, t: 10, b: 22 }, bands = o.bands || [];
@@ -341,7 +371,10 @@ function svgLines(series, o = {}) {
 // bars by category, one or more groups side by side, negative values below a zero line; marks = dashed lines at a category position
 function svgBars(cats, groups, o = {}) {
   const fy = o.yFmt || (v => v);
-  const legend = groups.length > 1 ? el("div", { class: "legend" }, ...groups.map(g => swatch(g.color, g.name)), ...(o.marks || []).map(mk => swatch(mk.color, mk.label, true))) : null;
+  const csv = o.csv !== false && cats.length ? csvButton(csvName(groups.length === 1 && groups[0].name ? groups[0].name : "bars"),
+    () => csvText([o.catHead || "category", ...groups.map((g, j) => g.name || "value " + (j + 1))], cats.map((c, i) => [o.catName ? o.catName(i) : c, ...groups.map(g => g.values[i])]))) : null;
+  const legend = groups.length > 1 ? el("div", { class: "legend" }, ...groups.map(g => swatch(g.color, g.name)), ...(o.marks || []).map(mk => swatch(mk.color, mk.label, true)), csv)
+    : csv ? el("div", { class: "legend" }, csv) : null;
   const read = el("div", { class: "muted", style: "min-height:18px" }, o.note || "Hover or tap a bar.");
   const box = svgBox(o.h || 220, (host, W, H) => {
     const pad = { l: 6, r: 58, t: 10, b: 22 };

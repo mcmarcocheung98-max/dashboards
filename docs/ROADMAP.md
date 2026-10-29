@@ -87,7 +87,8 @@ four staying half done.
 - Open Graph title and description per page (from `meta`) so a shared link previews properly (done: the server writes each
   public dashboard's title and blurb into the page head; private ones keep the generic shell); consider removing
   `noindex` once the data is verified (no `noindex` is set today).
-- "Download CSV" link per card (the payload is already the series; a small JS helper in `topic.html`).
+- "Download CSV" link per card (done: every chart drawn by `linesChart`, `svgLines` or `svgBars` in `topic.html` has a "CSV ↓" button
+  on its legend that saves the numbers it draws, one row per date or category; a chart can opt out with `csv: false`).
 - A short "Method" page per dashboard at `/<slug>#about`, rendered from the README's calculation section, so visitors
   see the caveats without GitHub.
 
