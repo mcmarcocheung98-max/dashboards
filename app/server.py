@@ -20,6 +20,7 @@ A background warmer recomputes expired data every 10 minutes so a visitor never 
 from __future__ import annotations
 
 import asyncio
+import html
 import json
 import logging
 import os
@@ -34,6 +35,22 @@ STATIC = Path(__file__).with_name("static")
 HEADERS = {"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer",
            "Strict-Transport-Security": "max-age=31536000", "X-Frame-Options": "DENY", "Content-Security-Policy": "frame-ancestors 'none'"}
 WARM_EVERY = 10 * 60
+SHELL_TITLE = "<title>Dashboard</title>"
+SHELL_DESC = '<meta name="description" content="A thematic data dashboard: public, read-only.">'
+
+
+def page_html(slug: str) -> str:
+    """topic.html with this dashboard's title and blurb in <title>, the description and Open Graph tags, so a shared link previews
+    with the dashboard's name (link previewers do not run the page's JavaScript). Private dashboards keep the generic shell."""
+    shell = (STATIC / "topic.html").read_text(encoding="utf-8")
+    t = topics.REGISTRY[slug]
+    if t.private:
+        return shell
+    title, desc = html.escape(f"{t.title} · Dashboards"), html.escape(t.blurb)
+    tags = (f'<meta name="description" content="{desc}">\n<meta property="og:type" content="website">\n'
+            f'<meta property="og:site_name" content="Dashboards">\n<meta property="og:title" content="{title}">\n'
+            f'<meta property="og:description" content="{desc}">\n<meta name="twitter:card" content="summary">')
+    return shell.replace(SHELL_TITLE, f"<title>{title}</title>", 1).replace(SHELL_DESC, tags, 1)
 
 
 def _json(obj, status: int = 200) -> web.Response:
@@ -63,7 +80,7 @@ def make_app() -> web.Application:
             raise web.HTTPMovedPermanently(f"/{to}#{tab}")
         if slug not in topics.REGISTRY:
             raise web.HTTPNotFound()
-        return web.FileResponse(STATIC / "topic.html", headers=HEADERS)
+        return web.Response(text=page_html(slug), content_type="text/html", charset="utf-8", headers=HEADERS)
 
     async def api_index(request):
         return _json(topics.index())

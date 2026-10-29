@@ -84,8 +84,9 @@ four staying half done.
 
 - Custom domain on Railway for the dashboards  so links do not
   carry the Railway subdomain.
-- Open Graph title and description per page (from `meta`) so a shared link previews properly; consider removing
-  `noindex` once the data is verified.
+- Open Graph title and description per page (from `meta`) so a shared link previews properly (done: the server writes each
+  public dashboard's title and blurb into the page head; private ones keep the generic shell); consider removing
+  `noindex` once the data is verified (no `noindex` is set today).
 - "Download CSV" link per card (the payload is already the series; a small JS helper in `topic.html`).
 - A short "Method" page per dashboard at `/<slug>#about`, rendered from the README's calculation section, so visitors
   see the caveats without GitHub.
