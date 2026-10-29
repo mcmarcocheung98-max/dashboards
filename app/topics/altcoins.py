@@ -4,6 +4,9 @@ and a buy zone for every coin on one tab.
 zones    every coin's buy zone (rule below), where today's price sits against it, RSI and the 30-day move
 volume   big-volume days (3x the 60-day median) and the support / resistance zones they leave, per coin, from Hyperliquid daily candles
          (_volume_zones.py); what each coin did after its own big days and zone retests
+signals  twenty daily signals on top of the zones (zone position, retests, breaks, big-day balance, trend, RSI, BTC, unlock windows ...),
+         each judged on the next 7 days, weighted by rank correlation on the pooled past of every coin and re-fitted every 30 days, one
+         final score per coin with a walk-forward backtest of trading it (_signals.py)
 hype ... one tab per candidate (_coin_page.py): price against BTC, RSI, market cap, the case for it, fundamentals and the projection
 unlocks  ENA's full unlock schedule (data/altcoins/unlocks/ENA.csv) and what the price did before, into and after each unlock, with the
          simple short-before / buy-after rules and a placebo (_unlocks.py)
@@ -33,6 +36,7 @@ import numpy as np
 from ..cache import _cached
 from . import Topic
 from . import _coin_page as P
+from . import _signals as SG
 from . import _unlocks as UL
 from . import _volume_zones as VZ
 from . import btc_cycles as C
@@ -41,11 +45,11 @@ from ._base import DAY, _r, fetch_json, stale_info
 
 SLUG = "altcoins"
 CANDIDATES = ("HYPE", "ENA", "SOL", "NEAR")
-TABS = (("zones", "Buy zones"), ("volume", "Volume zones"), *((t.lower(), t) for t in CANDIDATES), ("unlocks", "ENA unlocks"), ("basket", "Memecoins"), ("season", "Meme season"))
+TABS = (("zones", "Buy zones"), ("volume", "Volume zones"), ("signals", "Signals"), *((t.lower(), t) for t in CANDIDATES), ("unlocks", "ENA unlocks"), ("basket", "Memecoins"), ("season", "Meme season"))
 TOPIC = Topic(SLUG, "Altcoin Study",
               "HYPE, ENA, SOL and NEAR in full (price against BTC, fundamentals, the bear / base / bull projection), the memecoin basket and meme "
               "season, a buy zone for every coin, the big-volume days and the support / resistance zones they leave, and ENA around every token unlock.",
-              "altcoins", TABS, ("zones", "volume", "unlocks", "basket", "season"), icon="chart", order=12)
+              "altcoins", TABS, ("zones", "volume", "signals", "unlocks", "basket", "season"), icon="chart", order=12)
 MA_DAYS = 200
 VALUE_MULT = 2.0                               # the base case to end-2028 must at least double from the top of the zone
 SIBLINGS = {t: f"#{t.lower()}" for t in CANDIDATES}
@@ -139,7 +143,7 @@ def _hl_post(coin: str) -> dict:
 
 def hl_daily(ticker: str) -> pd.DataFrame:
     """Closed daily candles (open, high, low, close, volume in coins, usd_volume) for a coin's Hyperliquid market, scaled to one token."""
-    name, k = HL_COINS[ticker]
+    name, k = HL_COINS.get(ticker, (ticker, 1))
     raw = fetch_json(HL_INFO, HL_TTL, post=_hl_post(name), min_bytes=100)
     if not raw:
         raise ValueError(f"no Hyperliquid candles for {name}")
@@ -196,6 +200,69 @@ def _volume_now() -> dict:
             "settings": VZ.DEFAULTS, "stale": stale_info([HL_INFO]), "updated": int(time.time())}
 
 
+# ------------------------------------------------------------------ 20 signals on top of the zones, weighted into one reading per coin
+def _signals_now() -> dict:
+    try:
+        btc = hl_daily("BTC")
+    except Exception as e:
+        btc = None
+        btc_err = type(e).__name__
+    else:
+        btc_err = None
+    per, coins = {}, []
+    for c in _all_coins():
+        if c["ticker"] not in HL_COINS:
+            coins.append({**c, "status": "not on Hyperliquid"})
+            continue
+        try:
+            d = hl_daily(c["ticker"])
+            if len(d) < 120:
+                raise ValueError(f"only {len(d)} days")
+            ev = UL.events(c["ticker"]) if c["ticker"] in UL.coins() else None
+            S = SG.signals(d, btc, VZ.zones(d, c["ticker"]), ev)
+            per[c["ticker"]] = (S, d.close)
+            coins.append({**c, "status": "ok", "price": float(d.close.iloc[-1]), "since": str(d.index[0].date()), "days": len(d), "unlock_schedule": ev is not None})
+        except Exception as e:
+            coins.append({**c, "status": "error", "why": type(e).__name__})
+    out = {"coins": coins, "signals": [{"key": k, "label": v[0], "family": v[1], "means": v[2]} for k, v in SG.SIGNALS.items()], "horizon": SG.HORIZON,
+           "enter": SG.ENTER, "refit_days": SG.REFIT_DAYS, "min_train_days": SG.MIN_TRAIN_DAYS, "cost_per_side": SG.COST_PER_SIDE, "btc_error": btc_err,
+           "stale": stale_info([HL_INFO]), "updated": int(time.time())}
+    if not per:
+        return out
+    wf = SG.walk_forward(per)
+    out |= {"weights": wf["weights_now"], "how": wf["how_now"], "fits": [{k: v for k, v in f.items() if k != "weights"} for f in wf["fits"]], "train_rows": wf.get("train_rows_now")}
+    if wf["fits"]:
+        last = wf["fits"][-1]["weights"]
+        out["weights_drift"] = float(sum(abs(wf["weights_now"][k] - last[k]) for k in SG.SIGNALS) / 2)
+    pooled = pd.concat([S.assign(_fwd=SG.forward(c).reindex(S.index)) for S, c in per.values()])
+    out["per_signal"] = SG.evaluate(pooled[list(SG.SIGNALS)], pooled["_fwd"])
+    for c in coins:
+        if c["status"] != "ok":
+            continue
+        S, close = per[c["ticker"]]
+        comp = wf["composite"][c["ticker"]]
+        today = SG.composite(S.iloc[[-1]], wf["weights_now"]).iloc[0] if wf["weights_now"] else None
+        c["score"] = None if today is None else float(today)
+        c["label"] = SG.label(c["score"])
+        c["lean"] = 0 if c["score"] is None else (1 if c["score"] >= SG.ENTER else -1 if c["score"] <= -SG.ENTER else 0)
+        c["contributions"] = SG.contributions(S.iloc[-1], wf["weights_now"] or {})
+        c["today"] = {k: float(S[k].iloc[-1]) for k in SG.SIGNALS}
+        c["composite"] = [[int(t.timestamp()), round(float(v), 3)] for t, v in comp.dropna().items()]
+        c["price_series"] = [[int(t.timestamp()), float(v)] for t, v in close.reindex(comp.dropna().index).items()]
+        c["backtest"] = SG.backtest(comp, close)
+        c["backtest_long_only"] = {k: v for k, v in SG.backtest(comp, close, long_short=False).items() if k not in ("equity", "hold_curve")}
+        c["own_eval"] = SG.evaluate(S, SG.forward(close))
+    ok = [c for c in coins if c["status"] == "ok" and c.get("score") is not None]
+    out["counts"] = {"buy": sum(c["lean"] > 0 for c in ok), "sell": sum(c["lean"] < 0 for c in ok), "neutral": sum(c["lean"] == 0 for c in ok)}
+    bts = [c["backtest"] for c in ok if c["backtest"].get("total") is not None]
+    if bts:
+        out["pooled_backtest"] = {"coins": len(bts), "beat_hold": sum(b["total"] > b["hold"] for b in bts), "median_a_year": float(np.median([b["a_year"] for b in bts if b["a_year"] is not None])),
+                                  "median_hold_a_year": float(np.median([b["hold_a_year"] for b in bts if b["hold_a_year"] is not None])),
+                                  "median_sharpe": float(np.median([b["sharpe"] for b in bts if b["sharpe"] is not None])), "median_worst_drop": float(np.median([b["worst_drop"] for b in bts])),
+                                  "median_hit_rate_7d": float(np.median([b["hit_rate_7d"] for b in bts if b["hit_rate_7d"] is not None]))}
+    return out
+
+
 # ------------------------------------------------------------------ ENA unlocks: the schedule and what the price did around each one
 UNLOCK_COIN = "ENA"
 
@@ -233,6 +300,8 @@ def READINGS() -> list[dict]:
            for r in (ENDPOINTS["zones"]() or {}).get("coins", []) if r["status"] in ("in zone", "above zone", "no zone")]
     out += [{"tab": "volume", "key": f"vz_{c['ticker'].lower()}", "label": f"{c['ticker']} volume zones", "value": c["read"], "lean": c["lean"]}
             for c in (ENDPOINTS["volume"]() or {}).get("coins", []) if c.get("status") == "ok"]
+    out += [{"tab": "signals", "key": f"sig_{c['ticker'].lower()}", "label": f"{c['ticker']} final signal", "value": c["label"], "lean": c["lean"],
+             "note": f"score {c['score']:+.2f}"} for c in (ENDPOINTS["signals"]() or {}).get("coins", []) if c.get("status") == "ok" and c.get("score") is not None]
     u = ENDPOINTS["unlocks"]() or {}
     nb = u.get("next_big") or u.get("next")
     if nb:
@@ -245,7 +314,7 @@ def _cached_ep(name, fn, ttl=3600):
     return lambda: _cached(f"topic:{SLUG}:{name}", ttl, fn)
 
 
-ENDPOINTS = {"zones": _cached_ep("zones", _zones_now, 900), "volume": _cached_ep("volume", _volume_now, HL_TTL),
+ENDPOINTS = {"zones": _cached_ep("zones", _zones_now, 900), "volume": _cached_ep("volume", _volume_now, HL_TTL), "signals": _cached_ep("signals", _signals_now, HL_TTL),
              **{t.lower(): _cached_ep(t.lower(), (lambda t: lambda: _coin_tab(t))(t)) for t in CANDIDATES},
              "unlocks": _cached_ep("unlocks", _unlocks_now, HL_TTL), "basket": M.ENDPOINTS["basket"], "season": M.ENDPOINTS["season"]}
 BACKGROUND = M.BACKGROUND                       # the memecoin prices; the candidates come with btc_cycles' own fill

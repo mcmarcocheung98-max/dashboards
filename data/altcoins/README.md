@@ -9,6 +9,7 @@ dashboard. It replaces the separate pages `/hype`, `/ena`, `/sol`, `/near` and `
 |---|---|
 | Buy zones | Every coin's zone (top, mid, floor), where today's price sits against it, what set the top, the 30-day move and RSI 14; sorted in-zone first |
 | Volume zones | Per coin (pick one): daily candles with the big-volume days marked and the support / resistance zones they left, what the coin did after its own big days and zone retests, and a table of every coin against its zones |
+| Signals | Twenty daily signals on top of the volume zones, each scored −1 to +1, weighted by their record across every coin and summed into one final signal per coin; a table of all coins, each coin's 20 signals with weights, the score day by day and a walk-forward backtest of trading it |
 | HYPE, ENA, SOL, NEAR | One tab per candidate: price against BTC, RSI, market cap, the case for it, its buy zone on a price chart, then Fundamentals (fees, TVL, supply and unlocks against price, the multiples, the unlock schedule) and the Projection (bear / base / bull to end-2028) |
 | ENA unlocks | ENA's full unlock schedule (past and ahead), the next unlock, what the price did before / into / after every unlock against an ordinary day, simple short-before / buy-after rules with costs and a placebo, and a date check of each listed day against volume |
 | Memecoins | The basket of six memecoins (see `data/memecoins/README.md`) |
@@ -40,6 +41,39 @@ Candles are Hyperliquid's daily perp candles (the whole history of each market, 
 scaled back), so volume is perp volume in dollars, not spot. Coins without a Hyperliquid market show "not on Hyperliquid". Same method as the
 trading bot's basket-wide study (trading-system repo, `docs/Alt_Volume_Zones_Study.xlsx`), which is where the rules are judged with costs,
 out-of-sample periods and a luck test; this page only describes one coin's own history.
+
+## The signal weighting rule and backtest method (`app/topics/_signals.py`)
+
+Twenty signals, each a daily score from −1 (sell) to +1 (buy) from the coin's own Hyperliquid candles, BTC's, the zones above and (ENA) the
+unlock schedule; nothing uses a later day. **Volume zones**: inside a zone (support +1 / resistance −1); near a zone (within 3%, closer =
+stronger); first retest of a zone; retest on under 0.7x the usual volume; live support zones within 10% below minus resistance zones within
+10% above; a big-volume close through a zone; a failed break (back on the right side within 3 days). **Volume**: a big day today; big buy
+minus big sell days over 30 days (3 = full score); an absorption wick (big volume, close in the top quarter after a lower low, or the mirror);
+a big day that is coin-specific (BTC had an ordinary day); a big buy day while BTC fell (or sell day while it rose); 20-day volume 30% over
+the 60-day with price up (or down). **Price**: trend (close over the 50-day over the 200-day, or the reverse); RSI 14 (30 → +1, 70 → −1);
+30-day momentum (±20% = full score); place in the 1-year range (bottom tenth +1, top tenth −1); price 20%+ under its 200-day average (+1) to
+50%+ over (−1). **Market**: BTC above or below its 200-day average. **Supply**: 1-7 days after an unlock of 1%+ of circulating (+1), the 3 days
+before (−1); coins without a schedule use the 26th-6th month-turn (−1).
+
+**Weighting rule.** Each signal is judged on the return over the next 7 days. Its weight is its Spearman rank correlation with that return over
+every coin's history pooled, kept only when positive and at least 1.5 standard errors from zero, and the kept correlations are scaled to sum to 1
+(equal weights if nothing qualifies, and the page says so). Final score = Σ weight × signal, clipped to ±1. Strong buy ≥ +0.5, lean buy ≥ +0.2,
+lean sell ≤ −0.2, strong sell ≤ −0.5.
+
+**Backtest method (walk-forward).** Weights are first fitted once 180 days of pooled history exist and re-fitted every 30 days, each time on
+rows whose 7-day return was already known; every day's score uses the latest weights fitted before it. Trading it: position at each close from
+that day's score (long above +0.2, short below −0.2, else flat), earning the next day's close-to-close move, 0.095% each way on every change,
+funding not included; also long-only. Reported per coin and as medians across coins, next to holding the coin over the same days.
+
+### Caveats
+
+- The signal definitions and thresholds were chosen by hand, and the weights adapt, so the out-of-sample figure is honest about the weights
+  but not about the design: a first pass, not a verified edge. The trading bot's repo runs the same study on the Binance basket with its
+  luck tests before anything is traded.
+- Hyperliquid histories are short (HYPE from late 2024, most others from 2023), so the first fit uses a few hundred coin-days and early weights
+  swing. Perp volume, not spot.
+- Twenty signals on ten correlated coins: some weights will be noise, and the final signal leans on momentum-type signals in trends. Read the
+  per-coin hit rate and the weight list, not just the label.
 
 ## The unlock study method (`app/topics/_unlocks.py`)
 

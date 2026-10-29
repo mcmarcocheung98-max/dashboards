@@ -10,6 +10,7 @@ import pytest
 
 from app import topics
 from app.topics import _base as B
+from app.topics import _signals as SG
 from app.topics import _unlocks as UL
 from app.topics import _volume_zones as VZ
 from app.topics import altcoins as A
@@ -79,7 +80,7 @@ def _px(values):
 def test_registry_and_redirects():
     t = topics.REGISTRY["altcoins"]
     assert t.title == "Altcoin Study" and topics.category("altcoins") == "Money & markets" and not t.private
-    assert [k for k, _ in t.tabs] == ["zones", "volume", "hype", "ena", "sol", "near", "unlocks", "basket", "season"] and set(A.ENDPOINTS) == {k for k, _ in t.tabs}
+    assert [k for k, _ in t.tabs] == ["zones", "volume", "signals", "hype", "ena", "sol", "near", "unlocks", "basket", "season"] and set(A.ENDPOINTS) == {k for k, _ in t.tabs}
     for old in ("hype", "ena", "sol", "near", "memecoins"):
         assert old not in topics.REGISTRY and topics.REDIRECTS[old][0] == "altcoins"
     assert topics.REDIRECTS["sol"] == ("altcoins", "sol") and topics.script("altcoins") == "altcoins.js"
@@ -237,7 +238,7 @@ def test_volume_and_unlock_tabs(filled):
     r = {x["key"]: x for x in A.READINGS()}
     assert {"vz_ena", "vz_pepe", "ena_next_unlock"} <= set(r) and r["vz_ena"]["tab"] == "volume" and r["ena_next_unlock"]["lean"] in (-1, 0)
     m = topics.method("altcoins")
-    assert [s["title"] for s in m["sections"]] == ["The buy zone rule", "The volume-zone rule", "The unlock study method"]
+    assert [s["title"] for s in m["sections"]] == ["The buy zone rule", "The volume-zone rule", "The signal weighting rule and backtest method", "The unlock study method"]
 
 
 def test_offline_volume_and_unlocks_degrade(tmp_path, monkeypatch):
@@ -251,3 +252,78 @@ def test_offline_volume_and_unlocks_degrade(tmp_path, monkeypatch):
     assert u["study_error"] == "ConnectionError" and u["next"] and len(u["events"]) > 80 and "price" not in u
     B.json_safe(u)
     cache._cache.clear()
+
+
+# ------------------------------------------------------------------ the 20 signals, their weights and the walk-forward backtest
+def _walk(n=900, seed=0, drift=0.0, start="2024-01-01"):
+    rng = np.random.default_rng(seed)
+    idx = pd.date_range(start, periods=n, freq="D")
+    c = 10 * np.exp(np.cumsum(rng.normal(drift, 0.03, n))); o = np.r_[c[0], c[:-1]]
+    v = rng.lognormal(0, 0.4, n) * 1e7; v[rng.choice(n, 30, replace=False)] *= 6
+    return pd.DataFrame({"open": o, "high": np.maximum(o, c) * 1.02, "low": np.minimum(o, c) * 0.98, "close": c, "volume": v / c, "usd_volume": v}, index=idx)
+
+
+def test_signals_are_bounded_use_no_future_and_fire():
+    d, btc = _walk(), _walk(seed=9)
+    S = SG.signals(d, btc)
+    assert list(S.columns) == list(SG.SIGNALS) and len(S) == len(d) and S.abs().max().max() <= 1 and not S.isna().any().any()
+    fires = (S != 0).sum()
+    assert all(fires[k] > 0 for k in ("in_zone", "near_zone", "zone_balance", "big_day", "big_balance_30d", "trend", "rsi", "momentum_30d", "range_1y", "value_vs_ma", "btc_trend", "unlock_window", "volume_trend"))
+    d2, btc2 = d.copy(), btc.copy()
+    d2.iloc[700:, :] *= 1.5; btc2.iloc[700:, :] *= 0.5                           # changing the future changes nothing before it
+    pd.testing.assert_frame_equal(SG.signals(d2, btc2).iloc[:700], S.iloc[:700])
+    # hand-made days: an absorption wick on a big day, an unlock window from a schedule, and the month-turn fallback
+    idx = pd.date_range("2025-01-01", periods=200, freq="D")
+    c = np.full(200, 10.0); o = c.copy(); h = c + 0.1; l = c - 0.1; v = np.full(200, 100.0)
+    o[150], l[150], h[150], c[150], v[150] = 10.0, 8.0, 10.2, 10.1, 2000.0         # big volume, lower low, close in the top quarter
+    d3 = pd.DataFrame({"open": o, "high": h, "low": l, "close": c, "volume": v}, index=idx)
+    S3 = SG.signals(d3, None)
+    assert S3.absorption.iloc[150] == 1 and S3.big_day.iloc[150] == 1 and S3.absorption.abs().sum() == 1
+    ev = pd.DataFrame({"date": [pd.Timestamp("2025-03-10")], "pct_of_circulating": [2.0]})
+    S4 = SG.signals(d3, None, unlocks=ev)
+    assert S4.unlock_window.loc["2025-03-08"] == -1 and S4.unlock_window.loc["2025-03-10"] == -1 and S4.unlock_window.loc["2025-03-14"] == 1 and S4.unlock_window.loc["2025-04-01"] == 0
+    assert S3.unlock_window.loc["2025-01-28"] == -1 and S3.unlock_window.loc["2025-01-15"] == 0           # no schedule: the 26th-6th month turn
+    assert SG.label(0.6) == "strong buy" and SG.label(0.25) == "lean buy" and SG.label(0.0) == "neutral" and SG.label(-0.3) == "lean sell" and SG.label(-0.7) == "strong sell" and SG.label(None) == "no reading"
+
+
+def test_weights_reward_a_signal_that_predicts_and_the_backtest_adds_up():
+    d = _walk(n=600, seed=3)
+    fwd = SG.forward(d.close)
+    S = SG.signals(d, None)
+    S["trend"] = np.sign(fwd.fillna(0))                                              # a planted oracle: perfect rank correlation
+    w, how = SG.weights_from(S, fwd)
+    assert w["trend"] == max(w.values()) and abs(sum(w.values()) - 1) < 1e-9 and "by rank correlation" in how
+    ev = {r["signal"]: r for r in SG.evaluate(S, fwd)}
+    assert ev["trend"]["ic"] > 0.7 and ev["trend"]["hit_rate"] > 0.95 and ev["trend"]["after_buy"] > 0 > ev["trend"]["after_sell"]
+    eq, _ = SG.weights_from(S.iloc[:25], fwd.iloc[:25])                              # under 30 active days: equal weights, never empty
+    assert all(abs(x - 1 / 20) < 1e-9 for x in eq.values())
+    per = {"A": (S, d.close), "B": (SG.signals(_walk(n=600, seed=4), None), _walk(n=600, seed=4).close)}
+    wf = SG.walk_forward(per)
+    assert wf["fits"] and wf["weights_now"]["trend"] > 0.5 and wf["composite"]["A"].iloc[:SG.MIN_TRAIN_DAYS].isna().all() and wf["composite"]["A"].dropna().abs().max() <= 1
+    assert all(f["train_rows"] > 0 for f in wf["fits"]) and wf["fits"][0]["date"] < wf["fits"][-1]["date"]
+    bt = SG.backtest(wf["composite"]["A"], d.close)
+    assert bt["days"] > 300 and bt["total"] > bt["hold"] and bt["hit_rate_7d"] > 0.7 and bt["time_long"] + bt["time_short"] <= 1 and len(bt["equity"]) == bt["days"]
+    # the arithmetic on a tiny hand-made case: long one day at +10% then flat, costs on the way in and out
+    idx = pd.date_range("2025-01-01", periods=5, freq="D")
+    comp = pd.Series([0.5, 0.0, 0.0, 0.0, 0.0], index=idx); close = pd.Series([10, 11, 11, 11, 11.0], index=idx)
+    comp = pd.concat([pd.Series(0.0, index=pd.date_range("2024-11-01", periods=40, freq="D")), comp]); close = pd.concat([pd.Series(10.0, index=comp.index[:40]), close])
+    b = SG.backtest(comp, close)
+    assert b["total"] == pytest.approx((1 + 0.1 - SG.COST_PER_SIDE) * (1 - SG.COST_PER_SIDE) - 1, rel=1e-6) and b["changes"] == 2    # costs are taken from the day's return
+    lo = SG.backtest(comp.where(comp <= 0, -0.5), close, long_short=False)            # a sell reading never shorts when long only
+    assert lo["time_short"] == 0 and lo["total"] == 0
+    rows = SG.contributions(S.iloc[-1], w)
+    assert rows[0]["contribution"] == max(abs(r["contribution"]) for r in rows) * (1 if rows[0]["contribution"] >= 0 else -1) and len(rows) == 20
+
+
+def test_signals_tab(filled):
+    d = A.ENDPOINTS["signals"]()
+    B.json_safe(d)
+    ok = [c for c in d["coins"] if c["status"] == "ok"]
+    assert len(ok) == len(A.HL_COINS) and d["btc_error"] is None and len(d["signals"]) == 20 and d["weights"] and abs(sum(d["weights"].values()) - 1) < 1e-6
+    c = next(x for x in ok if x["ticker"] == "ENA")
+    assert c["label"] in ("strong buy", "lean buy", "neutral", "lean sell", "strong sell") and -1 <= c["score"] <= 1 and c["lean"] in (-1, 0, 1)
+    assert len(c["contributions"]) == 20 and len(c["today"]) == 20 and c["composite"] and c["backtest"]["days"] > 100 and "equity" in c["backtest"] and "equity" not in c["backtest_long_only"]
+    assert c["unlock_schedule"] is True and next(x for x in ok if x["ticker"] == "SOL")["unlock_schedule"] is False
+    assert d["counts"]["buy"] + d["counts"]["sell"] + d["counts"]["neutral"] == len(ok) and d["pooled_backtest"]["coins"] == len(ok) and len(d["per_signal"]) == 20
+    r = {x["key"]: x for x in A.READINGS()}
+    assert "sig_ena" in r and r["sig_ena"]["tab"] == "signals" and r["sig_ena"]["value"] == c["label"] and r["sig_ena"]["lean"] == c["lean"]
