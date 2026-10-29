@@ -1268,3 +1268,40 @@ def test_dashboard_page_carries_its_own_link_preview(monkeypatch):
     assert "<title>Tom &amp; &quot;Jerry&quot; · Dashboards</title>" in og and 'content="Cats &lt;b&gt;vs&lt;/b&gt; mice."' in og
     assert "Secret odds" not in private and "og:title" not in private and "<title>Dashboard</title>" in private
     assert '<meta property="og:title" content="Dashboards">' in index
+
+
+def test_method_tab_takes_calculation_and_caveat_sections_from_the_readme(monkeypatch, tmp_path):
+    """topics.method: the README's calculation and caveat sections, each to the next heading of its level, titled with their part
+    heading where there is one; upkeep sections are left out. meta says whether the page gets a Method tab; /api/<slug>/method serves it."""
+    import asyncio
+    from aiohttp.test_utils import TestClient, TestServer
+    from app import config
+    from app.server import make_app
+    (tmp_path / "zz-m").mkdir()
+    (tmp_path / "zz-m" / "README.md").write_text(
+        "# Title (`/zz-m`)\n\nIntro.\n\n## What it shows\n\nCards.\n\n## How it is calculated\n\n- **Ratio**: a / b.\n\n"
+        "### Detail\n\nKept with its section.\n\n```\n# a shell comment, not a heading\n```\n\n## Keeping it up to date\n\nNothing.\n\n# Second half\n\n### Known gaps\n\n"
+        "| a | b |\n|---|---|\n| 1 | 2 |\n\n### Checking it\n\npytest\n\n## The buy zone rule (`app/topics/x.py`, `f`)\n\nBuy low.\n")
+    (tmp_path / "zz-none").mkdir()
+    (tmp_path / "zz-none" / "README.md").write_text("# T\n\n## Keeping it up to date\n\nNothing.\n")
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    s = topics.method("zz-m")["sections"]
+    assert [x["title"] for x in s] == ["How it is calculated", "Second half · Known gaps", "Second half · The buy zone rule"]
+    assert "### Detail" in s[0]["markdown"] and "# a shell comment" in s[0]["markdown"] and "Nothing" not in s[0]["markdown"]
+    assert s[1]["markdown"].startswith("| a | b |") and "pytest" not in s[1]["markdown"] and s[2]["markdown"] == "Buy low."
+    assert topics.method("zz-none")["sections"] == [] and topics.method("zz-missing")["sections"] == []
+    monkeypatch.setitem(topics.REGISTRY, "zz-m", topics.Topic("zz-m", "M", "b", "housing", (("a", "A"),)))
+    monkeypatch.setitem(topics.REGISTRY, "zz-none", topics.Topic("zz-none", "N", "b", "housing", (("a", "A"),)))
+    assert topics.meta("zz-m")["method"] is True and topics.meta("zz-none")["method"] is False
+
+    async def go():
+        async with TestClient(TestServer(make_app())) as c:
+            r = await c.get("/api/zz-m/method")
+            return r.status, await r.json()
+    status, body = asyncio.run(go())
+    assert status == 200 and body["sections"][0]["title"] == "How it is calculated"
+
+
+def test_every_dashboard_leaves_about_free_for_the_method_tab():
+    for slug, t in topics.REGISTRY.items():
+        assert "about" not in dict(t.tabs) and "method" not in topics.endpoints(slug), slug

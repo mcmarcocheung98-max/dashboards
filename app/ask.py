@@ -121,7 +121,7 @@ def _clip(obj, n: int) -> str:
 def context(slug: str, tab: str, date: str | None) -> str:
     """What Claude is told about the page: meta, the tab's own data, readings and overnight changes."""
     m = topics.meta(slug)
-    tab_label = dict((k, l) for k, l in m.get("tabs", [])).get(tab, tab)
+    tab_label = dict((k, l) for k, l in m.get("tabs", [])).get(tab, "Method" if tab == "about" else tab)
     parts = [f"Dashboard: {m['title']} — {m['blurb']}",
              "Tabs: " + ", ".join(f"{l} ({k})" for k, l in m.get("tabs", [])),
              f"The reader is on the tab: {tab_label} ({tab})."]
@@ -131,7 +131,9 @@ def context(slug: str, tab: str, date: str | None) -> str:
         parts.append("Notes: " + str(m["notes"])[:1500])
     eps = topics.endpoints(slug)
     budget = MAX_CONTEXT - sum(len(p) for p in parts) - 2500
-    if tab in eps:
+    if tab == "about" and m.get("method"):                 # the Method tab: its text is the dashboard guide's calculation sections
+        parts.append("The Method tab shows these sections of the dashboard's guide:\n" + _clip(topics.method(slug)["sections"], max(2000, budget)))
+    elif tab in eps:
         try:
             parts.append(f"Data behind the '{tab_label}' tab (JSON; time series are [unix seconds, value] pairs):\n" + _clip(eps[tab](), max(2000, budget)))
         except Exception as e:

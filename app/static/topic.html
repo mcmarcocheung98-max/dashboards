@@ -63,6 +63,15 @@
   .bar i { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
   .err { color: var(--down); }
   .nfa { font-size: 12.5px; color: var(--ink2); border-style: dashed; }
+  .md { font-size: 13.5px; line-height: 1.55; }
+  .md p, .md ul, .md ol, .md pre { margin: 0 0 8px; }
+  .md ul, .md ol { padding-left: 20px; }
+  .md li { margin: 2px 0; }
+  .md code { font-size: 12px; background: color-mix(in srgb, var(--line) 60%, transparent); padding: 1px 4px; border-radius: 4px; }
+  .md pre { overflow-x: auto; padding: 8px 10px; background: color-mix(in srgb, var(--line) 40%, transparent); border-radius: 8px; }
+  .md pre code { background: none; padding: 0; }
+  .md .tw { overflow-x: auto; margin: 0 0 8px; }
+  .md th, .md td { text-align: left; white-space: normal; vertical-align: top; min-width: 80px; }
   footer { max-width: 1100px; margin: 0 auto; padding: 0 16px 30px; color: var(--muted); font-size: 12px; }
 </style>
 <style>
@@ -678,8 +687,9 @@ async function render() {
   charts = [];
   SYNC = [];
   try {
-    const nodes = await window.TOPIC.VIEWS[current]();
-    view.replaceChildren(changesCard(current, current === TABS[0][0]), ...[].concat(nodes).filter(Boolean));
+    const about = current === "about";
+    const nodes = await (about ? methodView() : window.TOPIC.VIEWS[current]());
+    view.replaceChildren(...[about ? null : changesCard(current, current === TABS[0][0]), ...[].concat(nodes)].filter(Boolean));
     old.forEach(c => c.remove());
   } catch (e) {
     view.replaceChildren(card(null, el("div", { class: "err" }, "Could not load: " + e.message)));
@@ -689,6 +699,55 @@ async function render() {
   document.getElementById("stamp").textContent = "Updated " + new Date().toLocaleTimeString();
   rangeBar();
   askTab();
+}
+// the Method tab (#about): the calculation and caveat sections of data/<slug>/README.md (topics.method), rendered from a small
+// subset of Markdown (paragraphs, lists, tables, code, bold, links) as DOM nodes, never as HTML
+function mdInline(s) {
+  return s.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)\s]+\))/).filter(Boolean).map(t => {
+    if (t.startsWith("**") && t.endsWith("**") && t.length > 4) return el("strong", {}, mdInline(t.slice(2, -2)));
+    if (t.startsWith("`") && t.endsWith("`") && t.length > 2) return el("code", {}, t.slice(1, -1));
+    const m = t.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
+    if (m) return /^https?:\/\//.test(m[2]) ? link(m[1], m[2]) : el("span", {}, mdInline(m[1]));
+    return t;
+  });
+}
+function mdBlocks(text) {
+  const lines = text.split("\n"), out = [];
+  const isItem = l => /^\s*([-*]|\d+\.)\s+/.test(l), isTable = l => /^\s*\|/.test(l), isFence = l => /^\s*```/.test(l);
+  const cells = l => l.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(c => c.trim());
+  for (let i = 0; i < lines.length;) {
+    const l = lines[i];
+    if (!l.trim()) { i++; continue; }
+    if (isFence(l)) {
+      const code = [];
+      for (i++; i < lines.length && !isFence(lines[i]); i++) code.push(lines[i]);
+      i++;
+      out.push(el("pre", {}, el("code", {}, code.join("\n"))));
+    } else if (isTable(l)) {
+      const rows = [];
+      for (; i < lines.length && isTable(lines[i]); i++) if (!/^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i])) rows.push(cells(lines[i]));
+      const [head, ...body] = rows;
+      out.push(el("div", { class: "tw" }, el("table", {}, el("thead", {}, el("tr", {}, head.map(c => el("th", {}, mdInline(c))))),
+        el("tbody", {}, body.map(r => el("tr", {}, r.map(c => el("td", {}, mdInline(c)))))))));
+    } else if (isItem(l)) {
+      const ordered = /^\s*\d+\./.test(l), items = [];
+      for (; i < lines.length && lines[i].trim() && (isItem(lines[i]) || /^\s+\S/.test(lines[i])) && !isTable(lines[i]); i++) {
+        if (isItem(lines[i])) items.push({ deep: /^\s{2,}/.test(lines[i]), text: lines[i].replace(/^\s*([-*]|\d+\.)\s+/, "") });
+        else items[items.length - 1].text += " " + lines[i].trim();
+      }
+      out.push(el(ordered ? "ol" : "ul", {}, items.map(it => el("li", it.deep ? { style: "margin-left:18px" } : {}, mdInline(it.text)))));
+    } else {
+      const para = [];
+      for (; i < lines.length && lines[i].trim() && !isItem(lines[i]) && !isTable(lines[i]) && !isFence(lines[i]); i++) para.push(lines[i].trim().replace(/^#+\s+/, ""));
+      out.push(el("p", {}, mdInline(para.join(" "))));
+    }
+  }
+  return el("div", { class: "md" }, out);
+}
+async function methodView() {
+  const d = await api("method");
+  return [...d.sections.map(s => card(s.title.replace(/[`*]/g, ""), mdBlocks(s.markdown))),
+    card(null, note("From this dashboard's guide (data/" + SLUG + "/README.md in the repository), which also lists every source and how each is kept current."))];
 }
 function footer() {
   const f = document.getElementById("foot");
@@ -702,7 +761,7 @@ async function boot() {
   document.getElementById("title").textContent = META.title;
   if (META.category) document.getElementById("crumbcat").textContent = " › " + META.category;
   document.getElementById("blurb").textContent = META.blurb;
-  TABS = META.tabs;
+  TABS = META.method ? [...META.tabs, ["about", "Method"]] : META.tabs;     // #about: how the numbers are worked out
   if (!TABS.some(t => t[0] === current)) current = TABS[0][0];
   footer();
   await new Promise((ok, bad) => { const s = document.createElement("script"); s.src = "/" + SLUG + ".js"; s.onload = ok; s.onerror = () => bad(new Error("dashboard script failed to load")); document.head.append(s); });

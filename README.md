@@ -10,7 +10,7 @@ Public, read-only data dashboards, each on its own page:
 | BTC Cycles & Sector Rotation | `/btc-cycles` | Four Bitcoin cycles, the altcoin sectors that won each, winner metrics, 2026–27 candidates and signals, checked daily against live data |
 | Altcoin Study | `/altcoins` | HYPE, ENA, SOL and NEAR in full (against BTC, fundamentals, projection), the memecoin basket and meme season, and a buy zone for every coin. Replaces `/hype`, `/ena`, `/sol`, `/near` and `/memecoins` |
 
-`/` lists them. Data is at `/api/<slug>/<name>` (JSON), and every chart has a "CSV ↓" button that saves the numbers it shows. Every dashboard has a guide in `data/<slug>/README.md`: what each card shows, where every number comes from, and how to keep it current.
+`/` lists them. Data is at `/api/<slug>/<name>` (JSON), and every chart has a "CSV ↓" button that saves the numbers it shows. Every dashboard has a guide in `data/<slug>/README.md`: what each card shows, where every number comes from, and how to keep it current. Its calculation and caveat sections (headings with calculated, method, rule, caveats or gaps) also appear on the page as the last tab, **Method** (`/<slug>#about`), so keep those headings when editing a guide.
 
 ## How it works
 
