@@ -65,7 +65,7 @@ four staying half done.
 - CPUC quarterly driverless trip counts: try to automate from the published spreadsheet; fall back to hand entry.
 - Rides per week for Baidu, Pony.ai, WeRide, Zoox, Tesla when they announce a weekly figure.
 
-## Phase 3: working rules (write them into `data/README.md` as a "Contributing" section)
+## Phase 3: working rules (done: written into `data/README.md` as a "Contributing" section)
 
 - Branch name `dash/<slug>-<what>`; commit prefix `feat(dash-<slug>)`, `fix(dash-<slug>)`, `data(dash-<slug>)` for
   CSV-only changes, `chore(dash)` for shared plumbing.
