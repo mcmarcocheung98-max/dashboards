@@ -1,4 +1,5 @@
-"""Memecoins (/memecoins): the largest memecoins as one basket, against BTC, and whether it is meme season.
+"""Memecoins, the Memecoins and Meme season tabs of Altcoin Study (/altcoins#basket, #season; see altcoins.py): the largest memecoins as one
+basket, against BTC, and whether it is meme season. (Was its own dashboard at /memecoins, which now redirects.)
 
 basket   one row per coin (data/memecoins/coins.csv): price, 24h, 7-day, 30-day and 1-year change, distance from the 1-year high, market cap,
          RSI 14 in USD and against BTC, beta to BTC, 90 days against BTC, a 90-day sparkline; the basket's total market cap; and every coin's
@@ -21,15 +22,11 @@ import pandas as pd
 
 from ..cache import _cached
 from ..config import DATA_DIR, SNAP_DIR
-from . import Topic
 from . import btc_cycles as C
 from ._base import _pts, _r, cached_only, fetch_json, stale_info
 
-SLUG = "memecoins"
-TOPIC = Topic(SLUG, "Memecoins",
-              "Dogecoin, Shiba Inu, Pepe, Bonk, dogwifhat and Trump as one basket: prices, momentum against BTC, and whether memes are "
-              "beating Bitcoin (meme season) or lagging it.",
-              "memecoins", (("basket", "Basket"), ("season", "Meme season")), ("basket", "season"), icon="chart", order=15)
+SLUG = "memecoins"                          # its data folder (data/memecoins/) and cache keys; the page is Altcoin Study
+DASHBOARD = "altcoins"
 COINS = DATA_DIR / SLUG / "coins.csv"
 CG_CATEGORIES = "https://api.coingecko.com/api/v3/coins/categories"
 CG_GLOBAL = C.CG_GLOBAL

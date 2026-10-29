@@ -531,7 +531,7 @@ const VIEWS = {
 };
 
 // coins with a standalone page of their own (app/topics/coin_<ticker>.py, static/topics/coin.js)
-const PAGES = { ENA: "/ena", SOL: "/sol", NEAR: "/near" };
+const PAGES = { HYPE: "/altcoins#hype", ENA: "/altcoins#ena", SOL: "/altcoins#sol", NEAR: "/altcoins#near" };
 // one candidate coin: links, KPI strip, 90-day sparkline, and on demand its four charts
 function coinRow(c, px, r1, rsiCls) {
   const head = el("div", { style: "display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline" },
