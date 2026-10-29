@@ -1,0 +1,114 @@
+date,ena_m,pct_supply,category,kind,confidence,use,source,note
+2024-04-02,750.0,5.0,Airdrop season 1 (Shards),tge,high,1,Binance Launchpool announcement; coinlaunch.space,5% of supply claimable at listing
+2024-04-02,300.0,2.0,Binance Launchpool,tge,high,1,Binance Launchpool announcement (240M BNB pool + 60M FDUSD pool),"farmed 30 Mar-1 Apr 2024, tradable at listing"
+2024-04-02,375.0,2.5,Ecosystem / liquidity / Foundation at TGE,tge,medium,1,"Binance: initial circulating 1,425M (9.5%) minus the two rows above",balance of the initial float; split between buckets not published
+2024-05-02,40.625,0.271,Foundation,linear,medium,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",start month assumed (first seen on trackers Feb 2025)
+2024-06-02,40.625,0.271,Foundation,linear,medium,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",start month assumed (first seen on trackers Feb 2025)
+2024-07-02,40.625,0.271,Foundation,linear,medium,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",start month assumed (first seen on trackers Feb 2025)
+2024-08-02,40.625,0.271,Foundation,linear,medium,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",start month assumed (first seen on trackers Feb 2025)
+2024-09-02,40.625,0.271,Foundation,linear,medium,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",start month assumed (first seen on trackers Feb 2025)
+2024-09-30,750.0,5.0,Airdrop season 2 (Sats),airdrop,medium,1,Ethena Labs S2 announcement (5% = 750M; claimable the week of 30 Sep 2024),"claim-open date; part of many claims was locked as sENA, so the sellable amount was smaller"
+2024-10-02,40.625,0.271,Foundation,linear,medium,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",start month assumed (first seen on trackers Feb 2025)
+2024-11-02,40.625,0.271,Foundation,linear,medium,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",start month assumed (first seen on trackers Feb 2025)
+2024-12-02,40.625,0.271,Foundation,linear,medium,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",start month assumed (first seen on trackers Feb 2025)
+2025-01-02,40.625,0.271,Foundation,linear,medium,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",start month assumed (first seen on trackers Feb 2025)
+2025-02-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2025-03-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2025-03-05,1125.0,7.5,Core contributors,cliff,high,1,crypto.news / Bitget / ChainCatcher 5 Mar 2025 (2.07B unlock: 1.13B CC + 937.5M investors + 7.93M ecosystem); Ethena docs: vesting started 5 Mar 2024,1-year 25% cliff
+2025-03-05,7.93,0.053,Ecosystem development,cliff,high,1,as above,
+2025-03-05,937.5,6.25,Investors,cliff,high,1,as above,1-year 25% cliff
+2025-03-24,0.0,0.0,Airdrop season 3,airdrop,low,0,Ethena season 3 announcement (ended 23 Mar 2025),amount not published in our sources; excluded (use=0) until confirmed
+2025-04-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2025-04-05,93.75,0.625,Core contributors,linear,high,1,"TradingView/CoinMarketCal (171.88M on the 5th, e.g. 5 Mar 2026); KuCoin (171M expected 5 Oct 2026); 4,500M x 75% / 36",some calendars show the 2nd; the study checks the day against volume
+2025-04-05,78.125,0.521,Investors,linear,high,1,"as above; 3,750M x 75% / 36",
+2025-05-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2025-05-05,93.75,0.625,Core contributors,linear,high,1,"TradingView/CoinMarketCal (171.88M on the 5th, e.g. 5 Mar 2026); KuCoin (171M expected 5 Oct 2026); 4,500M x 75% / 36",some calendars show the 2nd; the study checks the day against volume
+2025-05-05,78.125,0.521,Investors,linear,high,1,"as above; 3,750M x 75% / 36",
+2025-06-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2025-06-05,93.75,0.625,Core contributors,linear,high,1,"TradingView/CoinMarketCal (171.88M on the 5th, e.g. 5 Mar 2026); KuCoin (171M expected 5 Oct 2026); 4,500M x 75% / 36",some calendars show the 2nd; the study checks the day against volume
+2025-06-05,78.125,0.521,Investors,linear,high,1,"as above; 3,750M x 75% / 36",
+2025-07-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2025-07-05,93.75,0.625,Core contributors,linear,high,1,"TradingView/CoinMarketCal (171.88M on the 5th, e.g. 5 Mar 2026); KuCoin (171M expected 5 Oct 2026); 4,500M x 75% / 36",some calendars show the 2nd; the study checks the day against volume
+2025-07-05,78.125,0.521,Investors,linear,high,1,"as above; 3,750M x 75% / 36",
+2025-08-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2025-08-05,93.75,0.625,Core contributors,linear,high,1,"TradingView/CoinMarketCal (171.88M on the 5th, e.g. 5 Mar 2026); KuCoin (171M expected 5 Oct 2026); 4,500M x 75% / 36",some calendars show the 2nd; the study checks the day against volume
+2025-08-05,78.125,0.521,Investors,linear,high,1,"as above; 3,750M x 75% / 36",
+2025-09-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2025-09-05,93.75,0.625,Core contributors,linear,high,1,"TradingView/CoinMarketCal (171.88M on the 5th, e.g. 5 Mar 2026); KuCoin (171M expected 5 Oct 2026); 4,500M x 75% / 36",some calendars show the 2nd; the study checks the day against volume
+2025-09-05,78.125,0.521,Investors,linear,high,1,"as above; 3,750M x 75% / 36",
+2025-10-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2025-10-05,93.75,0.625,Core contributors,linear,high,1,"TradingView/CoinMarketCal (171.88M on the 5th, e.g. 5 Mar 2026); KuCoin (171M expected 5 Oct 2026); 4,500M x 75% / 36",some calendars show the 2nd; the study checks the day against volume
+2025-10-05,78.125,0.521,Investors,linear,high,1,"as above; 3,750M x 75% / 36",
+2025-11-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2025-11-05,93.75,0.625,Core contributors,linear,high,1,"TradingView/CoinMarketCal (171.88M on the 5th, e.g. 5 Mar 2026); KuCoin (171M expected 5 Oct 2026); 4,500M x 75% / 36",some calendars show the 2nd; the study checks the day against volume
+2025-11-05,78.125,0.521,Investors,linear,high,1,"as above; 3,750M x 75% / 36",
+2025-12-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2025-12-05,93.75,0.625,Core contributors,linear,high,1,"TradingView/CoinMarketCal (171.88M on the 5th, e.g. 5 Mar 2026); KuCoin (171M expected 5 Oct 2026); 4,500M x 75% / 36",some calendars show the 2nd; the study checks the day against volume
+2025-12-05,78.125,0.521,Investors,linear,high,1,"as above; 3,750M x 75% / 36",
+2026-01-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2026-01-05,93.75,0.625,Core contributors,linear,high,1,"TradingView/CoinMarketCal (171.88M on the 5th, e.g. 5 Mar 2026); KuCoin (171M expected 5 Oct 2026); 4,500M x 75% / 36",some calendars show the 2nd; the study checks the day against volume
+2026-01-05,78.125,0.521,Investors,linear,high,1,"as above; 3,750M x 75% / 36",
+2026-02-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2026-02-05,93.75,0.625,Core contributors,linear,high,1,"TradingView/CoinMarketCal (171.88M on the 5th, e.g. 5 Mar 2026); KuCoin (171M expected 5 Oct 2026); 4,500M x 75% / 36",some calendars show the 2nd; the study checks the day against volume
+2026-02-05,78.125,0.521,Investors,linear,high,1,"as above; 3,750M x 75% / 36",
+2026-03-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2026-03-05,93.75,0.625,Core contributors,linear,high,1,"TradingView/CoinMarketCal (171.88M on the 5th, e.g. 5 Mar 2026); KuCoin (171M expected 5 Oct 2026); 4,500M x 75% / 36",some calendars show the 2nd; the study checks the day against volume
+2026-03-05,78.125,0.521,Investors,linear,high,1,"as above; 3,750M x 75% / 36",
+2026-04-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2026-04-05,93.75,0.625,Core contributors,linear,high,1,"TradingView/CoinMarketCal (171.88M on the 5th, e.g. 5 Mar 2026); KuCoin (171M expected 5 Oct 2026); 4,500M x 75% / 36",some calendars show the 2nd; the study checks the day against volume
+2026-04-05,78.125,0.521,Investors,linear,high,1,"as above; 3,750M x 75% / 36",
+2026-05-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2026-05-05,93.75,0.625,Core contributors,linear,high,1,"TradingView/CoinMarketCal (171.88M on the 5th, e.g. 5 Mar 2026); KuCoin (171M expected 5 Oct 2026); 4,500M x 75% / 36",some calendars show the 2nd; the study checks the day against volume
+2026-05-05,78.125,0.521,Investors,linear,high,1,"as above; 3,750M x 75% / 36",
+2026-06-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2026-06-05,93.75,0.625,Core contributors,linear,high,1,"TradingView/CoinMarketCal (171.88M on the 5th, e.g. 5 Mar 2026); KuCoin (171M expected 5 Oct 2026); 4,500M x 75% / 36",some calendars show the 2nd; the study checks the day against volume
+2026-06-05,78.125,0.521,Investors,linear,high,1,"as above; 3,750M x 75% / 36",
+2026-07-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2026-07-05,93.75,0.625,Core contributors,linear,high,1,"TradingView/CoinMarketCal (171.88M on the 5th, e.g. 5 Mar 2026); KuCoin (171M expected 5 Oct 2026); 4,500M x 75% / 36",some calendars show the 2nd; the study checks the day against volume
+2026-07-05,78.125,0.521,Investors,linear,high,1,"as above; 3,750M x 75% / 36",
+2026-08-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2026-08-05,93.75,0.625,Core contributors,linear,high,1,"TradingView/CoinMarketCal (171.88M on the 5th, e.g. 5 Mar 2026); KuCoin (171M expected 5 Oct 2026); 4,500M x 75% / 36",some calendars show the 2nd; the study checks the day against volume
+2026-08-05,78.125,0.521,Investors,linear,high,1,"as above; 3,750M x 75% / 36",
+2026-09-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2026-09-05,93.75,0.625,Core contributors,linear,high,1,"TradingView/CoinMarketCal (171.88M on the 5th, e.g. 5 Mar 2026); KuCoin (171M expected 5 Oct 2026); 4,500M x 75% / 36",some calendars show the 2nd; the study checks the day against volume
+2026-09-05,78.125,0.521,Investors,linear,high,1,"as above; 3,750M x 75% / 36",
+2026-10-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2026-10-05,93.75,0.625,Core contributors,linear,high,1,as the monthly rows,
+2026-10-05,1406.25,9.375,Investors (accelerated: all remaining),acceleration,medium,1,"Ethena Foundation 27 Aug 2026; CoinMarketCap / Startup Fortune (~1.4B); COINOTAG (~1.5B); 18 x 78.125M = 1,406M before OTC buy-outs","size not published by the Foundation; some seed investors were bought out OTC first, so the true figure is lower"
+2026-10-05,3030.0,20.2,StablecoinX lock-up waiver,waiver,high,0,"StablecoinX / Ethena OpCo waiver (Bitbase, KuCoin)",lock-up removed but any sale or transfer still needs the Foundation's written consent -> not sellable supply (use=0)
+2026-11-01,275.016,1.833,Unnamed (tokenomics.com),cliff,low,0,"app.tokenomics.com / cryptoticker (275,015,625 ENA, 1.8%, 1 Nov 2026)",bucket not named; verify before trading it
+2026-11-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2026-11-05,93.75,0.625,Core contributors,linear,high,1,"4,500M x 75% / 36, 5th of the month",
+2026-12-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2026-12-05,93.75,0.625,Core contributors,linear,high,1,"4,500M x 75% / 36, 5th of the month",
+2027-01-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2027-01-05,93.75,0.625,Core contributors,linear,high,1,"4,500M x 75% / 36, 5th of the month",
+2027-02-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2027-02-05,93.75,0.625,Core contributors,linear,high,1,"4,500M x 75% / 36, 5th of the month",
+2027-03-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2027-03-05,93.75,0.625,Core contributors,linear,high,1,"4,500M x 75% / 36, 5th of the month",
+2027-04-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2027-04-05,93.75,0.625,Core contributors,linear,high,1,"4,500M x 75% / 36, 5th of the month",
+2027-05-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2027-05-05,93.75,0.625,Core contributors,linear,high,1,"4,500M x 75% / 36, 5th of the month",
+2027-06-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2027-06-05,93.75,0.625,Core contributors,linear,high,1,"4,500M x 75% / 36, 5th of the month",
+2027-07-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2027-07-05,93.75,0.625,Core contributors,linear,high,1,"4,500M x 75% / 36, 5th of the month",
+2027-08-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2027-08-05,93.75,0.625,Core contributors,linear,high,1,"4,500M x 75% / 36, 5th of the month",
+2027-09-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2027-09-05,93.75,0.625,Core contributors,linear,high,1,"4,500M x 75% / 36, 5th of the month",
+2027-10-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2027-10-05,93.75,0.625,Core contributors,linear,high,1,"4,500M x 75% / 36, 5th of the month",
+2027-11-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2027-11-05,93.75,0.625,Core contributors,linear,high,1,"4,500M x 75% / 36, 5th of the month",
+2027-12-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2027-12-05,93.75,0.625,Core contributors,linear,high,1,"4,500M x 75% / 36, 5th of the month",
+2028-01-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2028-01-05,93.75,0.625,Core contributors,linear,high,1,"4,500M x 75% / 36, 5th of the month",
+2028-02-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2028-02-05,93.75,0.625,Core contributors,linear,high,1,"4,500M x 75% / 36, 5th of the month",
+2028-03-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",
+2028-03-05,93.75,0.625,Core contributors,linear,high,1,"4,500M x 75% / 36, 5th of the month",
+2028-04-02,40.625,0.271,Foundation,linear,high,1,"Tokenomist (40,625,000 ENA to Foundation on the 2nd; snapshots Jun 2025, Oct 2026, Nov 2026)",

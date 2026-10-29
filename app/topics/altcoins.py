@@ -2,7 +2,11 @@
 and a buy zone for every coin on one tab.
 
 zones    every coin's buy zone (rule below), where today's price sits against it, RSI and the 30-day move
+volume   big-volume days (3x the 60-day median) and the support / resistance zones they leave, per coin, from Hyperliquid daily candles
+         (_volume_zones.py); what each coin did after its own big days and zone retests
 hype ... one tab per candidate (_coin_page.py): price against BTC, RSI, market cap, the case for it, fundamentals and the projection
+unlocks  ENA's full unlock schedule (data/altcoins/unlocks/ENA.csv) and what the price did before, into and after each unlock, with the
+         simple short-before / buy-after rules and a placebo (_unlocks.py)
 basket   the memecoin basket (memecoins.py): prices, momentum against BTC, a sortable table
 season   whether memes are beating BTC (memecoins.py)
 
@@ -15,7 +19,8 @@ Buy zone (mechanical, recomputed with each day's prices; research, not advice):
          below the year's low (the base case does not double from any price seen this year)
 A coin can sit 'in zone' while still falling: the 30-day move and RSI are shown beside it for that reason.
 
-Nothing is downloaded here: btc_cycles' and memecoins' background fills keep every coin's 365 days of prices.
+Only the Hyperliquid daily candles are downloaded here (one POST per coin, cached for 6 hours, kept as a snapshot): btc_cycles' and
+memecoins' background fills keep every coin's 365 days of CoinGecko prices for the other tabs.
 """
 from __future__ import annotations
 
@@ -23,27 +28,41 @@ import time
 
 import pandas as pd
 
+import numpy as np
+
 from ..cache import _cached
 from . import Topic
 from . import _coin_page as P
+from . import _unlocks as UL
+from . import _volume_zones as VZ
 from . import btc_cycles as C
 from . import memecoins as M
-from ._base import _r
+from ._base import DAY, _r, fetch_json, stale_info
 
 SLUG = "altcoins"
 CANDIDATES = ("HYPE", "ENA", "SOL", "NEAR")
-TABS = (("zones", "Buy zones"), *((t.lower(), t) for t in CANDIDATES), ("basket", "Memecoins"), ("season", "Meme season"))
+TABS = (("zones", "Buy zones"), ("volume", "Volume zones"), *((t.lower(), t) for t in CANDIDATES), ("unlocks", "ENA unlocks"), ("basket", "Memecoins"), ("season", "Meme season"))
 TOPIC = Topic(SLUG, "Altcoin Study",
               "HYPE, ENA, SOL and NEAR in full (price against BTC, fundamentals, the bear / base / bull projection), the memecoin basket and meme "
-              "season, and a buy zone for every coin: below its 200-day average and, for the candidates, with the base case at least doubling.",
-              "altcoins", TABS, ("zones", "basket", "season"), icon="chart", order=12)
+              "season, a buy zone for every coin, the big-volume days and the support / resistance zones they leave, and ENA around every token unlock.",
+              "altcoins", TABS, ("zones", "volume", "unlocks", "basket", "season"), icon="chart", order=12)
 MA_DAYS = 200
 VALUE_MULT = 2.0                               # the base case to end-2028 must at least double from the top of the zone
 SIBLINGS = {t: f"#{t.lower()}" for t in CANDIDATES}
 SOURCES = [*(s for t in CANDIDATES for s in P.sources(t)), *M.SOURCES,
-           {"name": "Projection levels and coin notes (BTC Cycles & Sector Rotation)", "url": "/btc-cycles#candidates", "cadence": "as revised"}]
+           {"name": "Projection levels and coin notes (BTC Cycles & Sector Rotation)", "url": "/btc-cycles#candidates", "cadence": "as revised"},
+           {"name": "Daily candles with volume for the volume zones and the unlock study (Hyperliquid public API)", "url": "https://api.hyperliquid.xyz/info", "cadence": "every 6 hours"},
+           {"name": "ENA unlock schedule (hand-entered from Ethena docs, Binance, Tokenomist, news; data/altcoins/unlocks/ENA.csv)", "url": "https://docs.ethena.fi/overview/ena/tokenomics", "cadence": "as revised"}]
 NOTES = ("Research, not investment advice. Buy zones are mechanical: below the coin's 200-day average and, for the four candidates, low enough "
-         "that the base-case projection at least doubles by end-2028. They say nothing about whether a coin survives or what its news will be.")
+         "that the base-case projection at least doubles by end-2028. They say nothing about whether a coin survives or what its news will be. "
+         "Volume zones and the unlock study are descriptive statistics on a few years of one coin's prices: a hint to watch, not a rule to trade.")
+
+# Hyperliquid perp names for the coins (k-prefixed markets quote 1,000 tokens); coins not listed there have no volume zones
+HL_INFO = "https://api.hyperliquid.xyz/info"
+HL_COINS = {"HYPE": ("HYPE", 1), "ENA": ("ENA", 1), "SOL": ("SOL", 1), "NEAR": ("NEAR", 1), "DOGE": ("DOGE", 1), "WIF": ("WIF", 1), "TRUMP": ("TRUMP", 1),
+            "PEPE": ("kPEPE", 1000), "BONK": ("kBONK", 1000), "SHIB": ("kSHIB", 1000)}
+HL_TTL = 6 * 3600
+CHART_DAYS = 400
 
 
 # ------------------------------------------------------------------ the buy zone
@@ -76,6 +95,11 @@ def _coin_tab(ticker: str) -> dict:
     pts = (f.get("series") or {}).get("price")
     if pts:
         f["zone"] = buy_zone(_series(pts), (f.get("kpi") or {}).get("base_2028"))
+    if ticker in UL.coins():
+        ev = UL.events(ticker)
+        now = pd.Timestamp.now("UTC").tz_localize(None).normalize()
+        f["unlocks"] = {"recent": [UL._row(r) for r in ev[(ev.date < now) & (ev.date >= now - pd.Timedelta(days=90))].itertuples()],
+                        "coming": [UL._row(r) for r in ev[ev.date >= now].head(6).itertuples()], "tab": "#unlocks"}
     return f
 
 
@@ -105,11 +129,115 @@ def _zones_now() -> dict:
             "rule": {"ma_days": MA_DAYS, "value_mult": VALUE_MULT}, "updated": int(time.time())}
 
 
+# ------------------------------------------------------------------ volume zones: Hyperliquid daily candles, big days, support / resistance
+def _hl_post(coin: str) -> dict:
+    """Up to 5,000 daily candles (the whole history of the market); the window is rounded to the day so the download is cached per day."""
+    today = pd.Timestamp.now("UTC").tz_localize(None).normalize()
+    return {"type": "candleSnapshot", "req": {"coin": coin, "interval": "1d", "startTime": int((today - pd.Timedelta(days=4999)).timestamp() * 1000),
+                                               "endTime": int((today + pd.Timedelta(days=1)).timestamp() * 1000)}}
+
+
+def hl_daily(ticker: str) -> pd.DataFrame:
+    """Closed daily candles (open, high, low, close, volume in coins, usd_volume) for a coin's Hyperliquid market, scaled to one token."""
+    name, k = HL_COINS[ticker]
+    raw = fetch_json(HL_INFO, HL_TTL, post=_hl_post(name), min_bytes=100)
+    if not raw:
+        raise ValueError(f"no Hyperliquid candles for {name}")
+    d = pd.DataFrame(raw)
+    d["ts"] = pd.to_datetime(d["t"].astype("int64"), unit="ms")
+    d = d.set_index("ts")[["o", "h", "l", "c", "v"]].astype(float)
+    d.columns = ["open", "high", "low", "close", "volume"]
+    d[["open", "high", "low", "close"]] /= k
+    d["volume"] *= k
+    d["usd_volume"] = d.volume * d.close
+    today = pd.Timestamp.now("UTC").tz_localize(None).normalize()
+    return d[d.index < today].sort_index()
+
+
+def _all_coins() -> list[dict]:
+    out = [{"ticker": t, "name": P.coin_row(t)["name"], "group": "Candidate", "tab": t.lower()} for t in CANDIDATES]
+    return out + [{"ticker": c["ticker"], "name": c["name"], "group": "Memecoin", "tab": "basket"} for c in M.coins_list()]
+
+
+def zone_read(now: dict) -> tuple[str, int]:
+    """One line on where the price sits: inside support (+1), inside resistance (-1), within 3% under resistance (-1), within 3% over support (+1), else between (0)."""
+    if "inside" in now:
+        k = now["inside"]["kind"]
+        return (f"inside a {'support' if k == 'buy' else 'resistance'} zone", 1 if k == "buy" else -1)
+    r, s = now.get("resistance"), now.get("support")
+    if r and r["above_pct"] <= 0.03:
+        return (f"{r['above_pct']:.1%} under resistance", -1)
+    if s and s["below_pct"] <= 0.03:
+        return (f"{s['below_pct']:.1%} over support", 1)
+    if r or s:
+        return ("between zones", 0)
+    return ("no live zone", 0)
+
+
+def _volume_now() -> dict:
+    coins, t0 = [], pd.Timestamp.now("UTC").tz_localize(None).normalize() - pd.Timedelta(days=CHART_DAYS)
+    for c in _all_coins():
+        if c["ticker"] not in HL_COINS:
+            coins.append({**c, "status": "not on Hyperliquid"})
+            continue
+        try:
+            d = hl_daily(c["ticker"])
+            if len(d) < 90:
+                raise ValueError(f"only {len(d)} days of candles")
+            p = VZ.chart_payload(d, c["ticker"], CHART_DAYS)
+            read, lean = zone_read(p["now"])
+            big30 = [b for b in p["big_days"] if b["ts"] >= int((d.index[-1] - pd.Timedelta(days=30)).timestamp())]
+            coins.append({**c, **p, "status": "ok", "market": HL_COINS[c["ticker"]][0], "read": read, "lean": lean, "big_days_30d": len(big30),
+                          "unlocks": UL.for_chart(c["ticker"], t0, d.index[-1] + pd.Timedelta(days=90)) if c["ticker"] in UL.coins() else []})
+        except Exception as e:
+            coins.append({**c, "status": "error", "why": type(e).__name__})
+    ok = [c for c in coins if c["status"] == "ok"]
+    return {"coins": coins, "counts": {"inside support": sum(c["lean"] > 0 for c in ok), "under resistance": sum(c["lean"] < 0 for c in ok), "coins": len(ok)},
+            "settings": VZ.DEFAULTS, "stale": stale_info([HL_INFO]), "updated": int(time.time())}
+
+
+# ------------------------------------------------------------------ ENA unlocks: the schedule and what the price did around each one
+UNLOCK_COIN = "ENA"
+
+
+def _unlocks_now() -> dict:
+    sched, ev = UL.schedule(UNLOCK_COIN), UL.events(UNLOCK_COIN)
+    now = pd.Timestamp.now("UTC").tz_localize(None).normalize()
+    out = {"coin": UNLOCK_COIN, "schedule": [{**r._asdict(), "date": str(r.date.date())} for r in sched.fillna("").itertuples(index=False)],
+           "events": [UL._row(r) for r in ev.itertuples()], "next": None, "updated": int(time.time()), "stale": stale_info([HL_INFO])}
+    future = ev[ev.date >= now]
+    if len(future):
+        r = future.iloc[0]
+        out["next"] = {**UL._row(r), "days": int((r.date.normalize() - now).days)}
+        nb = future[future.pct_of_circulating.fillna(0) >= 1]
+        if len(nb):
+            out["next_big"] = {**UL._row(nb.iloc[0]), "days": int((nb.iloc[0].date.normalize() - now).days)}
+    out["unlocked_m"] = float(ev[ev.date <= now].amount_m.sum()) if len(ev) else None
+    out["total_m"] = 15000.0
+    try:
+        d = hl_daily(UNLOCK_COIN)
+        et = UL.event_table(d, ev)
+        out |= {"price": VZ.chart_payload(d, UNLOCK_COIN, 10000)["bars"], "event_table": et, "averages": UL.averages(et, d), "rules": UL.rules(d, ev),
+                "history_since": str(d.index[0].date()), "events_in_history": len(et),
+                "date_check": sum(1 for r in et if r["max_vol_day_offset"] == 0), "date_check_off": sum(1 for r in et if abs(r["max_vol_day_offset"]) >= 2)}
+    except Exception as e:
+        out["study_error"] = type(e).__name__
+    return out
+
+
 def READINGS() -> list[dict]:
-    """Each coin's zone status (+1 in zone, 0 otherwise) plus the meme season headline, from cached data only."""
+    """Each coin's buy-zone status (+1 in zone), where it sits against its volume zones (+1 support / -1 resistance), days to the next
+    sizeable ENA unlock (-1 inside the 3 days before), plus the meme season headline, from cached data only."""
     out = [{"tab": "zones", "key": f"zone_{r['ticker'].lower()}", "label": f"{r['ticker']} buy zone", "value": r["status"],
             "lean": 1 if r["status"] == "in zone" else 0}
            for r in (ENDPOINTS["zones"]() or {}).get("coins", []) if r["status"] in ("in zone", "above zone", "no zone")]
+    out += [{"tab": "volume", "key": f"vz_{c['ticker'].lower()}", "label": f"{c['ticker']} volume zones", "value": c["read"], "lean": c["lean"]}
+            for c in (ENDPOINTS["volume"]() or {}).get("coins", []) if c.get("status") == "ok"]
+    u = ENDPOINTS["unlocks"]() or {}
+    nb = u.get("next_big") or u.get("next")
+    if nb:
+        out.append({"tab": "unlocks", "key": "ena_next_unlock", "label": "Days to the next ENA unlock of 1%+", "value": nb["days"], "lean": -1 if nb["days"] <= 3 else 0,
+                    "note": f"{nb['amount_m']:,.0f}M ENA on {nb['date']}"})
     return out + M.READINGS()
 
 
@@ -117,7 +245,7 @@ def _cached_ep(name, fn, ttl=3600):
     return lambda: _cached(f"topic:{SLUG}:{name}", ttl, fn)
 
 
-ENDPOINTS = {"zones": _cached_ep("zones", _zones_now, 900),
+ENDPOINTS = {"zones": _cached_ep("zones", _zones_now, 900), "volume": _cached_ep("volume", _volume_now, HL_TTL),
              **{t.lower(): _cached_ep(t.lower(), (lambda t: lambda: _coin_tab(t))(t)) for t in CANDIDATES},
-             "basket": M.ENDPOINTS["basket"], "season": M.ENDPOINTS["season"]}
+             "unlocks": _cached_ep("unlocks", _unlocks_now, HL_TTL), "basket": M.ENDPOINTS["basket"], "season": M.ENDPOINTS["season"]}
 BACKGROUND = M.BACKGROUND                       # the memecoin prices; the candidates come with btc_cycles' own fill

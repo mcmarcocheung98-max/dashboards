@@ -223,6 +223,204 @@ function zonesTable(rows) {
 }
 
 const section = t => el("h2", { style: "font-size:16px;margin:22px 0 2px" }, t);
+
+// ------------------------------------------------------------------ volume zones: candles, big-volume days, the bands they left, unlocks
+const pctAbs1 = v => v == null ? "–" : (Math.abs(v) * 100).toFixed(1) + "%";
+const dayOfTs = t => new Date(t * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+let VZ_COIN = null, VZ_DAYS = 365;
+try { VZ_COIN = sessionStorage.getItem("vz:coin"); } catch (e) {}
+
+function zoneChart(c, days) {
+  // candlesticks, each zone a band (baseline series filled between its top and bottom) from its birth to its death or today,
+  // ▲ / ▼ markers on the big days with the volume ratio, orange squares on unlock days; joins the tab's shared date axis
+  const host = el("div", { class: "chart", style: "height:360px" });
+  const bars = c.bars.filter(b => b[0] >= c.bars[c.bars.length - 1][0] - days * 86400);
+  if (!bars.length) return host;
+  const first = bars[0][0], last = bars[bars.length - 1][0];
+  setTimeout(() => {
+    const ch = newChart(host, { rightPriceScale: { borderVisible: false, mode: 1 } });
+    const prec = c.price >= 100 ? 2 : c.price >= 1 ? 4 : c.price >= 0.01 ? 5 : 7;
+    const s = ch.addCandlestickSeries({ upColor: css("--up"), downColor: css("--down"), borderVisible: false, wickUpColor: css("--up"), wickDownColor: css("--down"),
+      priceFormat: { type: "price", precision: prec, minMove: Math.pow(10, -prec) }, priceLineVisible: false, lastValueVisible: false });
+    s.setData(bars.map(b => ({ time: b[0], open: b[1], high: b[2], low: b[3], close: b[4] })));
+    for (const z of c.zones) {
+      if (z.died != null && z.died < first) continue;
+      const col = z.kind === "buy" ? "31,157,99" : "214,69,61", live = z.died == null, a = Math.max(z.born, first), b = live ? last : Math.max(z.died, a + 86400);
+      const zs = ch.addBaselineSeries({ baseValue: { type: "price", price: z.lo }, topLineColor: "rgba(" + col + "," + (live ? 0.8 : 0.35) + ")",
+        topFillColor1: "rgba(" + col + "," + (live ? 0.26 : 0.09) + ")", topFillColor2: "rgba(" + col + "," + (live ? 0.26 : 0.09) + ")",
+        bottomLineColor: "rgba(0,0,0,0)", bottomFillColor1: "rgba(0,0,0,0)", bottomFillColor2: "rgba(0,0,0,0)", lineWidth: 1,
+        priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+      zs.setData([{ time: a, value: z.hi }, { time: b, value: z.hi }]);
+    }
+    const marks = c.big_days.filter(b => b.ts >= first).map(b => ({ time: b.ts, position: b.kind === "buy" ? "belowBar" : "aboveBar", shape: b.kind === "buy" ? "arrowUp" : "arrowDown",
+      color: b.kind === "buy" ? css("--up") : css("--down"), text: b.ratio + "×" }));
+    for (const u of c.unlocks || []) if (u.ts >= first && u.ts <= last) marks.push({ time: u.ts, position: "aboveBar", shape: "square", color: "#ff7f0e",
+      text: "unlock " + (u.amount_m >= 1000 ? (u.amount_m / 1000).toFixed(1) + "B" : Math.round(u.amount_m) + "M") });
+    s.setMarkers(marks.sort((x, y) => x.time - y.time));
+    syncAdd(ch, s, bars.map(b => ({ time: b[0], value: b[4] })));
+  });
+  return host;
+}
+
+function zoneReadLine(c) {
+  const n = c.now || {}, parts = [px(c.price) + " · " + c.live + " live zone" + (c.live === 1 ? "" : "s")];
+  if (n.inside) parts.push("inside a " + (n.inside.kind === "buy" ? "support" : "resistance") + " zone " + px(n.inside.lo) + "–" + px(n.inside.hi) + " from " + n.inside.born + " (" + n.inside.ratio + "× volume)");
+  if (n.support) parts.push("nearest support " + px(n.support.lo) + "–" + px(n.support.hi) + ", " + pctAbs1(n.support.below_pct) + " below (" + n.support.born + ")");
+  if (n.resistance) parts.push("nearest resistance " + px(n.resistance.lo) + "–" + px(n.resistance.hi) + ", " + pctAbs1(n.resistance.above_pct) + " above (" + n.resistance.born + ")");
+  const nu = (c.unlocks || []).find(u => u.ts > c.bars[c.bars.length - 1][0]);
+  if (nu) parts.push("next unlock " + nu.date + ": " + Math.round(nu.amount_m) + "M" + (nu.pct_of_circulating != null ? " (+" + nu.pct_of_circulating + "% of circulating)" : ""));
+  return parts.join(" · ");
+}
+
+function zoneStatsCard(c) {
+  const S = c.stats || {}, f = v => v == null ? "–" : pct(v, 1), up = v => v == null ? "" : " (" + Math.round(v * 100) + "% up)";
+  const rows = [["After a big BUY day (" + S.buy_days + ")", f(S.buy_7d) + up(S.buy_7d_up), f(S.buy_30d) + up(S.buy_30d_up)],
+    ["After a big SELL day (" + S.sell_days + ")", f(S.sell_7d) + up(S.sell_7d_up), f(S.sell_30d) + up(S.sell_30d_up)],
+    ["Any day", f(S.every_7d), f(S.every_30d)],
+    ["After the first retest of support (" + S.buy_retests + ")", f(S.buy_retest_7d) + up(S.buy_retest_7d_up), "–"],
+    ["After the first retest of resistance (" + S.sell_retests + ")", f(S.sell_retest_7d) + up(S.sell_retest_7d_up), "–"]];
+  return card(c.ticker + " after its own big days and retests, " + c.history_days + " days of history since " + c.since,
+    el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["", "7 days later", "30 days later"].map((h, i) => el("th", { style: i ? "text-align:right" : "" }, h))),
+      ...rows.map(r => el("tr", {}, el("td", {}, r[0]), ...r.slice(1).map(v => el("td", { style: "text-align:right", class: v.startsWith("+") ? "up" : v.startsWith("−") ? "down" : "" }, v)))))),
+    note("Average close-to-close move after the event against the coin's average day. A few dozen events on one coin: a hint, not a statistic. The bot's full study across its whole basket is docs/Alt_Volume_Zones_Study.xlsx in the trading repo."));
+}
+
+function volumeTable(coins) {
+  const H = ["Coin", "Price", "Where it sits", "Live zones", "Nearest support", "Nearest resistance", "Big days, 30d", "After buy days, 7d", "After sell days, 7d"];
+  const lc = { 1: "up", "-1": "down", 0: "" };
+  return el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...H.map((h, i) => el("th", { style: (i > 1 ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
+    ...coins.map(c => c.status !== "ok" ? el("tr", {}, el("td", {}, el("b", {}, c.ticker)), el("td", { colspan: H.length - 1, class: "muted" }, c.status === "error" ? "Not available right now (" + c.why + ")." : c.status + ".")) :
+      el("tr", { class: "tap", style: "cursor:pointer", onclick: () => { VZ_COIN = c.ticker; try { sessionStorage.setItem("vz:coin", c.ticker); } catch (e) {} location.hash = "volume"; render(); } },
+        el("td", {}, el("b", {}, c.ticker), " ", el("span", { class: "muted" }, c.group === "Memecoin" ? "meme" : "candidate")),
+        el("td", { style: "text-align:right" }, px(c.price)), el("td", { style: "text-align:right", class: lc[c.lean] || "" }, c.read),
+        el("td", { style: "text-align:right" }, c.live),
+        el("td", { style: "text-align:right" }, c.now.support ? px(c.now.support.hi) + " (" + pctAbs1(c.now.support.below_pct) + " below)" : "–"),
+        el("td", { style: "text-align:right" }, c.now.resistance ? px(c.now.resistance.lo) + " (" + pctAbs1(c.now.resistance.above_pct) + " above)" : "–"),
+        el("td", { style: "text-align:right" }, c.big_days_30d),
+        el("td", { style: "text-align:right", class: cls(c.stats.buy_7d) }, pct(c.stats.buy_7d, 1)), el("td", { style: "text-align:right", class: cls(c.stats.sell_7d) }, pct(c.stats.sell_7d, 1))))));
+}
+
+// ------------------------------------------------------------------ ENA unlocks
+const mTok = v => v == null ? "–" : v >= 1000 ? (v / 1000).toFixed(2) + "B" : Math.round(v) + "M";
+const pctOrDash = (v, d = 1) => v == null ? "–" : pct(v, d);
+const CONF_CLS = { high: "up", medium: "", low: "down" };
+
+function unlockChart(u) {
+  const host = el("div", { class: "chart", style: "height:360px" });
+  const bars = u.price || [];
+  if (!bars.length) return host;
+  setTimeout(() => {
+    const ch = newChart(host, { rightPriceScale: { borderVisible: false, mode: 1 } });
+    const s = ch.addLineSeries({ color: css("--s1"), lineWidth: 2, priceLineVisible: false, lastValueVisible: false, priceFormat: { type: "custom", formatter: px, minMove: 0.0001 } });
+    const pts = bars.map(b => ({ time: b[0], value: b[4] }));
+    s.setData(pts);
+    const first = bars[0][0], last = bars[bars.length - 1][0];
+    s.setMarkers((u.events || []).filter(e => e.ts >= first && e.ts <= last).map(e => {
+      const big = (e.pct_of_circulating || 0) >= 5, mid = (e.pct_of_circulating || 0) >= 1;
+      return { time: e.ts, position: "aboveBar", shape: big ? "arrowDown" : "square", color: big ? css("--down") : mid ? "#ff7f0e" : css("--muted"), size: big ? 2 : mid ? 1 : 0.6, text: big || mid ? mTok(e.amount_m) : "" };
+    }));
+    syncAdd(ch, s, pts);
+  });
+  return host;
+}
+
+function unlockScheduleTable(rows, now) {
+  const H = ["Date", "Amount", "% of supply", "% of circulating", "Who", "Kind", "Tranches"];
+  return el("div", { class: "scroll", style: "max-height:420px;overflow:auto" }, el("table", {}, el("tr", {}, ...H.map((h, i) => el("th", { style: (i > 0 && i < 4 ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
+    ...rows.map(e => el("tr", { style: e.ts >= now ? "" : "opacity:.75" }, el("td", { style: "white-space:nowrap" }, e.date, e.ts >= now ? el("span", { class: "pill", style: "margin-left:6px" }, "ahead") : null),
+      el("td", { style: "text-align:right" }, mTok(e.amount_m)), el("td", { style: "text-align:right" }, e.pct_supply + "%"),
+      el("td", { style: "text-align:right", class: (e.pct_of_circulating || 0) >= 5 ? "down" : "" }, e.pct_of_circulating == null ? "–" : "+" + e.pct_of_circulating + "%"),
+      el("td", {}, e.who), el("td", { class: "muted" }, e.kinds), el("td", { style: "text-align:right" }, e.n_tranches == null ? "" : e.n_tranches)))));
+}
+
+function unlockAverages(rows) {
+  const H = ["Group", "Unlocks", "Week before", "Into the day", "1 day after", "3 days after", "7 days after", "14 days after", "Weeks before that fell"];
+  const cell = v => el("td", { style: "text-align:right", class: cls(v) }, pctOrDash(v));
+  return el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...H.map((h, i) => el("th", { style: (i ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
+    ...rows.map(r => el("tr", { style: r.group === "every day" ? "font-style:italic" : "" }, el("td", {}, r.group), el("td", { style: "text-align:right" }, r.events),
+      cell(r.run_up_7d), cell(r.into_day), cell(r.after_1d), cell(r.after_3d), cell(r.after_7d), cell(r.after_14d),
+      el("td", { style: "text-align:right" }, r.run_up_7d_down == null ? "–" : Math.round(r.run_up_7d_down * 100) + "%")))));
+}
+
+function unlockRules(rows) {
+  const H = ["Rule", "Unlocks used", "Trades", "Total", "Per trade", "Win rate", "Worst trade", "Before Jul 2025", "Jul 2025 on", "Placebo p"];
+  const cell = (v, d = 1) => el("td", { style: "text-align:right", class: cls(v) }, pctOrDash(v, d));
+  return el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...H.map((h, i) => el("th", { style: (i > 1 ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
+    ...rows.map(r => el("tr", {}, el("td", {}, r.rule), el("td", {}, r.unlocks), el("td", { style: "text-align:right" }, r.trades),
+      cell(r.total, 0), cell(r.avg, 2), el("td", { style: "text-align:right" }, r.win_rate == null ? "–" : Math.round(r.win_rate * 100) + "%"), cell(r.worst, 1),
+      cell(r.in_sample, 0), cell(r.out_of_sample, 0),
+      el("td", { style: "text-align:right", class: r.placebo_p != null && r.placebo_p <= 0.05 ? "up" : "" }, r.placebo_p == null ? "–" : r.placebo_p.toFixed(2))))));
+}
+
+function unlockEvents(rows) {
+  const H = ["Date", "Amount", "% of circulating", "Who", "Week before", "Into day", "7 days after", "14 days after", "Volume ×", "Busiest day ±4"];
+  const cell = v => el("td", { style: "text-align:right", class: cls(v) }, pctOrDash(v));
+  return el("div", { class: "scroll", style: "max-height:420px;overflow:auto" }, el("table", {}, el("tr", {}, ...H.map((h, i) => el("th", { style: (i > 0 && i !== 3 ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
+    ...rows.slice().reverse().map(e => el("tr", {}, el("td", { style: "white-space:nowrap" }, e.date), el("td", { style: "text-align:right" }, mTok(e.amount_m)),
+      el("td", { style: "text-align:right" }, e.pct_of_circulating == null ? "–" : "+" + e.pct_of_circulating + "%"), el("td", { class: "muted" }, e.who),
+      cell(e.run_up_7d), cell(e.into_day), cell(e.after_7d), cell(e.after_14d), el("td", { style: "text-align:right" }, e.vol_ratio == null ? "–" : e.vol_ratio.toFixed(1)),
+      el("td", { style: "text-align:right", class: e.max_vol_day_offset === 0 ? "up" : Math.abs(e.max_vol_day_offset) >= 2 ? "down" : "" }, e.max_vol_day_offset === 0 ? "same day" : (e.max_vol_day_offset > 0 ? "+" : "") + e.max_vol_day_offset + "d")))));
+}
+
+function unlockMiniCard(f) {
+  const U = f.unlocks;
+  if (!U) return null;
+  const nx = U.coming[0];
+  return card("Token unlocks", el("div", { class: "kpis" },
+      kpi("Next unlock", nx ? nx.date : "–"), kpi("Amount", nx ? mTok(nx.amount_m) + " " + f.ticker : "–"), kpi("Added to circulating", nx && nx.pct_of_circulating != null ? "+" + nx.pct_of_circulating + "%" : "–", nx && nx.pct_of_circulating >= 1 ? "down" : ""),
+      kpi("Unlocks in the last 90 days", String(U.recent.length))),
+    el("div", { class: "muted" }, nx ? "To " + nx.who + " (" + nx.kinds + "). " : "", el("a", { href: U.tab }, "Full schedule and what the price did around every unlock")));
+}
+
+const VIEWS_EXTRA = {
+  async volume() {
+    const d = await api("volume");
+    const ok = (d.coins || []).filter(c => c.status === "ok");
+    if (!ok.length) return [card(null, el("div", { class: "muted" }, "Candles are loading in the background, back in a few minutes."), stale(d))];
+    if (!VZ_COIN || !ok.some(c => c.ticker === VZ_COIN)) VZ_COIN = ok[0].ticker;
+    const c = ok.find(x => x.ticker === VZ_COIN);
+    const C = d.counts || {};
+    const head = card(null, el("div", { class: "kpis" },
+      kpi("Coins with candles", C.coins + " of " + (d.coins || []).length), kpi("Inside or just over support", String(C["inside support"] || 0), C["inside support"] ? "up" : ""),
+      kpi("Inside or just under resistance", String(C["under resistance"] || 0), C["under resistance"] ? "down" : ""),
+      kpi("Big day = volume ≥", d.settings.mult + "× the " + d.settings.lookback + "-day median")),
+      note("A big-volume day with an up close leaves a support zone (its open-to-close range); with a down close, a resistance zone. Mechanical and recomputed every 6 hours; research, not advice."));
+    const pick = el("div", { class: "seg", style: "flex-wrap:wrap;margin-bottom:6px" }, ...ok.map(x => el("button", { class: x.ticker === VZ_COIN ? "on" : "", onclick: () => { VZ_COIN = x.ticker; try { sessionStorage.setItem("vz:coin", x.ticker); } catch (e) {} render(); } }, x.ticker)));
+    const rng = el("div", { class: "seg", style: "margin-bottom:6px" }, ...[[180, "6 months"], [365, "1 year"], [400, "Whole window"]].map(([v, l]) => el("button", { class: v === VZ_DAYS ? "on" : "", onclick: () => { VZ_DAYS = v; render(); } }, l)));
+    const chart = card(c.ticker + ": daily candles, big-volume days and the zones they left (" + c.market + " on Hyperliquid)", pick, rng, zoneChart(c, VZ_DAYS),
+      el("div", { class: "muted", style: "margin-top:6px" }, zoneReadLine(c)),
+      note("▲ / ▼ = a day with " + d.settings.mult + "× or more the usual volume (label = how many times); up close = buy day, down close = sell day. Green band = support left by a buy day, red = resistance left by a sell day, from the day's open to its close; " +
+        "a band ends when a close goes " + d.settings.break_atr + " ATR through it or after " + d.settings.max_age + " days (faded = ended). Orange squares = token unlocks (ENA). Volume is Hyperliquid's perp volume in dollars."));
+    return [head, chart, zoneStatsCard(c), card("Every coin against its zones", volumeTable(d.coins || []), note("Click a row to chart it. 'Where it sits' reads +/− 3% from the nearest zone.")), stale(d)];
+  },
+  async unlocks() {
+    const u = await api("unlocks");
+    const now = Math.floor(Date.now() / 1000), nx = u.next, nb = u.next_big;
+    const head = card(null, el("div", { class: "kpis" },
+        kpi("Next unlock", nx ? nx.date + " (" + nx.days + " days)" : "–"), kpi("Amount", nx ? mTok(nx.amount_m) : "–"),
+        kpi("Next of 1%+ of circulating", nb ? nb.date + " · " + mTok(nb.amount_m) + " (+" + nb.pct_of_circulating + "%)" : "none scheduled", nb && nb.days <= 7 ? "down" : ""),
+        kpi("Unlocked so far", u.unlocked_m != null ? mTok(u.unlocked_m) + " of " + mTok(u.total_m) : "–"),
+        kpi("Unlocks in the price history", u.events_in_history != null ? u.events_in_history + " since " + u.history_since : "–")),
+      note("ENA: 15B max supply; core contributors 30%, investors 25%, Foundation 15%, ecosystem 30%. Listed 2 Apr 2024 with 9.5% circulating; 1-year cliff of 25% on 5 Mar 2025, then monthly tranches; all remaining investor tokens were released at once on 5 Oct 2026 (size not published, ~1.4B before OTC buy-outs). " +
+        "Schedule hand-entered from Ethena's docs, Binance, Tokenomist and news (data/altcoins/unlocks/ENA.csv); trackers disagree on the 2nd vs the 5th for the 2025-26 tranches, so the 'busiest day' column checks each date against volume."));
+    const out = [head];
+    if (u.price) out.push(card("ENA price (log) with every unlock: red arrows = 5%+ of circulating, orange = 1-5%, grey = under 1% (Foundation)", unlockChart(u),
+      note("Hyperliquid daily closes. Markers sit on the unlock day; the labels give the amount in tokens.")));
+    if (u.averages && u.averages.length) out.push(card("What ENA did around its unlocks, on average", unlockAverages(u.averages),
+      note("Close-to-close moves. 'Week before' = close 8 days before to the day before; 'Into the day' = the day before to the unlock day's close. The italic 'every day' row is ENA's average move over the same windows on any day: the difference is the unlock effect, if any. " +
+        u.events_in_history + " events, " + (u.averages.find(r => r.group === "big (>= 5% of circulating)") || {}).events + " of them big: a hint, not a statistic.")));
+    if (u.rules && u.rules.length) out.push(card("Would the dates have been tradable? Simple rules at daily closes, perp costs included", unlockRules(u.rules),
+      note("Enter and exit at the close; 0.045% fee + 0.05% slippage each side, funding not included. Before / after Jul 2025 = the two halves the trading bot's studies judge on. Placebo p = share of 300 random date sets of the same size that did as well (green at 0.05 or less). " +
+        "Ten settings on about " + Math.max(0, ...(u.rules || []).map(r => r.trades)) + " events: one or two will look good by luck; a rule needs both halves positive AND a low p before it means anything.")));
+    if (u.event_table && u.event_table.length) out.push(card("Every unlock in the price history", unlockEvents(u.event_table),
+      note("'Busiest day ±4' = the highest-volume day within four days of the listed date: 'same day' (green) supports the date, ±2 days or more (red) means the tracker's day may be wrong.")));
+    out.push(card("The full schedule, past and ahead (" + (u.events || []).length + " unlock days to " + ((u.events || []).slice(-1)[0] || {}).date + ")", unlockScheduleTable(u.events || [], now),
+      note("Same-day tranches are summed; '% of circulating' = the day's amount against everything unlocked before it. Not counted: the StablecoinX lock-up waiver (3.03B, transfers still need the Foundation's consent), the season-3 airdrop (amount unpublished) and a 275M item some trackers show for 1 Nov 2026. Rows and sources in data/altcoins/unlocks/ENA.csv.")));
+    if (u.study_error) out.push(note("The price study is not available right now (" + u.study_error + "); the schedule above is from the committed file."));
+    out.push(stale(u));
+    return out;
+  },
+};
 const DATA = {};                     // one download per coin tab; a failure is retried on the next visit
 const coinData = t => DATA[t] || (DATA[t] = api(t).catch(e => { delete DATA[t]; throw e; }));
 
@@ -230,7 +428,7 @@ async function coinView(t) {
   const f = await coinData(t);
   if (!f.series || !f.series.price) return [header(f), card(null, el("div", { class: "muted" }, "Not available right now: prices are loading in the background."), stale(f))];
   const S = f.series;
-  return [header(f), card(null, strip(f)), zoneCard(f), notesCard(f),
+  return [header(f), card(null, strip(f)), zoneCard(f), unlockMiniCard(f), notesCard(f),
     card(f.ticker + " and BTC rebased to the same start (log)", ...linesChart([{ name: f.ticker, points: S.price }, { name: "BTC, rebased", points: S.btc_indexed, dashed: true, color: css("--hold") }], px, { log: true })),
     el("div", { class: "grid2" },
       card(f.ticker + " ÷ BTC (log): rising = beating BTC", ...linesChart([{ name: f.ticker + "/BTC", points: S.ratio }], v => v == null ? "–" : v.toPrecision(3), { log: true, small: true })),
@@ -303,5 +501,6 @@ const VIEWS = {
     return [head, ratio, el("div", { class: "grid2" }, rsi, ew, caps), share, stale(d)];
   },
 };
+Object.assign(VIEWS, VIEWS_EXTRA);
 window.TOPIC = { VIEWS };
 })();
