@@ -64,6 +64,7 @@ found by its title if its key ever changes. `pytest -m network tests/test_nba_od
 - `history/<event id>.jsonl`: one line per price change at Ladbrokes, Pinnacle and the Exchange (`[t, book, market, name, point, price]`),
   kept 60 days.
 - `props.json`: player props, when switched on.
+- `sim.json`: the synthetic lab's last run (the Simulator tab and the Live tab's model column).
 
 ## Settings (Railway variables)
 
@@ -82,6 +83,41 @@ found by its title if its key ever changes. `pytest -m network tests/test_nba_od
 
 `date,team,player,status,source,note`: one row per report the ESPN feed misses, team by its full or short name, `source` a URL. Context
 only: injuries, rest and form never enter the fair line or EV.
+
+## The Simulator tab (`app/topics/nba_sim.py`, synthetic data only)
+
+Before a real credit is spent, the lab answers three questions on made-up games whose true probabilities are known:
+
+1. **How do live odds move?** Games are played possession by possession from a made-up spread and total (pace, a little catch-up by
+   the trailing side, overtime; final margins spread about 10-11 points around the spread, like the NBA). A sharp book (2.5% margin,
+   reprices 4 s after every score) and a slow book (6% margin, reprices 25 s after a score and every 60 s, only when the fair line has
+   moved 2 points, suspended 8 s after each score, a stuck feed for 2½ minutes in 12% of games) are run over every game. The slow book's
+   rules are stylised guesses in `DEFAULTS`, **not Ladbrokes' trading rules**.
+2. **Train the model.** `P(home) = Φ((lead + a·m·f + c) / (σ·√f))`, f the fraction of the game left, m the pre-game expected home
+   margin, fitted by maximum likelihood on the simulated **outcomes** (never on the true probabilities) of 70% of the games and scored
+   on the other 30% (log loss against the base rate, Brier, a calibration table). Rows within a game are correlated, so the fit needs
+   hundreds of games: the default run is 800 (about 15 s). The fitted parameters give the **Model % · EV** column on the Live tab, a
+   second opinion on each moneyline that never raises a flag. Retrain on real games when the poller has logged a few hundred
+   (`history/` holds every price; the scores are in `state.json`): same `fit()` on rows of (lead, pre-game margin, fraction left, won).
+3. **Where is the exploitable price?** The dashboard's own `devig` / `ev` run on snapshots at three polling cadences (300 s as the real
+   poller, 60 s, 15 s). Every flag (EV ≥ threshold against the sharp fair, one bet per price run) is settled at the game's outcome and
+   scored against the **true** probability, by quarter, lead, seconds since the last score, odds, side, feed state, and cadence ×
+   threshold.
+
+What the default run shows (synthetic, so a statement about the pipeline, not about Ladbrokes):
+
+- The edge lives in the **10-30 seconds after a score**, when the sharp book has moved and the slow one has not, and in **Q4**
+  (the same lag is worth more when a basket moves the probability more). Flags 30 s or more after a score have **negative** true
+  edge: they are the sharp book's own noise, not a stale price.
+- Flags at **leads of 13+** and at **odds above 4.00** have no real edge either; the EV shown against the sharp fair (about +12%)
+  overstates the true edge (about +7%) everywhere, because the sharp fair is itself noisy.
+- At the poller's **5-minute cadence** fewer than one flag a game lands in a lag window, so the realised ROI is noise at any sample
+  size the budget allows; at 60 s there are 3-4 a game and at 15 s a dozen. A faster live cadence costs credits in proportion
+  (6 a pull), so a 1-minute live cadence for an hour of play is about 360 credits a night.
+
+`python -m app.topics.nba_sim --games 800 --lag 40 --sticky 0.03 --hiccup 0.2` prints the whole report for other assumptions;
+`--save` writes it to the volume for the tab. The background job runs the default once and again when the file is a week old
+(`sim.json`). Tests: `tests/test_nba_sim.py` (the analytic truth is checked against Monte Carlo rollouts).
 
 ## Readings ("what changed since yesterday")
 

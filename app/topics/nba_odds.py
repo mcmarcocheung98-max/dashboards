@@ -7,6 +7,8 @@ moves     each game's price history at Ladbrokes, Pinnacle and the Betfair Excha
 results   every flagged bet with its price, closing line value against the sharp close, the result, and running ROI and CLV; plus the
           bets the user placed (stored on the volume)
 teams     form, rest days, back-to-backs and injuries for tonight's teams: context only, never used in EV
+sim       the synthetic lab (nba_sim.py): how live odds move on simulated games, the live win-probability model trained on them, and
+          where and at what polling cadence the pipeline's flags are really exploitable; its fitted model gives the Live tab's "model fair"
 
 All odds come from The Odds API v4 (paid key in ODDS_API_KEY). Ladbrokes has no public feed and is not scraped. Polling runs only in the
 background thread started by BACKGROUND and writes snapshots under SNAPSHOT_DIR/nba-odds/; page requests read those files and never call
@@ -37,7 +39,7 @@ from . import Topic
 log = logging.getLogger("dashboards.nba_odds")
 
 SLUG = "nba-odds"
-_TABS = (("today", "Today"), ("live", "Live"), ("moves", "Line moves"), ("results", "Results & CLV"), ("teams", "Teams"))
+_TABS = (("today", "Today"), ("live", "Live"), ("moves", "Line moves"), ("results", "Results & CLV"), ("teams", "Teams"), ("sim", "Simulator"))
 _BLURB = ("Ladbrokes' NBA moneylines, spreads and totals against a fair line from Pinnacle and the Betfair Exchange, pre-game and live: "
           "the bets priced above fair each day, how the lines moved, and whether the flagged value beat the closing line.")
 try:
@@ -724,7 +726,13 @@ def start_poller() -> dict:
     return {"poller": "ok"}
 
 
-BACKGROUND = [start_poller]
+def run_sim() -> dict:
+    """BACKGROUND job: the synthetic lab (nba_sim.py), once, then again when its file is a week old."""
+    from . import nba_sim
+    return nba_sim.ensure()
+
+
+BACKGROUND = [start_poller, run_sim]
 
 
 # ------------------------------------------------------------------ NBA context (free sources; never in EV)
@@ -916,16 +924,61 @@ def live() -> dict:
         board, board_err = {}, type(e).__name__
     scores = lt.get("scores") or {}
     games = []
+    from . import nba_sim
+    params = nba_sim.load().get("model") or {}
     for g in _game_rows(rows):
         s, b = scores.get(g["id"]) or {}, board.get(nickname(g["home"])) or {}
         g.update(home_score=s.get("home_score") if s.get("home_score") is not None else b.get("home_score"),
                  away_score=s.get("away_score") if s.get("away_score") is not None else b.get("away_score"),
                  clock=b.get("clock"), period=b.get("period"), status=b.get("status"), clock_source=b.get("source"))
+        g["model"] = model_fair(g, st, params)
         games.append(g)
     recent = [f for f in st.get("flags", []) if f["live"] and (f["status"] == "active" or (f.get("gone") or 0) > now - 2 * HOUR)]
     recent.sort(key=lambda f: (f["status"] != "active", -(f.get("last_ev") or f["ev"] or 0)))
     return {"as_of": lt.get("t"), "games": games, "flags": recent, "min_ev": min_ev(), "fresh_live": FRESH_LIVE, "board_error": board_err,
             "credits": credits(st, lt.get("games") or []), "updated": int(now)}
+
+
+def pregame_spread(gid: str, home: str, st: dict) -> float | None:
+    """The home spread line at the pre-game close (Ladbrokes' key, which is what close_pre and opens are keyed by), else the open."""
+    pre = f"{gid}|spreads|{home}|"
+    for store in (st.get("close_pre", {}), st.get("opens", {})):
+        for k in store:
+            if k.startswith(pre) and k[len(pre):]:
+                try:
+                    return float(k[len(pre):])
+                except ValueError:
+                    continue
+    return None
+
+
+def model_fair(g: dict, st: dict, params: dict) -> dict | None:
+    """The synthetic-trained live model's P(home) for a game in progress, and its EV against Ladbrokes' moneyline. A second opinion
+    shown next to the sharp fair; it never raises a flag (see nba_sim.py)."""
+    from . import nba_sim
+    if not params or g.get("home_score") is None or g.get("away_score") is None:
+        return None
+    spread = pregame_spread(g["id"], g["home"], st)
+    p = nba_sim.live_model_p(g["home_score"] - g["away_score"], g.get("period"), g.get("clock"), spread, params)
+    if p is None:
+        return None
+    out = {"p_home": _r(p, 4), "odds_home": _r(1 / p, 3) if p > 0.001 else None, "odds_away": _r(1 / (1 - p), 3) if p < 0.999 else None, "spread": spread,
+           "trained_on": "synthetic"}
+    for r in g["markets"].get("h2h", []):
+        side_p = p if r["name"] == g["home"] else 1 - p
+        r["model_p"] = _r(side_p, 4)
+        r["model_ev"] = _r(ev(r["lad"], side_p), 4)
+    return out
+
+
+def sim() -> dict:
+    """The synthetic lab's last run (nba_sim.py); a short run on the spot the first time, so the tab is never empty."""
+    from . import nba_sim
+    out = nba_sim.load()
+    if not out:
+        out = nba_sim.run(games=120)
+        nba_sim.save(out)
+    return out
 
 
 def moves() -> dict:
@@ -1107,4 +1160,4 @@ def _ep(name, fn, ttl=15):
 
 
 ENDPOINTS = {"today": _ep("today", today), "live": _ep("live", live), "moves": _ep("moves", moves, 30), "results": _ep("results", results),
-             "teams": _ep("teams", teams, 600), "bets": bets}
+             "teams": _ep("teams", teams, 600), "sim": _ep("sim", sim, 600), "bets": bets}

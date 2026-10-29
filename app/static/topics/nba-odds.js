@@ -66,13 +66,16 @@ function valueTable(rows, live) {
 function gameCard(g, extra) {
   const rows = ["h2h", "spreads", "totals"].flatMap(m => g.markets[m] || []);
   const margins = ["h2h", "spreads", "totals"].map(m => (g.markets[m] || [])[0]).filter(Boolean).map(r => MKT[r.market] + " " + pct(r.margin, 1).replace("+", ""));
+  const model = !!g.model;                                 // live only: the synthetic-trained model's second opinion on the moneyline
+  const mcell = r => r.model_p == null ? el("td", { class: "muted" }, "–") : el("td", { class: r.model_ev >= 0 ? "up" : "down" }, prob(r.model_p) + " · " + evp(r.model_ev));
   return card(g.game + (g.live ? " · LIVE" : " · " + ukDay(g.commence) + " " + ukTime(g.commence) + " UK"), extra || null,
     el("div", { class: "scroll" }, el("table", {},
-      el("tr", {}, ...["Market", "Bet", "Ladbrokes", "Fair odds", "Fair %", "EV", "¼ Kelly", "Best UK", "Open → now"].map(h => el("th", {}, h))),
+      el("tr", {}, ...["Market", "Bet", "Ladbrokes", "Fair odds", "Fair %", "EV", "¼ Kelly", "Best UK", "Open → now"].concat(model ? ["Model % · EV"] : []).map(h => el("th", {}, h))),
       ...rows.map(r => el("tr", { style: r.value ? "background:color-mix(in srgb, var(--up) 10%, transparent)" : "" }, el("td", {}, MKT[r.market]), el("td", {}, r.label),
         el("td", {}, odds(r.lad)), el("td", {}, odds(r.fair_odds)), el("td", {}, prob(r.fair_p)), evCell(r), el("td", {}, r.value ? stake(r.kelly) : "–"),
-        el("td", {}, r.best ? odds(r.best.price) + " " + r.best.book : "–"), moveCell(r))))),
-    note("Ladbrokes margin: " + (margins.join(" · ") || "–") + ". Sharp lines: " + (rows[0] ? sharpAge(rows[0]) : "–") + ". Fair needs a sharp book on the same line; a spread or total Ladbrokes prices on a line Pinnacle and the Exchange do not show has no fair."));
+        el("td", {}, r.best ? odds(r.best.price) + " " + r.best.book : "–"), moveCell(r), model ? mcell(r) : null)))),
+    note("Ladbrokes margin: " + (margins.join(" · ") || "–") + ". Sharp lines: " + (rows[0] ? sharpAge(rows[0]) : "–") + ". Fair needs a sharp book on the same line; a spread or total Ladbrokes prices on a line Pinnacle and the Exchange do not show has no fair."
+      + (model ? " Model: the live win-probability model from the Simulator tab (trained on synthetic games" + (g.model.spread != null ? ", pre-game spread " + (g.model.spread > 0 ? "+" : "") + g.model.spread : "") + "): a second opinion on the moneyline, never a flag." : "")));
 }
 
 function flagList(flags) {
@@ -200,7 +203,69 @@ const VIEWS = {
       note("Context only: none of this goes into the fair line or the EV, which come from prices alone. Rest counts days off before tonight (US Eastern days). " +
         "Injuries: " + (d.injury_sources.length ? d.injury_sources.join(", ") : "no source answered") + "; hand-entered ones are in data/nba-odds/injuries.csv with their source."))];
   },
+
+  async sim() {
+  const d = await api("sim"), m = d.model || {}, cfg = d.cfg || {}, lad = cfg.lad || {}, sh = cfg.sharp || {};
+  const pc = v => v == null ? "–" : (v * 100).toFixed(1) + "%";
+  const se = r => r.se == null ? "" : " ± " + (r.se * 100).toFixed(1);
+  const head = card(null, el("div", { class: "kpis" }, kpi("Synthetic games", num(d.n_games)), kpi("Model σ (margin spread, pts)", m.sigma), kpi("Hold-out log loss", m.logloss + " (base " + m.logloss_base + ")"),
+    kpi("Home win rate", pc(d.home_win_rate)), kpi("Overtime", pc(d.ot_share)), kpi("Ran", d.took + " s")),
+    note("Everything on this tab is synthetic: games played possession by possession from a made-up spread and total, a sharp book and a slow book run over them with the rules below. " +
+      "It shows what kind of edge the pipeline can catch and at what polling cadence; it says nothing about whether such edges exist at Ladbrokes."));
+  const rules = card("The two books in the lab",
+    el("div", { class: "grid2" },
+      el("div", {}, el("b", {}, "Sharp (Pinnacle-like)"), el("div", { class: "muted" }, "Margin " + pc(sh.margin) + " · reprices " + sh.lag + " s after every score and every " + sh.timer + " s · noise ±" + pc(sh.noise) + " on the probability")),
+      el("div", {}, el("b", {}, "Slow (Ladbrokes-like)"), el("div", { class: "muted" }, "Margin " + pc(lad.margin) + " · reprices " + lad.lag + " s after a score and every " + lad.timer + " s, and only when the fair line has moved " + pc(lad.sticky) +
+        " · suspended " + lad.suspend + " s after each score · a stuck feed for " + Math.round(lad.hiccup_len / 60) + " min in " + pc(lad.hiccup_p) + " of games"))),
+    note("Stylised guesses, not Ladbrokes' trading rules; change them in app/topics/nba_sim.py (DEFAULTS) or on the command line: python -m app.topics.nba_sim --lag 40 --sticky 0.03."));
+  // the example game
+  const ex = d.example, exCard = ex ? card("One game: true probability against both books (home win %)",
+    ...svgLines([{ name: "Truth", points: ex.truth, color: css("--ink2"), width: 1.5 }, { name: "Sharp", points: ex.sharp, color: css("--s2") }, { name: "Ladbrokes-like", points: ex.lad, color: css("--s1") },
+      { name: "Home lead (right axis, scaled)", points: ex.lead.map(([t, v]) => [t, 0.5 + v / 60]), color: css("--s4"), dashed: true }],
+      { xFmt: v => Math.round(v) + "'", yFmt: v => (v * 100).toFixed(0) + "%", h: 300, hline: 0.5, note: "Hover: minute, truth, sharp, Ladbrokes-like (blank while suspended)",
+        vlines: [{ x: 12, label: "Q2" }, { x: 24, label: "Q3" }, { x: 36, label: "Q4" }].concat(ex.hiccup ? [{ x: ex.hiccup[0], label: "feed stuck" }, { x: ex.hiccup[1] }] : []) }),
+    note("Pre-game home spread " + (ex.spread > 0 ? "+" : "") + ex.spread + ", total " + ex.total + ", final " + ex.final[0] + "–" + ex.final[1] + ". The lead line is the margin on a ±30 scale around 50%. " +
+      "The slow book trails the truth after every score and stays flat through small moves; each gap above the sharp line is a flag (" + ex.flags + " in this game at 15-second polling).")) : null;
+  // cadence × threshold
+  const cad = card("What the pipeline catches, by polling cadence and threshold",
+    el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Poll every", "EV ≥", "Flags", "Per game", "Mean EV vs sharp", "True edge", "Realised ROI", "Hit rate", "Avg odds"].map(h => el("th", {}, h))),
+      ...(d.cadence || []).map(r => el("tr", { style: r.cadence === 300 && r.min_ev === d.min_ev ? "background:color-mix(in srgb, var(--s1) 10%, transparent)" : "" },
+        el("td", {}, r.cadence + " s" + (r.cadence === 300 ? " (the poller)" : "")), el("td", {}, pc(r.min_ev)), el("td", {}, num(r.n)), el("td", {}, r.per_game), el("td", { class: cls(r.ev) }, pc(r.ev)),
+        el("td", { class: cls(r.true_edge) }, pc(r.true_edge)), el("td", { class: cls(r.roi) }, pc(r.roi) + se(r)), el("td", {}, pc(r.hit)), el("td", {}, odds(r.odds)))))),
+    note("One bet per price run (the same stale price seen on consecutive polls counts once), 1 unit each, settled at the game's outcome. Mean EV is what the page would show (against the sharp fair); " +
+      "true edge is Ladbrokes price × the simulator's real probability − 1, the edge that was actually there; realised ROI is the noisy version of it (± one standard error). " +
+      "Credits: the real poller's 5-minute cadence costs 6 credits a pull; 60 s would be five times that."));
+  const reg = d.regimes || {}, pick = reg["60"] ? "60" : Object.keys(reg)[0];
+  const regTable = (title, rows, what) => card(title, el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...[what, "Flags", "Mean EV vs sharp", "True edge", "Realised ROI"].map(h => el("th", {}, h))),
+    ...rows.map(r => el("tr", {}, el("td", {}, r.label), el("td", {}, num(r.n)), el("td", { class: cls(r.ev) }, pc(r.ev)), el("td", { class: cls(r.true_edge) }, pc(r.true_edge)), el("td", { class: cls(r.roi) }, pc(r.roi) + se(r)))))));
+  const R = reg[pick] || {};
+  const regimes = R.quarter ? [el("div", { class: "grid2" },
+      regTable("By quarter (polling every " + pick + " s, EV ≥ " + pc(d.min_ev) + ")", R.quarter, "Quarter"),
+      regTable("By seconds since the last score", R.since_score, "Since a score"),
+      regTable("By size of the lead", R.lead, "Lead"),
+      regTable("By the slow book's feed", R.hiccup, "Feed"),
+      regTable("By side", R.side, "Side"),
+      regTable("By Ladbrokes odds", R.odds, "Odds")),
+    note("Read the true-edge column, not the ROI: with a few hundred bets the ROI is mostly noise. Where the true edge is negative the flag is an artefact (the sharp book's own noise at short prices, " +
+      "a big lead where a few points of probability are worth little), and the threshold or the freshness rule should be tighter there.")] : [];
+  const mv = d.moves || {};
+  const moves = mv.since_score ? card("How far each book sits from the truth (mean |probability − truth|, 15-second grid)",
+    el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Since the last score", "Samples", "Sharp", "Ladbrokes-like", "Suspended"].map(h => el("th", {}, h))),
+      ...mv.since_score.map(r => el("tr", {}, el("td", {}, r.label), el("td", {}, num(r.n)), el("td", {}, pc(r.sharp_gap)), el("td", {}, pc(r.lad_gap)), el("td", {}, pc(r.lad_off)))))),
+    el("div", { class: "scroll", style: "margin-top:8px" }, el("table", {}, el("tr", {}, ...["Quarter", "Samples", "Sharp", "Ladbrokes-like"].map(h => el("th", {}, h))),
+      ...mv.quarter.map(r => el("tr", {}, el("td", {}, r.label), el("td", {}, num(r.n)), el("td", {}, pc(r.sharp_gap)), el("td", {}, pc(r.lad_gap)))))),
+    note("The slow book is 3 points or more off the truth " + pc(mv.lad_off_3pts) + " of the time and 5 points or more " + pc(mv.lad_off_5pts) + ". The 10-30 s window after a score is the lag: the sharp book has moved, the slow one has not yet.")) : null;
+  const calib = m.calibration ? card("The live win-probability model, trained on the synthetic outcomes",
+    el("div", { class: "muted" }, m.form + ". Fitted by maximum likelihood on " + num(m.rows_train) + " game-minutes from 70% of the games: σ = " + m.sigma + ", a = " + m.a + ", c = " + m.c +
+      ". On the other 30% (" + num(m.rows_test) + " game-minutes): log loss " + m.logloss + " against " + m.logloss_base + " for always guessing the base rate, Brier " + m.brier + "."),
+    ...svgBars(m.calibration.map(c => c.bin), [{ name: "Predicted", values: m.calibration.map(c => c.pred), color: css("--s1") }, { name: "Actual", values: m.calibration.map(c => c.actual), color: css("--s3") }],
+      { yFmt: v => (v * 100).toFixed(0) + "%", h: 200, extra: i => " · n=" + m.calibration[i].n }),
+    note("Each bin: the model's average prediction against how often the home side actually won. The same fit runs unchanged on real games once the poller has logged enough of them (data/nba-odds/README.md); " +
+      "until then the Live tab's model column is this synthetic fit, a second opinion only.")) : null;
+  return [head, cad, ...regimes, moves, exCard, calib, rules];
+  },
 };
+
 const nicknameOf = n => { const parts = String(n || "").split(" "); return parts[parts.length - 1] === "Blazers" ? "Trail Blazers" : parts[parts.length - 1]; };
 
 // ---- bets the user placed: POSTed to the server (stored on the volume) when it accepts them, else kept in this browser
