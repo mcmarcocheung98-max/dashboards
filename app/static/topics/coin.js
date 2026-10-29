@@ -1,4 +1,4 @@
-// One BTC Cycles candidate coin on its own page (/ena, /sol, /near): the same script for each, which coin from SLUG.
+// One BTC Cycles candidate coin on its own page (/hype, /ena, /sol, /near): the same script for each, which coin from SLUG.
 // Data from /api/<slug>/overview (one payload for all three tabs; see app/topics/_coin_page.py); helpers from topic.html.
 (() => {
 const usdBig = v => v == null ? "–" : "$" + big(v);

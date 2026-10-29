@@ -1,4 +1,4 @@
-"""A standalone page for one BTC Cycles candidate coin (/ena, /sol, /near): the same data the Candidates tab shows in a row, in full.
+"""A standalone page for one BTC Cycles candidate coin (/hype, /ena, /sol, /near): the same data the Candidates tab shows in a row, in full.
 
 Nothing is downloaded here: btc_cycles' background fill already keeps each candidate's 365-day price and market cap (CoinGecko) and its
 fundamentals (DefiLlama TVL, fees, unlock schedule; CoinGecko supply). A page module is three lines (see coin_ena.py):
