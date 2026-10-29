@@ -1244,3 +1244,27 @@ def test_btc_classification_covers_every_coin():
     cl = C.classification()
     assert {c["ticker"] for c in C.coins_list()} <= set(cl) and all(v["doc_sector"] in ("primary", "secondary") and v["sources"] for v in cl.values())
     assert cl["LINK"]["doc_sector"] == "secondary" and "NEAR" in _json.loads(C.SECTOR_STATUS.read_text())["sectors"][5]["reps"]
+
+
+def test_dashboard_page_carries_its_own_link_preview(monkeypatch):
+    """GET /<slug> puts the dashboard's title and blurb into <title>, the description and Open Graph tags (escaped);
+    a private dashboard keeps the generic shell."""
+    import asyncio
+    import html
+    from aiohttp.test_utils import TestClient, TestServer
+    from app.server import make_app
+    t = topics.REGISTRY["housing"]
+    monkeypatch.setitem(topics.REGISTRY, "zz-og", topics.Topic("zz-og", 'Tom & "Jerry"', "Cats <b>vs</b> mice.", "zz_og", (("a", "A"),)))
+    monkeypatch.setitem(topics.REGISTRY, "zz-og-private", topics.Topic("zz-og-private", "Secret odds", "hidden", "zz_og_p", (("a", "A"),), private=True))
+
+    async def go():
+        async with TestClient(TestServer(make_app())) as c:
+            r = await c.get("/housing")
+            return r.status, r.content_type, await r.text(), await (await c.get("/zz-og")).text(), await (await c.get("/zz-og-private")).text(), await (await c.get("/")).text()
+    status, ctype, housing, og, private, index = asyncio.run(go())
+    assert status == 200 and ctype == "text/html"
+    assert f'<meta property="og:title" content="{html.escape(t.title)} · Dashboards">' in housing
+    assert housing.count('name="description"') == 1 and "lightweight-charts" in housing           # the rest of the shell is untouched
+    assert "<title>Tom &amp; &quot;Jerry&quot; · Dashboards</title>" in og and 'content="Cats &lt;b&gt;vs&lt;/b&gt; mice."' in og
+    assert "Secret odds" not in private and "og:title" not in private and "<title>Dashboard</title>" in private
+    assert '<meta property="og:title" content="Dashboards">' in index
