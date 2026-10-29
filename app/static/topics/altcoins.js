@@ -369,7 +369,7 @@ function weightsCard(d) {
     P ? el("div", { class: "kpis", style: "margin-top:10px" }, kpi("Coins backtested", String(P.coins)), kpi("Beat holding the coin", P.beat_hold + " of " + P.coins, P.beat_hold > P.coins / 2 ? "up" : "down"),
       kpi("Median a year: strategy / hold", pct(P.median_a_year, 0) + " / " + pct(P.median_hold_a_year, 0), cls(P.median_a_year - P.median_hold_a_year)),
       kpi("Median Sharpe", P.median_sharpe.toFixed(2)), kpi("Median worst fall", pct(P.median_worst_drop, 0)), kpi("Median 7-day hit rate", Math.round(P.median_hit_rate_7d * 100) + "%", P.median_hit_rate_7d > 0.5 ? "up" : "down")) : null,
-    note("A signal earns weight when its rank correlation with the next " + d.horizon + " days' return, over every coin's history, is positive and at least 1.5 standard errors from zero; weights are the correlations scaled to sum to 1. " +
+    note("A signal earns weight when its rank correlation with the next " + d.horizon + " days' return, over every coin's history, is positive, at least 1.5 standard errors from zero and measured on 100+ active coin-days; weights are the correlations scaled to sum to 1, none above 40%. " +
       (d.weights_drift != null ? "Today's weights differ from the last fitted set by " + Math.round(d.weights_drift * 100) + "% of the total. " : "") + "Hover a name for what the signal means."));
 }
 

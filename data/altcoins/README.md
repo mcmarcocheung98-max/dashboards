@@ -56,8 +56,8 @@ the 60-day with price up (or down). **Price**: trend (close over the 50-day over
 before (−1); coins without a schedule use the 26th-6th month-turn (−1).
 
 **Weighting rule.** Each signal is judged on the return over the next 7 days. Its weight is its Spearman rank correlation with that return over
-every coin's history pooled, kept only when positive and at least 1.5 standard errors from zero, and the kept correlations are scaled to sum to 1
-(equal weights if nothing qualifies, and the page says so). Final score = Σ weight × signal, clipped to ±1. Strong buy ≥ +0.5, lean buy ≥ +0.2,
+every coin's history pooled, kept only when positive, at least 1.5 standard errors from zero and measured on 100+ active coin-days, and the kept
+correlations are scaled to sum to 1 with no single signal above 40% (equal weights if nothing qualifies, and the page says so). Final score = Σ weight × signal, clipped to ±1. Strong buy ≥ +0.5, lean buy ≥ +0.2,
 lean sell ≤ −0.2, strong sell ≤ −0.5.
 
 **Backtest method (walk-forward).** Weights are first fitted once 180 days of pooled history exist and re-fitted every 30 days, each time on

@@ -19,6 +19,8 @@ ENTER = 0.2                       # composite needed to be long (above) or short
 REFIT_DAYS = 30
 MIN_TRAIN_DAYS = 180
 MIN_T = 1.5                       # a signal earns weight only if its rank correlation is this many standard errors from zero
+MIN_ACTIVE = 100                  # ... and it has fired on at least this many coin-days (a rare signal's correlation is noise)
+MAX_WEIGHT = 0.4                  # no single signal carries more than this share of the final score
 
 # key: (label, family, what +1 means)
 SIGNALS = {
@@ -191,14 +193,24 @@ def evaluate(S: pd.DataFrame, fwd: pd.Series) -> list[dict]:
 
 
 def weights_from(S: pd.DataFrame, fwd: pd.Series) -> tuple[dict, str]:
-    """Weight = the signal's rank correlation with the forward return when it is positive and at least MIN_T standard errors from zero,
-    scaled so the weights sum to 1; equal weights when nothing qualifies (so the composite is never silently empty)."""
+    """Weight = the signal's rank correlation with the forward return when it is positive, at least MIN_T standard errors from zero and
+    measured on at least MIN_ACTIVE active coin-days, scaled so the weights sum to 1 with no signal above MAX_WEIGHT (the excess is shared
+    out); equal weights when nothing qualifies (so the composite is never silently empty)."""
     ev = evaluate(S, fwd)
-    w = {r["signal"]: max(0.0, r["ic"]) for r in ev if r["ic"] is not None and r["t"] is not None and r["t"] >= MIN_T}
-    tot = sum(w.values())
-    if tot <= 0:
+    w = {r["signal"]: max(0.0, r["ic"]) for r in ev if r["ic"] is not None and r["t"] is not None and r["t"] >= MIN_T and r["days_active"] >= MIN_ACTIVE}
+    w = {k: v for k, v in w.items() if v > 0}
+    if not w:
         return {k: 1 / len(SIGNALS) for k in SIGNALS}, "equal (no signal cleared the bar)"
-    return {k: w.get(k, 0.0) / tot for k in SIGNALS}, f"{sum(1 for x in w.values() if x > 0)} signals by rank correlation"
+    for _ in range(len(w)):                                                 # cap, then share the excess among the uncapped
+        tot = sum(w.values())
+        w = {k: v / tot for k, v in w.items()}
+        over = {k for k, v in w.items() if v > MAX_WEIGHT + 1e-12}
+        if not over or len(over) == len(w):
+            break
+        excess = sum(w[k] - MAX_WEIGHT for k in over)
+        free = sum(v for k, v in w.items() if k not in over)
+        w = {k: (MAX_WEIGHT if k in over else v + excess * v / free) for k, v in w.items()}
+    return {k: w.get(k, 0.0) for k in SIGNALS}, f"{len(w)} signals by rank correlation"
 
 
 def composite(S: pd.DataFrame, w: dict) -> pd.Series:
