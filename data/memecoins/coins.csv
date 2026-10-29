@@ -1,0 +1,8 @@
+ticker,name,coingecko_id,chain,launched,note
+# The memecoin basket: the largest memecoins by market cap across the main chains. coingecko_id drives the data. 'verify' = id copied from memory, confirm with pytest -m network tests/test_memecoins.py.
+DOGE,Dogecoin,dogecoin,Dogecoin,2013,verify
+SHIB,Shiba Inu,shiba-inu,Ethereum,2020,verify
+PEPE,Pepe,pepe,Ethereum,2023,verify
+BONK,Bonk,bonk,Solana,2022,verify
+WIF,dogwifhat,dogwifcoin,Solana,2023,verify
+TRUMP,Official Trump,official-trump,Solana,2025,verify
