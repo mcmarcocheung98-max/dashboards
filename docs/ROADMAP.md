@@ -65,7 +65,7 @@ four staying half done.
 - CPUC quarterly driverless trip counts: try to automate from the published spreadsheet; fall back to hand entry.
 - Rides per week for Baidu, Pony.ai, WeRide, Zoox, Tesla when they announce a weekly figure.
 
-## Phase 3: working rules (write them into `data/README.md` as a "Contributing" section)
+## Phase 3: working rules (done: written into `data/README.md` as a "Contributing" section)
 
 - Branch name `dash/<slug>-<what>`; commit prefix `feat(dash-<slug>)`, `fix(dash-<slug>)`, `data(dash-<slug>)` for
   CSV-only changes, `chore(dash)` for shared plumbing.
@@ -84,8 +84,9 @@ four staying half done.
 
 - Custom domain on Railway for the dashboards  so links do not
   carry the Railway subdomain.
-- Open Graph title and description per page (from `meta`) so a shared link previews properly; consider removing
-  `noindex` once the data is verified.
+- Open Graph title and description per page (from `meta`) so a shared link previews properly (done: the server writes each
+  public dashboard's title and blurb into the page head; private ones keep the generic shell); consider removing
+  `noindex` once the data is verified (no `noindex` is set today).
 - "Download CSV" link per card (the payload is already the series; a small JS helper in `topic.html`).
 - A short "Method" page per dashboard at `/<slug>#about`, rendered from the README's calculation section, so visitors
   see the caveats without GitHub.

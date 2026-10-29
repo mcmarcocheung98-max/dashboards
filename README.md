@@ -8,6 +8,7 @@ Public, read-only data dashboards, each on its own page:
 | Autonomous Car Adoption | `/robotaxi` | Paid driverless rides by operator, cities, rules and pilots in the US, UK, HK and China, crash reports per mile, and a Tesla tab (price, deliveries, FSD, Robotaxi, Cybercab) |
 | AI: Jobs & Adoption | `/ai` | AI openings vs law and finance (US, UK), headcount and pay (US, UK, HK), firms and people adopting AI tools and agents, AI share of job postings. Replaces `/ai-jobs` and `/ai-adoption`, which redirect here |
 | BTC Cycles & Sector Rotation | `/btc-cycles` | Four Bitcoin cycles, the altcoin sectors that won each, winner metrics, 2026–27 candidates and signals, checked daily against live data |
+| Memecoins | `/memecoins` | Dogecoin, Shiba Inu, Pepe, Bonk, dogwifhat and Trump as one basket: prices, momentum against BTC, and whether it is meme season |
 
 `/` lists them. Data is at `/api/<slug>/<name>` (JSON). Every dashboard has a guide in `data/<slug>/README.md`: what each card shows, where every number comes from, and how to keep it current.
 

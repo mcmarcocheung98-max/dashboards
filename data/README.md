@@ -40,7 +40,7 @@ then open `http://localhost:8080/d`.
 
 ## What comes next
 
-The order of work, the rules for changes and the per-dashboard backlog are in [docs/Dashboards_Roadmap.md](../../docs/Dashboards_Roadmap.md).
+The order of work and the per-dashboard backlog are in [docs/ROADMAP.md](../docs/ROADMAP.md). The rules for changes are below.
 
 ## Adding a dashboard
 
@@ -48,3 +48,14 @@ The order of work, the rules for changes and the per-dashboard backlog are in [d
 2. `app/static/topics/<slug>.js` with `window.TOPIC = { VIEWS }`, one async function per tab.
 3. One `Topic(...)` line in `app/topics/__init__.py`. The index page, routes, meta, warmer and tests pick it up from there.
 4. A folder here with its CSVs and a README like the others.
+
+## Contributing
+
+The working rules for every dashboard change (from the roadmap, Phase 3).
+
+- **Branches and commits.** Branch `dash/<slug>-<what>` (scheduled runs use `sched/dash-<slug>-<what>`). One dashboard change per branch and commit. Commit prefix `feat(dash-<slug>)`, `fix(dash-<slug>)`, `data(dash-<slug>)` for CSV-only changes, `chore(dash)` for shared plumbing.
+- **Stay inside one dashboard.** A change to a dashboard touches only its module (`app/topics/<module>.py`), its script (`app/static/topics/<slug>.js`), its folder here and its tests. Shared helpers in `app/topics/_base.py` or `app/static/topic.html` change in their own commit, with every page re-opened in the browser.
+- **Every new series has** a `SOURCES` entry, a fixture in `tests/test_topics.py`, a line in the dashboard README's source table, and a licence note if it is not OGL, CC BY or public domain.
+- **Hand-entered rows cite the primary source.** A figure copied from memory or a secondary report is marked `verify` in `note` and is cleared against its source within a week, or removed.
+- **Verify three ways before merging:** `pytest -q` green (fixtures, no network); `pytest -m network tests/test_sources.py` from a normal network for any changed source; `python scripts/smoke.py` (every tab in headless Chromium, no JavaScript errors), plus a look at phone width (390px) after any change to `topic.html`.
+- **Monthly maintenance** (first weekend of the month, about 20 minutes): run the network test, add the month's Ramp AI Index and Census BTOS points, scan operator blogs for robotaxi ride announcements, check `/api/health`. The daily `source-health` issue catches anything in between.
