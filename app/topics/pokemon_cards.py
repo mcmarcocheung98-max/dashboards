@@ -1198,6 +1198,43 @@ def READINGS() -> list[dict]:
 
 
 # ------------------------------------------------------------------ the probe
+def _search_probe() -> dict:
+    """Not a tab: PriceCharting's search as JSON (sorted by price or not), and whether product pages answer at addresses made from the
+    names, for finding each character's top cards on the server."""
+    import requests
+    jh = {**B.UA, "Accept": "application/json, text/javascript, */*; q=0.01", "X-Requested-With": "XMLHttpRequest"}
+    out = {}
+    for name, url in (("plain", PC_BASE + "/search-products?type=prices&q=pikachu"),
+                      ("sorted", PC_BASE + "/search-products?type=prices&q=pikachu&sort=highest-price&broad-category=pokemon-cards"),
+                      ("sorted p2", PC_BASE + "/search-products?type=prices&q=pikachu&sort=highest-price&broad-category=pokemon-cards&cursor=50"),
+                      ("psyduck", PC_BASE + "/search-products?type=prices&q=psyduck&sort=highest-price&broad-category=pokemon-cards")):
+        try:
+            time.sleep(1.5)
+            r = requests.get(url, headers=jh, timeout=30)
+            j = r.json()
+            ps = j.get("products") or []
+            out[name] = {"status": r.status_code, "keys": sorted(j)[:20], "n": len(ps), "product_keys": sorted(ps[0]) if ps else None,
+                         "first": [{k: p.get(k) for k in ("id", "productName", "consoleName", "price1", "price2", "price3", "imageUri", "category")} for p in ps[:6]],
+                         "last": [{k: p.get(k) for k in ("productName", "consoleName", "price1")} for p in ps[-3:]], "extra": {k: j[k] for k in j if k != "products"}}
+        except Exception as e:
+            out[name] = {"error": f"{type(e).__name__}: {str(e)[:160]}"}
+    slug = lambda x: re.sub(r"-+", "-", re.sub(r"[^a-z0-9&'.+-]+", "-", x.lower().replace("[", "").replace("]", "").replace("#", ""))).strip("-")
+    checks = {}
+    for p in ((out.get("sorted") or {}).get("first") or [])[:4]:
+        u = f"{PC_BASE}/game/{slug(p['consoleName'])}/{slug(p['productName'])}"
+        try:
+            time.sleep(1.5)
+            r = requests.get(u, headers={**B.UA, **PC_HEADERS}, timeout=30)
+            checks[u] = {"status": r.status_code, "final": r.url, "chart": "chart_data" in r.text, "tcg_id": (re.search(r'id="js-tcg-id-link">(\d+)', r.text) or [None, None])[1],
+                         "img": re.findall(r'https://storage\.googleapis\.com/images\.pricecharting\.com/[^"\']+', r.text)[:2],
+                         "desc": re.sub(r"\s+", " ", (re.search(r'itemprop="description">(.*?)</td>', r.text, re.S) or [None, ""])[1])[:200],
+                         "release": re.sub(r"\s+", " ", (re.search(r'itemprop="datePublished">(.*?)</td>', r.text, re.S) or [None, ""])[1]).strip()}
+        except Exception as e:
+            checks[u] = {"error": f"{type(e).__name__}: {str(e)[:120]}"}
+    out["slug_checks"] = checks
+    return out
+
+
 def _layout_now() -> dict:
     """Not a tab: what this server gets back from each source (status, type, size, first 600 characters), to check the parsers and see
     which shops answer a cloud server. Read it with Actions > show-json on /api/pokemon-cards/layout."""
@@ -1262,6 +1299,7 @@ def _layout_now() -> dict:
     with ThreadPoolExecutor(max_workers=8) as ex:
         out = dict(ex.map(one, urls.items()))
     out["_resolved"] = _resolved()
+    out["_search"] = _search_probe()
     return out
 
 
