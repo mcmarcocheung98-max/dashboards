@@ -3,10 +3,21 @@
 const dateOf = s => new Date(s).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 const q = ts => { const d = new Date(ts * 1000); return "Q" + (Math.floor(d.getUTCMonth() / 3) + 1) + " " + d.getUTCFullYear(); };
 const qLabel = iso => q(Date.parse(iso) / 1000);
+const qOf = ts => q(ts);                 // views that name a local "q" use this
+// Top cards follow the date hovered or clicked on any chart in the tab (datedHead/followHead/valueAt from topic.html; t = null: latest)
+const timeAt = (pts, t) => { if (!pts || !pts.length) return null; if (t == null) return pts[pts.length - 1][0]; let r = null; for (const p of pts) { if (p[0] <= t) r = p[0]; else break; } return r; };
+const ymd = t => t == null ? "–" : dateOf(t * 1000);
+const monthYear = t => t == null ? "–" : new Date(t * 1000).toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "UTC" });
+const DAY = 86400, YEAR = 365.25 * DAY;
+// a quarter's figure as it became public: the 2nd of the month after the quarter (Tesla's production and deliveries release)
+const published = pts => (pts || []).map(([t, v]) => { const d = new Date(t * 1000); return [Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 3, 2) / 1000, v, t]; });
 const VIEWS = {
   async rides() {
     const d = await api("rides"), L = d.latest || {};
-    const head = card(null, el("div", { class: "kpis" }, ...Object.entries(L).map(([k, v]) => kpi(k + " · paid rides a week (" + dateOf(v.date) + ")", big(v.value)))), asOf(d));
+    const head = card(null, datedHead(Object.entries(d.weekly || {}).map(([k, pts]) => ({
+      label: t => k + " · paid rides a week (as announced " + ymd(timeAt(pts, t)) + ")", value: t => [big(valueAt(pts, t))] }))
+      .concat(Object.entries(d.quarterly || {}).map(([k, pts]) => ({ label: t => k + " · rides in " + (timeAt(pts, t) == null ? "–" : q(timeAt(pts, t))), value: t => [big(valueAt(pts, t))] }))),
+      { latest: "Latest announcements" }), asOf(d));
     const weekly = card("Paid driverless rides per week, as announced", ...linesChart(Object.entries(d.weekly || {}).map(([k, pts]) => ({ name: k, points: pts })), v => big(v)),
       note("Operator announcements; lines join announcements. Waymo's figures are paid rides, US-wide across its cities. Baidu Apollo Go's are fully driverless operational rides from its quarterly results, two of them peak weeks rather than averages."), cite(d.cited));
     const qs = Object.entries(d.quarterly || {});
@@ -19,7 +30,9 @@ const VIEWS = {
   },
   async footprint() {
     const d = await api("footprint");
-    const head = card(null, el("div", { class: "kpis" }, ...Object.entries(d.by_operator || {}).map(([k, v]) => kpi(k + " · cities", v))), asOf(d));
+    const head = card(null, followHead(Object.entries(d.cumulative || {}).map(([k, pts]) => ({ label: k + " · cities", points: pts, fmt: v => String(Math.round(v)) }))
+      .concat(Object.entries(d.cpuc || {}).map(([k, pts]) => ({ label: k + " · California trips a quarter (CPUC)", points: pts, fmt: v => big(v), delta: { lag: "1y" } }))),
+      { latest: "Latest" }), asOf(d));
     const cum = card("Cities with public driverless rides, cumulative by operator", ...linesChart(Object.entries(d.cumulative || {}).map(([k, pts]) => ({ name: k, points: pts })), v => Math.round(v), { small: true }));
     const rows = (d.rows || []).map(r => el("tr", {}, el("td", {}, dateOf(r.date)), el("td", {}, r.operator), el("td", {}, r.city + ", " + r.country), el("td", { class: "wrap" }, link(host(r.source), r.source), r.note ? " · " + r.note : "")));
     const table = card("Where", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Opened to the public", "Operator", "City", "Source"].map(h => el("th", {}, h))), ...rows)),
@@ -36,6 +49,8 @@ const VIEWS = {
   async safety() {
     const d = await api("safety"), r = d.reports;
     if (!r) return [card("Crash reports", el("div", { class: "err" }, "Not available right now (" + (d.reports_error || "no data") + ")."), stale(d))];
+    const head = card(null, followHead([{ label: "Crash reports that month", points: r.total, fmt: v => num(v) },
+      { label: "12-month total", points: r.total_12m, fmt: v => num(v), delta: { lag: "1y" } }], { latest: "Latest month " + (r.latest_month || "") }), asOf(d), stale(d));
     const total = card("Crash reports filed by driverless-system operators (NHTSA Standing General Order), per month",
       ...linesChart([{ name: "Reports a month", points: r.total }, { name: "12-month total", points: r.total_12m, axis: "left", dashed: true, color: css("--hold") }], v => num(v)), asOf(d), stale(d),
       note("Every incident an operator must report, however minor and whoever caused it, so the count rises with miles driven; it is a measure of exposure as much as of safety. " + num(r.n) + " reports in all."));
@@ -46,13 +61,20 @@ const VIEWS = {
       note("Reports the operator filed since the order took effect (Jul 2021) up to that date, divided by the driverless miles it had published by then (data/robotaxi/miles.csv). For scale, not a like-for-like comparison with human drivers: every minor contact is reportable, whoever caused it."))
       : card("Reports per mile", el("div", { class: "muted" }, r.archived === false ? "NHTSA's archive of reports before June 2025 could not be loaded, so reports to date would be undercounted; the rate is hidden until it loads."
         : "Add operators' published driverless miles to data/robotaxi/miles.csv to turn counts into a rate."));
-    return [total, by, rate];
+    return [head, total, by, rate];
   },
   async tesla() {
     const d = await api("tesla"), K = d.kpi || {};
-    const head = card(null, el("div", { class: "kpis" }, kpi("TSLA", K.tsla == null ? "–" : usd(K.tsla, 2)), kpi("TSLA, 1 year", pct(K.tsla_1y, 0), cls(K.tsla_1y)),
-      kpi("Deliveries, latest quarter", big(K.deliveries_last)), kpi("vs a year earlier", pct(K.yoy, 0), cls(K.yoy)), kpi("Deliveries, last 4 quarters", big(K.ttm)),
-      kpi("FSD markets in the list", (d.fsd_markets || []).length)), missing(d, "tsla", "The TSLA price (Yahoo)"), asOf(d), stale(d));
+    const TP = d.tsla || [], DL = published((d.quarterly || {}).Deliveries);
+    const dIdx = t => { let i = -1; DL.forEach((p, j) => { if (t == null || p[0] <= t) i = j; }); return i; };     // latest quarter public by t
+    const head = card(null, datedHead([
+      { label: () => "TSLA", value: t => [valueAt(TP, t) == null ? "–" : usd(valueAt(TP, t), 2)] },
+      { label: () => "TSLA, 1 year", value: t => { const T = timeAt(TP, t), v = valueAt(TP, T), w = T == null ? null : valueAt(TP, T - YEAR); const x = v == null || !w ? null : v / w - 1; return [pct(x, 0), cls(x)]; } },
+      { label: t => { const i = dIdx(t); return "Deliveries, " + (i < 0 ? "latest quarter" : qOf(DL[i][2])) + " (out " + (i < 0 ? "–" : ymd(DL[i][0])) + ")"; }, value: t => { const i = dIdx(t); return [i < 0 ? "–" : big(DL[i][1])]; } },
+      { label: () => "vs a year earlier", value: t => { const i = dIdx(t); const x = i < 4 ? null : DL[i][1] / DL[i - 4][1] - 1; return [pct(x, 0), cls(x)]; } },
+      { label: () => "Deliveries, last 4 quarters", value: t => { const i = dIdx(t); return [i < 3 ? "–" : big(DL.slice(i - 3, i + 1).reduce((a, p) => a + p[1], 0))]; } },
+      { label: () => "FSD markets in the list", value: () => [String((d.fsd_markets || []).length)] }],
+      { latest: "Latest figures" }), missing(d, "tsla", "The TSLA price (Yahoo)"), asOf(d), stale(d));
     const px = d.tsla ? card("TSLA share price", ...linesChart([{ name: "TSLA", points: d.tsla }], v => usd(v, 0), { log: true })) : null;
     const q = Object.entries(d.quarterly || {}).filter(([, p]) => p.length);
     const qc = q.length ? card("Quarterly deliveries (hand-entered from Tesla's releases)", ...svgBars(q[0][1].map(p => { const t = new Date(p[0] * 1000); return "Q" + (Math.floor(t.getUTCMonth() / 3) + 1) + " " + String(t.getUTCFullYear()).slice(2); }),
@@ -88,10 +110,14 @@ const VIEWS = {
   async energy() {
     const d = await api("energy"), E = d.ev || {}, P = d.power || {}, M = d.ev_ember || {};
     const short = k => k.split(" (")[0];
-    const head = card(null, el("div", { class: "kpis" },
-      ...Object.entries(M.latest || {}).map(([m, v]) => kpi(m + ": electric share of new cars, 12 months to " + dateOf(v.month).replace(/^\d+ /, ""), v.r12.toFixed(1) + "%",
-        v.r12_year_ago == null ? "" : cls(v.r12 - v.r12_year_ago))),
-      ...Object.entries(P.latest || {}).map(([m, v]) => kpi(m + ": wind + solar share of electricity, " + v.year, v.share.toFixed(1) + "%"))), asOf(d), stale(d));
+    const pp = v => v.toFixed(1) + "%", pts = v => (v > 0 ? "+" : "") + v.toFixed(1) + " pts";
+    const head = card(null, datedHead([
+      ...Object.entries(M.r12 || {}).map(([m, P12]) => ({ label: t => m + ": electric share of new cars, 12 months to " + monthYear(timeAt(P12, t)) + (() => {
+          const T = timeAt(P12, t), w = T == null ? null : valueAt(P12, T - YEAR + 15 * DAY), v = valueAt(P12, T); return v == null || w == null ? "" : " · " + pts(v - w) + " on a year"; })(),
+        value: t => { const T = timeAt(P12, t), v = valueAt(P12, T), w = T == null ? null : valueAt(P12, T - YEAR + 15 * DAY); return [v == null ? "–" : pp(v), v == null || w == null ? "" : cls(v - w)]; } })),
+      ...Object.entries(P.yearly || {}).map(([m, PY]) => ({ label: t => m + ": wind + solar share of electricity, " + (timeAt(PY, t) == null ? "–" : new Date(timeAt(PY, t) * 1000).getUTCFullYear()),
+        value: t => { const v = valueAt(PY, t); return [v == null ? "–" : pp(v)]; } }))],
+      { latest: "Latest figures" }), asOf(d), stale(d));
     const ev = card("Electric share of new cars, by year: each country's official measure", ...linesChart(Object.entries(E.yearly || {}).map(([k, pts]) => ({ name: short(k), points: pts })), v => v.toFixed(1) + "%", { sync: false }),
       note("Definitions differ: UK battery-electric and plug-in (SMMT registrations); China new energy vehicles including plug-in hybrids and range-extenders (CPCA retail); US battery-electric (Cox Automotive / Kelley Blue Book) and plug-in (DOE / Argonne); Hong Kong electric share of newly registered private cars (government papers). UK 2026 is January to September. Hong Kong 2026 is left out: the figures since its EV tax concession ended on 31 March conflict."),
       el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Latest", "Market", "Measure", "Share", "Source"].map(h => el("th", {}, h))),
