@@ -105,3 +105,8 @@ def test_routes_and_no_question_in_logs(env, caplog):
     assert st["set_up"] and st["left"]["hour"] == 5
     assert health["ask"]["questions"] == 1 and "sk-test" not in json.dumps(health)
     assert "secret question text" not in caplog.text
+
+
+def test_context_on_the_method_tab_carries_the_guide_sections(env):
+    ctx = K.context("housing", "about", None)
+    assert "The reader is on the tab: Method (about)" in ctx and "How it is calculated" in ctx

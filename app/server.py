@@ -5,6 +5,7 @@ GET /<slug>           a dashboard (static/topic.html, which loads /<slug>.js)
 GET /<slug>.js        that dashboard's tabs and cards (static/topics/<slug>.js)
 GET /api/index        the list of dashboards
 GET /api/<slug>/meta  title, tabs, sources
+GET /api/<slug>/method  the calculation and caveat sections of data/<slug>/README.md, for the page's Method tab (#about)
 GET /api/<slug>/changes  what changed since yesterday (topics/_daily.py): flipped readings and each tab's lean day by day
 GET /api/<slug>/<n>   that dashboard's data (JSON); 404 unknown, 503 when the source is down and no snapshot exists
 GET /healthz          'ok'
@@ -112,6 +113,8 @@ def make_app() -> web.Application:
         try:
             if name == "meta":
                 data = topics.meta(slug)
+            elif name == "method":
+                data = await asyncio.to_thread(topics.method, slug)
             elif name == "changes":
                 data = await asyncio.to_thread(topics.changes, slug)
             elif name in topics.endpoints(slug):

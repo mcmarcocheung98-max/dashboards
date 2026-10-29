@@ -90,7 +90,8 @@ four staying half done.
 - "Download CSV" link per card (done: every chart drawn by `linesChart`, `svgLines` or `svgBars` in `topic.html` has a "CSV ↓" button
   on its legend that saves the numbers it draws, one row per date or category; a chart can opt out with `csv: false`).
 - A short "Method" page per dashboard at `/<slug>#about`, rendered from the README's calculation section, so visitors
-  see the caveats without GitHub.
+  see the caveats without GitHub (done: a "Method" tab, last on every dashboard whose guide has a calculation, method, rule,
+  caveats or gaps section; `topics.method()` reads them from `data/<slug>/README.md` and `/api/<slug>/method` serves them).
 
 ## Verification (applies to every phase)
 

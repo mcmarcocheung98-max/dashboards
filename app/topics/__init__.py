@@ -26,6 +26,8 @@ from __future__ import annotations
 
 import importlib
 import pkgutil
+import re
+from pathlib import Path
 from dataclasses import dataclass, field
 
 
@@ -100,7 +102,41 @@ def endpoints(slug: str) -> dict:
 def meta(slug: str) -> dict:
     t, m = REGISTRY[slug], module(slug)
     return {"slug": t.slug, "title": t.title, "blurb": t.blurb, "category": category(slug), "private": t.private, "tabs": [list(x) for x in t.tabs], "sources": list(getattr(m, "SOURCES", [])),
-            "notes": getattr(m, "NOTES", "")}
+            "notes": getattr(m, "NOTES", ""), "method": bool(method(slug)["sections"])}
+
+
+# README sections shown on the page's Method tab (/<slug>#about): how the numbers are worked out and their caveats, not upkeep
+METHOD_HEADINGS = re.compile(r"calculat|method|the measures|caveat|gaps|notes on the data|\brule\b|heat score", re.I)
+
+
+def method(slug: str) -> dict:
+    """The calculation and caveat sections of data/<slug>/README.md as [{title, markdown}], for the Method tab. A section runs to
+    the next heading of its level or higher; a section under a part heading (# Jobs half) is titled with the part as well."""
+    from ..config import DATA_DIR
+    f = Path(DATA_DIR) / slug / "README.md"
+    lines = f.read_text(encoding="utf-8").splitlines() if f.exists() else []
+    heads, fenced = [], False
+    for i, ln in enumerate(lines):
+        fenced ^= ln.lstrip().startswith("```")               # a "# comment" inside a code block is not a heading
+        if not fenced and (m := re.match(r"(#{1,4})\s+(.+)", ln)):
+            heads.append((i, len(m.group(1)), m.group(2).strip()))
+    out, inside = [], False
+    for n, (i, level, text) in enumerate(heads):
+        if n == 0 and level == 1:
+            continue                                         # the document title
+        if inside and level > inside:
+            continue                                         # a sub-heading of a section already taken whole
+        inside = False
+        if not METHOD_HEADINGS.search(text):
+            continue
+        end = next((j for j, lv, _ in heads[n + 1:] if lv <= level), len(lines))
+        part = next((t for j, lv, t in reversed(heads[1:n]) if lv < level), None)
+        body = "\n".join(lines[i + 1:end]).strip()
+        if body:
+            text = re.sub(r"\s*\([^)]*`[^)]*\)", "", text)          # "The buy zone rule (`app/topics/altcoins.py`)" -> "The buy zone rule"
+            out.append({"title": f"{part} · {text}" if part else text, "markdown": body})
+            inside = level
+    return {"slug": slug, "sections": out}
 
 
 def save_daily(slug: str) -> str:
