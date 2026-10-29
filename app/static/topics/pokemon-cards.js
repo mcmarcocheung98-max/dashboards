@@ -56,31 +56,62 @@ const pickPill = v => !v || !v.pick ? el("span", { class: "pill" }, "no data") :
 const lastSale = l => l ? usd(l.price, l.price < 100 ? 2 : 0) + " on " + l.date + (l.source ? " (" + l.source + ")" : "") : "–";
 const GCOL = { Raw: "--s1", "PSA 9": "--s3", "PSA 10": "--s5" };
 
+const img = (src, alt, w, href) => !src ? el("div", { style: `width:${w}px;height:${Math.round(w * 1.4)}px;border-radius:6px;background:var(--chip)` }) :
+  el("a", { href: href || src, target: "_blank", rel: "noopener" }, el("img", { src, alt, loading: "lazy", referrerpolicy: "no-referrer",
+    style: `width:${w}px;height:auto;border-radius:6px;display:block;border:1px solid var(--line)`, onerror: e => { e.currentTarget.style.visibility = "hidden"; } }));
+const money = v => usd(v, v != null && v < 100 ? 2 : 0);
+
+function topCard(c, i) {
+  const G = c.grades || {}, W = c.weekly || {}, A = c.activity || {}, D = c.description || {};
+  const gl = ["Raw", "PSA 9", "PSA 10"].filter(g => (G[g] || {}).points && G[g].points.length).map(g => ({ name: g, points: G[g].points, color: css(GCOL[g]) }));
+  const tip = D.tip ? (D.tip.length > 360 ? D.tip.slice(0, 357) + "…" : D.tip) : null;
+  const headRow = el("div", { style: "display:flex;gap:14px;align-items:flex-start" }, img(c.image, c.name, 110, c.image_large || c.url),
+    el("div", { style: "min-width:0;flex:1" },
+      el("div", { class: "muted" }, "#" + (c.popularity || i + 1) + " most popular" + (c.set ? " · " + c.set : "")),
+      D.facts ? el("div", { style: "margin-top:4px" }, D.facts) : null,
+      tip ? el("div", { class: "muted", style: "margin-top:6px" }, tip) : D.text ? el("div", { class: "muted", style: "margin-top:6px" }, "Card text: " + D.text.slice(0, 200)) : null,
+      el("div", { style: "margin-top:6px" }, pickPill(c.verdict), el("span", { class: "muted" }, " better grade to trade"))));
+  const prices = el("div", { class: "kpis", style: "margin-top:10px" }, ...["Raw", "PSA 9", "PSA 10"].map(g => kpi(g + " · " + perMo((G[g] || {}).per_month), money((G[g] || {}).price))));
+  const act = el("div", { class: "kpis", style: "margin-top:4px" },
+    kpi("Sales per month, all grades", A.per_month_all == null ? "–" : num(A.per_month_all, A.per_month_all < 10 ? 1 : 0)),
+    kpi("Sold in the last 30 days (listed)", f0(A.sold_30d)),
+    kpi("TCGplayer units, last 4 weeks", f0(A.units_4w)),
+    kpi("TCGplayer listings · sellers", A.listings == null ? "–" : f0(A.listings) + " · " + f0(A.sellers)));
+  const chart = (W.price || []).length
+    ? [el("div", { class: "muted", style: "margin-top:8px" }, "Raw on TCGplayer: price (line) and units sold (bars) each week"), ...priceVol(W.price, W.units, v => usd(v, 2), { small: true })]
+    : gl.length ? [el("div", { class: "muted", style: "margin-top:8px" }, "Raw, Grade 9 and PSA 10 by month (PriceCharting, log scale)"), ...lines(gl, money, { small: true, log: true })]
+    : [el("div", { class: "muted" }, "No price history yet.")];
+  const R = A.recent || [];
+  const recent = R.length ? el("div", { class: "scroll", style: "margin-top:6px" }, el("table", {}, el("tr", {}, ...["Sold", "Grade", "Price", "Where"].map(h => el("th", {}, h))),
+    ...R.map(x => el("tr", {}, el("td", {}, x.date), el("td", {}, x.grade), el("td", {}, money(x.price)), el("td", {}, x.source || "–"))))) : null;
+  return card((i + 1) + ". " + c.name, headRow, prices, act, ...chart, recent,
+    el("div", { class: "src", style: "margin-top:6px" }, link("PriceCharting", c.url), c.tcg_url ? [" · ", link("TCGplayer", c.tcg_url)] : null));
+}
+
 async function character(who) {
   const d = await api(who), K = d.kpi || {}, C = d.cards || [];
-  const head = card(d.label + " cards", el("div", { class: "kpis" },
+  const head = card(d.label + ": " + (d.top ? "the top " + C.length + " cards" : C.length + " cards"), el("div", { class: "kpis" },
     kpi("Raw index, 1 month", pct(K.m1), cls(K.m1)), kpi("3 months", pct(K.m3), cls(K.m3)), kpi("12 months", pct(K.m12), cls(K.m12)),
     kpi("TCGplayer units sold, last 4 weeks (4 before)", K.units_4w == null ? "–" : f0(K.units_4w) + (K.units_prev_4w == null ? "" : " (" + f0(K.units_prev_4w) + ")"),
       K.units_prev_4w ? cls(K.units_4w - K.units_prev_4w) : ""),
     kpi("Cards where PSA 9 is the better market", f0(K.psa9_picks) + " of " + f0(K.n))), asOf(d), stale(d),
-    note("Cards are listed in data/pokemon-cards/characters.csv. Prices are PriceCharting's monthly ungraded, Grade 9 and PSA 10 values; volume is TCGplayer units sold per week " +
-      "(raw copies) and PriceCharting's stated sales per month for each grade."));
+    note((d.top ? "The top cards are the most popular English " + d.label + " cards in PriceCharting's search, refreshed every three days. "
+      : "Cards from data/pokemon-cards/characters.csv (the search has not been read yet). ") +
+      "Pictures are PriceCharting's; descriptions are TCGplayer's (rarity, number, artist and its own note). Trading activity is PriceCharting's stated sales per month for each grade " +
+      "and its latest sold listings (eBay, TCGplayer, Fanatics, Goldin and others), TCGplayer's units sold per week and its current listings."));
   const idx = (d.index || []).length ? card(d.label + ": raw price index with units sold per week",
     ...priceVol(d.index, d.units, f0, { priceName: "Raw index (100 at start)", unitsName: "TCGplayer units / week" }),
-    note("The line is an equal-weight, chain-linked index of the raw cards; the bars are units sold of those cards on TCGplayer each week (one year of history). " +
+    note("The line is an equal-weight, chain-linked index of these cards' raw prices; the bars are units of them sold on TCGplayer each week (one year). " +
       "Price rising on rising units is demand; price rising on thinning units is a few buyers chasing, which reverses more easily.")) : null;
-  const cards = C.map(c => {
-    const G = c.grades || {}, W = c.weekly || {};
-    const gl = ["Raw", "PSA 9", "PSA 10"].filter(g => (G[g] || {}).points && G[g].points.length).map(g => ({ name: g, points: G[g].points, color: css(GCOL[g]) }));
-    return card(c.name + " · " + (c.set || ""),
-      el("div", { class: "kpis" }, ...["Raw", "PSA 9", "PSA 10"].map(g => kpi(g + " · " + perMo((G[g] || {}).per_month), usd((G[g] || {}).price, (G[g] || {}).price < 100 ? 2 : 0))),
-        el("div", { class: "kpi" }, el("div", { class: "v" }, pickPill(c.verdict)), el("div", { class: "l" }, "better grade to trade"))),
-      gl.length ? lines(gl, v => usd(v, v < 100 ? 2 : 0), { small: true, log: true }) : el("div", { class: "muted" }, "No PriceCharting history yet."),
-      (W.price || []).length ? [el("div", { class: "muted", style: "margin-top:8px" }, "Raw on TCGplayer: market price and units sold per week"), ...priceVol(W.price, W.units, v => usd(v, 2), { small: true })] : null,
-      note(c.verdict.why + ". Last sales: PSA 9 " + lastSale((G["PSA 9"] || {}).last) + "; PSA 10 " + lastSale((G["PSA 10"] || {}).last) + "."),
-      el("div", { class: "src" }, link("PriceCharting", c.url), c.tcg_url ? [" · ", link("TCGplayer", c.tcg_url)] : null, c.note ? " · " + c.note : ""));
-  });
-  return [head, idx, el("div", { class: "grid2" }, ...cards)];
+  const rows = C.map((c, i) => { const G = c.grades || {}, A = c.activity || {};
+    return el("tr", {}, el("td", {}, String(i + 1)), el("td", {}, img(c.image, c.name, 34, c.image_large || c.url)), el("td", { class: "wrap", style: "min-width:160px" }, link(c.name, c.url), el("div", { class: "muted" }, c.set || "")),
+      el("td", {}, money((G.Raw || {}).price)), el("td", {}, money((G["PSA 9"] || {}).price)), el("td", {}, money((G["PSA 10"] || {}).price)),
+      el("td", {}, perMo((G.Raw || {}).per_month)), el("td", {}, perMo((G["PSA 9"] || {}).per_month)), el("td", {}, perMo((G["PSA 10"] || {}).per_month)),
+      el("td", {}, f0(A.units_4w)), el("td", {}, f0(A.listings)), el("td", {}, ((A.recent || [])[0] || {}).date || "–")); });
+  const tbl = C.length ? card("Top " + C.length + " at a glance", el("div", { class: "scroll" }, el("table", {},
+      el("tr", {}, ...["#", "", "Card", "Raw", "PSA 9", "PSA 10", "Raw sales", "PSA 9 sales", "PSA 10 sales", "TCG units 4w", "Listings", "Last sale"].map(h => el("th", {}, h))), ...rows)),
+    note("In order of popularity on PriceCharting. Sales are per month; a card with many sales and few listings is in demand, one with many listings and few sales is being sold into a thin market.")) : null;
+  return [head, idx, tbl, el("div", { class: "grid2" }, ...C.map(topCard))];
 }
 
 const VIEWS = {

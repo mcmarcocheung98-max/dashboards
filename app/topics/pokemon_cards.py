@@ -44,6 +44,10 @@ CHARACTERS = (("pikachu", "Pikachu"), ("charizard", "Charizard"), ("psyduck", "P
 
 PC_BASE = "https://www.pricecharting.com"
 PC_SEARCH = PC_BASE + "/search-products?type=prices&q={q}"
+PC_SEARCH_JSON = PC_BASE + "/search-products?type=prices&q={q}&sort=popularity"     # asked for as JSON: the 100 most popular matches
+JSON_HEADERS = {"Accept": "application/json, text/javascript, */*; q=0.01", "X-Requested-With": "XMLHttpRequest"}
+TOP_N = 20
+NOT_ENGLISH = re.compile(r"Japanese|Chinese|Korean|German|French|Italian|Spanish|Portuguese|Dutch|Polish|Thai|Indonesian|Russian", re.I)
 TCGDEX = "https://api.tcgdex.net/v2/en/cards/{id}"
 PTCG = "https://api.pokemontcg.io/v2/cards?q={q}&select=id,name,number,rarity,set,tcgplayer,cardmarket&pageSize=250"
 TCG_HISTORY = "https://infinite-api.tcgplayer.com/price/history/{pid}/detailed?range=annual"
@@ -126,8 +130,54 @@ def characters(who: str | None = None) -> list[dict]:
     return out
 
 
+def pc_slug(x: str) -> str:
+    """PriceCharting's address form: 'Charizard [1st Edition] #4' -> 'charizard-1st-edition-4', 'Pokemon Scarlet & Violet 151' -> 'pokemon-scarlet-&-violet-151'."""
+    x = x.lower().replace("[", "").replace("]", "").replace("#", "")
+    return re.sub(r"-+", "-", re.sub(r"[^a-z0-9&'.+-]+", "-", x)).strip("-")
+
+
+def parse_pc_top(j: dict, who: str, n: int = TOP_N) -> list[dict]:
+    """PriceCharting's search (JSON, most popular first) -> the first n English cards whose name contains the character's name."""
+    label = dict(CHARACTERS).get(who, who)
+    out, seen = [], set()
+    for rank, p in enumerate((j or {}).get("products") or [], 1):
+        name, console = (p.get("productName") or "").strip(), (p.get("consoleName") or "").strip()
+        if p.get("category", "pokemon-cards") != "pokemon-cards" or not console.lower().startswith("pokemon") or NOT_ENGLISH.search(console):
+            continue
+        if label.lower() not in name.lower() or p.get("id") in seen:
+            continue
+        seen.add(p.get("id"))
+        img = p.get("imageUri") or ""
+        out.append({"key": f"top-{who}-{p.get('id')}", "name": name, "set": re.sub(r"^Pokemon\s+", "", console), "character": who, "segment": "character",
+                    "kind": "card", "msrp": None, "date": "", "pricecharting": f"{pc_slug(console)}/{pc_slug(name)}", "pc_id": str(p.get("id") or ""),
+                    "image": img, "image_large": img.replace("/240.jpg", "/1600.jpg") if img.endswith("/240.jpg") else img, "popularity": rank,
+                    "list_prices": {"Raw": _f(p.get("price1")), "PSA 10": _f(p.get("price2")), "PSA 9": _f(p.get("price3"))},
+                    "source": PC_SEARCH_JSON.format(q=quote_plus(label)), "note": "found by PriceCharting's search (most popular)"})
+        if len(out) >= n:
+            break
+    return out
+
+
+def top_items(who: str) -> list[dict]:
+    """The character's top cards as last found by the fill (empty until the search has been read once)."""
+    try:
+        return parse_pc_top(json.loads(read(PC_SEARCH_JSON.format(q=quote_plus(dict(CHARACTERS)[who])))), who)
+    except (LookupError, ValueError):
+        return []
+
+
+def character_items(who: str) -> list[dict]:
+    """The cards a character tab shows: its top 20 from PriceCharting, else the hand-picked rows in characters.csv."""
+    return top_items(who) or characters(who)
+
+
 def all_items() -> list[dict]:
-    return basket() + characters()
+    out, seen = [], set()
+    for i in basket() + characters() + [t for w, _ in CHARACTERS for t in top_items(w)]:
+        if i["key"] not in seen:
+            seen.add(i["key"])
+            out.append(i)
+    return out
 
 
 def rows(name: str) -> list[dict]:
@@ -293,8 +343,14 @@ def parse_tcg_details(j: dict) -> dict:
     """TCGplayer product details: listings, sellers and market price under whichever key names the API uses."""
     j = (j or {}).get("results", [j])[0] if isinstance((j or {}).get("results"), list) and j.get("results") else (j or {})
     pick = lambda *ks: next((_f(j[k]) for k in ks if k in j and _f(j[k]) is not None), None)
+    attrs = j.get("formattedAttributes") if isinstance(j.get("formattedAttributes"), dict) else {}
+    plain = lambda v: re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", str(v or ""))).strip() or None
+    num_rar = plain(attrs.get("Card Number / Rarity")) or ""
     return {"listings": pick("listings", "totalListings", "listingCount", "listingsCount"), "sellers": pick("sellers", "sellerCount", "totalSellers"),
-            "market": pick("marketPrice", "market"), "median": pick("medianPrice", "median"), "lowest": pick("lowestPrice", "lowPrice", "lowest")}
+            "market": pick("marketPrice", "market"), "median": pick("median", "medianPrice"), "lowest": pick("lowestPrice", "lowPrice", "lowest"),
+            "rarity": plain(j.get("rarityName")) or (num_rar.split(" / ")[-1] if " / " in num_rar else None),
+            "number": num_rar.split(" / ")[0] if num_rar else None, "artist": plain(attrs.get("Artist")), "tip": plain(attrs.get("TCGplayer Tip")),
+            "text": plain(attrs.get("Card Text")), "set_name": plain(j.get("setName"))}
 
 
 def parse_fx(j: dict) -> dict:
@@ -323,8 +379,15 @@ def ptcg_url(items: list[dict]) -> str | None:
     return PTCG.format(q=quote("(" + " OR ".join(f"id:{x}" for x in ids) + ")")) if ids else None
 
 
+STATE_DIR = None          # the folder for resolved.json and daily.csv; None = SNAP_DIR/pokemon-cards (tests pin it)
+
+
+def _state_dir():
+    return STATE_DIR or B.SNAP_DIR / SLUG
+
+
 def _resolved_file():
-    return B.SNAP_DIR / SLUG / "resolved.json"
+    return _state_dir() / "resolved.json"
 
 
 def _resolved() -> dict:
@@ -426,7 +489,7 @@ def _resolve_tcg(item: dict, ptcg: dict, res: dict) -> str | None:
 
 
 def _log_file():
-    return B.SNAP_DIR / SLUG / "daily.csv"
+    return _state_dir() / "daily.csv"
 
 
 def log_today(rows_: list[tuple], today: str | None = None) -> int:
@@ -467,7 +530,7 @@ def basket_log() -> dict[str, pd.DataFrame]:
 def fill() -> dict:
     """Background job: FX, TCGdex (one call per card; pokemontcg.io in one call when TCGdex misses most), then each item's PriceCharting page and TCGplayer history and
     listings, one at a time. Logs today's prices and listings. Returns {what: 'ok' | error}."""
-    done, items, res = {}, all_items(), _resolved()
+    done, res = {}, _resolved()
 
     def step(name, fn):
         try:
@@ -476,6 +539,13 @@ def fill() -> dict:
         except Exception as e:
             done[name] = f"{type(e).__name__}: {str(e)[:80]}"
     step("fx", lambda: _fx(live=True))
+    def search(who, lab):
+        found = parse_pc_top(json.loads(polite(PC_SEARCH_JSON.format(q=quote_plus(lab)), "pc", MAX_AGE["pc"], headers=JSON_HEADERS, min_bytes=200)), who)
+        if not found:
+            raise ValueError("no English cards in the search results")
+    for who, lab in CHARACTERS:       # each character's most popular cards, found again every 3 days
+        step(f"search {who}", lambda who=who, lab=lab: search(who, lab))
+    items = all_items()
     ptcg: dict = {}
 
     cards = [i for i in items if i.get("ptcg_id")]
@@ -503,6 +573,9 @@ def fill() -> dict:
                 raise LookupError("no PriceCharting page")
             html = polite(u, "pc", MAX_AGE["pc"], min_bytes=500, headers=PC_HEADERS)
             parse_pc_chart(html)
+            meta = parse_pc_meta(html)
+            if meta.get("tcg_id") and not tcg_id(i) and not i.get("ptcg_id"):      # cards with a TCGdex id get it from TCGdex
+                res.setdefault(i["key"], {})["tcg"] = meta["tcg_id"]      # PriceCharting names the TCGplayer product
             vol = parse_pc_volume(html)
             log.extend((i["key"], "vol_" + lab.split()[-1].lower(), vol.get(tab)) for tab, _, lab in PC_GRADES)     # vol_raw, vol_9, vol_10
         step(f"pc {i['key']}", pc)
@@ -996,7 +1069,21 @@ def pc_page(item: dict) -> dict:
         html = read(u) if u else ""
     except LookupError:
         html = ""
-    return {"volume": parse_pc_volume(html), "sales": parse_pc_sales(html)} if html else {"volume": {}, "sales": {}}
+    return {"volume": parse_pc_volume(html), "sales": parse_pc_sales(html), "meta": parse_pc_meta(html)} if html else {"volume": {}, "sales": {}, "meta": {}}
+
+
+def parse_pc_meta(html: str) -> dict:
+    """From a PriceCharting product page: its TCGplayer id, release date, description (when it has one) and main image."""
+    grab = lambda rx: (re.search(rx, html, re.S) or [None, None])[1]
+    clean = lambda v: re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", v or "")).strip()
+    rel = clean(grab(r'itemprop="datePublished">(.*?)</td>'))
+    try:
+        rel = str(pd.Timestamp(rel).date()) if rel and rel.lower() != "none" else None
+    except ValueError:
+        rel = None
+    desc = clean(grab(r'itemprop="description">(.*?)</td>'))
+    img = grab(r'(https://storage\.googleapis\.com/images\.pricecharting\.com/[\w/]+?/(?:1600|240)\.jpg)')
+    return {"tcg_id": grab(r'id="js-tcg-id-link"[^>]*>\s*(\d+)'), "release": rel, "description": None if desc.lower() in ("", "none") else desc, "image": img}
 
 
 def _change_m(s: pd.Series | None, months: int):
@@ -1048,8 +1135,27 @@ def card_detail(item: dict, dex: dict | None = None) -> dict:
         w = w.iloc[:-1] if len(w) > 2 else w          # the current week is not over
         weekly = {"price": _pts(w["price"], 2), "units": _pts(w["qty"], 0), "units_4w": int(w["qty"].iloc[-4:].sum()), "price_now": _r(w["price"].dropna().iloc[-1], 2) if w["price"].notna().any() else None}
     d = dex or {}
-    return {"key": item["key"], "name": item["name"], "set": item.get("set"), "release": item.get("date"), "url": s["url"], "src": s["src"],
-            "grades": grades, "weekly": weekly, "tcg_url": d.get("tcg_url") or (f"https://www.tcgplayer.com/product/{tcg_id(item)}" if tcg_id(item) else None),
+    meta = page.get("meta") or {}
+    pid = tcg_id(item) or meta.get("tcg_id")
+    det = {}
+    if pid:
+        try:
+            det = parse_tcg_details(json.loads(read(TCG_DETAILS.format(pid=pid))))
+        except (LookupError, ValueError):
+            det = {}
+    recent = sorted(({**x, "grade": lab} for tab, _, lab in PC_GRADES for x in page["sales"].get(tab, [])), key=lambda x: x["date"], reverse=True)
+    month_ago = str((today - pd.Timedelta(days=30)).date())
+    image = item.get("image") or meta.get("image") or (f"https://tcgplayer-cdn.tcgplayer.com/product/{pid}_200w.jpg" if pid else None)
+    facts = [x for x in (det.get("rarity"), ("#" + det["number"]) if det.get("number") else None, (item.get("set") or det.get("set_name")),
+                         ("released " + (meta.get("release") or item.get("date"))) if (meta.get("release") or item.get("date")) else None,
+                         ("illustrated by " + det["artist"]) if det.get("artist") else None) if x]
+    activity = {"per_month_all": _r(sum(g["per_month"] or 0 for g in grades.values()), 2) if any(g["per_month"] for g in grades.values()) else None,
+                "sold_30d": sum(1 for x in recent if x["date"] >= month_ago), "recent": recent[:6], "listings": det.get("listings"), "sellers": det.get("sellers"),
+                "units_4w": weekly.get("units_4w")}
+    return {"key": item["key"], "name": item["name"], "set": item.get("set"), "release": meta.get("release") or item.get("date") or None, "url": s["url"], "src": s["src"],
+            "image": image, "image_large": item.get("image_large") or image, "popularity": item.get("popularity"),
+            "description": {"facts": " · ".join(facts), "tip": det.get("tip") or meta.get("description"), "text": det.get("text")}, "activity": activity,
+            "grades": grades, "weekly": weekly, "tcg_url": d.get("tcg_url") or (f"https://www.tcgplayer.com/product/{pid}" if pid else None),
             "tcg": d.get("tcg"), "cm_trend": d.get("cm_trend"), "note": item.get("note", ""),
             "verdict": verdict_grade(grades["PSA 9"], grades["PSA 10"], grades["PSA 9"]["price"], grades["PSA 10"]["price"])}
 
@@ -1065,7 +1171,8 @@ def _dex_for(items: list[dict]) -> dict:
 
 
 def _character_now(who: str) -> dict:
-    items = characters(who)
+    tops = top_items(who)
+    items = tops or characters(who)
     dex = _dex_for(items)
     cards = [card_detail(i, dex.get(i["key"])) for i in items]
     raw = pd.DataFrame({c["key"]: pd.Series({pd.to_datetime(t, unit="s"): v for t, v in c["grades"]["Raw"]["points"]}, dtype=float) for c in cards
@@ -1076,7 +1183,7 @@ def _character_now(who: str) -> dict:
     k = {"m1": _change_m(idx, 1), "m3": _change_m(idx, 3), "m12": _change_m(idx, 12), "units_4w": int(u.iloc[-4:].sum()) if len(u) else None,
          "units_prev_4w": int(u.iloc[-8:-4].sum()) if len(u) >= 8 else None, "n": len(cards),
          "psa9_picks": sum(1 for c in cards if c["verdict"]["pick"] == "PSA 9"), "psa10_picks": sum(1 for c in cards if c["verdict"]["pick"] == "PSA 10")}
-    return {"who": who, "label": dict(CHARACTERS)[who], "index": _pts(idx, 2), "units": _pts(u, 0), "kpi": k, "cards": cards,
+    return {"who": who, "label": dict(CHARACTERS)[who], "index": _pts(idx, 2), "units": _pts(u, 0), "kpi": k, "cards": cards, "top": bool(tops),
             "as_of": str(idx.index[-1].date()) if len(idx) else None, "stale": B.stale_info([pc_url(i) for i in items if pc_url(i)])}
 
 
@@ -1096,7 +1203,7 @@ def _psa9_now() -> dict:
         if g9["price"] is None and g10["price"] is None:
             continue
         rows_.append({"key": c["key"], "name": c["name"], "set": c["set"], "url": c["url"], "who": i.get("character") or i["segment"],
-                      "era": "vintage" if str(i.get("date") or "9999") < "2010" else "modern",
+                      "era": "vintage" if str(c["release"] or i.get("date") or "9999") < "2010" else "modern",
                       **{f"{p}_{k}": g.get(k) for p, g in (("raw", gr), ("p9", g9), ("p10", g10))
                          for k in ("price", "per_month", "listed_rate", "noise", "volatility", "m12", "dollar_month", "n_listed")},
                       "p9_last": g9["last"], "p10_last": g10["last"], "verdict": c["verdict"]})

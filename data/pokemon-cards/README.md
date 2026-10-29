@@ -51,11 +51,17 @@ First live reading after the fill (2026-10-26): heat score −0.17 (neutral), do
 
 Volume comes from two places. **TCGplayer units sold** per week (raw copies, one year, from the price-history API) is drawn as bars under the price line on the Prices tab (whole basket) and on every card of the character tabs. **PriceCharting's stated sales per month** for each grade (the `volume: N sales per day|week|month|year` row under its price table, which counts eBay, TCGplayer, Fanatics, Goldin and other sold listings) is shown per card and per grade, and logged once a day (`vol_raw`, `vol_9`, `vol_10` in `daily.csv`) so a volume history builds up from launch.
 
-## Character tabs: Pikachu, Charizard, Psyduck (`characters.csv`)
+## Character tabs: Pikachu, Charizard, Psyduck (top 20 each)
 
-Columns: `date` (release), `key`, `character` (`pikachu`, `charizard` or `psyduck`), `name`, `set`, `pricecharting`, `ptcg_id`, `tcgdex_id`, `tcgplayer_id`, `source`, `note`. Five Pikachu cards (Base Set, Jungle, Vivid Voltage VMAX rainbow, 151 illustration rare, Surging Sparks SIR), seven Charizard (Base Set, Team Rocket Dark, Neo Destiny Shining, Skyridge, Brilliant Stars alt art, Obsidian Flames and 151 SIRs) and three Psyduck (Fossil unlimited and 1st Edition, 151 illustration rare). All ids and paths are from memory and marked `verify`; a wrong PriceCharting path falls back to PriceCharting search (see `/api/pokemon-cards/basket` → `resolved`). Add a row to add a card. These cards are not in the heat-score basket.
+**Which cards.** Each tab shows the character's **top 20**: the 20 most popular English cards whose name contains the character's name, in the order PriceCharting's own search ranks them (`search-products?type=prices&q=<name>&sort=popularity`, asked for as JSON; it returns the 100 most popular matches with name, set, raw / PSA 10 / Grade 9 prices and a picture). Japanese, Chinese, Korean and other-language sets are left out (TCGplayer, the volume source, is English). The search is read again every 3 days, so the list follows the market. Asking it to sort by price returned nothing from the server (2026-10-29), so "top" means most popular, not most expensive.
 
-Each tab shows a chain-linked raw index of its cards with the summed TCGplayer units per week, and per card: raw, Grade 9 and PSA 10 prices (monthly, log scale), sales per month per grade, the last PSA 9 and PSA 10 sale, raw TCGplayer price with units per week, and which grade is the better market to trade.
+**Each card's page** is found from its name (`pc_slug`: `Charizard [1st Edition] #4` in `Pokemon Base Set` → `pokemon-base-set/charizard-1st-edition-4`), checked once, with PriceCharting's search as the fallback. That page also names the card's **TCGplayer product id** and **release date**, so TCGplayer history and listings follow without TCGdex.
+
+**Picture:** PriceCharting's image (240 px in the list, 1,600 px on click); TCGplayer's CDN image when PriceCharting has none. **Description:** TCGplayer's product details: rarity, card number, artist, card text and TCGplayer's own note on the card, plus the release date. **Trading activity:** PriceCharting's stated sales per month for raw, Grade 9 and PSA 10 and its latest sold listings (date, grade, price, venue), TCGplayer units sold per week drawn under its weekly price, units in the last 4 weeks, and current TCGplayer listings and sellers.
+
+`characters.csv` (hand-picked cards, ids from memory, marked `verify`) is the fallback while a search has not been read yet, and its cards also feed the PSA 9 vs 10 tab. Columns: `date` (release), `key`, `character`, `name`, `set`, `pricecharting`, `ptcg_id`, `tcgdex_id`, `tcgplayer_id`, `source`, `note`. None of these cards are in the heat-score basket.
+
+The first full download of 60 cards (page, TCGplayer history and details for each, 8 seconds apart) takes about half an hour after a deploy; until then some cards show "–".
 
 ## PSA 9 vs PSA 10 (`psa9` tab)
 

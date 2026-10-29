@@ -26,7 +26,7 @@ def _path(t: pd.Timestamp, seg: str, k: int) -> float:
 
 
 def _months(item):
-    start = max(pd.Timestamp("2015-01-01"), pd.Timestamp(item["date"]).to_period("M").to_timestamp())
+    start = max(pd.Timestamp("2015-01-01"), pd.Timestamp(item.get("date") or "2015-01-01").to_period("M").to_timestamp())
     return pd.date_range(start, TODAY, freq="MS")
 
 
@@ -37,6 +37,10 @@ def pc_html(item, k=0):
     data = {"used": used, "cib": [[a, 0] for a, _ in used], "graded": [[a, v * 2] for a, v in used], "manualonly": psa}
     return (f"<html><script>VGPC.product = {{id: 1}};\nVGPC.chart_data = {json.dumps(data)};\nVGPC.other = 1;</script>"
             + pc_volume_html(("1 sale per week", "2 sales per day", "3 sales per day", f"{1 + k % 3} sales per day", "1 sale per week", "1 sale per month"))
+            + f'<td class="details"><a href="https://partner.tcgplayer.com/c/1?u=x" target="_blank" rel="nofollow" id="js-tcg-id-link">{3000 + k}</a></td>'
+            + f'<td class="details" itemprop="datePublished"> {"January 9, 1999" if k % 2 else "November 8, 2024"} </td>'
+            + '<td class="details" itemprop="description"> none </td>'
+            + f'<img src="https://storage.googleapis.com/images.pricecharting.com/abc{k}/240.jpg">'
             + pc_sales_html({"used": (7, 300), "graded": (1, 900 + k), "manual-only": (30, 5000)}) + "</html>")
 
 
@@ -95,10 +99,25 @@ def tcg_history(pid: int):
 FX_JSON = {"amount": 1.0, "base": "USD", "date": "2026-10-23", "rates": {"EUR": 0.92, "GBP": 0.79, "JPY": 151.2, "HKD": 7.78}}
 
 
+def search_json(q):
+    """PriceCharting's search as JSON (live layout 2026-10-29): English and other-language cards, and a few that only mention the name."""
+    label = q.replace("+", " ").title()
+    prods = []
+    for n in range(100):
+        console = ("Pokemon Base Set", "Pokemon Japanese Promo", "Pokemon Scarlet & Violet 151", "Pokemon Chinese 30th Celebration", "Pokemon Promo")[n % 5]
+        name = f"{label} [1st Edition] #{n}" if n % 7 == 0 else f"{label} ex #{n}" if n % 3 else f"Trainer #{n}"
+        prods.append({"category": "pokemon-cards", "consoleName": console, "consoleUid": "G1", "id": str(9000 + n), "productName": name,
+                      "imageUri": f"https://storage.googleapis.com/images.pricecharting.com/img{n}/240.jpg", "price1": f"${10 + n:,.2f}", "price2": f"${1000 + n:,.2f}",
+                      "price3": f"${100 + n:,.2f}", "hasProduct": False, "isProofCoin": False, "printRun": 0, "wishlistHasProduct": False})
+    return {"broad-category": "", "console-uid": "", "exclude-variants": "", "q": q, "region-name": "", "sort": "popularity", "products": prods}
+
+
 def fake_fetch(url, ttl=0, **k):
+    if "search-products" in url:
+        return json.dumps(search_json(url.split("q=")[1].split("&")[0]))
     if "pricecharting.com/game/" in url:
         items = M.all_items()
-        n = next((n for n, i in enumerate(items) if url.endswith(i["pricecharting"])), 0)
+        n = next((n for n, i in enumerate(items) if url.endswith(i["pricecharting"])), sum(map(ord, url)) % len(items))
         return pc_html(items[n], n)
     if "api.tcgdex.net" in url:
         items = M.all_items()
@@ -110,7 +129,9 @@ def fake_fetch(url, ttl=0, **k):
         return json.dumps(tcg_history(int(url.split("/history/")[1].split("/")[0])))
     if "/details" in url:
         pid = int(url.split("/product/")[1].split("/")[0])
-        return json.dumps({"productId": pid, "marketPrice": 55.0, "listings": 40 + pid % 9, "sellers": 20})
+        return json.dumps({"productId": pid, "marketPrice": 55.0, "listings": 40 + pid % 9, "sellers": 20, "rarityName": "Holo Rare", "setName": "Base Set",
+                           "formattedAttributes": {"Card Number / Rarity": "004/102 / Holo Rare", "Artist": "Mitsuhiro Arita",
+                                                   "TCGplayer Tip": "The <b>holy grail</b> of Pokémon collectibles.", "Card Text": "Energy Burn"}})
     if "frankfurter" in url or "er-api" in url:
         return json.dumps(FX_JSON)
     raise ConnectionError(f"fixture: no {url}")
@@ -150,6 +171,7 @@ def smoke_patch():
     M.http_get = fake_http_get
     M._now = lambda: TODAY
     M.PACE = 0
+    M.STATE_DIR = B.SNAP_DIR / M.SLUG       # another dashboard's smoke_patch may point SNAP_DIR elsewhere after this one ran
     seed_log()
     M.fill()
 
@@ -239,7 +261,9 @@ def test_tcgplayer_parsers():
     assert len(h) == 53 and h["qty"].iloc[0] == 3 + 2 and h["price"].iloc[0] == pytest.approx((50 + 42382 % 7))      # NM sold most
     with pytest.raises(ValueError):
         M.parse_tcg_history({"result": []})
-    assert M.parse_tcg_details({"listings": 12, "sellers": "5", "marketPrice": 3.5}) == {"listings": 12, "sellers": 5, "market": 3.5, "median": None, "lowest": None}
+    d = M.parse_tcg_details({"listings": 12, "sellers": "5", "marketPrice": 3.5})
+    assert {k: d[k] for k in ("listings", "sellers", "market", "median", "lowest")} == {"listings": 12, "sellers": 5, "market": 3.5, "median": None, "lowest": None}
+    assert d["rarity"] is None and d["tip"] is None
     assert M.parse_tcg_details({"results": [{"totalListings": 7}]})["listings"] == 7
 
 
@@ -335,7 +359,7 @@ def test_pricecharting_missing_falls_back_to_tcgplayer(mocked, monkeypatch):
     s = M.item_series(M.basket()[0])
     assert s["src"] == "TCGplayer" and len(s["raw"]) >= 12
     sealed = next(i for i in M.basket() if i["segment"] == "sealed")
-    assert M.item_series(sealed)["src"] is None
+    assert M.item_series(sealed)["src"] == "TCGplayer"            # PriceCharting's page named its TCGplayer product
 
 
 def test_readings_from_cached_payloads(mocked):
@@ -352,13 +376,32 @@ def test_readings_from_cached_payloads(mocked):
     assert len({x["key"] for x in r}) == len(r)
 
 
+def test_top_cards_from_search():
+    top = M.parse_pc_top(search_json("pikachu"), "pikachu")
+    assert len(top) == M.TOP_N and all("pikachu" in t["name"].lower() for t in top)
+    assert not any(M.NOT_ENGLISH.search(t["set"]) for t in top) and top[0]["popularity"] == 1 and top[0]["set"] == "Base Set"
+    assert top[0]["pricecharting"] == "pokemon-base-set/pikachu-1st-edition-0" and top[0]["list_prices"]["PSA 10"] == 1000
+    assert top[0]["image_large"].endswith("/1600.jpg") and len({t["key"] for t in top}) == M.TOP_N
+    assert M.pc_slug("Pokemon Scarlet & Violet 151") == "pokemon-scarlet-&-violet-151" and M.pc_slug("Pikachu [World Championships] #225") == "pikachu-world-championships-225"
+
+
+def test_pc_meta_and_tcg_attributes():
+    m = M.parse_pc_meta(pc_html(M.basket()[0], 1))
+    assert m == {"tcg_id": "3001", "release": "1999-01-09", "description": None, "image": "https://storage.googleapis.com/images.pricecharting.com/abc1/240.jpg"}
+    d = M.parse_tcg_details(json.loads(fake_fetch(M.TCG_DETAILS.format(pid=42382))))
+    assert d["rarity"] == "Holo Rare" and d["number"] == "004/102" and d["artist"] == "Mitsuhiro Arita" and d["tip"] == "The holy grail of Pokémon collectibles."
+
+
 def test_character_and_psa9_tabs(mocked):
     seed_log()
     M.fill()
     for who, lab in M.CHARACTERS:
         d = M.ENDPOINTS[who]()
         B.json_safe(d)
-        assert d["cards"] and len(d["cards"]) == len(M.characters(who)) and d["index"] and d["kpi"]["m12"] is not None
+        assert d["top"] and len(d["cards"]) == M.TOP_N and d["index"] and d["kpi"]["m12"] is not None
+        c = d["cards"][0]
+        assert c["image"].startswith("https://storage.googleapis.com/") and c["popularity"] == 1 and "Holo Rare" in c["description"]["facts"]
+        assert c["description"]["tip"] and c["activity"]["listings"] and c["activity"]["recent"] and c["activity"]["per_month_all"]
         c = d["cards"][0]
         assert set(c["grades"]) == {"Raw", "PSA 9", "PSA 10"} and c["grades"]["PSA 9"]["per_month"] and c["grades"]["PSA 10"]["last"]
         assert c["verdict"]["pick"] == "PSA 9"
