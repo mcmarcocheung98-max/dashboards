@@ -4,13 +4,19 @@ What London homes cost, how that compares with the rest of the UK and with infla
 
 ## What it shows
 
+Tabs, in order: **London** (key `prices`), **Boroughs: homes & rents** (`boroughs`), Types & volume, Rates & affordability, London vs US vs HK.
+
 | Tab | Cards | Series |
 |---|---|---|
-| Prices | Headline figures | London average price, change on a year ago, distance from the peak, 5- and 10-year change |
+| London (Prices) | Headline figures | London average price, change on a year ago, distance from the peak, 5- and 10-year change |
 | | London average price: as paid, and in today's money | Average price; the same restated in the latest month's money using CPIH |
 | | London vs the UK | House price index for London and for the UK (January 2015 = 100) |
 | | Change on a year earlier | Yearly % change, London and UK |
 | | Average monthly private rent | London rent, change on a year, gross yield (a year's rent ÷ average price); London and England average rent since 2015 |
+| | Rents against prices | London rent and London average price, both January 2015 = 100 |
+| | Gross rental yield | A year's average London rent ÷ the average London price, monthly since 2015 |
+| | London's premium | London average price ÷ UK average price |
+| Boroughs: homes & rents · Top 3 | Top 3 boroughs by measure | Cheapest flats, cheapest terraced houses, cheapest 2-bed rent, highest gross yield (2-bed rent × 12 ÷ flat price), prices rising fastest on a year, most growth over 5 years, rents rising slowest on a year (PIPR annual change, all homes), most expensive homes. Rankings, not recommendations |
 | Types & volume | Headline figures | Latest average by property type; sales last month and last 12 months |
 | | Average price by property type | Detached, semi-detached, terraced, flat / maisonette |
 | | Change on a year earlier, by type | Yearly % change per type |

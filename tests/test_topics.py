@@ -420,7 +420,7 @@ def test_routes(snapdir, monkeypatch):
             assert (await c.get("/nope")).status == 404 and (await c.get("/nope.js")).status == 404
             assert (await c.get("/..%2Fserver.py")).status == 404
             meta = await (await c.get("/api/housing/meta")).json()
-            assert meta["title"] == "Housing: London, US & Hong Kong" and meta["tabs"][0] == ["prices", "Prices"] and meta["sources"]
+            assert meta["title"] == "Housing: London, US & Hong Kong" and meta["tabs"][0] == ["prices", "London"] and meta["sources"]
             assert (await c.get("/api/housing/nope")).status == 404 and (await c.get("/api/nope/meta")).status == 404
             red = await c.get("/ai-jobs", allow_redirects=False)
             assert red.status == 301 and red.headers["Location"] == "/ai#openings"
@@ -874,6 +874,7 @@ def test_housing_borough_map(snapdir, monkeypatch):
     assert len(b["map"]["shapes"]) == 33 and b["map"]["viewBox"].startswith("0 0 1000") and all(s["d"].startswith("M") for s in b["map"]["shapes"])
     assert {r["code"] for r in b["rows"]} == {s["code"] for s in b["map"]["shapes"]}            # every borough row has an outline, Westminster included
     w = next(r for r in b["rows"] if r["borough"] == "City of Westminster")
+    assert w["rent_yoy"] == 5.0
     assert w["code"] == "E09000033" and w["rent_2bed"] == 3600 and w["flat"] and w["terraced"] and w["rent_month"] == "2026-09-01"
     assert next(r for r in b["rows"] if r["borough"] == "City of London")["rent_2bed"] is None and b["rents_error"] is None
     h = b["map"]["history"]
@@ -907,6 +908,9 @@ def test_housing_rents_from_pipr(snapdir, monkeypatch):
     p = H._prices_now()
     assert set(p["rents"]) >= {"London average rent", "England average rent"} and p["rent_now"]["rent"] == 2300 and p["rent_now"]["yoy"] == 5.0
     assert p["rent_now"]["month"] == "2026-09-01" and 0 < p["rent_now"]["rent_to_price"] < 0.2
+    assert set(p["rent_vs_price"]) == {"Rent", "House price"} and p["rent_vs_price"]["Rent"][0][1] == 100.0
+    assert p["gross_yield"] and 0 < p["gross_yield"][-1][1] < 20 and p["premium"] and p["premium"][-1][1] > 0
+    assert "from_peak" in p["real_now"] and not [k for k in p if k.endswith("_error")]
 
 
 def test_robotaxi_tesla_rate_and_rules(snapdir, monkeypatch):

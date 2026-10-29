@@ -16,6 +16,29 @@ const YEAR = 365.25 * 86400;
 const timeAt = (pts, t) => { if (!pts || !pts.length) return null; if (t == null) return pts[pts.length - 1][0]; let r = null; for (const p of pts) { if (p[0] <= t) r = p[0]; else break; } return r; };
 const chgAt = (pts, t, yrs) => { const T = timeAt(pts, t), v = valueAt(pts, T), w = T == null ? null : valueAt(pts, T - yrs * YEAR); return v == null || !w ? null : v / w - 1; };
 const monthOf = (pts, t) => { const T = timeAt(pts, t); return T == null ? "–" : month(T); };
+// Top 3 boroughs for each measure (ranks of what the table shows; not advice)
+const PICKS = [
+  ["Cheapest flats", r => r.flat, 1, v => money(v)],
+  ["Cheapest terraced houses", r => r.terraced, 1, v => money(v)],
+  ["Cheapest 2-bed rent", r => r.rent_2bed, 1, v => gbp(v) + " a month"],
+  ["Highest rental yield (2-bed rent × 12 ÷ flat price)", r => r.rent_2bed && r.flat ? r.rent_2bed * 12 / r.flat : null, -1, v => (v * 100).toFixed(1) + "%"],
+  ["Prices rising fastest (on a year)", r => r.yoy, -1, v => pc(v)],
+  ["Most growth over 5 years", r => r.change_5y, -1, v => pct(v, 0)],
+  ["Rents rising slowest (on a year)", r => r.rent_yoy, 1, v => pc(v)],
+  ["Most expensive homes (all types)", r => r.avg, -1, v => money(v)],
+];
+function boroughPicks(d) {
+  const grid = el("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px" }, ...PICKS.map(([title, get, dir, fmt]) => {
+    const top = d.rows.filter(r => get(r) != null).sort((a, b) => dir * (get(a) - get(b))).slice(0, 3);
+    return el("div", { style: "border:1px solid var(--line);border-radius:10px;padding:10px 12px" }, el("div", { style: "font-weight:600;margin-bottom:6px" }, title),
+      ...(top.length ? top.map((r, i) => el("div", { style: "display:flex;justify-content:space-between;gap:8px;padding:2px 0" },
+        el("span", {}, el("span", { class: "muted" }, (i + 1) + ". "), r.borough), el("b", { style: "font-variant-numeric:tabular-nums" }, fmt(get(r)))))
+        : [el("div", { class: "muted" }, "No figures yet.")]));
+  }));
+  const rm = (d.rows.find(r => r.rent_month) || {}).rent_month;
+  return card("Top 3 boroughs by measure", grid,
+    note("Rankings of the latest figures (prices " + (d.as_of || "").slice(0, 7) + (rm ? ", rents " + rm.slice(0, 7) : "") + "), not recommendations. Yield is a gross figure before costs; borough averages hide big differences between streets."));
+}
 function boroughMap(d) {
   const H = d.map.history || {}, V = H.values || {}, n = H.months || 0;
   const [y0, m0] = (H.start || "2005-01").split("-").map(Number);
@@ -93,6 +116,8 @@ const VIEWS = {
   async prices() {
     const d = await api("prices"), n = d.now || {};
     const A = d.london_avg || [], Y = d.london_yoy || [];
+    const R = d.london_real || [], LR = (d.rents || {})["London average rent"] || [], GY = d.gross_yield || [], PR = d.premium || [];
+    const realPeakTo = t => { const T = timeAt(R, t); let best = null; for (const p of R) { if (T != null && p[0] > T) break; if (!best || p[1] > best[1]) best = p; } return best; };
     const peakTo = t => { const T = timeAt(A, t); let best = null; for (const p of A) { if (T != null && p[0] > T) break; if (!best || p[1] > best[1]) best = p; } return best; };
     const head = card(null, datedHead([
       { label: t => "London average price (" + monthOf(A, t) + ")", value: t => [gbp(valueAt(A, timeAt(A, t)))] },
@@ -100,7 +125,12 @@ const VIEWS = {
       { label: t => { const pk = peakTo(t); return "From the peak (" + (pk ? month(pk[0]) : "–") + ")"; },
         value: t => { const pk = peakTo(t), v = valueAt(A, timeAt(A, t)); const x = pk && v != null ? v / pk[1] - 1 : null; return [pct(x), cls(x)]; } },
       { label: () => "5 years", value: t => { const x = chgAt(A, t, 5); return [pct(x, 0), cls(x)]; } },
-      { label: () => "10 years", value: t => { const x = chgAt(A, t, 10); return [pct(x, 0), cls(x)]; } }],
+      { label: () => "10 years", value: t => { const x = chgAt(A, t, 10); return [pct(x, 0), cls(x)]; } },
+      { label: t => "In today's money, from its peak (" + (realPeakTo(t) ? month(realPeakTo(t)[0]) : "–") + ")",
+        value: t => { const pk = realPeakTo(t), v = valueAt(R, timeAt(R, t)); const x = pk && v != null ? v / pk[1] - 1 : null; return [pct(x), cls(x)]; } },
+      { label: t => "London rent a month (" + monthOf(LR, t) + ")", value: t => [gbp(valueAt(LR, timeAt(LR, t)))] },
+      { label: () => "Gross yield: a year's rent ÷ price", value: t => { const v = valueAt(GY, timeAt(GY, t)); return [v == null ? "–" : v.toFixed(1) + "%"]; } },
+      { label: () => "London price ÷ UK average", value: t => { const v = valueAt(PR, timeAt(PR, t)); return [v == null ? "–" : v.toFixed(2) + "×"]; } }],
       { latest: "Latest: " + (n.avg ? monthOf(A, null) : "–") }), asOf(d), stale(d));
     const real = card("London average price: as paid, and in today's money",
       ...linesChart([{ name: "Average price", points: d.london_avg || [] }, { name: "In today's money (CPIH)", points: d.london_real || [], dashed: true, color: css("--hold") }], v => gbp(v)),
@@ -117,7 +147,17 @@ const VIEWS = {
       ...linesChart(rk.map(([k, pts]) => ({ name: k, points: pts })), v => gbp(v), { small: true }),
       note("Average rent agreed on new and existing private tenancies, all property types (ONS PIPR, from January 2015). Rents against prices: a rising rent while prices are flat lifts the rental yield and usually comes before buyers return."))
       : card("Rents", el("div", { class: "muted" }, "Not available right now (" + (d.rents_error || "no data") + ")."));
-    return [head, real, idx, yoy, rents];
+    const rvp = card("Rents against prices in London (January 2015 = 100)",
+      ...linesChart(Object.entries(d.rent_vs_price || {}).map(([k, pts], i) => i ? { name: k, points: pts, color: css("--s2") } : { name: k, points: pts }), v => v == null ? "–" : v.toFixed(0), { small: true }),
+      missing(d, "rent_vs_price", "Rents against prices"),
+      note("When the rent line climbs above the price line, renting has got dearer relative to buying (and landlords' yields have risen)."));
+    const gy = card("Gross rental yield in London: a year's average rent ÷ average price (%)",
+      ...linesChart([{ name: "Gross yield", points: GY }], v => v == null ? "–" : v.toFixed(2) + "%", { small: true }), missing(d, "gross_yield", "The yield"),
+      note("Before costs, voids and tax. Average rent (all private tenancies) against the average price of all homes sold, so a broad gauge rather than any one flat's return."));
+    const prem = card("London's premium: London average price ÷ UK average price",
+      ...linesChart([{ name: "London ÷ UK", points: PR }], v => v == null ? "–" : v.toFixed(2) + "×", { small: true }), missing(d, "premium", "The premium"),
+      note("How many average UK homes one average London home would buy. A falling line means the rest of the UK has been catching up."));
+    return [head, real, idx, yoy, rents, rvp, gy, prem];
   },
   async market() {
     const d = await api("market"), n = d.now || {}, t = d.by_type || {}, ty = d.by_type_yoy || {};
@@ -177,7 +217,7 @@ const VIEWS = {
     const lines = card("Most and least expensive boroughs, indexed (Jan 2015 = 100)", ...linesChart([...top, ...bottom].filter(b => d.indexed[b]).map(b => ({ name: b, points: d.indexed[b], dashed: bottom.includes(b) })), v => v == null ? "–" : v.toFixed(0)),
       note("Solid: the three most expensive; dashed: the three cheapest. Prime central London has lagged outer boroughs since 2015."));
     const errs = Object.keys(d.errors || {}).length ? note("Not available right now: " + Object.keys(d.errors).join(", ") + ".") : null;
-    return [d.map ? boroughMap(d) : null, card("London's 33 boroughs (UK HPI, " + (d.as_of || "–").slice(0, 7) + ")", el("div", { class: "muted" }, "Click a column to sort."), host, errs), bars, lines].filter(Boolean);
+    return [d.map ? boroughMap(d) : null, boroughPicks(d), card("London's 33 boroughs (UK HPI, " + (d.as_of || "–").slice(0, 7) + ")", el("div", { class: "muted" }, "Click a column to sort."), host, errs), bars, lines].filter(Boolean);
   },
   async global() {
     const d = await api("global");

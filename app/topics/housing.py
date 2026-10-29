@@ -451,6 +451,30 @@ def _prices_now() -> dict:
                            "rent_to_price": _r(lr["rent"].iloc[-1] * 12 / a.iloc[-1], 4) if len(a) else None}
     except Exception:
         out["rent_now"] = {}
+
+    def london_rent() -> pd.Series:
+        return rents()["London average rent"]["rent"].dropna()
+
+    def rent_vs_price():
+        """London rent and London average price, both January 2015 = 100 (PIPR starts then)."""
+        r = london_rent()
+        return {"Rent": _pts(_rebase(r), 1), "House price": _pts(_rebase(a[a.index >= r.index[0]]), 1)}
+
+    def gross_yield():
+        """A year's average London rent / the average London price, %, monthly since rents start."""
+        r = london_rent()
+        return _pts((r * 12 / a.reindex(r.index)).dropna() * 100, 2)
+
+    def premium():
+        """London average price / UK average price: how many UK homes one London home buys."""
+        uk = hpi("uk")["avg"].dropna()
+        return _pts((a / uk.reindex(a.index)).dropna(), 2)
+    _part(out, "rent_vs_price", rent_vs_price)
+    _part(out, "gross_yield", gross_yield)
+    _part(out, "premium", premium)
+    real = out.get("london_real") or []
+    rv = [v for _, v in real if v is not None]
+    out["real_now"] = {"from_peak": _r(rv[-1] / max(rv) - 1, 4), "peak_month": str(pd.Timestamp(max(real, key=lambda p: p[1])[0], unit="s").date())} if rv else {}
     out["now"] = {"avg": _r(a.iloc[-1], 0) if len(a) else None, "yoy": _r(lon["pc_ann"].dropna().iloc[-1], 2) if lon["pc_ann"].notna().any() else None,
                   "peak": _r(a.max(), 0) if len(a) else None, "peak_month": str(a.idxmax().date()) if len(a) else None,
                   "from_peak": _r(a.iloc[-1] / a.max() - 1, 4) if len(a) else None,
@@ -558,6 +582,7 @@ def _boroughs_now() -> dict:
                          "change_5y": _r(a.iloc[-1] / five.iloc[-1] - 1, 4) if len(five) else None, "month": str(a.index[-1].date()),
                          "flat": last(d["avg_flat"]), "terraced": last(d["avg_terraced"]), "semi": last(d["avg_semi"]), "detached": last(d["avg_detached"]),
                          "rent_2bed": last(rf["rent_2bed"]) if rf is not None else None, "rent": last(rf["rent"]) if rf is not None else None,
+                         "rent_yoy": _r(rf["yoy"].dropna().iloc[-1], 2) if rf is not None and rf["yoy"].notna().any() else None,
                          "rent_month": str(rf["rent_2bed"].dropna().index[-1].date()) if rf is not None and rf["rent_2bed"].notna().any() else None})
             series[name] = _pts(_rebase(a, "2015-01-01"), 1)
             if code:
