@@ -8,13 +8,13 @@ Public, read-only data dashboards, each on its own page:
 | Autonomous Car Adoption | `/robotaxi` | Paid driverless rides by operator, cities, rules and pilots in the US, UK, HK and China, crash reports per mile, and a Tesla tab (price, deliveries, FSD, Robotaxi, Cybercab) |
 | AI: Jobs & Adoption | `/ai` | AI openings vs law and finance (US, UK), headcount and pay (US, UK, HK), firms and people adopting AI tools and agents, AI share of job postings. Replaces `/ai-jobs` and `/ai-adoption`, which redirect here |
 | BTC Cycles & Sector Rotation | `/btc-cycles` | Four Bitcoin cycles, the altcoin sectors that won each, winner metrics, 2026–27 candidates and signals, checked daily against live data |
-| Altcoin Study | `/altcoins` | HYPE, ENA, SOL and NEAR in full (against BTC, fundamentals, projection), the memecoin basket and meme season, and a buy zone for every coin. Replaces `/hype`, `/ena`, `/sol`, `/near` and `/memecoins` |
+| Altcoin Study | `/altcoins` | HYPE, ENA, SOL and NEAR in full (against BTC, fundamentals, projection), the memecoin basket and meme season, a buy zone for every coin, the big-volume days and support / resistance zones they leave (Hyperliquid candles), and ENA around every token unlock. Replaces `/hype`, `/ena`, `/sol`, `/near` and `/memecoins` |
 
 `/` lists them. Data is at `/api/<slug>/<name>` (JSON), and every chart has a "CSV ↓" button that saves the numbers it shows. Every dashboard has a guide in `data/<slug>/README.md`: what each card shows, where every number comes from, and how to keep it current. Its calculation and caveat sections (headings with calculated, method, rule, caveats or gaps) also appear on the page as the last tab, **Method** (`/<slug>#about`), so keep those headings when editing a guide.
 
 ## How it works
 
-- **Free sources only**, fetched at most once a day and cached. UK House Price Index, ONS, Bank of England, Indeed Hiring Lab, BLS via FRED, US Census, NHTSA, Coin Metrics, DefiLlama, CoinGecko.
+- **Free sources only**, fetched at most once a day and cached. UK House Price Index, ONS, Bank of England, Indeed Hiring Lab, BLS via FRED, US Census, NHTSA, Coin Metrics, DefiLlama, CoinGecko, Hyperliquid.
 - **Snapshots.** Every download is written to a persistent folder. If a source is down, the last copy is served and the card says "showing the last copy from <date>". Nothing blanks because a government site had a bad night.
 - **Hand-entered data** (announcements, surveys without an API) lives in `data/<slug>/*.csv`, one row per point with the source it came from. Adding a point is one committed line; the next deploy shows it.
 - **One module per dashboard** in `app/topics/`, one script per dashboard in `app/static/topics/`, a shared page shell in `app/static/topic.html`, and a 150-line server in `app/server.py`. No build step, no database.
