@@ -1,4 +1,4 @@
-"""The standalone coin pages (/ena, /sol, /near) on fixtures (no network): registry and shared script, the payload built from btc_cycles'
+"""The standalone coin pages (/hype, /ena, /sol, /near) on fixtures (no network): registry and shared script, the payload built from btc_cycles'
 background fill (series, projection, today's sentences, rank among the candidates), and every tab, page and script through the server."""
 import asyncio
 import json
@@ -11,7 +11,7 @@ from app.topics import _coin_page as P
 from app.topics import btc_cycles as C
 from tests.test_topics import _chart
 
-PAGES = ("ena", "sol", "near")
+PAGES = ("hype", "ena", "sol", "near")
 
 
 @pytest.fixture()
@@ -49,7 +49,7 @@ def test_payload(filled):
     assert len(f["projection"]) == 2 and all(p["bear"] < p["base"] < p["bull"] for p in f["projection"])
     assert abs(f["kpi"]["beta"] - 1.5) < 0.05 and f["notes"].get("narrative")
     assert f["peers"]["n"] == len(C.coins_list()) and 1 <= f["peers"]["market_cap"] <= f["peers"]["n"]
-    assert isinstance(f["now"], list) and f["sibling_pages"] == {"ENA": "/ena", "SOL": "/sol", "NEAR": "/near"}
+    assert isinstance(f["now"], list) and f["sibling_pages"] == {"HYPE": "/hype", "ENA": "/ena", "SOL": "/sol", "NEAR": "/near"}
     assert f["scenarios"]["scenarios"]
     eps = topics.endpoints("near")
     assert eps["overview"]()["ticker"] == "NEAR" and eps["projection"]() is eps["overview"]()       # one cached payload for the three tabs
