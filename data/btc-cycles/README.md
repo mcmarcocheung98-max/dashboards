@@ -40,6 +40,16 @@ A dashboard built on the research doc "BTC Cycles & Sector Rotation: 2013–2026
 | | Volume and dominance | BTC spot volume vs the $10bn line; dominance logged daily since deploy |
 | | The doc's text | Signals in order, timing on the halving clock, what could break the pattern |
 
+## Standalone coin pages (`/ena`, `/sol`, `/near`)
+
+Three candidates also have a page of their own, linked from their row on the Candidates tab ("Full page →"): Overview (price against BTC
+rebased, the coin ÷ BTC ratio, RSI, market cap, the coin notes and today's sentences, its rank among the candidates), Fundamentals
+(fees, TVL, supply and unlocks against price, price-to-fees, the unlock schedule) and Projection (bear / base / bull to end-2028 with the
+dilution and valuation factors, and the BTC levels behind them). They download nothing: the same background fill feeds them
+(`app/topics/_coin_page.py`, one module per page: `coin_ena.py`, `coin_sol.py`, `coin_near.py`; one shared script `static/topics/coin.js`).
+To add a page for another candidate: a three-line `app/topics/coin_<ticker>.py`, its slug in `CATEGORIES` and in `PAGES` in
+`btc-cycles.js`.
+
 ## Where the numbers come from
 
 | Series | Source | Cadence | How |

@@ -530,12 +530,15 @@ const VIEWS = {
   },
 };
 
+// coins with a standalone page of their own (app/topics/coin_<ticker>.py, static/topics/coin.js)
+const PAGES = { ENA: "/ena", SOL: "/sol", NEAR: "/near" };
 // one candidate coin: links, KPI strip, 90-day sparkline, and on demand its four charts
 function coinRow(c, px, r1, rsiCls) {
   const head = el("div", { style: "display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline" },
     el("b", {}, c.name, " ", el("span", { class: "muted" }, c.ticker)),
     c.links && c.links.coinmarketcap ? link("CoinMarketCap", c.links.coinmarketcap) : null, c.links && c.links.defillama ? link("DefiLlama", c.links.defillama) : null,
-    c.links && c.links.coingecko ? link("CoinGecko", c.links.coingecko) : null, c.note ? el("span", { class: "pill" }, c.note) : null);
+    c.links && c.links.coingecko ? link("CoinGecko", c.links.coingecko) : null, c.note ? el("span", { class: "pill" }, c.note) : null,
+    PAGES[c.ticker] ? el("a", { href: PAGES[c.ticker], style: "font-weight:600" }, "Full page →") : null);
   const N = c.notes || {};
   const notes = N.narrative ? el("div", { class: "notes", style: "margin-top:8px;display:grid;gap:4px;font-size:13px" },
     el("div", {}, el("b", {}, "Why it fits: "), N.narrative), el("div", {}, el("b", {}, "What stands out: "), N.standout),

@@ -40,7 +40,7 @@ def test_registry_is_complete():
         assert m["title"] and m["tabs"] and m["sources"]
         assert set(t.slow) <= set(eps), slug
         assert {k for k, _ in t.tabs} <= set(eps), f"{slug}: every tab needs an endpoint of the same name"
-        js = (B.MANUAL_DIR.parent / "app/static/topics" / f"{slug}.js").read_text()
+        js = (B.MANUAL_DIR.parent / "app/static/topics" / topics.script(slug)).read_text()
         assert "window.TOPIC" in js and all(f"async {k}(" in js for k, _ in t.tabs), slug
 
 
