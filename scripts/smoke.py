@@ -152,7 +152,8 @@ def follow_check(pg) -> dict | None:
     target = None
     for i in range(charts.count()):
         c = charts.nth(i)
-        if c.is_visible() and c.evaluate("e => !e.closest('[data-follow]')"):
+        # a chart with a handful of points (a hand-entered series with fixtures) has nothing under the cursor at 30% of its width
+        if c.is_visible() and c.evaluate("e => !e.closest('[data-follow]') && SYNC.some(o => o.c.chartElement().closest('.chart') === e && o.times.length >= 10)"):
             target = c; break
     if target is None:
         return None
@@ -166,8 +167,8 @@ def follow_check(pg) -> dict | None:
     pg.mouse.move(box["x"] + box["width"] / 2, box["y"] - 40); time.sleep(0.3)
     kept = status()
     back = head.get_by_text("Back to latest")
-    if back.count():
-        back.click(); time.sleep(0.2)
+    if back.count() and back.first.is_visible():          # shown only once a date is kept
+        back.first.click(); time.sleep(0.2)
     latest = status()
     ok = hovered.startswith(("On ", "Kept: ")) and kept.startswith("Kept: ") and not latest.startswith(("On ", "Kept: "))
     return {"ok": ok, "hover": hovered[:24], "kept": kept[:24]}
