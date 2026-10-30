@@ -4,3 +4,4 @@ snapshots/
 .venv/
 .DS_Store
 smoke-shots/
+graphify-out/
