@@ -1,0 +1,35 @@
+name: api-summary
+# Prints one /api page from the deployed site with long arrays folded to their length, so a big payload (chart series, equity curves)
+# fits in a log: Actions > api-summary > Run workflow, path e.g. altcoins/signals.
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Site"
+        default: "https://dashboards-production-bde6.up.railway.app"
+      path:
+        description: "API path after /api/"
+        default: "altcoins/signals"
+      keep:
+        description: "Max list length printed in full"
+        default: "12"
+jobs:
+  show:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -fsS --max-time 600 "${{ inputs.url }}/api/${{ inputs.path }}" | python3 -c '
+          import json, sys
+          KEEP = int("${{ inputs.keep }}")
+          def fold(x):
+              if isinstance(x, dict):
+                  return {k: fold(v) for k, v in x.items()}
+              if isinstance(x, list):
+                  if len(x) > KEEP and all(isinstance(e, (list, int, float)) or e is None for e in x):
+                      return f"[{len(x)} items; first {x[0]!r}, last {x[-1]!r}]"
+                  return [fold(e) for e in x]
+              if isinstance(x, float):
+                  return round(x, 4)
+              return x
+          print(json.dumps(fold(json.load(sys.stdin)), indent=1, ensure_ascii=False))
+          '
