@@ -254,7 +254,7 @@ def backtest(comp: pd.Series, c: pd.Series, enter: float = ENTER, cost: float = 
     pos = pd.Series(np.where(x >= enter, 1.0, np.where(x <= -enter, -1.0 if long_short else 0.0, 0.0)), index=x.index)
     r = px.pct_change().shift(-1)                                       # the return earned by the position taken at this close
     turn = pos.diff().abs().fillna(pos.abs())
-    strat = (pos * r - turn * cost).dropna()
+    strat = (pos * r - turn * cost).dropna().clip(lower=-1.0)          # a short losing over 100% in a day ends the account at zero (DOGE, 2021)
     eq = (1 + strat).cumprod()
     hold = (px / px.iloc[0])
     dd = float((eq / eq.cummax() - 1).min())
@@ -262,7 +262,8 @@ def backtest(comp: pd.Series, c: pd.Series, enter: float = ENTER, cost: float = 
     direction = np.sign(x.where(x.abs() >= enter)).dropna()
     hit = float((direction == np.sign(forward(px, HORIZON).reindex(direction.index))).mean()) if len(direction) else None
     return {"days": days, "from": str(x.index[0].date()), "to": str(x.index[-1].date()), "total": float(eq.iloc[-1] - 1), "hold": float(hold.iloc[-1] - 1),
-            "a_year": float(eq.iloc[-1] ** (365 / days) - 1) if days > 60 else None, "hold_a_year": float(hold.iloc[-1] ** (365 / days) - 1) if days > 60 else None,
+            "a_year": float(eq.iloc[-1] ** (365 / days) - 1) if days > 60 and eq.iloc[-1] > 0 else (-1.0 if days > 60 else None),
+            "hold_a_year": float(hold.iloc[-1] ** (365 / days) - 1) if days > 60 else None,
             "sharpe": float(strat.mean() / strat.std() * np.sqrt(365)) if strat.std() > 0 else None, "worst_drop": dd,
             "hold_worst_drop": float((hold / hold.cummax() - 1).min()), "time_long": float((pos > 0).mean()), "time_short": float((pos < 0).mean()),
             "changes": int((turn > 0).sum()), "hit_rate_7d": hit, "readings": int(len(direction)),

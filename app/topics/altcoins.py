@@ -266,7 +266,7 @@ def _signals_now() -> dict:
     out["counts"] = {"buy": sum(c["lean"] > 0 for c in ok), "sell": sum(c["lean"] < 0 for c in ok), "neutral": sum(c["lean"] == 0 for c in ok)}
     bts = [c["backtest"] for c in ok if c["backtest"].get("total") is not None]
     if bts:
-        med = lambda key: (lambda xs: float(np.median(xs)) if xs else None)([b[key] for b in bts if b.get(key) is not None])
+        med = lambda key: (lambda xs: float(np.median(xs)) if xs else None)([b[key] for b in bts if b.get(key) is not None and np.isfinite(b[key])])
         out["pooled_backtest"] = {"coins": len(bts), "beat_hold": sum(b["total"] > b["hold"] for b in bts), "median_a_year": med("a_year"), "median_hold_a_year": med("hold_a_year"),
                                   "median_sharpe": med("sharpe"), "median_worst_drop": med("worst_drop"), "median_hit_rate_7d": med("hit_rate_7d")}
     return _scrub(out)

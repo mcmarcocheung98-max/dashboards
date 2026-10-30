@@ -63,7 +63,7 @@ lean sell ≤ −0.2, strong sell ≤ −0.5.
 **Backtest method (walk-forward).** Weights are first fitted once 180 days of pooled history exist and re-fitted every 30 days, each time on
 rows whose 7-day return was already known; every day's score uses the latest weights fitted before it. Trading it: position at each close from
 that day's score (long above +0.2, short below −0.2, else flat), earning the next day's close-to-close move, 0.095% each way on every change,
-funding not included; also long-only. Reported per coin and as medians across coins, next to holding the coin over the same days.
+funding not included; also long-only. A short that loses more than 100% in one day ends the account at zero and the curve stays there. Reported per coin and as medians across coins, next to holding the coin over the same days.
 
 ### Caveats
 
