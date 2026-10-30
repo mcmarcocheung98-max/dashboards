@@ -13,6 +13,9 @@ on:
       keep:
         description: "Max list length printed in full"
         default: "12"
+      drop:
+        description: "Keys to leave out anywhere in the payload, comma-separated (e.g. bars,equity)"
+        default: ""
 jobs:
   show:
     runs-on: ubuntu-latest
@@ -21,9 +24,10 @@ jobs:
           curl -fsS --max-time 600 "${{ inputs.url }}/api/${{ inputs.path }}" | python3 -c '
           import json, sys
           KEEP = int("${{ inputs.keep }}")
+          DROP = {k.strip() for k in "${{ inputs.drop }}".split(",") if k.strip()}
           def fold(x):
               if isinstance(x, dict):
-                  return {k: fold(v) for k, v in x.items()}
+                  return {k: fold(v) for k, v in x.items() if k not in DROP}
               if isinstance(x, list):
                   if len(x) > KEEP:
                       return [f"[{len(x)} items; the first {KEEP} follow, last {fold(x[-1])!r}]", *[fold(e) for e in x[:KEEP]]]
