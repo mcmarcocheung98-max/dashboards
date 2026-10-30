@@ -182,7 +182,7 @@ def evaluate(S: pd.DataFrame, fwd: pd.Series) -> list[dict]:
         n = int(m.sum())
         row = {"signal": k, "days_active": n, "share_active": float((s != 0).mean())}
         if n >= 30 and s[m].nunique() > 1:
-            ic = float(s[m].corr(f[m], method="spearman"))
+            ic = float(s[m].rank().corr(f[m].rank()))                 # Spearman = Pearson on ranks (no scipy needed)
             row |= {"ic": ic, "t": ic * np.sqrt(n), "after_buy": float(f[m & (s > 0)].mean()) if (m & (s > 0)).any() else None,
                     "after_sell": float(f[m & (s < 0)].mean()) if (m & (s < 0)).any() else None,
                     "hit_rate": float((np.sign(s[m]) == np.sign(f[m])).mean())}
