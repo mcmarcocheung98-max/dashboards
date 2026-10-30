@@ -25,8 +25,8 @@ jobs:
               if isinstance(x, dict):
                   return {k: fold(v) for k, v in x.items()}
               if isinstance(x, list):
-                  if len(x) > KEEP and all(isinstance(e, (list, int, float)) or e is None for e in x):
-                      return f"[{len(x)} items; first {x[0]!r}, last {x[-1]!r}]"
+                  if len(x) > KEEP:
+                      return [f"[{len(x)} items; the first {KEEP} follow, last {fold(x[-1])!r}]", *[fold(e) for e in x[:KEEP]]]
                   return [fold(e) for e in x]
               if isinstance(x, float):
                   return round(x, 4)

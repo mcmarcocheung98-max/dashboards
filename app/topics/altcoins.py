@@ -228,39 +228,61 @@ def _signals_now() -> dict:
            "enter": SG.ENTER, "refit_days": SG.REFIT_DAYS, "min_train_days": SG.MIN_TRAIN_DAYS, "cost_per_side": SG.COST_PER_SIDE, "btc_error": btc_err,
            "stale": stale_info([HL_INFO]), "updated": int(time.time())}
     if not per:
-        return out
-    wf = SG.walk_forward(per)
+        return _scrub(out)
+    try:
+        wf = SG.walk_forward(per)
+    except Exception as e:                                   # the fit failing must not take the tab down: say so and show the coins
+        out["error"] = f"weights: {type(e).__name__}: {e}"
+        return _scrub(out)
     out |= {"weights": wf["weights_now"], "how": wf["how_now"], "fits": [{k: v for k, v in f.items() if k != "weights"} for f in wf["fits"]], "train_rows": wf.get("train_rows_now")}
-    if wf["fits"]:
+    if wf["fits"] and wf["weights_now"]:
         last = wf["fits"][-1]["weights"]
         out["weights_drift"] = float(sum(abs(wf["weights_now"][k] - last[k]) for k in SG.SIGNALS) / 2)
-    pooled = pd.concat([S.assign(_fwd=SG.forward(c).reindex(S.index)) for S, c in per.values()])
-    out["per_signal"] = SG.evaluate(pooled[list(SG.SIGNALS)], pooled["_fwd"])
+    try:
+        pooled = pd.concat([S.assign(_fwd=SG.forward(c).reindex(S.index)) for S, c in per.values()])
+        out["per_signal"] = SG.evaluate(pooled[list(SG.SIGNALS)], pooled["_fwd"])
+    except Exception as e:
+        out["per_signal"], out["per_signal_error"] = [], f"{type(e).__name__}: {e}"
     for c in coins:
         if c["status"] != "ok":
             continue
-        S, close = per[c["ticker"]]
-        comp = wf["composite"][c["ticker"]]
-        today = SG.composite(S.iloc[[-1]], wf["weights_now"]).iloc[0] if wf["weights_now"] else None
-        c["score"] = None if today is None else float(today)
-        c["label"] = SG.label(c["score"])
-        c["lean"] = 0 if c["score"] is None else (1 if c["score"] >= SG.ENTER else -1 if c["score"] <= -SG.ENTER else 0)
-        c["contributions"] = SG.contributions(S.iloc[-1], wf["weights_now"] or {})
-        c["today"] = {k: float(S[k].iloc[-1]) for k in SG.SIGNALS}
-        c["composite"] = [[int(t.timestamp()), round(float(v), 3)] for t, v in comp.dropna().items()]
-        c["price_series"] = [[int(t.timestamp()), float(v)] for t, v in close.reindex(comp.dropna().index).items()]
-        c["backtest"] = SG.backtest(comp, close)
-        c["backtest_long_only"] = {k: v for k, v in SG.backtest(comp, close, long_short=False).items() if k not in ("equity", "hold_curve")}
-        c["own_eval"] = SG.evaluate(S, SG.forward(close))
+        try:
+            S, close = per[c["ticker"]]
+            comp = wf["composite"][c["ticker"]]
+            today = SG.composite(S.iloc[[-1]], wf["weights_now"]).iloc[0] if wf["weights_now"] else None
+            c["score"] = None if today is None or not np.isfinite(today) else float(today)
+            c["label"] = SG.label(c["score"])
+            c["lean"] = 0 if c["score"] is None else (1 if c["score"] >= SG.ENTER else -1 if c["score"] <= -SG.ENTER else 0)
+            c["contributions"] = SG.contributions(S.iloc[-1], wf["weights_now"] or {})
+            c["today"] = {k: float(S[k].iloc[-1]) for k in SG.SIGNALS}
+            c["composite"] = [[int(t.timestamp()), round(float(v), 3)] for t, v in comp.dropna().items()]
+            c["price_series"] = [[int(t.timestamp()), float(v)] for t, v in close.reindex(comp.dropna().index).items()]
+            c["backtest"] = SG.backtest(comp, close)
+            c["backtest_long_only"] = {k: v for k, v in SG.backtest(comp, close, long_short=False).items() if k not in ("equity", "hold_curve")}
+            c["own_eval"] = SG.evaluate(S, SG.forward(close))
+        except Exception as e:
+            c["status"], c["why"] = "error", f"{type(e).__name__}: {e}"
     ok = [c for c in coins if c["status"] == "ok" and c.get("score") is not None]
     out["counts"] = {"buy": sum(c["lean"] > 0 for c in ok), "sell": sum(c["lean"] < 0 for c in ok), "neutral": sum(c["lean"] == 0 for c in ok)}
     bts = [c["backtest"] for c in ok if c["backtest"].get("total") is not None]
     if bts:
-        out["pooled_backtest"] = {"coins": len(bts), "beat_hold": sum(b["total"] > b["hold"] for b in bts), "median_a_year": float(np.median([b["a_year"] for b in bts if b["a_year"] is not None])),
-                                  "median_hold_a_year": float(np.median([b["hold_a_year"] for b in bts if b["hold_a_year"] is not None])),
-                                  "median_sharpe": float(np.median([b["sharpe"] for b in bts if b["sharpe"] is not None])), "median_worst_drop": float(np.median([b["worst_drop"] for b in bts])),
-                                  "median_hit_rate_7d": float(np.median([b["hit_rate_7d"] for b in bts if b["hit_rate_7d"] is not None]))}
-    return out
+        med = lambda key: (lambda xs: float(np.median(xs)) if xs else None)([b[key] for b in bts if b.get(key) is not None])
+        out["pooled_backtest"] = {"coins": len(bts), "beat_hold": sum(b["total"] > b["hold"] for b in bts), "median_a_year": med("a_year"), "median_hold_a_year": med("hold_a_year"),
+                                  "median_sharpe": med("sharpe"), "median_worst_drop": med("worst_drop"), "median_hit_rate_7d": med("hit_rate_7d")}
+    return _scrub(out)
+
+
+def _scrub(x):
+    """JSON has no NaN or infinity: None instead, all the way down (the server refuses a payload with either)."""
+    if isinstance(x, dict):
+        return {k: _scrub(v) for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return [_scrub(v) for v in x]
+    if isinstance(x, (float, np.floating)):
+        return float(x) if np.isfinite(x) else None
+    if isinstance(x, np.integer):
+        return int(x)
+    return x
 
 
 # ------------------------------------------------------------------ ENA unlocks: the schedule and what the price did around each one
