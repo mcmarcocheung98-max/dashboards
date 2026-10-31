@@ -343,6 +343,34 @@ def test_health_stale_when_a_source_stops(filled, monkeypatch):
     assert gh["status"] == "stale" and "429" in gh["error"]
 
 
+def test_bluesky_and_reddit_refusals_are_handled_not_alerts(mocked, monkeypatch):
+    """As on Railway (Oct 2026): Bluesky's search and every Reddit host answer 403 and never answered before. Both stay 'failing'
+    in /api/health, with the reason, but raise no alert; the Social tab carries the reason. Any other error still alerts."""
+    import requests
+
+    def refuse(url, *a, **k):
+        if "searchPosts" in url:
+            raise requests.HTTPError("403 Client Error: Forbidden for url: " + url)
+        if "reddit.com" in url:
+            raise requests.HTTPError("403 Client Error: Blocked for url: " + url)
+        return fake_download(url, *a, **k)
+    monkeypatch.setattr(M, "download", refuse)
+    M.fill()
+    src = {s["url"]: s for s in topics.health()["dashboards"]["trends"]["sources"]}
+    for k in ("bsky", "reddit"):
+        s = src[M.HEALTH_KEYS[k]]
+        assert s["status"] == "failing" and not s["alert"] and s["handled"] == M.CLOSED[k] and "403" in s["error"]
+    soc = M._social_now()
+    assert soc["bsky"]["closed"] == M.CLOSED["bsky"] and soc["reddit"]["closed"] == M.CLOSED["reddit"] and soc["bsky"]["rows"] == []
+    B.json_safe(soc)
+    for u in M.HEALTH_KEYS.values():
+        B.HEALTH.pop(u, None)
+    monkeypatch.setattr(M, "download", lambda url, *a, **k: (_ for _ in ()).throw(ValueError("bad JSON")) if "searchPosts" in url else fake_download(url, *a, **k))
+    M.fill()
+    s = next(s for s in topics.health()["dashboards"]["trends"]["sources"] if s["url"] == M.HEALTH_KEYS["bsky"])
+    assert s["alert"] and "handled" not in s
+
+
 def test_log_today_keeps_the_first_value(mocked):
     assert M.log_today([("github", "a/b", "stars", 10)], "2026-10-01") == 1
     assert M.log_today([("github", "a/b", "stars", 11), ("github", "a/b", "forks", 2)], "2026-10-01") == 1

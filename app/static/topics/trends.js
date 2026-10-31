@@ -84,10 +84,12 @@ const VIEWS = {
       el("td", {}, r.label), el("td", {}, f0(r.stories)), el("td", {}, f0(r.comments)), el("td", { class: cls(r.s_4) }, pc0(r.s_4)), el("td", { class: cls(r.s_13) }, pc0(r.s_13)))))) : null;
     const bs = card("Bluesky posts a day", ...((S.lines || []).length ? [...linesChart(S.lines.map((t, i) => line(t, i)), f0, { small: true }),
       table(["Keyword", "Posts (" + (S.rows[0] || {}).date + ")", "7-day average"], S.rows.map(r => el("tr", {}, el("td", {}, r.label), el("td", {}, r.capped ? "500+" : f0(r.posts)), el("td", {}, f0(r.avg7)))))] : [empty("Bluesky counts")]),
+      S.closed ? note(S.closed + ".") : null,
       note("Posts matching the keyword on each UTC day, from Bluesky's public search, counted once a day from launch (up to 500 a day: '500+' means more). Bluesky only, not X."));
     const rd = card("Reddit subscribers", ...((R.lines || []).length ? [...linesChart(R.lines.map((t, i) => line(t, i)), big, { small: true }),
       table(["Subreddit", "Theme", "Subscribers", "Active now", "30-day change", "Read"], R.rows.map(r => el("tr", {}, el("td", {}, link("r/" + r.sub, "https://www.reddit.com/r/" + r.sub + "/")), el("td", {}, THEMES_LABEL[r.theme] || r.theme || "–"),
         el("td", {}, big(r.subscribers)), el("td", {}, f0(r.active)), el("td", { class: cls(r.d30) }, r.d30 == null ? "–" : (r.d30 > 0 ? "+" : "") + big(r.d30)), el("td", {}, r.date))))] : [empty("Reddit counts")]),
+      R.closed ? note(R.closed + ".") : null,
       note("Read once a day from each subreddit's about.json (one request every few seconds). Reddit often refuses cloud servers; then counts are hand-entered in data/trends/reddit.csv (series 'sub|subscribers' or 'sub|active')."),
       cite(R.cited));
     const gh = card("GitHub stars of the main AI repositories", ...((G.lines || []).length ? [...linesChart(G.lines.map((t, i) => line(t, i)), big, { small: true }),

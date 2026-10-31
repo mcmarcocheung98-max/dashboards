@@ -66,6 +66,7 @@ fresh when any of its downloads worked in the last run, stale (since its last go
 - Second run (19:26 UTC): HN 84 of 84 requests answered and GitHub 10 of 10; the HN backfill continues over the next runs.
 - Attention vs reality: every other dashboard's payload was read from the server. The paths in `reality.csv` were set from `/layout` → `_reality_paths`: housing has no nominal London series (`london_real`, in today's money), AI uses `ai_share.US`, chips `chips.prices.NVDA`, space `satellites` → `active.cumulative_starlink`, rates `nominal.US`.
 - Reddit: **403** on `www`, `old` and `api.reddit.com`. Counts come only from `reddit.csv` until that changes; the fill stops asking after two refusals a run.
+- Bluesky and Reddit in `/api/health` (31 Oct 2026): while every answer in a run is a 401/403 refusal, both are filed as `failing` with `handled` (the reason, also shown on the Social tab's card) and raise no source-health alert; any other error (a changed format, a timeout) alerts as before. Re-check the two with `/layout` now and then: if either answers again, the counts resume on their own.
 - Google Trends: **429**. Hand-entered only.
 - This site's own API at `http://127.0.0.1:8080`: **200**.
 

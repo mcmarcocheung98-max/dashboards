@@ -454,7 +454,12 @@ def fill_fundamentals(c: dict) -> dict:
             if len(fees):
                 out["fees"], out["sources"]["fees"] = keep(fees), url
     except Exception as e:
-        err["fees"] = f"{type(e).__name__}: {str(e)[:80]}"
+        if getattr(getattr(e, "response", None), "status_code", None) in (400, 404):   # DefiLlama tracks no fees for it (Babylon): not a failing source
+            from ._base import HEALTH
+            HEALTH.pop(url, None)
+            err["fees"] = "none on DefiLlama"
+        else:
+            err["fees"] = f"{type(e).__name__}: {str(e)[:80]}"
     for key in [k for k in dict.fromkeys([slug, c["coingecko_id"]]) if k]:
         url = LLAMA_EMISSIONS.format(slug=key)
         try:

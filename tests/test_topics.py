@@ -684,6 +684,26 @@ def test_btc_treasury_prices_fall_back_from_yahoo(snapdir, monkeypatch):
     assert "price" not in hk and hk["price_error"].startswith("no price source") and len(hk["price_tried"]) == 3 and hk["rows"]
 
 
+def test_btc_treasury_prefers_cnbc_over_an_old_yahoo_copy(snapdir, monkeypatch):
+    from app.topics import btc_flows as F
+    days = pd.bdate_range(end="2026-10-20", periods=300)
+    cnbc = {"v": {"barData": {"priceBars": [{"tradeTimeinMills": str(int(d.timestamp() * 1000)), "close": "30"} for d in days]}}}
+
+    def fj(url, ttl, key=None, **k):                 # as fetch does on a 429 with a snapshot: the old copy, STALE set under the key
+        if "yahoo" in url:
+            B.STALE[key] = time.time() - 9 * 86400
+            return _yahoo(5.0, n=200)
+        return cnbc["v"]
+    monkeypatch.setattr(F, "fetch_json", fj)
+    s, src, tried = F.stock_daily("SWC.L")
+    assert src == "CNBC" and len(s) == 300 and "last good copy" in tried[0]
+    from app.cache import _cache
+    _cache.clear()
+    cnbc["v"] = {"barData": {"priceBars": []}}
+    s, src, tried = F.stock_daily("SWC.L")
+    assert src == "Yahoo (last good copy)" and len(s) == 200 and len(tried) == 2
+
+
 def test_farside_parser_rejects_a_changed_page():
     from app.topics.btc_flows import parse_farside, _num
     assert _num("(12.5)") == -12.5 and _num("-") == 0 and _num("1,234.5") == 1234.5
@@ -975,6 +995,77 @@ def test_source_health(snapdir, monkeypatch):
     B.HEALTH.clear()
 
 
+class _Resp:
+    def __init__(self, code, retry=None):
+        self.status_code, self.headers = code, ({"Retry-After": str(retry)} if retry is not None else {})
+
+
+def _http(code, retry=None):
+    import requests
+    return requests.HTTPError(f"{code} Client Error", response=_Resp(code, retry))
+
+
+def test_fetch_stable_key_mirrors_and_429_cooldown(snapdir, monkeypatch):
+    """A URL that changes every call (Yahoo's end date) keeps one snapshot under `key`; a 429 sends fetch to the mirror, then to
+    the snapshot, and the host is not asked again until its cooldown ends."""
+    from app import cache
+    B.HEALTH.clear(), B.COOLDOWN.clear()
+    seen, mode = [], {"v": "ok"}
+
+    def dl(url, *a, **k):
+        seen.append(url.split("/")[2])
+        if mode["v"] == "ok":
+            return "x" * 300
+        raise _http(429, retry=600)
+    monkeypatch.setattr(B, "_download", dl)
+    B.fetch("https://a.example/s?end=1", key="https://a.example/s", min_bytes=10)
+    assert seen == ["a.example"] and "https://a.example/s" in B.HEALTH and B.HEALTH["https://a.example/s"]["ok"]
+    cache._cache.clear()
+    mode["v"] = "429"
+    t = B.fetch("https://a.example/s?end=2", key="https://a.example/s", mirrors=("https://b.example/s?end=2",), min_bytes=10)
+    assert t == "x" * 300 and seen[1:] == ["a.example", "b.example"]          # both hosts asked once, then the snapshot
+    assert "https://a.example/s" in B.STALE and 590 < B.COOLDOWN["a.example"] - time.time() <= 600
+    cache._cache.clear()
+    B.fetch("https://a.example/s?end=3", key="https://a.example/s", mirrors=("https://b.example/s?end=3",), min_bytes=10)
+    assert len(seen) == 3                                                      # cooling down: nobody asked, snapshot served
+    st = topics.health()["dashboards"]
+    src = [s for d in st.values() for s in d["sources"] if s["url"] == "https://a.example/s"][0]
+    assert src["status"] == "stale" and "429" in src["error"]
+    B.COOLDOWN.clear(), B.HEALTH.clear()
+
+
+def test_yahoo_429_serves_snapshot_then_nasdaq_marks_handled(snapdir, monkeypatch):
+    from app import cache
+    B.HEALTH.clear(), B.COOLDOWN.clear()
+    yahoo = json.dumps(_yahoo(250, n=250))
+    mode = {"v": "ok"}
+
+    def dl(url, *a, **k):
+        if "nasdaq" in url:
+            rows = [{"date": d.strftime("%m/%d/%Y"), "close": f"${100 + i}"} for i, d in enumerate(pd.bdate_range(end="2026-10-20", periods=60))]
+            return json.dumps({"data": {"tradesTable": {"rows": rows}}})
+        if mode["v"] == "ok":
+            return yahoo
+        raise _http(429)
+    monkeypatch.setattr(B, "_download", dl)
+    assert len(B.yahoo_daily("TSLA", "2019-01-01")) == 250 and len(B.yahoo_daily("SWC.L", "2019-01-01")) == 250
+    monkeypatch.setattr(B.time, "time", lambda t=time.time() + 3600: t)          # an hour later: another end date (period2), same key
+    cache._cache.clear()
+    mode["v"] = "429"
+    s = B.yahoo_daily("TSLA", "2019-01-01")                                    # Yahoo serves its copy (stale), Nasdaq is fresher
+    assert len(s) == 60 and B.yahoo_key("TSLA", "2019-01-01") in B.STALE
+    assert sorted(u for u in B.HEALTH if "yahoo" in u) == sorted(B.yahoo_key(t, "2019-01-01") for t in ("TSLA", "SWC.L"))   # one per series
+    src = [s for d in topics.health()["dashboards"].values() for s in d["sources"] if s["url"] == B.yahoo_key("TSLA", "2019-01-01")][0]
+    assert src["status"] == "stale" and "Nasdaq" in src["handled"]
+    assert len(B.yahoo_daily("SWC.L", "2019-01-01")) == 250 and B.yahoo_key("SWC.L", "2019-01-01") in B.STALE   # no Nasdaq: the copy
+    # a ticker never fetched before: Yahoo refused (cooling down), Nasdaq answers, the Yahoo failure is handled (no alert)
+    s = B.yahoo_daily("ZZZZ", "2019-01-01")
+    assert len(s) == 60 and s.iloc[-1] == 159
+    src = [s for d in topics.health()["dashboards"].values() for s in d["sources"] if s["url"] == B.yahoo_key("ZZZZ", "2019-01-01")][0]
+    assert src["status"] == "failing" and not src["alert"] and "Nasdaq" in src["handled"]
+    B.COOLDOWN.clear(), B.HEALTH.clear()
+
+
 def test_robotaxi_cpuc_links():
     from app.topics import robotaxi as R
     html = ('<a class="x" href="/-/media/cpuc-website/q1-2026-waymo.xlsx?rev=ab&amp;hash=1"><span>Waymo\n Q1 2026</span></a>'
@@ -1231,6 +1322,37 @@ def test_btc_sector_leaders_and_case_fields(snapdir, monkeypatch):
     assert L[1]["candidate"] is True                                     # Uniswap's tiny cap loses to the candidates
     K = next(c for c in k["coins"] if c["ticker"] == "SOL")["kpi"]
     assert K["bear_2027"] < K["base_2027"] < K["bull_2027"] and K["bear_2028"] < K["base_2028"] < K["bull_2028"] and K["mcap_base_2028"] > 0
+
+
+def test_btc_fundamentals_without_defillama_fees(snapdir, monkeypatch):
+    """Babylon: TVL from /protocol/babylon-protocol; DefiLlama has no fees for it (400), which is recorded on the coin, not as a failing source."""
+    import json as _json
+    import requests
+    from app.topics import btc_cycles as C
+    monkeypatch.setattr(C, "FUND_DIR", snapdir / "btc_fundamentals")
+    monkeypatch.setattr(C, "PACE", 0)
+    B.HEALTH.clear()
+    c = next(c for c in C.coins_list() if c["ticker"] == "BABY")
+    assert c["defillama_slug"] == "babylon-protocol" and c["coingecko_id"] == "babylon" and "verify id" not in c["note"]
+    days = pd.date_range(end="2026-10-30", periods=500)
+    tvl = {"tvl": [{"date": int(d.timestamp()), "totalLiquidityUSD": 3e9 + i} for i, d in enumerate(days)]}
+
+    class R400:
+        status_code, headers = 400, {}
+
+    def dl(url, *a, **k):
+        if "summary/fees/" in url or "emissions" in url:
+            raise requests.HTTPError("400 Client Error", response=R400())
+        if "/protocol/babylon-protocol" in url:
+            return _json.dumps(tvl)
+        if "coins/babylon" in url:
+            return _json.dumps({"market_data": {"circulating_supply": 2e9, "total_supply": 1e10, "max_supply": None}, "categories": ["Bitcoin Ecosystem"], "description": {"en": "x" * 600}})
+        raise AssertionError(url)
+    monkeypatch.setattr(B, "_download", dl)
+    out = C.fill_fundamentals(c)
+    assert len(out["tvl"]) > 300 and "fees" not in out and out["errors"]["fees"] == "none on DefiLlama" and out["supply"]["circulating_supply"] == 2e9
+    assert not [u for u in B.HEALTH if "summary/fees" in u] and C.LLAMA_PROTO.format(slug="babylon-protocol") in B.HEALTH
+    B.HEALTH.clear()
 
 
 def test_btc_sector_check_against_coingecko():

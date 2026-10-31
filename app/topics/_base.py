@@ -9,6 +9,8 @@ built with _part so one dead source blanks one chart. What is new here:
   manual(slug, name)   a hand-entered series from data/<slug>/<name>.csv (date,value,source,note; or date,series,value,...)
                        for data that has no free API (announcements, surveys). Adding a point = one committed line; Railway redeploys.
   payload(parts)       builds {key: value, key_error: ..., as_of, stale} from {key: fn}.
+  handled(key, how)    a failure the page already makes up for (another source answered, the source is closed to servers and the card
+                       says so): /api/health still lists it as failing, with `handled`, but raises no alert.
 """
 from __future__ import annotations
 
@@ -16,7 +18,9 @@ import csv
 import hashlib
 import json
 import subprocess
+import threading
 import time
+from urllib.parse import urlparse
 from pathlib import Path
 
 import numpy as np
@@ -68,6 +72,8 @@ def _last(s: pd.Series):
 # ------------------------------------------------------------------ fetch with a disk snapshot
 STALE: dict[str, float] = {}            # url -> snapshot time, for sources served from the snapshot because the download failed
 HEALTH: dict[str, dict] = {}            # url -> {"module", "ok", "fail", "error"}: last success / failure (unix s) of each real download
+COOLDOWN: dict[str, float] = {}         # host -> unix s until which it is not asked again, after it answered 429 Too Many Requests
+COOL_S, COOL_MAX_S = 15 * 60, 2 * 3600  # how long a 429 keeps a host quiet when it sends no (or an absurd) Retry-After
 
 
 def _caller_module() -> str:
@@ -103,33 +109,74 @@ def _download(url: str, timeout: int = 60, curl: bool = False, headers: dict | N
     return r.content.decode("latin-1") if binary else r.text
 
 
+def _retry_after(e: Exception) -> float | None:
+    """Seconds to keep away from a host that answered 429 (its Retry-After, else COOL_S); None for any other failure."""
+    r = getattr(e, "response", None)
+    if getattr(r, "status_code", None) != 429:
+        return None
+    try:
+        s = float(r.headers.get("Retry-After", ""))
+    except (TypeError, ValueError):
+        s = COOL_S
+    return min(max(s, 60.0), COOL_MAX_S)
+
+
 def fetch(url: str, ttl: float = DAY, *, curl: bool = False, headers: dict | None = None, timeout: int = 60, min_bytes: int = 50, binary: bool = False,
-          post: dict | None = None) -> str:
-    """The text at `url`, cached in memory for `ttl` seconds and kept on disk; the disk copy is served (and STALE[url] set) when the
-    download fails. Raises only when there is neither."""
-    key = url if post is None else url + "#" + json.dumps(post, sort_keys=True)     # a POST is cached and snapshotted per body
+          post: dict | None = None, key: str | None = None, mirrors: tuple[str, ...] = ()) -> str:
+    """The text at `url`, cached in memory for `ttl` seconds and kept on disk; the disk copy is served (and STALE[key] set) when the
+    download fails. Raises only when there is neither.
+
+    key      a stable address for the cache, the snapshot and /api/health when the URL itself changes on every call (an end date of
+             now): without it every call has a new snapshot file, so a failure never finds the last good copy.
+    mirrors  other URLs for the same data (Yahoo's query2 host), tried in turn when the first fails.
+    A host that answers 429 is left alone until its Retry-After (else COOL_S) has passed: the snapshot is served meanwhile instead
+    of asking again and lengthening the block."""
+    base = key or url
+    key = base if post is None else base + "#" + json.dumps(post, sort_keys=True)     # a POST is cached and snapshotted per body
 
     def go():
         snap = _snap(key)
-        h = HEALTH.setdefault(url, {"module": _caller_module(), "ok": None, "fail": None, "error": None})
-        try:
-            text = _download(url, timeout, curl, headers, binary, post)
-            if len(text) < min_bytes:
-                raise ValueError(f"short response ({len(text)} bytes)")
+        h = HEALTH.setdefault(base, {"module": _caller_module(), "ok": None, "fail": None, "error": None})
+        err: Exception | None = None
+        for u in (url, *mirrors):
+            host = urlparse(u).netloc
+            if COOLDOWN.get(host, 0) > time.time():
+                err = err or RuntimeError(f"{host} answered 429 Too Many Requests; not asked again until "
+                                          + time.strftime("%H:%M UTC", time.gmtime(COOLDOWN[host])))
+                continue
+            try:
+                text = _download(u, timeout, curl, headers, binary, post)
+                if len(text) < min_bytes:
+                    raise ValueError(f"short response ({len(text)} bytes)")
+            except Exception as e:
+                err = e
+                wait = _retry_after(e)
+                if wait:
+                    COOLDOWN[host] = time.time() + wait
+                continue
             SNAP_DIR.mkdir(parents=True, exist_ok=True)
             snap.write_text(text, encoding="utf-8")
             STALE.pop(key, None)
+            STALE.pop(base, None)
             h.update(ok=time.time(), error=None)
             return text
-        except Exception as e:
-            h.update(fail=time.time(), error=f"{type(e).__name__}: {str(e)[:160]}")
-            if snap.exists():
-                STALE[key] = snap.stat().st_mtime
-                if key != url:
-                    STALE[url] = snap.stat().st_mtime
-                return snap.read_text(encoding="utf-8")
-            raise
+        h.update(fail=time.time(), error=f"{type(err).__name__}: {str(err)[:160]}")
+        if snap.exists():
+            STALE[key] = snap.stat().st_mtime
+            if key != base:
+                STALE[base] = snap.stat().st_mtime
+            return snap.read_text(encoding="utf-8")
+        raise err
     return _cached(f"topic:{key}", ttl, go)
+
+
+def handled(key: str, how: str) -> None:
+    """Say that the failure of the source at `key` (its /api/health address) is made up for on the page: another source answered, or
+    the source is closed to servers and the card says so. It keeps its status in /api/health (failing or stale), with `handled`, but
+    raises no alert while it is renewed (within two days)."""
+    h = HEALTH.get(key)
+    if h is not None:
+        h.update(handled=time.time(), handled_how=how[:160])
 
 
 def cached_only(url: str) -> str:
@@ -204,7 +251,6 @@ def manual_sources(slug: str, name: str) -> list[dict]:
 def health(module_to_slug: dict[str, str], stale_days: float = 3, failing_days: float = 1) -> dict:
     """Every source downloaded since the server started, grouped by dashboard: fresh (last download worked), stale (serving a snapshot
     because downloads fail), failing (no snapshot to fall back on). `alert` marks those past the thresholds the daily check uses."""
-    from urllib.parse import urlparse
     now = time.time()
     out: dict = {}
     for url, h in sorted(HEALTH.items()):
@@ -217,11 +263,14 @@ def health(module_to_slug: dict[str, str], stale_days: float = 3, failing_days: 
             status, since = "failing", h["fail"]
         age = (now - since) / 86400 if since else None
         alert = (status == "stale" and age is not None and age > stale_days) or (status == "failing" and (h["ok"] is None or (now - h["ok"]) / 86400 > failing_days))
+        how = h.get("handled_how") if status != "fresh" and h.get("handled") and now - h["handled"] < 2 * 86400 else None
+        alert = alert and not how
         d = out.setdefault(slug, {"fresh": 0, "stale": 0, "failing": 0, "alerts": 0, "sources": []})
         d[status] += 1
         d["alerts"] += int(bool(alert))
         d["sources"].append({"host": urlparse(url).netloc, "url": url, "status": status, "since": time.strftime("%Y-%m-%d %H:%M", time.gmtime(since)) if since else None,
-                             "days": round(age, 2) if age is not None else None, "error": h["error"], "alert": bool(alert)})
+                             "days": round(age, 2) if age is not None else None, "error": h["error"], "alert": bool(alert),
+                             **({"handled": how} if how else {})})
     return {"dashboards": out, "checked": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(now)), "thresholds": {"stale_days": stale_days, "failing_days": failing_days}}
 
 
@@ -258,28 +307,43 @@ def weekly(s: pd.Series, how: str = "mean") -> pd.Series:
 
 
 YAHOO = "https://query{n}.finance.yahoo.com/v8/finance/chart/{sym}?period1={p1}&period2={p2}&interval=1d"
+_YAHOO_TURN = threading.Lock()          # one Yahoo download at a time: the warmer, the background fill and visitors share Railway's IP
+
+
+def yahoo_key(sym: str, start: str = "2020-01-01") -> str:
+    """The stable address of one Yahoo series (no end date) for the snapshot and /api/health."""
+    return f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}?period1={int(pd.Timestamp(start).timestamp())}&interval=1d"
 
 
 def yahoo_daily(sym: str, start: str = "2020-01-01", fetcher=None) -> pd.Series:
-    """Daily closes from Yahoo's chart API (ported from the trading bot: explicit dates, the other host after a pause on 429).
-    `fetcher` is the calling module's fetch_json, so tests can replace it there."""
+    """Daily closes from Yahoo's chart API (ported from the trading bot: explicit dates, the query2 host when query1 fails). Yahoo
+    answers Railway with 429 often: then fetch serves the last good copy (stale) and leaves Yahoo alone for a while; a US ticker
+    takes Nasdaq's quote API instead when it answers (fresher than the copy, and the only source when there is no copy), which marks
+    the Yahoo failure handled. `fetcher` is the calling module's fetch_json, so tests can replace it there."""
     fetcher = fetcher or fetch_json
 
     def go():
-        last = None
-        for k in range(2):
-            url = YAHOO.format(n=1 + k % 2, sym=sym, p1=int(pd.Timestamp(start).timestamp()), p2=int(time.time()))
+        p1, p2 = int(pd.Timestamp(start).timestamp()), int(time.time())
+        key = yahoo_key(sym, start)
+        try:
+            with _YAHOO_TURN:
+                j = fetcher(YAHOO.format(n=1, sym=sym, p1=p1, p2=p2), DAY, min_bytes=200, key=key, mirrors=(YAHOO.format(n=2, sym=sym, p1=p1, p2=p2),))
+            res = j["chart"]["result"][0]
+            s = pd.Series(res["indicators"]["quote"][0]["close"], index=pd.to_datetime(res["timestamp"], unit="s").normalize(), dtype=float)
+            copy = s[~s.index.duplicated(keep="last")].dropna()
+            if key not in STALE or "." in sym or "-" in sym:
+                return copy
+            last = None                                      # Yahoo refused and served its last good copy: try Nasdaq for fresher closes
+        except Exception as e:
+            last, copy = e, None
+        if "." not in sym and "-" not in sym:                # US tickers from Nasdaq's quote API instead
             try:
-                res = fetcher(url, DAY, min_bytes=200)["chart"]["result"][0]
-                s = pd.Series(res["indicators"]["quote"][0]["close"], index=pd.to_datetime(res["timestamp"], unit="s").normalize(), dtype=float)
-                return s[~s.index.duplicated(keep="last")].dropna()
+                s = nasdaq_daily(sym, start, fetcher)
+                handled(key, "Yahoo refused; prices from Nasdaq's quote API")
+                return s
             except Exception as e:
-                last = e
-                time.sleep(1 + 2 * k)
-        if "." not in sym and "-" not in sym:                # Yahoo refuses cloud servers (429): US tickers from Nasdaq's quote API instead
-            try:
-                return nasdaq_daily(sym, start, fetcher)
-            except Exception as e:
+                if copy is not None:
+                    return copy
                 last = e
         raise last
     return _cached(f"yahoo:{sym}:{start}", 6 * 3600, go)
@@ -305,5 +369,5 @@ def json_safe(obj):
     return json.loads(json.dumps(obj, default=str, allow_nan=False))
 
 
-__all__ = ["fetch", "fetch_csv", "fetch_json", "manual", "manual_rows", "manual_sources", "payload", "_pts", "_part", "_r", "_num",
+__all__ = ["fetch", "fetch_csv", "fetch_json", "manual", "manual_rows", "manual_sources", "payload", "handled", "_pts", "_part", "_r", "_num",
            "_years_ago", "_last", "latest_date", "yoy", "monthly", "weekly", "stale_info", "STALE", "SNAP_DIR", "MANUAL_DIR", "HOUR", "DAY"]
