@@ -975,6 +975,74 @@ def test_source_health(snapdir, monkeypatch):
     B.HEALTH.clear()
 
 
+class _Resp:
+    def __init__(self, code, retry=None):
+        self.status_code, self.headers = code, ({"Retry-After": str(retry)} if retry is not None else {})
+
+
+def _http(code, retry=None):
+    import requests
+    return requests.HTTPError(f"{code} Client Error", response=_Resp(code, retry))
+
+
+def test_fetch_stable_key_mirrors_and_429_cooldown(snapdir, monkeypatch):
+    """A URL that changes every call (Yahoo's end date) keeps one snapshot under `key`; a 429 sends fetch to the mirror, then to
+    the snapshot, and the host is not asked again until its cooldown ends."""
+    from app import cache
+    B.HEALTH.clear(), B.COOLDOWN.clear()
+    seen, mode = [], {"v": "ok"}
+
+    def dl(url, *a, **k):
+        seen.append(url.split("/")[2])
+        if mode["v"] == "ok":
+            return "x" * 300
+        raise _http(429, retry=600)
+    monkeypatch.setattr(B, "_download", dl)
+    B.fetch("https://a.example/s?end=1", key="https://a.example/s", min_bytes=10)
+    assert seen == ["a.example"] and "https://a.example/s" in B.HEALTH and B.HEALTH["https://a.example/s"]["ok"]
+    cache._cache.clear()
+    mode["v"] = "429"
+    t = B.fetch("https://a.example/s?end=2", key="https://a.example/s", mirrors=("https://b.example/s?end=2",), min_bytes=10)
+    assert t == "x" * 300 and seen[1:] == ["a.example", "b.example"]          # both hosts asked once, then the snapshot
+    assert "https://a.example/s" in B.STALE and 590 < B.COOLDOWN["a.example"] - time.time() <= 600
+    cache._cache.clear()
+    B.fetch("https://a.example/s?end=3", key="https://a.example/s", mirrors=("https://b.example/s?end=3",), min_bytes=10)
+    assert len(seen) == 3                                                      # cooling down: nobody asked, snapshot served
+    st = topics.health()["dashboards"]
+    src = [s for d in st.values() for s in d["sources"] if s["url"] == "https://a.example/s"][0]
+    assert src["status"] == "stale" and "429" in src["error"]
+    B.COOLDOWN.clear(), B.HEALTH.clear()
+
+
+def test_yahoo_429_serves_snapshot_then_nasdaq_marks_handled(snapdir, monkeypatch):
+    from app import cache
+    B.HEALTH.clear(), B.COOLDOWN.clear()
+    yahoo = json.dumps(_yahoo(250, n=250))
+    mode = {"v": "ok"}
+
+    def dl(url, *a, **k):
+        if "nasdaq" in url:
+            rows = [{"date": d.strftime("%m/%d/%Y"), "close": f"${100 + i}"} for i, d in enumerate(pd.bdate_range(end="2026-10-20", periods=60))]
+            return json.dumps({"data": {"tradesTable": {"rows": rows}}})
+        if mode["v"] == "ok":
+            return yahoo
+        raise _http(429)
+    monkeypatch.setattr(B, "_download", dl)
+    assert len(B.yahoo_daily("TSLA", "2019-01-01")) == 250
+    monkeypatch.setattr(B.time, "time", lambda t=time.time() + 3600: t)          # an hour later: another end date (period2), same key
+    cache._cache.clear()
+    mode["v"] = "429"
+    s = B.yahoo_daily("TSLA", "2019-01-01")
+    assert len(s) == 250 and B.yahoo_key("TSLA", "2019-01-01") in B.STALE          # last good Yahoo copy, not Nasdaq
+    assert [u for u in B.HEALTH if "yahoo" in u] == [B.yahoo_key("TSLA", "2019-01-01")]
+    # a ticker never fetched before: Yahoo refused (cooling down), Nasdaq answers, the Yahoo failure is handled (no alert)
+    s = B.yahoo_daily("ZZZZ", "2019-01-01")
+    assert len(s) == 60 and s.iloc[-1] == 159
+    src = [s for d in topics.health()["dashboards"].values() for s in d["sources"] if s["url"] == B.yahoo_key("ZZZZ", "2019-01-01")][0]
+    assert src["status"] == "failing" and not src["alert"] and "Nasdaq" in src["handled"]
+    B.COOLDOWN.clear(), B.HEALTH.clear()
+
+
 def test_robotaxi_cpuc_links():
     from app.topics import robotaxi as R
     html = ('<a class="x" href="/-/media/cpuc-website/q1-2026-waymo.xlsx?rev=ab&amp;hash=1"><span>Waymo\n Q1 2026</span></a>'
