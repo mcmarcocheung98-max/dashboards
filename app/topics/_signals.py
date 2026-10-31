@@ -13,7 +13,8 @@ import pandas as pd
 
 from . import _volume_zones as VZ
 
-HORIZON = 7                       # days ahead the signals are judged and weighted on
+HORIZON = 7                       # default days ahead the signals are judged and weighted on
+HORIZONS = (7, 14, 30)            # every horizon the page and the study compute
 COST_PER_SIDE = 0.00045 + 0.0005  # Hyperliquid perp taker fee + slippage allowance
 ENTER = 0.2                       # composite needed to be long (above) or short (below the negative)
 REFIT_DAYS = 30
@@ -24,7 +25,7 @@ MAX_WEIGHT = 0.4                  # no single signal carries more than this shar
 
 # key: (label, family, what +1 means)
 SIGNALS = {
-    "in_zone": ("Inside a zone", "volume zones", "close inside a live support zone (+1) or resistance zone (-1)"),
+    "in_zone": ("Inside a zone (flipped)", "volume zones", "close inside live resistance (+1) or live support (-1): on these coins a price sitting in a zone has kept going the way it came; sign flipped 30 Oct 2026 after a negative record at 7 days"),
     "near_zone": ("Near a zone", "volume zones", "within 3% above live support (+1, closer = stronger) or below live resistance (-1)"),
     "retest": ("Zone retest", "volume zones", "first day back into live support from above (+1) or into resistance from below (-1)"),
     "dry_retest": ("Retest on thin volume", "volume zones", "a retest on under 0.7x the usual volume: the sellers (buyers) are gone"),
@@ -39,7 +40,7 @@ SIGNALS = {
     "trend": ("Trend", "price", "close above the 50-day average and the 50 above the 200 (+1); below both (-1)"),
     "rsi": ("RSI 14", "price", "oversold under 30 (+1) to overbought over 70 (-1), scaled between"),
     "momentum_30d": ("30-day momentum", "price", "the 30-day return, +-20% = full score"),
-    "range_1y": ("Place in the 1-year range", "price", "within 10% of the 1-year low (+1) to within 10% of the 1-year high (-1)"),
+    "range_1y": ("Place in the 1-year range (flipped)", "price", "within 10% of the 1-year high (+1) to within 10% of the 1-year low (-1), the 52-week-high effect; sign flipped 30 Oct 2026 after a negative record at 7 days"),
     "volume_trend": ("Volume trend with price", "volume", "20-day volume 30% over the 60-day with price up over 20 days (+1), with price down (-1)"),
     "btc_trend": ("BTC trend", "market", "BTC above its 200-day average (+1) or below (-1)"),
     "unlock_window": ("Unlock window", "supply", "1-7 days after an unlock of 1%+ of circulating (+1); the 3 days before one (-1); without a schedule, the 26th-6th month-turn (-1)"),
@@ -88,7 +89,7 @@ def signals(d: pd.DataFrame, btc: pd.DataFrame | None = None, zs: list | None = 
         inside = [z for z in live if z.lo <= px <= z.hi]
         if inside:
             z = max(inside, key=lambda z: z.ratio)
-            in_zone[i] = 1 if z.kind == "buy" else -1
+            in_zone[i] = -1 if z.kind == "buy" else 1                 # flipped: in support -> lower, in resistance -> higher (the record at 7 days)
         sup = [z for z in live if z.kind == "buy" and z.hi < px]
         res = [z for z in live if z.kind == "sell" and z.lo > px]
         if sup:
@@ -144,7 +145,7 @@ def signals(d: pd.DataFrame, btc: pd.DataFrame | None = None, zs: list | None = 
     S["momentum_30d"] = _clip((c / c.shift(30) - 1) / 0.2, idx).to_numpy()
     lo1, hi1 = l.rolling(365, min_periods=120).min(), h.rolling(365, min_periods=120).max()
     pos = ((c - lo1) / (hi1 - lo1).replace(0, np.nan))
-    S["range_1y"] = _clip(np.where(pos <= 0.1, 1.0, np.where(pos >= 0.9, -1.0, 0.0)), idx).where(pos.notna(), 0.0).to_numpy()
+    S["range_1y"] = _clip(np.where(pos <= 0.1, -1.0, np.where(pos >= 0.9, 1.0, 0.0)), idx).where(pos.notna(), 0.0).to_numpy()     # flipped: near the high +1
     vt = v.rolling(20, min_periods=10).mean() / v.rolling(60, min_periods=30).mean()
     p20 = c / c.shift(20) - 1
     S["volume_trend"] = np.where((vt > 1.3) & (p20 > 0), 1.0, np.where((vt > 1.3) & (p20 < 0), -1.0, 0.0))
@@ -244,7 +245,7 @@ def walk_forward(per_coin: dict[str, tuple[pd.DataFrame, pd.Series]], h: int = H
     return {"composite": comp, "fits": fits, "weights_now": w_now, "how_now": how_now, "train_rows_now": int(len(known))}
 
 
-def backtest(comp: pd.Series, c: pd.Series, enter: float = ENTER, cost: float = COST_PER_SIDE, long_short: bool = True) -> dict:
+def backtest(comp: pd.Series, c: pd.Series, enter: float = ENTER, cost: float = COST_PER_SIDE, long_short: bool = True, h: int = HORIZON) -> dict:
     """Trade the composite close to close: position decided at each close from that day's score (+1 above `enter`, -1 below -enter, else 0),
     earning the next day's return; costs on every change of position. Judged over the days the composite exists (after the first fit)."""
     x = comp.dropna()
@@ -260,13 +261,13 @@ def backtest(comp: pd.Series, c: pd.Series, enter: float = ENTER, cost: float = 
     dd = float((eq / eq.cummax() - 1).min())
     days = len(strat)
     direction = np.sign(x.where(x.abs() >= enter)).dropna()
-    hit = float((direction == np.sign(forward(px, HORIZON).reindex(direction.index))).mean()) if len(direction) else None
+    hit = float((direction == np.sign(forward(px, h).reindex(direction.index))).mean()) if len(direction) else None
     return {"days": days, "from": str(x.index[0].date()), "to": str(x.index[-1].date()), "total": float(eq.iloc[-1] - 1), "hold": float(hold.iloc[-1] - 1),
             "a_year": float(eq.iloc[-1] ** (365 / days) - 1) if days > 60 and eq.iloc[-1] > 0 else (-1.0 if days > 60 else None),
             "hold_a_year": float(hold.iloc[-1] ** (365 / days) - 1) if days > 60 else None,
             "sharpe": float(strat.mean() / strat.std() * np.sqrt(365)) if strat.std() > 0 else None, "worst_drop": dd,
             "hold_worst_drop": float((hold / hold.cummax() - 1).min()), "time_long": float((pos > 0).mean()), "time_short": float((pos < 0).mean()),
-            "changes": int((turn > 0).sum()), "hit_rate_7d": hit, "readings": int(len(direction)),
+            "changes": int((turn > 0).sum()), "hit_rate_7d": hit, "hit_horizon": h, "readings": int(len(direction)),
             "equity": [[int(t.timestamp()), round(float(v), 5)] for t, v in eq.items()], "hold_curve": [[int(t.timestamp()), round(float(v), 5)] for t, v in hold.reindex(eq.index).items()]}
 
 

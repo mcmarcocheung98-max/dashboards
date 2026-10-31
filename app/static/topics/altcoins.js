@@ -301,14 +301,34 @@ function volumeTable(coins) {
 }
 
 // ------------------------------------------------------------------ signals: twenty of them, weighted into one reading per coin
-let SG_COIN = null;
-try { SG_COIN = sessionStorage.getItem("sg:coin"); } catch (e) {}
+let SG_COIN = null, SG_H = 7;
+try { SG_COIN = sessionStorage.getItem("sg:coin"); SG_H = +(sessionStorage.getItem("sg:h") || 7); } catch (e) {}
+// one coin's reading at the chosen horizon merged with its static row (price, history), so the cards read one object
+const atHorizon = (d, h) => { const B = (d.by_horizon || {})[String(h)] || {}; return { ...d, ...B, coins: (d.coins || []).map(c => c.status === "ok" && B.coins && B.coins[c.ticker] ? { ...c, ...B.coins[c.ticker] } : c) }; };
+
+function horizonCard(d) {
+  // the same pipeline judged on 7, 14 and 30 days side by side: how many signals earned weight, the top ones, the pooled walk-forward result
+  const hs = d.horizons || [7];
+  const H = ["Judged on", "Signals with weight", "Top weights", "Beat holding (long + short)", "Median Sharpe", "Median worst fall", "Median hit rate", "Beat holding (long only)", "Median Sharpe (long only)", "Median a year (long only)"];
+  return card("Which horizon do the signals predict? The whole fit and backtest, once per horizon",
+    el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...H.map((h, i) => el("th", { style: (i > 1 && i !== 2 ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
+      ...hs.map(h => { const B = (d.by_horizon || {})[String(h)] || {}, P = B.pooled_backtest || {}, W = B.weights || {};
+        const top = Object.entries(W).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => ((d.signals || []).find(x => x.key === k) || { label: k }).label + " " + w1(v)).join(", ");
+        return el("tr", { style: h === SG_H ? "font-weight:650" : "", onclick: () => { SG_H = h; try { sessionStorage.setItem("sg:h", h); } catch (e) {} render(); } },
+          el("td", {}, h + " days"), el("td", {}, B.error ? "error: " + B.error : (P.signals_with_weight ?? "–") + (B.how && B.how.startsWith("equal") ? " (equal: none cleared the bar)" : "")), el("td", { class: "muted" }, top || "–"),
+          el("td", { style: "text-align:right" }, P.coins ? P.beat_hold + " of " + P.coins : "–"), el("td", { style: "text-align:right" }, P.median_sharpe == null ? "–" : P.median_sharpe.toFixed(2)),
+          el("td", { style: "text-align:right", class: "down" }, pctOrDash(P.median_worst_drop, 0)), el("td", { style: "text-align:right", class: P.median_hit_rate_7d > 0.5 ? "up" : P.median_hit_rate_7d < 0.5 ? "down" : "" }, P.median_hit_rate_7d == null ? "–" : Math.round(P.median_hit_rate_7d * 100) + "%"),
+          el("td", { style: "text-align:right" }, P.coins ? P.long_only_beat_hold + " of " + P.coins : "–"), el("td", { style: "text-align:right" }, P.long_only_median_sharpe == null ? "–" : P.long_only_median_sharpe.toFixed(2)),
+          el("td", { style: "text-align:right", class: cls(P.long_only_median_a_year) }, pctOrDash(P.long_only_median_a_year, 0))); }))),
+    note("Each row re-fits the weights on that horizon's forward return and re-runs the walk-forward backtest; the trading rule itself is the same daily close-to-close rule. Hit rate = the share of readings whose direction matched the return over that horizon. Click a row to switch the tab to it. " +
+      "Two signals (inside a zone, place in the 1-year range) had a significantly negative record at 7 days on 30 Oct 2026 and were flipped; their record since is in-sample for that choice."));
+}
 const SG_CLS = { "strong buy": "up", "lean buy": "up", neutral: "", "lean sell": "down", "strong sell": "down" };
 const sc2 = v => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2);
 const w1 = v => v == null ? "–" : (v * 100).toFixed(0) + "%";
 
 function signalsTable(coins) {
-  const H = ["Coin", "Final signal", "Score", "Biggest push", "Walk-forward: strategy a year", "Hold a year", "Sharpe", "Worst fall", "7-day hit rate", "Since"];
+  const H = ["Coin", "Final signal", "Score", "Biggest push", "Walk-forward: strategy a year", "Hold a year", "Sharpe", "Worst fall", "Hit rate", "Since"];
   const rows = coins.filter(c => c.status === "ok").slice().sort((a, b) => (b.score ?? -9) - (a.score ?? -9));
   return el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...H.map((h, i) => el("th", { style: (i > 1 && i !== 3 ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
     ...rows.map(c => { const B = c.backtest || {}, top = (c.contributions || []).filter(x => x.contribution !== 0).slice(0, 2);
@@ -345,7 +365,7 @@ function compositeChart(c, enter) {
       ...linesChart([{ name: "Score", points: c.composite, bar: true }], v => v == null ? "–" : sc2(v), { small: true, hlines: [enter, -enter] }))];
 }
 
-function backtestCard(c, d) {
+function backtestCard(d, c) {
   const B = c.backtest || {}, L = c.backtest_long_only || {};
   if (B.total == null) return card("Walk-forward backtest", note("Not enough history after the first fit (" + (B.days || 0) + " days)."));
   return card("Trading the final signal, walk-forward (" + B.from + " to " + B.to + ", " + B.days + " days)",
@@ -354,7 +374,7 @@ function backtestCard(c, d) {
       kpi("A year: strategy / hold", pctOrDash(B.a_year, 0) + " / " + pctOrDash(B.hold_a_year, 0), cls((B.a_year || 0) - (B.hold_a_year || 0))),
       kpi("Sharpe", B.sharpe == null ? "–" : B.sharpe.toFixed(2)), kpi("Worst fall: strategy / hold", pct(B.worst_drop, 0) + " / " + pct(B.hold_worst_drop, 0)),
       kpi("Time long / short", Math.round(B.time_long * 100) + "% / " + Math.round(B.time_short * 100) + "%"), kpi("Position changes", String(B.changes)),
-      kpi("Right direction over 7 days", B.hit_rate_7d == null ? "–" : Math.round(B.hit_rate_7d * 100) + "% of " + B.readings + " readings", B.hit_rate_7d > 0.5 ? "up" : B.hit_rate_7d < 0.5 ? "down" : ""),
+      kpi("Right direction over " + (B.hit_horizon || d.horizon) + " days", B.hit_rate_7d == null ? "–" : Math.round(B.hit_rate_7d * 100) + "% of " + B.readings + " readings", B.hit_rate_7d > 0.5 ? "up" : B.hit_rate_7d < 0.5 ? "down" : ""),
       kpi("Long only: total / a year", pctOrDash(L.total, 0) + " / " + pctOrDash(L.a_year, 0), cls(L.total))),
     ...linesChart([{ name: "Strategy", points: B.equity, color: css("--s1") }, { name: "Hold " + c.ticker, points: B.hold_curve, dashed: true, color: css("--hold") }], v => v == null ? "–" : v.toFixed(2) + "×", { log: true, small: true }),
     note("Position decided at each close from that day's score (long above +" + d.enter + ", short below −" + d.enter + "), earning the next day's move; " + (d.cost_per_side * 100).toFixed(3) + "% each way on every change, funding not included. " +
@@ -375,14 +395,17 @@ function weightsCard(d) {
 
 const SIGNAL_VIEWS = {
   async signals() {
-    const d = await api("signals");
+    const d0 = await api("signals");
+    if (!(d0.horizons || []).includes(SG_H)) SG_H = d0.horizon || 7;
+    const d = atHorizon(d0, SG_H);
     const ok = (d.coins || []).filter(c => c.status === "ok" && c.score != null);
-    if (!ok.length) return [card(null, el("div", { class: "muted" }, d.btc_error ? "BTC candles are not available right now (" + d.btc_error + ")." : "Candles are loading in the background, back in a few minutes."), stale(d))];
+    if (!ok.length) return [card(null, el("div", { class: "muted" }, d.error ? "The fit is not available right now (" + d.error + ")." : d.btc_error ? "BTC candles are not available right now (" + d.btc_error + ")." : "Candles are loading in the background, back in a few minutes.")), horizonCard(d0), stale(d0)];
     if (!SG_COIN || !ok.some(c => c.ticker === SG_COIN)) SG_COIN = ok.slice().sort((a, b) => b.score - a.score)[0].ticker;
     const c = ok.find(x => x.ticker === SG_COIN), C = d.counts || {};
     const head = card(null, el("div", { class: "kpis" },
       kpi("Leaning buy", String(C.buy || 0), C.buy ? "up" : ""), kpi("Neutral", String(C.neutral || 0)), kpi("Leaning sell", String(C.sell || 0), C.sell ? "down" : ""),
-      kpi("Signals", (d.signals || []).length + " · judged on " + d.horizon + " days"), kpi("Weights re-fitted", "every " + d.refit_days + " days")),
+      kpi("Signals", (d.signals || []).length + " · judged on " + SG_H + " days"), kpi("Weights re-fitted", "every " + d.refit_days + " days")),
+      el("div", { class: "seg", style: "margin:8px 0 4px" }, ...(d.horizons || [7]).map(h => el("button", { class: h === SG_H ? "on" : "", onclick: () => { SG_H = h; try { sessionStorage.setItem("sg:h", h); } catch (e) {} render(); } }, "Judge on " + h + " days"))),
       note("Twenty daily signals on top of the volume zones (where the price sits against them, retests, breaks, the balance of big days, trend, RSI, BTC's trend, unlock windows), each scored −1 to +1, weighted by what it was worth across every coin's past, summed into one score. " +
         "Strong buy ≥ +0.5, lean buy ≥ +" + d.enter + ", lean sell ≤ −" + d.enter + ", strong sell ≤ −0.5. Research, not advice."));
     const pick = el("div", { class: "seg", style: "flex-wrap:wrap;margin-bottom:6px" }, ...ok.map(x => el("button", { class: x.ticker === SG_COIN ? "on" : "", onclick: () => { SG_COIN = x.ticker; try { sessionStorage.setItem("sg:coin", x.ticker); } catch (e) {} render(); } }, x.ticker)));
@@ -390,8 +413,8 @@ const SIGNAL_VIEWS = {
       el("div", { style: "font-size:20px;font-weight:650;margin:4px 0 6px" }, el("span", { class: SG_CLS[c.label] || "" }, c.label), " ", el("span", { class: "muted", style: "font-size:14px" }, "score " + sc2(c.score) + " · " + px(c.price))),
       el("div", { class: "muted" }, "Pushing it: " + (c.contributions || []).filter(x => x.contribution !== 0).slice(0, 4).map(x => x.label + " " + sc2(x.contribution)).join(" · ")),
       signalGrid(c, d), note("Today = the signal's score at the last close; weight = its share of the final score; push = today × weight. Rank corr. and hit rate: over every coin's history pooled (the record the weight comes from) and for this coin alone."));
-    return [head, card("Every coin's final signal", signalsTable(d.coins || []), note("Click a row for its 20 signals and backtest. Strategy and hold figures are the walk-forward backtest below, per coin.")),
-      coinHead, ...compositeChart(c, d.enter), backtestCard(c, d), weightsCard(d), stale(d)];
+    return [head, horizonCard(d0), card("Every coin's final signal, judged on " + SG_H + " days", signalsTable(d.coins || []), note("Click a row for its 20 signals and backtest. Strategy and hold figures are the walk-forward backtest below, per coin.")),
+      coinHead, ...compositeChart(c, d.enter), backtestCard({ ...d, horizon: SG_H }, c), weightsCard({ ...d, horizon: SG_H }), stale(d0)];
   },
 };
 
@@ -455,6 +478,56 @@ function unlockEvents(rows) {
       el("td", { style: "text-align:right" }, e.pct_of_circulating == null ? "–" : "+" + e.pct_of_circulating + "%"), el("td", { class: "muted" }, e.who),
       cell(e.run_up_7d), cell(e.into_day), cell(e.after_7d), cell(e.after_14d), el("td", { style: "text-align:right" }, e.vol_ratio == null ? "–" : e.vol_ratio.toFixed(1)),
       el("td", { style: "text-align:right", class: e.max_vol_day_offset === 0 ? "up" : Math.abs(e.max_vol_day_offset) >= 2 ? "down" : "" }, e.max_vol_day_offset === 0 ? "same day" : (e.max_vol_day_offset > 0 ? "+" : "") + e.max_vol_day_offset + "d")))));
+}
+
+// ------------------------------------------------------------------ the coin's signal board: the BTC spot signal's set-up, per coin
+const BOARD_CLS = { "STRONG BUY": "up", BUY: "up", NEUTRAL: "", SELL: "down", "STRONG SELL": "down" };
+const sgn2 = v => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2);
+function boardCard(f) {
+  const b = f.board;
+  if (!b) return null;
+  if (b.status !== "ok") return card(f.ticker + " signal board", note(b.status === "error" ? "Not available right now (" + (b.why || "") + ")." : "Not enough gauges yet: " + (b.why || "") + "."));
+  const col = b.action === "BUY" ? "--up" : b.action === "SELL" ? "--down" : "--muted";
+  const head = card(f.ticker + " signal board · data for " + b.day,
+    el("div", { style: "font-size:28px;font-weight:700;color:var(" + col + ")" }, b.action), el("div", {}, b.words),
+    el("div", { class: "kpis", style: "margin-top:10px" }, kpi("Score", sgn2(b.aggregate), cls(b.aggregate)), kpi("Label", b.label, BOARD_CLS[b.label] || ""),
+      kpi("vs day before", b.prev == null ? "–" : sgn2(b.aggregate - b.prev), cls(b.aggregate - b.prev)), kpi("vs a week before", b.week == null ? "–" : sgn2(b.aggregate - b.week), cls(b.aggregate - b.week)),
+      kpi("Gauges with data", b.n + " of " + ((b.gauges_available || []).length + (b.gauges_missing || []).length)), kpi("In buy / sell zones", b.n_buy + " / " + b.n_sell),
+      kpi("Sell signal", b.sell.words, b.sell.state ? "down" : "")),
+    el("div", { class: "muted", style: "margin-top:6px" }, "Buy at " + sgn2(b.levels.strong_buy) + " or above · take profit at " + sgn2(b.levels.sell) + " or below. Same set-up as the bot's BTC spot signal; information only, the altcoin engine does not trade it."));
+  // score bars (left) against the price (right), with the first day of each sell signal marked
+  const host = el("div", { class: "chart", style: "height:320px" });
+  setTimeout(() => {
+    const c = newChart(host, { leftPriceScale: { visible: true, borderVisible: false }, rightPriceScale: { borderVisible: false, mode: 1 } });
+    const pxs = c.addLineSeries({ priceScaleId: "right", color: css("--muted"), lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false, priceFormat: { type: "custom", formatter: px, minMove: 0.0001 } });
+    const sc = c.addHistogramSeries({ priceScaleId: "left", priceFormat: { type: "price", precision: 2, minMove: 0.01 }, base: 0, priceLineVisible: false, lastValueVisible: false });
+    const ser = b.series || [];
+    pxs.setData(ser.filter(r => r[2] != null).map(r => ({ time: r[0], value: r[2] })));
+    sc.setData(ser.filter(r => r[1] != null).map(r => ({ time: r[0], value: r[1], color: r[1] >= b.levels.strong_buy ? css("--up") : r[1] <= b.levels.sell ? css("--s2") : "rgba(128,128,128,.35)" })));
+    pxs.setMarkers(ser.filter((r, i) => r[3] > 0 && (i === 0 || ser[i - 1][3] !== r[3])).map(r => ({ time: r[0], position: "aboveBar", color: r[3] === 2 ? css("--down") : css("--s2"), shape: "arrowDown", size: 0.8, text: r[3] === 2 ? "trend break" : "take profit" })));
+    syncAdd(c, pxs, ser.filter(r => r[2] != null).map(r => ({ time: r[0], value: r[2] })));
+  });
+  const chart = card("Score (bars, left) and " + f.ticker + " price (line, right, log), last 2 years", host,
+    note("Green bars = buy zone (≥ +" + b.levels.strong_buy + ") · orange = take-profit zone (≤ " + b.levels.sell + ") · arrows = the first day of each sell signal. Score history from " + b.history_from + "."));
+  const gauges = card("The gauges today", el("div", { class: "scroll" }, el("table", {},
+      el("tr", {}, ...["Gauge", "Group", "Reading", "Zone", "Score", "Weight"].map((h, i) => el("th", { style: (i > 3 ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
+      ...b.rows.map(r => el("tr", { title: r.source }, el("td", {}, r.name), el("td", { class: "muted" }, r.group), el("td", {}, r.value), el("td", { class: cls(r.score) }, r.zone),
+        el("td", { style: "text-align:right", class: cls(r.score) }, sgn2(r.score)), el("td", { style: "text-align:right" }, r.weight))))),
+    (b.gauges_missing || []).length ? note("Without data for this coin: " + b.gauges_missing.join(", ") + ".") : null,
+    note("Hover a gauge for its zone thresholds and source. Valuation gauges count double in the score, as on the BTC board."));
+  const why = card("Why the score is what it is", ...(b.explain || []).map(t => el("div", { style: "margin:4px 0" }, t)),
+    el("div", { style: "margin-top:8px" }, el("b", {}, "Sell checks: "), ...b.sell.checks.flatMap(([ok, t]) => [el("span", { class: ok ? "down" : "muted" }, (ok ? "✓ " : "✗ ") + t), el("br")])));
+  const fl = (b.flips || []).length ? card("What would move it", el("div", { class: "scroll" }, el("table", {},
+      el("tr", {}, ...["Gauge", "Buy zone starts", "Fully buy", "Sell zone starts", "Fully sell"].map((h, i) => el("th", { style: (i ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
+      ...b.flips.map(r => r.level != null ? el("tr", {}, el("td", {}, r.gauge), el("td", { colspan: 4, style: "text-align:right" }, px(r.level) + " (" + pct(r.level_pct, 0) + " from here): below it the trend-break check is on"))
+        : el("tr", {}, el("td", {}, r.gauge), ...["buy_at", "buy_full_at", "sell_at", "sell_full_at"].map(k => el("td", { style: "text-align:right" }, px(r[k]) + " (" + pct(r[k + "_pct"], 0) + ")")))))),
+    note("Price levels that move each price-based gauge to the edge of its zones, from today's averages; the other gauges depend on fees, TVL, unlocks and BTC.")) : null;
+  const rec = card(f.ticker + " after each zone: median move over the next 30 / 90 / 180 days (zone read the day before)", el("div", { class: "scroll" }, el("table", {},
+      el("tr", {}, ...["Zone", "Days", "30 days", "90 days", "180 days"].map((h, i) => el("th", { style: (i ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
+      ...(b.record || []).map(r => el("tr", { style: r.zone === "ALL DAYS" ? "font-style:italic" : "" }, el("td", { class: BOARD_CLS[r.zone] || "" }, r.zone), el("td", { style: "text-align:right" }, r.days),
+        ...[30, 90, 180].map(h => el("td", { style: "text-align:right", class: cls(r[h + "d"]) }, r[h + "d"] == null ? "–" : pct(r[h + "d"], 0) + " (" + Math.round(r[h + "d_up"] * 100) + "% up)")))))),
+    note("The coin's own history since " + b.history_from + " (Hyperliquid candles), so a few hundred days per zone at best: a sanity check on the zones, not a forecast. The BTC board has four cycles behind it; this has part of one."));
+  return el("div", {}, head, chart, gauges, why, fl, rec);
 }
 
 function unlockMiniCard(f) {
@@ -523,7 +596,7 @@ async function coinView(t) {
   const f = await coinData(t);
   if (!f.series || !f.series.price) return [header(f), card(null, el("div", { class: "muted" }, "Not available right now: prices are loading in the background."), stale(f))];
   const S = f.series;
-  return [header(f), card(null, strip(f)), zoneCard(f), unlockMiniCard(f), notesCard(f),
+  return [header(f), card(null, strip(f)), boardCard(f), zoneCard(f), unlockMiniCard(f), notesCard(f),
     card(f.ticker + " and BTC rebased to the same start (log)", ...linesChart([{ name: f.ticker, points: S.price }, { name: "BTC, rebased", points: S.btc_indexed, dashed: true, color: css("--hold") }], px, { log: true })),
     el("div", { class: "grid2" },
       card(f.ticker + " ÷ BTC (log): rising = beating BTC", ...linesChart([{ name: f.ticker + "/BTC", points: S.ratio }], v => v == null ? "–" : v.toPrecision(3), { log: true, small: true })),

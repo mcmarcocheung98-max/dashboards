@@ -1431,3 +1431,39 @@ def test_method_tab_takes_calculation_and_caveat_sections_from_the_readme(monkey
 def test_every_dashboard_leaves_about_free_for_the_method_tab():
     for slug, t in topics.REGISTRY.items():
         assert "about" not in dict(t.tabs) and "method" not in topics.endpoints(slug), slug
+
+
+def test_btc_zones_models_and_thresholds():
+    from app.topics import btc_cycles as C
+    idx = pd.date_range("2019-01-01", periods=2200, freq="D")
+    flat = pd.Series(100.0, index=idx)
+    z = C.btc_zones(flat, [{"date": "2024-06-01", "label": "Peak"}, {"date": "2025-06-01", "label": "Low"}])
+    by = {m["key"]: m for m in z["models"]}
+    assert by["mayer"]["now"] == 1.0 and by["x2y"]["now"] == 1.0 and by["w200"]["now"] == 1.0 and by["pi_top"]["now"] == 0.5
+    assert all(m["zone"] in ("neither", None) for m in z["models"] if m["buy"] or m["sell"]) and z["n_buy"] == 0 and z["n_sell"] == 0 and z["n_models"] == 6
+    assert by["rsi_w"]["zone"] is None                                        # a flat series has no RSI (0 / 0)
+    assert by["mayer"]["at"]["2024-06-01"] == 1.0 and [m["date"] for m in z["markers"]] == ["2024-06-01", "2025-06-01"]
+    # a 60% drop over the last 60 days: below 0.8 x 200-day, below the 2-year MA, below the 200-week MA, RSI washed out
+    crash = flat.copy(); crash.iloc[-60:] = np.linspace(100, 40, 60)
+    z2 = C.btc_zones(crash, [])
+    b2 = {m["key"]: m for m in z2["models"]}
+    assert b2["mayer"]["zone"] == "buy" and b2["x2y"]["zone"] == "buy" and b2["w200"]["zone"] == "buy" and b2["rsi_w"]["zone"] == "buy" and z2["trend"] == "below" and z2["n_buy"] >= 4
+    # an 8x run in 120 days: Mayer above 2.4, price above 5 x the 2-year MA, the Pi Cycle 111-day MA above 2 x 350-day
+    run = flat.copy(); run.iloc[-120:] = np.linspace(100, 800, 120)
+    b3 = {m["key"]: m for m in C.btc_zones(run, [])["models"]}
+    assert b3["mayer"]["zone"] == "sell" and b3["x2y"]["zone"] == "sell" and b3["pi_top"]["zone"] == "sell" and b3["rsi_w"]["zone"] in ("sell", None)
+    assert set(C.btc_zones(flat, [])["lines"]) == {"mayer_buy", "mayer_sell", "ma2y", "ma2y_x5", "ma200w"}
+
+
+def test_btc_sector_supply_overhang_holds_undervalued_at_neutral():
+    from app.topics import btc_cycles as C
+    coin = lambda t, flt, unl: {"ticker": t, "name": t, "kpi": {"vs_btc_90d": -0.3, "rsi_vs_btc": 40, "from_high": -0.5, "float": flt, "unlock_12m": unl}}
+    day = 86400 * 7
+    metrics = {"stablecoins": [[i * day, 100 + i] for i in range(20)]}        # usage up: the stablecoin sector reads undervalued on usage
+    light = {s["rank"]: s for s in C.sector_status([coin(t, 0.9, 0.05) for t in ("ENA", "TRX", "SKY")], metrics, {})}
+    heavy = {s["rank"]: s for s in C.sector_status([coin(t, 0.15, 0.3) for t in ("ENA", "TRX", "SKY")], metrics, {})}
+    some = {s["rank"]: s for s in C.sector_status([coin(t, 0.4, 0.12) for t in ("ENA", "TRX", "SKY")], metrics, {})}
+    assert light[2]["status"] == "Undervalued" and light[2]["overhang"] == "light"
+    assert heavy[2]["status"] == "Neutral" and heavy[2]["overhang"] == "heavy" and heavy[2]["overhang_note"]
+    assert some[2]["status"] == "Undervalued" and some[2]["overhang"] == "some" and some[2]["float"] == 0.4
+    assert light[7]["overhang"] is None                                        # no supply data at all

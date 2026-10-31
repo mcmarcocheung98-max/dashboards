@@ -10,6 +10,7 @@ import pytest
 
 from app import topics
 from app.topics import _base as B
+from app.topics import _coin_board as CB
 from app.topics import _signals as SG
 from app.topics import _unlocks as UL
 from app.topics import _volume_zones as VZ
@@ -234,11 +235,18 @@ def test_volume_and_unlock_tabs(filled):
     assert u["date_check"] >= u["events_in_history"] * 0.4                            # the fake puts extra volume on the listed days (the 2nd and 5th share a +-4 window)
     f = A.ENDPOINTS["ena"]()
     assert f["unlocks"]["tab"] == "#unlocks" and f["unlocks"]["coming"] and all("date" in r for r in f["unlocks"]["coming"])
+    b = f["board"]
+    assert b["status"] == "ok" and b["label"] in CB.ZONES and b["action"] in ("BUY", "SELL", "HOLD") and -1 <= b["aggregate"] <= 1 and b["n"] >= CB.MIN_GAUGES
+    assert {"mayer", "from_high", "rsi", "btc_mayer", "zone_pos", "unlock_30d"} <= set(b["gauges_available"]) and len(b["rows"]) == b["n"] and b["series"] and len(b["series"][0]) == 4
+    assert b["record"][-1]["zone"] == "ALL DAYS" and b["explain"] and b["flips"] and b["sell"]["state"] in (0, 1, 2) and len(b["sell"]["checks"]) == 3
+    B.json_safe(b)
+    rb = {x["key"]: x for x in A.READINGS()}
+    assert rb["board_ena"]["tab"] == "ena" and rb["board_ena"]["value"] == b["label"] and rb["board_ena"]["lean"] in (-1, 0, 1)
     assert "unlocks" not in A.ENDPOINTS["sol"]()
     r = {x["key"]: x for x in A.READINGS()}
     assert {"vz_ena", "vz_pepe", "ena_next_unlock"} <= set(r) and r["vz_ena"]["tab"] == "volume" and r["ena_next_unlock"]["lean"] in (-1, 0)
     m = topics.method("altcoins")
-    assert [s["title"] for s in m["sections"]] == ["The buy zone rule", "The volume-zone rule", "The signal weighting rule and backtest method", "The unlock study method"]
+    assert [s["title"] for s in m["sections"]] == ["The buy zone rule", "The coin signal board rule", "The volume-zone rule", "The signal weighting rule and backtest method", "The unlock study method"]
 
 
 def test_offline_volume_and_unlocks_degrade(tmp_path, monkeypatch):
@@ -248,6 +256,8 @@ def test_offline_volume_and_unlocks_degrade(tmp_path, monkeypatch):
     cache._cache.clear()
     d = A._volume_now()
     assert all(c["status"] in ("error", "not on Hyperliquid") for c in d["coins"]) and d["counts"]["coins"] == 0
+    sg = A._signals_now()
+    assert all(c["status"] in ("error", "not on Hyperliquid") for c in sg["coins"]) and sg["by_horizon"] == {} and sg["btc_error"] == "ConnectionError"
     u = A._unlocks_now()
     assert u["study_error"] == "ConnectionError" and u["next"] and len(u["events"]) > 80 and "price" not in u
     B.json_safe(u)
@@ -279,6 +289,12 @@ def test_signals_are_bounded_use_no_future_and_fire():
     d3 = pd.DataFrame({"open": o, "high": h, "low": l, "close": c, "volume": v}, index=idx)
     S3 = SG.signals(d3, None)
     assert S3.absorption.iloc[150] == 1 and S3.big_day.iloc[150] == 1 and S3.absorption.abs().sum() == 1
+    # the two flipped signs: inside a support zone reads -1, near the 1-year high reads +1
+    o5 = o.copy(); c5 = c.copy(); v5 = v.copy(); o5[100], c5[100], v5[100] = 10.0, 10.5, 2000.0; c5[101:] = 10.2; o5[101:] = 10.2   # a big buy day leaves support 10.0-10.5; the price then sits inside it
+    S5 = SG.signals(pd.DataFrame({"open": o5, "high": np.maximum(o5, c5) + 0.1, "low": np.minimum(o5, c5) - 0.1, "close": c5, "volume": v5}, index=idx), None)
+    assert S5.in_zone.iloc[105] == -1
+    rising = pd.DataFrame({"open": np.linspace(1, 3, 400), "high": np.linspace(1, 3, 400) * 1.01, "low": np.linspace(1, 3, 400) * 0.99, "close": np.linspace(1, 3, 400), "volume": np.ones(400)}, index=pd.date_range("2024-01-01", periods=400, freq="D"))
+    assert SG.signals(rising, None).range_1y.iloc[-1] == 1
     ev = pd.DataFrame({"date": [pd.Timestamp("2025-03-10")], "pct_of_circulating": [2.0]})
     S4 = SG.signals(d3, None, unlocks=ev)
     assert S4.unlock_window.loc["2025-03-08"] == -1 and S4.unlock_window.loc["2025-03-10"] == -1 and S4.unlock_window.loc["2025-03-14"] == 1 and S4.unlock_window.loc["2025-04-01"] == 0
@@ -320,10 +336,43 @@ def test_signals_tab(filled):
     B.json_safe(d)
     ok = [c for c in d["coins"] if c["status"] == "ok"]
     assert len(ok) == len(A.HL_COINS) and d["btc_error"] is None and len(d["signals"]) == 20 and d["weights"] and abs(sum(d["weights"].values()) - 1) < 1e-6
+    assert d["horizons"] == [7, 14, 30] and set(d["by_horizon"]) == {"7", "14", "30"} and d["horizon"] == 7
     c = next(x for x in ok if x["ticker"] == "ENA")
     assert c["label"] in ("strong buy", "lean buy", "neutral", "lean sell", "strong sell") and -1 <= c["score"] <= 1 and c["lean"] in (-1, 0, 1)
-    assert len(c["contributions"]) == 20 and len(c["today"]) == 20 and c["composite"] and c["backtest"]["days"] > 100 and "equity" in c["backtest"] and "equity" not in c["backtest_long_only"]
+    assert len(c["contributions"]) == 20 and len(c["today"]) == 20 and c["backtest"]["days"] > 100 and "equity" in c["backtest"] and "equity" not in c["backtest_long_only"] and c["backtest"]["hit_horizon"] == 7
+    h30 = d["by_horizon"]["30"]
+    assert h30["coins"]["ENA"]["composite"] and h30["coins"]["ENA"]["backtest"]["hit_horizon"] == 30 and len(h30["per_signal"]) == 20 and h30["pooled_backtest"]["coins"] == len(ok)
+    assert "signals_with_weight" in h30["pooled_backtest"] and h30["coins"]["ENA"]["score"] == h30["coins"]["ENA"]["score"]           # a number, never NaN
     assert c["unlock_schedule"] is True and next(x for x in ok if x["ticker"] == "SOL")["unlock_schedule"] is False
     assert d["counts"]["buy"] + d["counts"]["sell"] + d["counts"]["neutral"] == len(ok) and d["pooled_backtest"]["coins"] == len(ok) and len(d["per_signal"]) == 20
     r = {x["key"]: x for x in A.READINGS()}
     assert "sig_ena" in r and r["sig_ena"]["tab"] == "signals" and r["sig_ena"]["value"] == c["label"] and r["sig_ena"]["lean"] == c["lean"]
+
+
+# ------------------------------------------------------------------ the coin signal board (the BTC spot signal's set-up, per coin)
+def test_coin_board_scores_zones_aggregate_sell_state_and_record():
+    g = CB.NAMES["mayer"]
+    assert CB.score(0.5, g) == 1 and CB.score(0.7, g) == pytest.approx(0.5) and CB.score(1.0, g) == 0 and CB.score(2.0, g) == pytest.approx(-0.5) and CB.score(3.0, g) == -1
+    assert np.isnan(CB.score(None, g)) and CB.score(5.0, CB.NAMES["unlock_30d"]) == pytest.approx(-0.5) and CB.score(0.0, CB.NAMES["unlock_30d"]) == 0      # sell side only
+    assert CB.score(2.0, CB.NAMES["zone_pos"]) == 1 and CB.score(-0.3, CB.NAMES["zone_score"]) == -0.3                                                    # direct scores, clipped
+    assert [CB.label(v) for v in (0.6, 0.3, 0.0, -0.3, -0.7, float("nan"))] == ["STRONG BUY", "BUY", "NEUTRAL", "SELL", "STRONG SELL", "no data"]
+    idx = pd.date_range("2024-01-01", periods=600, freq="D")
+    rng = np.random.default_rng(2)
+    px = pd.Series(np.exp(np.cumsum(rng.normal(0, 0.03, 600))), index=idx); btc = pd.Series(50000 * np.exp(np.cumsum(rng.normal(0, 0.02, 600))), index=idx)
+    unl = pd.Series(np.linspace(1e9, 3e9, 30), index=pd.date_range("2023-12-01", periods=30, freq="30D"))
+    d = CB.inputs(px, btc, px * 1e9, pd.Series(1e6, index=idx).rolling(30).sum(), pd.Series(1e9, index=idx), unl, 2e9, pd.Series(0.0, index=idx), pd.Series(np.nan, index=idx))
+    assert {"mayer", "p_fees_rel", "p_tvl_rel", "from_high", "rsi", "unlock_30d", "btc_mayer", "zone_pos"} <= set(d.columns) and d.zone_score.isna().all()
+    sc = CB.board(d)
+    assert sc["aggregate"].notna().sum() > 300 and sc["aggregate"].dropna().abs().max() <= 1 and (sc.n[sc["aggregate"].notna()] >= CB.MIN_GAUGES).all()
+    assert sc.weight_sum.iloc[-1] == sum(CB.NAMES[k].weight for k in d.columns if k in CB.NAMES and np.isfinite(d[k].iloc[-1]))
+    d2 = d.copy(); d2.iloc[500:, :] *= 1.3
+    pd.testing.assert_frame_equal(CB.board(d2).iloc[:500], sc.iloc[:500])                        # nothing uses a later day
+    # a hand-made day: everything deep in its buy zone except a stretched coin with a trend break
+    hot = d.copy(); hot.loc[idx[-1], ["mayer", "from_high", "rsi", "btc_mayer", "p_fees_rel", "p_tvl_rel"]] = [3.0, 1.0, 85, 2.5, 3.0, 3.0]; hot.loc[idx[-1], "ma20w"] = 10.0; hot.loc[idx[-1], "price"] = 1.0
+    sch = CB.board(hot); st = CB.sell_state(sch, CB.sell_checks(hot, sch))
+    assert sch["aggregate"].iloc[-1] < -0.5 and st.iloc[-1] == 2 and CB.action_for(sch["aggregate"].iloc[-1], 2)["action"] == "SELL"
+    assert CB.action_for(0.6, 0)["action"] == "BUY" and CB.action_for(0.1, 0)["action"] == "HOLD" and CB.action_for(-0.3, 1)["words"].startswith("TAKE PROFIT")
+    p = CB.payload(d)
+    assert p["status"] == "ok" and p["label"] in CB.ZONES and len(p["series"]) <= 731 and p["record"][-1]["zone"] == "ALL DAYS" and p["record"][0]["zone"] == "STRONG BUY"
+    assert p["flips"][0]["gauge"].startswith("Price / 200") and p["flips"][0]["buy_at"] < p["flips"][0]["sell_at"] and p["explain"][-1].startswith("Last 12 months")
+    assert CB.payload(CB.inputs(px.iloc[:100]))["status"] == "no data"                            # too short for any gauge: no board

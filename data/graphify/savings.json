@@ -1,0 +1,182 @@
+{
+ "measured": "2026-10-31",
+ "tasks": [
+  {
+   "task": "Where does the top card follow the timeline, and how do dashboards use it?",
+   "keywords": [
+    "followHead",
+    "datedHead"
+   ],
+   "files": 15,
+   "naive_tokens": 118344,
+   "graph_tokens": 1278,
+   "nodes_found": 890,
+   "example_files": [
+    "app/static/topic.html",
+    "app/static/topics/ai.js",
+    "app/static/topics/altcoins.js",
+    "app/static/topics/btc-cycles.js"
+   ]
+  },
+  {
+   "task": "What does _r() do and who depends on it?",
+   "keywords": [
+    "_r("
+   ],
+   "files": 22,
+   "naive_tokens": 190408,
+   "graph_tokens": 1263,
+   "nodes_found": 771,
+   "example_files": [
+    "app/topics/_base.py",
+    "app/topics/ai_adoption.py",
+    "app/topics/ai_jobs.py",
+    "app/topics/altcoins.py"
+   ]
+  },
+  {
+   "task": "How does the month-end archive reach OneDrive?",
+   "keywords": [
+    "archive",
+    "rclone"
+   ],
+   "files": 18,
+   "naive_tokens": 76438,
+   "graph_tokens": 1316,
+   "nodes_found": 128,
+   "example_files": [
+    "README.md",
+    "app/archive.py",
+    "app/cloud.py",
+    "app/server.py"
+   ]
+  },
+  {
+   "task": "How are Ask Claude questions rate-limited?",
+   "keywords": [
+    "ASK_PER_HOUR",
+    "Limit"
+   ],
+   "files": 4,
+   "naive_tokens": 7513,
+   "graph_tokens": 1291,
+   "nodes_found": 142,
+   "example_files": [
+    "app/ask.py",
+    "app/server.py",
+    "docs/ASK.md",
+    "tests/test_ask.py"
+   ]
+  },
+  {
+   "task": "How does a private dashboard check the passcode?",
+   "keywords": [
+    "PRIVATE_PASSCODE",
+    "dash_auth"
+   ],
+   "files": 7,
+   "naive_tokens": 29172,
+   "graph_tokens": 1295,
+   "nodes_found": 121,
+   "example_files": [
+    "README.md",
+    "app/auth.py",
+    "app/server.py",
+    "app/static/topic.html"
+   ]
+  },
+  {
+   "task": "Where are NBA odds de-vigged into a fair price?",
+   "keywords": [
+    "devig",
+    "fair_p"
+   ],
+   "files": 5,
+   "naive_tokens": 38835,
+   "graph_tokens": 1289,
+   "nodes_found": 338,
+   "example_files": [
+    "app/static/topics/nba-odds.js",
+    "app/topics/nba_odds.py",
+    "app/topics/nba_sim.py",
+    "data/nba-odds/README.md"
+   ]
+  },
+  {
+   "task": "How is the Pokemon heat score built?",
+   "keywords": [
+    "heat",
+    "cooldown"
+   ],
+   "files": 14,
+   "naive_tokens": 110143,
+   "graph_tokens": 1293,
+   "nodes_found": 328,
+   "example_files": [
+    "app/static/topics/ai.js",
+    "app/static/topics/climate.js",
+    "app/static/topics/compute-chips.js",
+    "app/static/topics/pokemon-cards.js"
+   ]
+  },
+  {
+   "task": "How does what-changed-since-yesterday save a snapshot a day?",
+   "keywords": [
+    "save_today",
+    "READINGS"
+   ],
+   "files": 47,
+   "naive_tokens": 280533,
+   "graph_tokens": 1285,
+   "nodes_found": 207,
+   "example_files": [
+    "app/ask.py",
+    "app/topics/__init__.py",
+    "app/topics/_daily.py",
+    "app/topics/ai.py"
+   ]
+  },
+  {
+   "task": "Which sources does the housing dashboard download?",
+   "keywords": [
+    "housing",
+    "fetch("
+   ],
+   "files": 40,
+   "naive_tokens": 243890,
+   "graph_tokens": 1249,
+   "nodes_found": 279,
+   "example_files": [
+    "README.md",
+    "app/static/index.html",
+    "app/static/topic.html",
+    "app/static/topics/housing.js"
+   ]
+  },
+  {
+   "task": "How does fetch fall back to a disk snapshot when a source is down?",
+   "keywords": [
+    "snapshot",
+    "STALE"
+   ],
+   "files": 59,
+   "naive_tokens": 319160,
+   "graph_tokens": 1319,
+   "nodes_found": 446,
+   "example_files": [
+    "README.md",
+    "app/archive.py",
+    "app/config.py",
+    "app/server.py"
+   ]
+  }
+ ],
+ "repo_tokens": 500284,
+ "repo_files": 103,
+ "graphify_benchmark": {
+  "corpus_tokens": 200866,
+  "avg_query_tokens": 1624,
+  "reduction_x": 123.7
+ },
+ "method": "tokens = characters / 4. Naive = every file a search for the task's keywords would point you to, read whole, which is what a session does without the map. Graph = the text graphify query returns for the same question, capped at 1,500 tokens. graphify's own benchmark compares an average query with reading the whole corpus."
+}

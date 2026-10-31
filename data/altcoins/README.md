@@ -10,7 +10,7 @@ dashboard. It replaces the separate pages `/hype`, `/ena`, `/sol`, `/near` and `
 | Buy zones | Every coin's zone (top, mid, floor), where today's price sits against it, what set the top, the 30-day move and RSI 14; sorted in-zone first |
 | Volume zones | Per coin (pick one): daily candles with the big-volume days marked and the support / resistance zones they left, what the coin did after its own big days and zone retests, and a table of every coin against its zones |
 | Signals | Twenty daily signals on top of the volume zones, each scored −1 to +1, weighted by their record across every coin and summed into one final signal per coin; a table of all coins, each coin's 20 signals with weights, the score day by day and a walk-forward backtest of trading it |
-| HYPE, ENA, SOL, NEAR | One tab per candidate: price against BTC, RSI, market cap, the case for it, its buy zone on a price chart, then Fundamentals (fees, TVL, supply and unlocks against price, the multiples, the unlock schedule) and the Projection (bear / base / bull to end-2028) |
+| HYPE, ENA, SOL, NEAR | One tab per candidate: its signal board (below), price against BTC, RSI, market cap, the case for it, its buy zone on a price chart, then Fundamentals (fees, TVL, supply and unlocks against price, the multiples, the unlock schedule) and the Projection (bear / base / bull to end-2028) |
 | ENA unlocks | ENA's full unlock schedule (past and ahead), the next unlock, what the price did before / into / after every unlock against an ordinary day, simple short-before / buy-after rules with costs and a placebo, and a date check of each listed day against volume |
 | Memecoins | The basket of six memecoins (see `data/memecoins/README.md`) |
 | Meme season | The basket against BTC and the season reading (see `data/memecoins/README.md`) |
@@ -26,6 +26,41 @@ dashboard. It replaces the separate pages `/hype`, `/ena`, `/sol`, `/near` and `
 Mechanical and recomputed from each day's prices; research, not investment advice. A coin falling hard sits "in zone" for a long time,
 which is why the 30-day move and RSI are shown beside it. Each coin's status is a daily reading, so "What changed since yesterday" flags a coin
 entering or leaving its zone.
+
+## The coin signal board rule (`app/topics/_coin_board.py`)
+
+The trading bot's BTC spot signal, rebuilt per coin. Each gauge scores a day from +1 (in its buy zone, where past lows sat) to −1 (in its
+sell zone, near past tops), 0 between, with a straight ramp through each zone; the score is the weighted average of the gauges with data that
+day (valuation gauges count double; at least four gauges or no score), read at the BTC board's levels: ≥ +0.5 STRONG BUY, ≥ +0.2 BUY,
+≤ −0.2 SELL, ≤ −0.5 STRONG SELL.
+
+| Gauge | Group | Buy zone (+1 at) | Sell zone (−1 at) | Source |
+|---|---|---|---|---|
+| Price / 200-day average | valuation ×2 | < 0.8 (0.6) | > 1.6 (2.4) | the BTC Mayer zones 0.8 / 2.4, widened for altcoin swings |
+| Price-to-fees vs its 1-year median | valuation ×2 | < 0.75 (0.5) | > 1.5 (2.5) | own; market cap / annualised 30-day fees (DefiLlama) |
+| Market cap / TVL vs its 1-year median | valuation ×2 | < 0.75 (0.5) | > 1.5 (2.5) | own; DefiLlama TVL |
+| Price / 1-year high | valuation ×2 | < 50% (30%) | > 90% (100%) | own |
+| RSI 14, daily | momentum | < 35 (25) | > 65 (80) | contrarian, as the BTC board's Fear and Greed |
+| Supply unlocking in the next 30 days, % of circulating | supply | – | > 2% (8%) | sell side only; the unlock file (ENA) or DefiLlama's curve |
+| BTC price / its 200-day average | market | < 1.0 (0.8) | > 1.8 (2.4) | the BTC Mayer zones: altcoins bottom and top with BTC |
+| Volume zone the price sits in | volume zones | inside resistance = +1 | inside support = −1 | the flipped zone signal (record at 7-30 days: t 3.5-5.6) |
+| Twenty-signal final score, 7 days | volume zones | the score itself | the score itself | the Signals tab, walk-forward weights |
+
+**Sell signal, two levels** (the BTC board's shape; altcoins have no halving clock, so the top-season check is dropped): *take profit* when the
+score is ≤ −0.2; *sell, trend break* when a valuation gauge was fully in its sell zone in the last 4 months AND the price is below its 20-week
+average AND the score is not a buy. **Action words**: BUY at ≥ +0.5, SELL at either sell level, else HOLD. Information only.
+
+The tab also shows why the score is what it is (what pushes it each way, what moved since the day before, the distance to the next level),
+the price levels that would move the price-based gauges into their zones, and the coin's median move over the next 30 / 90 / 180 days after
+each zone, over the coin's own Hyperliquid history.
+
+### Caveats
+
+- Every zone is hand-set. The BTC board's are the commonly published ones checked over four cycles; here a coin has one to three years of history
+  and most zones are the BTC ones widened, so the record-by-zone table is the only check on them. Read it before the label.
+- Fees and TVL come from the fundamentals fill (400 days) and market cap from CoinGecko (365 days), so the valuation multiples exist for about a
+  year and their "own median" is short. Coins without fees or TVL (memecoins have none; they have no board) simply lose those gauges.
+- The volume-zone gauges were flipped on 30 Oct 2026 on the same data they are now scored on (see the signals section).
 
 ## The volume-zone rule (`app/topics/_volume_zones.py`)
 
@@ -55,7 +90,12 @@ the 60-day with price up (or down). **Price**: trend (close over the 50-day over
 50%+ over (−1). **Market**: BTC above or below its 200-day average. **Supply**: 1-7 days after an unlock of 1%+ of circulating (+1), the 3 days
 before (−1); coins without a schedule use the 26th-6th month-turn (−1).
 
-**Weighting rule.** Each signal is judged on the return over the next 7 days. Its weight is its Spearman rank correlation with that return over
+Two signs were flipped on 30 Oct 2026 after the first live fit: *inside a zone* now reads +1 in live resistance and −1 in live support, and
+*place in the 1-year range* reads +1 near the 1-year high and −1 near the low (the 52-week-high effect). Both had a significantly negative record
+at 7 days (rank correlation −0.048 and −0.045, t ≈ −3), so their record since that date is in-sample for the flip and should be read as such.
+
+**Weighting rule.** Each signal is judged on the return over the next 7 days by default; the page also fits and backtests the whole thing
+on 14 and 30 days (the "Judge on" switch and the horizon table), with the same trading rule. Its weight is its Spearman rank correlation with that return over
 every coin's history pooled, kept only when positive, at least 1.5 standard errors from zero and measured on 100+ active coin-days, and the kept
 correlations are scaled to sum to 1 with no single signal above 40% (equal weights if nothing qualifies, and the page says so). Final score = Σ weight × signal, clipped to ±1. Strong buy ≥ +0.5, lean buy ≥ +0.2,
 lean sell ≤ −0.2, strong sell ≤ −0.5.
