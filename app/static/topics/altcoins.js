@@ -480,6 +480,56 @@ function unlockEvents(rows) {
       el("td", { style: "text-align:right", class: e.max_vol_day_offset === 0 ? "up" : Math.abs(e.max_vol_day_offset) >= 2 ? "down" : "" }, e.max_vol_day_offset === 0 ? "same day" : (e.max_vol_day_offset > 0 ? "+" : "") + e.max_vol_day_offset + "d")))));
 }
 
+// ------------------------------------------------------------------ the coin's signal board: the BTC spot signal's set-up, per coin
+const BOARD_CLS = { "STRONG BUY": "up", BUY: "up", NEUTRAL: "", SELL: "down", "STRONG SELL": "down" };
+const sgn2 = v => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2);
+function boardCard(f) {
+  const b = f.board;
+  if (!b) return null;
+  if (b.status !== "ok") return card(f.ticker + " signal board", note(b.status === "error" ? "Not available right now (" + (b.why || "") + ")." : "Not enough gauges yet: " + (b.why || "") + "."));
+  const col = b.action === "BUY" ? "--buy" : b.action === "SELL" ? "--sell" : "--muted";
+  const head = card(f.ticker + " signal board · data for " + b.day,
+    el("div", { style: "font-size:28px;font-weight:700;color:var(" + col + ")" }, b.action), el("div", {}, b.words),
+    el("div", { class: "kpis", style: "margin-top:10px" }, kpi("Score", sgn2(b.aggregate), cls(b.aggregate)), kpi("Label", b.label, BOARD_CLS[b.label] || ""),
+      kpi("vs day before", b.prev == null ? "–" : sgn2(b.aggregate - b.prev), cls(b.aggregate - b.prev)), kpi("vs a week before", b.week == null ? "–" : sgn2(b.aggregate - b.week), cls(b.aggregate - b.week)),
+      kpi("Gauges with data", b.n + " of " + ((b.gauges_available || []).length + (b.gauges_missing || []).length)), kpi("In buy / sell zones", b.n_buy + " / " + b.n_sell),
+      kpi("Sell signal", b.sell.words, b.sell.state ? "down" : "")),
+    el("div", { class: "muted", style: "margin-top:6px" }, "Buy at " + sgn2(b.levels.strong_buy) + " or above · take profit at " + sgn2(b.levels.sell) + " or below. Same set-up as the bot's BTC spot signal; information only, the altcoin engine does not trade it."));
+  // score bars (left) against the price (right), with the first day of each sell signal marked
+  const host = el("div", { class: "chart", style: "height:320px" });
+  setTimeout(() => {
+    const c = newChart(host, { leftPriceScale: { visible: true, borderVisible: false }, rightPriceScale: { borderVisible: false, mode: 1 } });
+    const pxs = c.addLineSeries({ priceScaleId: "right", color: css("--muted"), lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false, priceFormat: { type: "custom", formatter: px, minMove: 0.0001 } });
+    const sc = c.addHistogramSeries({ priceScaleId: "left", priceFormat: { type: "price", precision: 2, minMove: 0.01 }, base: 0, priceLineVisible: false, lastValueVisible: false });
+    const ser = b.series || [];
+    pxs.setData(ser.filter(r => r[2] != null).map(r => ({ time: r[0], value: r[2] })));
+    sc.setData(ser.filter(r => r[1] != null).map(r => ({ time: r[0], value: r[1], color: r[1] >= b.levels.strong_buy ? css("--buy") : r[1] <= b.levels.sell ? css("--sell") : "rgba(128,128,128,.35)" })));
+    pxs.setMarkers(ser.filter((r, i) => r[3] > 0 && (i === 0 || ser[i - 1][3] !== r[3])).map(r => ({ time: r[0], position: "aboveBar", color: r[3] === 2 ? css("--down") : css("--sell"), shape: "arrowDown", size: 0.8, text: r[3] === 2 ? "trend break" : "take profit" })));
+    syncAdd(c, pxs, ser.filter(r => r[2] != null).map(r => ({ time: r[0], value: r[2] })));
+  });
+  const chart = card("Score (bars, left) and " + f.ticker + " price (line, right, log), last 2 years", host,
+    note("Green bars = buy zone (≥ +" + b.levels.strong_buy + ") · orange = take-profit zone (≤ " + b.levels.sell + ") · arrows = the first day of each sell signal. Score history from " + b.history_from + "."));
+  const gauges = card("The gauges today", el("div", { class: "scroll" }, el("table", {},
+      el("tr", {}, ...["Gauge", "Group", "Reading", "Zone", "Score", "Weight"].map((h, i) => el("th", { style: (i > 3 ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
+      ...b.rows.map(r => el("tr", { title: r.source }, el("td", {}, r.name), el("td", { class: "muted" }, r.group), el("td", {}, r.value), el("td", { class: cls(r.score) }, r.zone),
+        el("td", { style: "text-align:right", class: cls(r.score) }, sgn2(r.score)), el("td", { style: "text-align:right" }, r.weight))))),
+    (b.gauges_missing || []).length ? note("Without data for this coin: " + b.gauges_missing.join(", ") + ".") : null,
+    note("Hover a gauge for its zone thresholds and source. Valuation gauges count double in the score, as on the BTC board."));
+  const why = card("Why the score is what it is", ...(b.explain || []).map(t => el("div", { style: "margin:4px 0" }, t)),
+    el("div", { style: "margin-top:8px" }, el("b", {}, "Sell checks: "), ...b.sell.checks.flatMap(([ok, t]) => [el("span", { class: ok ? "down" : "muted" }, (ok ? "✓ " : "✗ ") + t), el("br")])));
+  const fl = (b.flips || []).length ? card("What would move it", el("div", { class: "scroll" }, el("table", {},
+      el("tr", {}, ...["Gauge", "Buy zone starts", "Fully buy", "Sell zone starts", "Fully sell"].map((h, i) => el("th", { style: (i ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
+      ...b.flips.map(r => r.level != null ? el("tr", {}, el("td", {}, r.gauge), el("td", { colspan: 4, style: "text-align:right" }, px(r.level) + " (" + pct(r.level_pct, 0) + " from here): below it the trend-break check is on"))
+        : el("tr", {}, el("td", {}, r.gauge), ...["buy_at", "buy_full_at", "sell_at", "sell_full_at"].map(k => el("td", { style: "text-align:right" }, px(r[k]) + " (" + pct(r[k + "_pct"], 0) + ")")))))),
+    note("Price levels that move each price-based gauge to the edge of its zones, from today's averages; the other gauges depend on fees, TVL, unlocks and BTC.")) : null;
+  const rec = card(f.ticker + " after each zone: median move over the next 30 / 90 / 180 days (zone read the day before)", el("div", { class: "scroll" }, el("table", {},
+      el("tr", {}, ...["Zone", "Days", "30 days", "90 days", "180 days"].map((h, i) => el("th", { style: (i ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
+      ...(b.record || []).map(r => el("tr", { style: r.zone === "ALL DAYS" ? "font-style:italic" : "" }, el("td", { class: BOARD_CLS[r.zone] || "" }, r.zone), el("td", { style: "text-align:right" }, r.days),
+        ...[30, 90, 180].map(h => el("td", { style: "text-align:right", class: cls(r[h + "d"]) }, r[h + "d"] == null ? "–" : pct(r[h + "d"], 0) + " (" + Math.round(r[h + "d_up"] * 100) + "% up)")))))),
+    note("The coin's own history since " + b.history_from + " (Hyperliquid candles), so a few hundred days per zone at best: a sanity check on the zones, not a forecast. The BTC board has four cycles behind it; this has part of one."));
+  return el("div", {}, head, chart, gauges, why, fl, rec);
+}
+
 function unlockMiniCard(f) {
   const U = f.unlocks;
   if (!U) return null;
@@ -546,7 +596,7 @@ async function coinView(t) {
   const f = await coinData(t);
   if (!f.series || !f.series.price) return [header(f), card(null, el("div", { class: "muted" }, "Not available right now: prices are loading in the background."), stale(f))];
   const S = f.series;
-  return [header(f), card(null, strip(f)), zoneCard(f), unlockMiniCard(f), notesCard(f),
+  return [header(f), card(null, strip(f)), boardCard(f), zoneCard(f), unlockMiniCard(f), notesCard(f),
     card(f.ticker + " and BTC rebased to the same start (log)", ...linesChart([{ name: f.ticker, points: S.price }, { name: "BTC, rebased", points: S.btc_indexed, dashed: true, color: css("--hold") }], px, { log: true })),
     el("div", { class: "grid2" },
       card(f.ticker + " ÷ BTC (log): rising = beating BTC", ...linesChart([{ name: f.ticker + "/BTC", points: S.ratio }], v => v == null ? "–" : v.toPrecision(3), { log: true, small: true })),

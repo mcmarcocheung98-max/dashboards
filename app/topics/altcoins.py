@@ -7,7 +7,9 @@ volume   big-volume days (3x the 60-day median) and the support / resistance zon
 signals  twenty daily signals on top of the zones (zone position, retests, breaks, big-day balance, trend, RSI, BTC, unlock windows ...),
          each judged on the next 7, 14 and 30 days, weighted by rank correlation on the pooled past of every coin and re-fitted every 30
          days, one final score per coin and horizon with a walk-forward backtest of trading it (_signals.py)
-hype ... one tab per candidate (_coin_page.py): price against BTC, RSI, market cap, the case for it, fundamentals and the projection
+hype ... one tab per candidate (_coin_page.py): its signal board (_coin_board.py: the BTC spot signal's set-up per coin - gauges scored
+         -1..+1 in buy / sell zones, a weighted aggregate with the five levels, take-profit and trend-break sell states, the record by
+         zone and what would flip it), price against BTC, RSI, market cap, the case for it, fundamentals and the projection
 unlocks  ENA's full unlock schedule (data/altcoins/unlocks/ENA.csv) and what the price did before, into and after each unlock, with the
          simple short-before / buy-after rules and a placebo (_unlocks.py)
 basket   the memecoin basket (memecoins.py): prices, momentum against BTC, a sortable table
@@ -35,6 +37,7 @@ import numpy as np
 
 from ..cache import _cached
 from . import Topic
+from . import _coin_board as CB
 from . import _coin_page as P
 from . import _signals as SG
 from . import _unlocks as UL
@@ -104,7 +107,61 @@ def _coin_tab(ticker: str) -> dict:
         now = pd.Timestamp.now("UTC").tz_localize(None).normalize()
         f["unlocks"] = {"recent": [UL._row(r) for r in ev[(ev.date < now) & (ev.date >= now - pd.Timedelta(days=90))].itertuples()],
                         "coming": [UL._row(r) for r in ev[ev.date >= now].head(6).itertuples()], "tab": "#unlocks"}
+    f["board"] = _board_for(ticker, f)
     return f
+
+
+def _series(pts) -> pd.Series:
+    return pd.Series({pd.to_datetime(int(t), unit="s"): v for t, v in (pts or []) if v is not None}, dtype=float).sort_index()
+
+
+def _board_for(ticker: str, f: dict) -> dict:
+    """The coin's signal board (the BTC spot signal's set-up, per coin): Hyperliquid daily closes and BTC's, CoinGecko market cap, DefiLlama fees
+    and TVL from the fundamentals fill, the unlock schedule (hand-entered file, else DefiLlama's curve), and the volume-zone position and
+    twenty-signal score from the Signals tab. Any input that is missing leaves its gauge out; the board needs four."""
+    try:
+        d = hl_daily(ticker)
+        btc = hl_daily("BTC")
+    except Exception as e:
+        return {"status": "error", "why": type(e).__name__}
+    S, FD = f.get("series") or {}, f.get("fundamentals") or {}
+    FS = FD.get("series") or {}
+    now = pd.Timestamp.now("UTC").tz_localize(None).normalize()
+    unlocked, circ = None, None
+    try:
+        if ticker in UL.coins():
+            ev = UL.events(ticker)
+            unlocked = pd.Series(ev.cumulative_m.to_numpy() * 1e6, index=pd.DatetimeIndex(ev.date))
+            circ = float(ev[ev.date <= now].amount_m.sum()) * 1e6 or None
+        elif FS.get("schedule"):
+            unlocked = _series(FS["schedule"])
+            circ = _series(FS.get("supply")) if FS.get("supply") else None                      # circulating supply over time
+            if circ is None or circ.empty:
+                circ = ((FD.get("supply") or {}).get("circulating_supply")) or None
+            if circ is None and f.get("kpi", {}).get("market_cap") and f["kpi"].get("price"):
+                circ = f["kpi"]["market_cap"] / f["kpi"]["price"]
+    except Exception:
+        unlocked, circ = None, None
+    zone_pos = zone_score = None
+    try:
+        ev_for_signals = UL.events(ticker) if ticker in UL.coins() else None
+        zone_pos = SG.signals(d, btc, VZ.zones(d, ticker), ev_for_signals)["in_zone"]
+    except Exception:
+        pass
+    try:
+        blk = (ENDPOINTS["signals"]() or {}).get("by_horizon", {}).get(str(SG.HORIZON), {}).get("coins", {}).get(ticker) or {}
+        if blk.get("composite"):
+            zone_score = _series(blk["composite"])
+    except Exception:
+        pass
+    try:
+        inp = CB.inputs(d.close, btc.close, _series(S.get("market_cap")), _series(FS.get("fees_30d")), _series(FS.get("tvl")), unlocked, circ, zone_pos, zone_score)
+        out = CB.payload(inp)
+    except Exception as e:
+        return {"status": "error", "why": f"{type(e).__name__}: {e}"}
+    out["sources"] = {"price": "Hyperliquid daily closes", "btc": "Hyperliquid BTC daily closes", "market_cap": "CoinGecko (365 days)", "fees_tvl": "DefiLlama via the fundamentals fill (400 days)",
+                      "unlocks": "data/altcoins/unlocks/" + ticker + ".csv" if ticker in UL.coins() else "DefiLlama emissions curve", "zones": "Volume zones and Signals tabs"}
+    return _scrub(out)
 
 
 def _zones_now() -> dict:
@@ -340,6 +397,14 @@ def READINGS() -> list[dict]:
            for r in (ENDPOINTS["zones"]() or {}).get("coins", []) if r["status"] in ("in zone", "above zone", "no zone")]
     out += [{"tab": "volume", "key": f"vz_{c['ticker'].lower()}", "label": f"{c['ticker']} volume zones", "value": c["read"], "lean": c["lean"]}
             for c in (ENDPOINTS["volume"]() or {}).get("coins", []) if c.get("status") == "ok"]
+    for t in CANDIDATES:
+        try:
+            b = (ENDPOINTS[t.lower()]() or {}).get("board") or {}
+        except Exception:
+            b = {}
+        if b.get("status") == "ok":
+            out.append({"tab": t.lower(), "key": f"board_{t.lower()}", "label": f"{t} signal board", "value": b["label"], "lean": 1 if "BUY" in b["label"] else -1 if "SELL" in b["label"] else 0,
+                        "note": f"score {b['aggregate']:+.2f}, {b['sell']['words']}"})
     out += [{"tab": "signals", "key": f"sig_{c['ticker'].lower()}", "label": f"{c['ticker']} final signal", "value": c["label"], "lean": c["lean"],
              "note": f"score {c['score']:+.2f}"} for c in (ENDPOINTS["signals"]() or {}).get("coins", []) if c.get("status") == "ok" and c.get("score") is not None]
     u = ENDPOINTS["unlocks"]() or {}
