@@ -300,7 +300,7 @@ def test_pace_slows_down_and_stops_on_budget(monkeypatch):
     tips = [_uk(23, 30), _uk(23, 30) + 3 * H]
     monkeypatch.setenv("ODDS_MONTHLY_BUDGET", "19000")
     start, end = M.period_bounds(t)
-    days = (end - t) / 86400
+    days = max(0.25, (end - t) / 86400)                                   # same floor as pace(): on the last day of a month only hours are left
     need = M.est_day_cost(tips, 6)
     assert M.pace({"quota": {"used": 0, "remaining": 20000}}, t, tips) == 1.0 or need > 19000 / days
     tight = 19000 - need * days / 3                                        # a third of what the rest of the month needs
