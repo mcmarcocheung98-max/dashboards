@@ -55,7 +55,9 @@ def READINGS() -> list[dict]:
     return out
 
 
-ENDPOINTS = {"map": map_data, "savings": savings}
+# The other tabs draw from the same export as Map; each gets an endpoint of its own name so the registry rule
+# (every tab has an endpoint) holds and Ask Claude on those tabs reads the map.
+ENDPOINTS = {"map": map_data, "savings": savings, **{k: map_data for k in ("how", "gods", "audit", "explore", "use")}}
 SOURCES = [{"name": "graphify (graphifyy on PyPI)", "url": "https://github.com/Graphify-Labs/graphify", "cadence": "rebuilt each session"},
            {"name": "This repository", "url": "https://github.com/mcmarcocheung98-max/dashboards", "cadence": "every push"}]
 NOTES = ("The map is a snapshot exported from graphify-out/ by scripts/graphify_export.py; the commit it was built from is shown on the Map tab. "
