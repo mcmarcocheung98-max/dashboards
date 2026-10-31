@@ -1,9 +1,9 @@
 cycle,sector,start,end,family,source,note
 # When each sector led, one row per burst. Cycles 3-4: the doc's "Burst window" column. Cycles 1-2: the doc has no such column, so the months come from its text (the row's peak date, and the cycle's "Burst duration" paragraph); a month the doc does not give is marked verify. family links a past sector to a 2026-27 candidate sector (sector_status.json).
-1,Payment forks (LTC),2013-10,2013-11,btcfi,research doc: Cycle 1 table (LTC $2 -> $48 Nov 2013),start month verify
-1,Bank-rail ledgers (XRP / NXT),2013-11,2014-01,stable,research doc: Cycle 1 alt phase Nov 2013-Feb 2014,months within the phase - verify
+1,Payment forks (LTC),2013-11,2013-11,btcfi,research doc: Cycle 1 table (LTC $2 -> $48 Nov 2013),"start month 2013-11 (was 2013-10) from CoinMarketCap historical snapshots (coinmarketcap.com/historical/): LTC $1.93 on 20 Oct, $2.45 on 1 Nov, $3.93 on 10 Nov, $40.47 on 30 Nov 2013"
+1,Bank-rail ledgers (XRP / NXT),2013-11,2014-01,stable,research doc: Cycle 1 alt phase Nov 2013-Feb 2014,"months confirmed by CoinMarketCap historical snapshots (coinmarketcap.com/historical/): XRP $0.0064 on 1 Nov, $0.0515 on 1 Dec 2013, then falling; NXT $0.0074 on 15 Dec 2013, $0.078 on 26 Jan, $0.049 on 9 Feb 2014"
 1,Memecoins v1 (DOGE),2013-12,2014-02,meme,research doc: Cycle 1 table (launched Dec 2013; peak Feb 2014),
-1,Anonymity v1 (Darkcoin),2014-04,2014-05,privacy,research doc: Cycle 1 table (Darkcoin peak May 2014),start month verify
+1,Anonymity v1 (Darkcoin),2014-04,2014-05,privacy,research doc: Cycle 1 table (Darkcoin peak May 2014),"start month confirmed by CoinMarketCap historical snapshots (coinmarketcap.com/historical/, listed as Dash): $0.72 on 20 Apr, $1.71 on 27 Apr, $15.13 on 25 May 2014"
 2,Smart-contract platforms (ICO wave),2017-05,2017-06,l1,research doc: Cycle 2 burst paragraph (May-Jun 2017 ICO platforms),
 2,Smart-contract platforms (ETH killers),2017-12,2018-01,l1,research doc: Cycle 2 table (peaks Jan 2018),
 2,Payment / bank-settlement coins,2017-12,2018-01,stable,research doc: Cycle 2 burst paragraph (Dec 2017-Jan 2018 payment coins),

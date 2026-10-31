@@ -1,19 +1,19 @@
 rank,sector,ticker,name,coingecko_id,cmc_slug,defillama_slug,note,llama_chain
 # One row per candidate coin from the doc's 2026-27 table. coingecko_id drives the data; cmc_slug and defillama_slug build the links (blank = no page); defillama_slug also fetches the protocol's TVL, fees and unlock schedule, llama_chain the chain's TVL and fees (DefiLlama's chain name). 'verify' = id copied from memory, confirm with pytest -m network.
 1,On-chain finance with revenue,HYPE,Hyperliquid,hyperliquid,hyperliquid,hyperliquid,,
-1,On-chain finance with revenue,ASTER,Aster,aster-2,aster,aster,verify id,
-1,On-chain finance with revenue,LIT,Lighter,lighter,lighter,lighter,verify id,
+1,On-chain finance with revenue,ASTER,Aster,aster-2,aster,aster,"ids confirmed: CoinGecko API ID aster-2, coinmarketcap.com/currencies/aster, defillama.com/protocol/aster (31 Oct 2026)",
+1,On-chain finance with revenue,LIT,Lighter,lighter,lighter,lighter,"ids confirmed: CoinGecko API ID lighter, coinmarketcap.com/currencies/lighter, defillama.com/protocol/lighter (31 Oct 2026)",
 1,On-chain finance with revenue,JUP,Jupiter,jupiter-exchange-solana,jupiter-ag,jupiter,,
 1,On-chain finance with revenue,AAVE,Aave,aave,aave,aave,,
 1,On-chain finance with revenue,PENDLE,Pendle,pendle,pendle,pendle,,
 2,Stablecoin & payments infrastructure,ENA,Ethena,ethena,ethena,ethena,,
-2,Stablecoin & payments infrastructure,XPL,Plasma,plasma,plasma,,verify id,Plasma
+2,Stablecoin & payments infrastructure,XPL,Plasma,plasma,plasma-xpl,,"ids confirmed: CoinGecko API ID plasma, coinmarketcap.com/currencies/plasma-xpl (was plasma), defillama.com/chain/plasma (31 Oct 2026)",Plasma
 2,Stablecoin & payments infrastructure,TRX,Tron,tron,tron,,,Tron
-2,Stablecoin & payments infrastructure,SKY,Sky,sky,sky,sky-lending,verify id,
+2,Stablecoin & payments infrastructure,SKY,Sky,sky,sky,sky-lending,"ids confirmed: CoinGecko API ID sky, coinmarketcap.com/currencies/sky, defillama.com/protocol/sky-lending (31 Oct 2026)",
 3,RWA / tokenized stocks & Treasuries,ONDO,Ondo,ondo-finance,ondo-finance,ondo-finance,,
 3,RWA / tokenized stocks & Treasuries,LINK,Chainlink,chainlink,chainlink,chainlink,,
-3,RWA / tokenized stocks & Treasuries,SYRUP,Maple Finance,syrup,maple-finance,maple,verify id,
-3,RWA / tokenized stocks & Treasuries,PLUME,Plume,plume,plume,,verify id,
+3,RWA / tokenized stocks & Treasuries,SYRUP,Maple Finance,syrup,maple-finance,maple,"ids confirmed: CoinGecko API ID syrup, coinmarketcap.com/currencies/maple-finance, defillama.com/protocol/maple (31 Oct 2026)",
+3,RWA / tokenized stocks & Treasuries,PLUME,Plume,plume,plume,,"ids confirmed: CoinGecko API ID plume, coinmarketcap.com/currencies/plume (31 Oct 2026)",
 3,RWA / tokenized stocks & Treasuries,CFG,Centrifuge,centrifuge,centrifuge,centrifuge,,
 5,AI x crypto second wave,TAO,Bittensor,bittensor,bittensor,,,
 5,AI x crypto second wave,VIRTUAL,Virtuals Protocol,virtual-protocol,virtual-protocol,virtuals-protocol,,
@@ -29,5 +29,5 @@ rank,sector,ticker,name,coingecko_id,cmc_slug,defillama_slug,note,llama_chain
 8,BTC-fi / Bitcoin L2s,CORE,Core,coredaoorg,core-dao,,,
 8,BTC-fi / Bitcoin L2s,STX,Stacks,blockstack,stacks,,,
 7,Privacy / ZK,DASH,Dash,dash,dash,,,
-8,BTC-fi / Bitcoin L2s,BABY,Babylon,babylon,babylon,babylon-protocol,"DefiLlama slug babylon-protocol and CoinGecko id babylon confirmed (api.llama.fi/protocol/babylon-protocol, gecko_id babylon, 31 Oct 2026); DefiLlama has no fees for it; cmc_slug: verify",
+8,BTC-fi / Bitcoin L2s,BABY,Babylon,babylon,babylon,babylon-protocol,"DefiLlama slug babylon-protocol and CoinGecko id babylon confirmed (api.llama.fi/protocol/babylon-protocol, gecko_id babylon, 31 Oct 2026); DefiLlama has no fees for it; CMC slug babylon confirmed (coinmarketcap.com/currencies/babylon is the live BABY listing; babylon-iou is a separate IOU listing)",
 6,High-throughput L1s / app-chains,NEAR,NEAR Protocol,near,near-protocol,,not in the doc's list,Near
