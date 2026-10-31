@@ -158,6 +158,7 @@ CATEGORIES = (
     ("AI & technology", "How fast AI, chips and machines are arriving, and who leads.", ("ai", "compute-chips", "china-us-tech", "robotaxi", "space")),
     ("People & planet", "The slow forces: population, health and climate.", ("demographics", "longevity", "climate")),
     ("Sentiment & attention", "What people are betting on and paying attention to.", ("prediction-markets", "trends")),
+    ("About this site", "How the dashboards are built, mapped and kept honest.", ("graphify",)),
 )
 
 
