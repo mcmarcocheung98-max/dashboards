@@ -487,7 +487,7 @@ function boardCard(f) {
   const b = f.board;
   if (!b) return null;
   if (b.status !== "ok") return card(f.ticker + " signal board", note(b.status === "error" ? "Not available right now (" + (b.why || "") + ")." : "Not enough gauges yet: " + (b.why || "") + "."));
-  const col = b.action === "BUY" ? "--buy" : b.action === "SELL" ? "--sell" : "--muted";
+  const col = b.action === "BUY" ? "--up" : b.action === "SELL" ? "--down" : "--muted";
   const head = card(f.ticker + " signal board · data for " + b.day,
     el("div", { style: "font-size:28px;font-weight:700;color:var(" + col + ")" }, b.action), el("div", {}, b.words),
     el("div", { class: "kpis", style: "margin-top:10px" }, kpi("Score", sgn2(b.aggregate), cls(b.aggregate)), kpi("Label", b.label, BOARD_CLS[b.label] || ""),
@@ -503,8 +503,8 @@ function boardCard(f) {
     const sc = c.addHistogramSeries({ priceScaleId: "left", priceFormat: { type: "price", precision: 2, minMove: 0.01 }, base: 0, priceLineVisible: false, lastValueVisible: false });
     const ser = b.series || [];
     pxs.setData(ser.filter(r => r[2] != null).map(r => ({ time: r[0], value: r[2] })));
-    sc.setData(ser.filter(r => r[1] != null).map(r => ({ time: r[0], value: r[1], color: r[1] >= b.levels.strong_buy ? css("--buy") : r[1] <= b.levels.sell ? css("--sell") : "rgba(128,128,128,.35)" })));
-    pxs.setMarkers(ser.filter((r, i) => r[3] > 0 && (i === 0 || ser[i - 1][3] !== r[3])).map(r => ({ time: r[0], position: "aboveBar", color: r[3] === 2 ? css("--down") : css("--sell"), shape: "arrowDown", size: 0.8, text: r[3] === 2 ? "trend break" : "take profit" })));
+    sc.setData(ser.filter(r => r[1] != null).map(r => ({ time: r[0], value: r[1], color: r[1] >= b.levels.strong_buy ? css("--up") : r[1] <= b.levels.sell ? css("--s2") : "rgba(128,128,128,.35)" })));
+    pxs.setMarkers(ser.filter((r, i) => r[3] > 0 && (i === 0 || ser[i - 1][3] !== r[3])).map(r => ({ time: r[0], position: "aboveBar", color: r[3] === 2 ? css("--down") : css("--s2"), shape: "arrowDown", size: 0.8, text: r[3] === 2 ? "trend break" : "take profit" })));
     syncAdd(c, pxs, ser.filter(r => r[2] != null).map(r => ({ time: r[0], value: r[2] })));
   });
   const chart = card("Score (bars, left) and " + f.ticker + " price (line, right, log), last 2 years", host,
