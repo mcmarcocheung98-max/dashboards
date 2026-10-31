@@ -23,7 +23,7 @@ date,series,value,source,note
 2025-01-01,China: new energy vehicles (battery + plug-in hybrid + range-extender),54.0,https://cnevpost.com/2026/01/09/china-dec-2025-nev-retail-record-high/,CPCA final retail penetration 53.96 (12.81m NEVs); press report (preliminary was 54.07)
 2019-01-01,US: plug-in (battery + plug-in hybrid),1.9,https://www.energy.gov/eere/vehicles/articles/fotw-1136-june-1-2020-plug-vehicle-sales-accounted-about-2-all-light-duty,DOE Fact of the Week (Argonne); light-duty vehicles
 2020-01-01,US: plug-in (battery + plug-in hybrid),2.1,https://www.energy.gov/eere/vehicles/articles/fotw-1216-december-13-2021-plug-vehicles-share-new-light-duty-vehicle-sales,DOE Fact of the Week (Argonne); light-duty vehicles
-2023-01-01,US: plug-in (battery + plug-in hybrid),9.1,https://www.coxautoinc.com/market-insights/q4-2024-ev-sales/,DOE/Argonne figure as quoted; Argonne's sales page gives 9.3% of passenger vehicle sales (https://www.anl.gov/esia/light-duty-electric-drive-vehicles-monthly-sales-updates) but not the light-duty share used for 2019-20 - verify
+2023-01-01,US: plug-in (battery + plug-in hybrid),9.1,https://www.energy.gov/node/4836915,DOE Fact of the Week #1325 (Argonne); light-duty vehicles (Argonne's sales page gives 9.3% of passenger vehicle sales - a different base)
 2021-01-01,US: battery-electric,3.2,https://www.coxautoinc.com/insights/ev-sales-growth-was-a-highlight-of-2022/,Cox Automotive / Kelley Blue Book; light vehicles
 2022-01-01,US: battery-electric,5.8,https://www.coxautoinc.com/insights/ev-sales-growth-was-a-highlight-of-2022/,Cox Automotive / Kelley Blue Book
 2023-01-01,US: battery-electric,7.8,https://www.coxautoinc.com/market-insights/q4-2024-ev-sales/,Cox Automotive / Kelley Blue Book (revised)
