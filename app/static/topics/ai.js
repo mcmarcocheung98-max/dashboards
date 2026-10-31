@@ -80,9 +80,15 @@ const VIEWS = {
       const yoy = card("Change on a year earlier", ...linesChart(names.map(n => ({ name: n, points: u.yoy[n], dashed: n === "All private", color: n === "All private" ? css("--hold") : undefined })), v => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(1) + "%", { small: true }));
       return [head, idx, yoy];
     })() : [card("US headcount", el("div", { class: "err" }, "Not available right now (" + (d.US_error || "no data") + ")."), stale(d))];
-    const uk = Object.entries(d.UK || {}).filter(([, pts]) => pts.length);
-    const ukc = uk.length ? card("UK workforce jobs (hand-entered from ONS JOBS03, thousands)", ...linesChart(uk.map(([k, pts]) => ({ name: k, points: pts })), v => num(v), { sync: false }))
-      : card("UK headcount", el("div", { class: "muted" }, "No UK points entered yet: add quarterly ONS workforce-jobs figures to data/ai/uk_headcount.csv."));
+    const U = d.UK || {}, uk = Object.entries(U.levels || {}).filter(([, pts]) => pts.length);
+    const ukc = uk.length ? card("UK employee jobs (ONS JOBS03, thousands)",
+        followOr(uk.map(([k, pts]) => ({ label: k, points: pts, fmt: v => num(v * 1000), delta: { lag: "1y" } })), { latest: "Employee jobs" }),
+        ...linesChart(uk.map(([k, pts]) => ({ name: k, points: pts })), v => num(v), { sync: false }),
+        ...linesChart(Object.entries(U.yoy || {}).filter(([, pts]) => pts.length).map(([k, pts]) => ({ name: k + ", change on a year", points: pts })),
+          v => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(1) + "%", { small: true, sync: false }),
+        note("ONS JOBS03, employee jobs at the end of each quarter, not seasonally adjusted, so the change is against the same quarter a year earlier. Financial & insurance is SIC 2007 section K (divisions 64 to 66); legal & accounting is division 69 (JOBS03 does not split legal from accounting). "
+          + (U.workbook ? "Workbook: " + U.workbook + "." : "The workbook could not be read (" + (U.workbook_error || "unknown") + "); hand-entered quarters from data/ai/uk_headcount.csv are shown.")))
+      : card("UK headcount", el("div", { class: "muted" }, "Not available right now (" + (d.UK_error || "no data") + "). Quarters can be added by hand to data/ai/uk_headcount.csv."), stale(d));
     const hk = Object.entries(d.HK || {}).filter(([, pts]) => pts.length);
     const hkc = hk.length ? card("Hong Kong persons engaged (C&SD, thousands)", ...linesChart(hk.map(([k, pts]) => ({ name: k, points: pts })), v => num(v), { sync: false }),
         note("C&SD Quarterly Survey of Employment and Vacancies, table 215-16001: persons engaged at the end of each quarter, civil service excluded. Professional, scientific & technical services include legal and accounting firms."))

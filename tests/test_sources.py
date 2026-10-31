@@ -53,6 +53,14 @@ def test_fred_employment():
         assert len(s) > 100 and s.index[-1] > pd.Timestamp.now() - pd.DateOffset(months=3), sid
 
 
+def test_ons_jobs03():
+    from app.topics import ai_jobs as J
+    s, name = J.jobs03()
+    assert name.startswith("jobs03") and set(s) == set(J.UK_INDUSTRIES)
+    assert 800 < s["Financial & insurance"].iloc[-1] < 1600 and 300 < s["Legal & accounting"].iloc[-1] < 900     # thousands
+    assert s["Financial & insurance"].index[-1] > pd.Timestamp.now() - pd.DateOffset(months=9)
+
+
 def test_census_btos_workbook():
     from app.topics import ai_adoption as A
     s = A.parse_btos(B.fetch(A.BTOS_XLSX, 0, binary=True, min_bytes=1000).encode("latin-1"))

@@ -242,7 +242,39 @@ def _bres_csv() -> str:
     return "\n".join(rows) + "\n"
 
 
+JOBS03_PAGE = ('<a href="/file?uri=%2Femploymentandlabourmarket%2Fpeopleinwork%2Femploymentandemployeetypes%2Fdatasets%2Femployeejobsbyindustryjobs03'
+               '%2Fcurrent%2Fjobs03sep2026.xls">jobs03sep2026.xls (1.4 MB)</a> <a href="/file?uri=/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/'
+               'datasets/employeejobsbyindustryjobs03/previous/v1/jobs03jun2026.xls">old</a>')
+
+
+def _jobs03_xlsx(in_jobs=False) -> bytes:
+    """A JOBS03-like workbook (layout assumed, not seen live: ONS is unreachable from the build container): a contents sheet, a
+    sheet by sex, then the all-employees sheet with title lines, a section-letter row, a SIC division code row and one row per quarter."""
+    import io
+    divs = [f"{i:02d}" for i in (1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 62, 63, 64, 65, 66, 68, 69, 70)]
+    def sheet(scale):
+        rows = [["JOBS03: Employee jobs by industry"] + [""] * len(divs), ["United Kingdom, not seasonally adjusted, thousands"] + [""] * len(divs),
+                ["", "Section"] + ["K" if c == "64" else "M" if c == "69" else "" for c in divs],
+                ["", "SIC 2007 division"] + [int(c) if c in ("64", "69") else c for c in divs]]     # codes as numbers or text
+        for i, q in enumerate(pd.date_range("2016-03-01", "2026-06-01", freq="3MS")):
+            base = {"64": 500, "65": 100, "66": 450, "69": 560}
+            vals = [(base.get(c, 50) + i * (2 if c == "69" else 1)) * scale * (1000 if in_jobs else 1) for c in divs]
+            rows.append(["", q.strftime("%b %Y") + (" (p)" if i == 41 else "")] + vals)
+        rows.append(["Source: Office for National Statistics"] + [""] * len(divs))
+        return pd.DataFrame(rows)
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as w:
+        pd.DataFrame([["Contents"], ["1 Male"], ["2 Total"]]).to_excel(w, sheet_name="Contents", index=False, header=False)
+        sheet(0.5).to_excel(w, sheet_name="1. Male", index=False, header=False)
+        sheet(1).to_excel(w, sheet_name="2. Total", index=False, header=False)
+    return buf.getvalue()
+
+
 def jobs_fetch(url, ttl, **k):
+    if url.endswith("employeejobsbyindustryjobs03"):
+        return JOBS03_PAGE
+    if "jobs03sep2026" in url:
+        return _jobs03_xlsx().decode("latin-1")
     if "nomisweb" in url:
         return _bres_csv()
     if "censtatd" in url:
@@ -264,6 +296,38 @@ def test_ai_jobs_payloads(snapdir, monkeypatch):
     assert set(h["US"]["levels"]) == set(J.US_SERIES) and h["US"]["latest"]["Legal services"]["since_2020"] > 0 and h["as_of"]
     assert r["US"]["ai_over_professions"][-1][1] < 1 < r["US"]["ai_over_professions"][0][1] + 0.01
     assert len(json.dumps(o)) < 400_000                      # weekly / monthly resampling keeps the page light
+    assert h["UK"]["workbook"] == "jobs03sep2026.xls" and set(h["UK"]["levels"]) == set(J.UK_INDUSTRIES)
+
+
+def test_ai_jobs_uk_headcount_from_jobs03(snapdir, monkeypatch):
+    from app.topics import ai_jobs as J
+    pytest.importorskip("openpyxl")
+    assert J.jobs03_url(JOBS03_PAGE).endswith("%2Fcurrent%2Fjobs03sep2026.xls")
+    for in_jobs in (False, True):                            # thousands, or plain jobs (divided by 1,000)
+        s = J.parse_jobs03(_jobs03_xlsx(in_jobs))
+        assert set(s) == {"Financial & insurance", "Legal & accounting"}
+        f, l = s["Financial & insurance"], s["Legal & accounting"]
+        assert f.index[0] == pd.Timestamp("2016-03-01") and f.index[-1] == pd.Timestamp("2026-06-01") and len(f) == 42
+        assert f.iloc[0] == 1050 and f.iloc[-1] == 1050 + 3 * 41 and l.iloc[-1] == 560 + 2 * 41    # the "Total" sheet, K = 64+65+66
+    monkeypatch.setattr(J, "fetch", jobs_fetch)
+    hand = {"Legal & accounting": pd.Series({pd.Timestamp("2026-06-01"): 650.0})}          # a hand-entered quarter wins
+    monkeypatch.setattr(J, "manual", lambda slug, name: hand if name == "uk_headcount" else pd.Series(dtype=float))
+    u = J._headcount_now()["UK"]
+    assert u["latest"]["Legal & accounting"]["level"] == 650 and u["latest"]["Financial & insurance"]["date"] == "2026-06-01"
+    assert u["latest"]["Financial & insurance"]["yoy"] == round((1173 / 1161 - 1) * 100, 2) and u["workbook_error"] is None
+
+    def blocked(url, ttl, **k):                              # ONS unreachable: hand-entered rows only, with the reason
+        if "ons.gov.uk" in url:
+            raise ConnectionError("blocked")
+        return jobs_fetch(url, ttl, **k)
+    monkeypatch.setattr(J, "fetch", blocked)
+    from app import cache
+    cache._cache.clear()
+    u = J._headcount_now()["UK"]
+    assert list(u["levels"]) == ["Legal & accounting"] and u["workbook"] is None and "blocked" in u["workbook_error"]
+    monkeypatch.setattr(J, "manual", lambda slug, name: pd.Series(dtype=float))
+    h = J._headcount_now()
+    assert h["UK"] is None and h["UK_error"] == "ValueError" and h["US"]          # the card says not available
 
 
 def test_ai_adoption_payloads(snapdir, monkeypatch):
