@@ -1028,13 +1028,16 @@ def test_yahoo_429_serves_snapshot_then_nasdaq_marks_handled(snapdir, monkeypatc
             return yahoo
         raise _http(429)
     monkeypatch.setattr(B, "_download", dl)
-    assert len(B.yahoo_daily("TSLA", "2019-01-01")) == 250
+    assert len(B.yahoo_daily("TSLA", "2019-01-01")) == 250 and len(B.yahoo_daily("SWC.L", "2019-01-01")) == 250
     monkeypatch.setattr(B.time, "time", lambda t=time.time() + 3600: t)          # an hour later: another end date (period2), same key
     cache._cache.clear()
     mode["v"] = "429"
-    s = B.yahoo_daily("TSLA", "2019-01-01")
-    assert len(s) == 250 and B.yahoo_key("TSLA", "2019-01-01") in B.STALE          # last good Yahoo copy, not Nasdaq
-    assert [u for u in B.HEALTH if "yahoo" in u] == [B.yahoo_key("TSLA", "2019-01-01")]
+    s = B.yahoo_daily("TSLA", "2019-01-01")                                    # Yahoo serves its copy (stale), Nasdaq is fresher
+    assert len(s) == 60 and B.yahoo_key("TSLA", "2019-01-01") in B.STALE
+    assert sorted(u for u in B.HEALTH if "yahoo" in u) == sorted(B.yahoo_key(t, "2019-01-01") for t in ("TSLA", "SWC.L"))   # one per series
+    src = [s for d in topics.health()["dashboards"].values() for s in d["sources"] if s["url"] == B.yahoo_key("TSLA", "2019-01-01")][0]
+    assert src["status"] == "stale" and "Nasdaq" in src["handled"]
+    assert len(B.yahoo_daily("SWC.L", "2019-01-01")) == 250 and B.yahoo_key("SWC.L", "2019-01-01") in B.STALE   # no Nasdaq: the copy
     # a ticker never fetched before: Yahoo refused (cooling down), Nasdaq answers, the Yahoo failure is handled (no alert)
     s = B.yahoo_daily("ZZZZ", "2019-01-01")
     assert len(s) == 60 and s.iloc[-1] == 159

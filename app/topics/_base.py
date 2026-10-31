@@ -172,7 +172,8 @@ def fetch(url: str, ttl: float = DAY, *, curl: bool = False, headers: dict | Non
 
 def handled(key: str, how: str) -> None:
     """Say that the failure of the source at `key` (its /api/health address) is made up for on the page: another source answered, or
-    the source is closed to servers and the card says so. It stays 'failing' in /api/health, with `handled`, but raises no alert."""
+    the source is closed to servers and the card says so. It keeps its status in /api/health (failing or stale), with `handled`, but
+    raises no alert while it is renewed (within two days)."""
     h = HEALTH.get(key)
     if h is not None:
         h.update(handled=time.time(), handled_how=how[:160])
@@ -262,7 +263,7 @@ def health(module_to_slug: dict[str, str], stale_days: float = 3, failing_days: 
             status, since = "failing", h["fail"]
         age = (now - since) / 86400 if since else None
         alert = (status == "stale" and age is not None and age > stale_days) or (status == "failing" and (h["ok"] is None or (now - h["ok"]) / 86400 > failing_days))
-        how = h.get("handled_how") if status == "failing" and h.get("handled") and now - h["handled"] < 2 * 86400 else None
+        how = h.get("handled_how") if status != "fresh" and h.get("handled") and now - h["handled"] < 2 * 86400 else None
         alert = alert and not how
         d = out.setdefault(slug, {"fresh": 0, "stale": 0, "failing": 0, "alerts": 0, "sources": []})
         d[status] += 1
@@ -316,9 +317,9 @@ def yahoo_key(sym: str, start: str = "2020-01-01") -> str:
 
 def yahoo_daily(sym: str, start: str = "2020-01-01", fetcher=None) -> pd.Series:
     """Daily closes from Yahoo's chart API (ported from the trading bot: explicit dates, the query2 host when query1 fails). Yahoo
-    answers Railway with 429 often: then fetch serves the last good copy (stale) and leaves Yahoo alone for a while, and a US ticker
-    with no copy yet comes from Nasdaq's quote API, which marks the Yahoo failure handled. `fetcher` is the calling module's
-    fetch_json, so tests can replace it there."""
+    answers Railway with 429 often: then fetch serves the last good copy (stale) and leaves Yahoo alone for a while; a US ticker
+    takes Nasdaq's quote API instead when it answers (fresher than the copy, and the only source when there is no copy), which marks
+    the Yahoo failure handled. `fetcher` is the calling module's fetch_json, so tests can replace it there."""
     fetcher = fetcher or fetch_json
 
     def go():
@@ -329,15 +330,20 @@ def yahoo_daily(sym: str, start: str = "2020-01-01", fetcher=None) -> pd.Series:
                 j = fetcher(YAHOO.format(n=1, sym=sym, p1=p1, p2=p2), DAY, min_bytes=200, key=key, mirrors=(YAHOO.format(n=2, sym=sym, p1=p1, p2=p2),))
             res = j["chart"]["result"][0]
             s = pd.Series(res["indicators"]["quote"][0]["close"], index=pd.to_datetime(res["timestamp"], unit="s").normalize(), dtype=float)
-            return s[~s.index.duplicated(keep="last")].dropna()
+            copy = s[~s.index.duplicated(keep="last")].dropna()
+            if key not in STALE or "." in sym or "-" in sym:
+                return copy
+            last = None                                      # Yahoo refused and served its last good copy: try Nasdaq for fresher closes
         except Exception as e:
-            last = e
+            last, copy = e, None
         if "." not in sym and "-" not in sym:                # US tickers from Nasdaq's quote API instead
             try:
                 s = nasdaq_daily(sym, start, fetcher)
                 handled(key, "Yahoo refused; prices from Nasdaq's quote API")
                 return s
             except Exception as e:
+                if copy is not None:
+                    return copy
                 last = e
         raise last
     return _cached(f"yahoo:{sym}:{start}", 6 * 3600, go)
