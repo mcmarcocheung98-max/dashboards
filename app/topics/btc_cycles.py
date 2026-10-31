@@ -166,6 +166,74 @@ def drawdown(px: pd.Series) -> pd.Series:
     return px / px.cummax() - 1
 
 
+# ------------------------------------------------------------------ BTC buy and sell zones: the published price-only models
+# Each model: a ratio of price to a slow average (or a crossover), with the buy and sell lines its author or the data firms use.
+# Sources (readings of Oct 2026): Mayer Multiple (Trace Mayer 2017; Glassnode bands 0.8 / 2.4), 2-Year MA Multiplier and 200-week MA
+# (Philip Swift, LookIntoBitcoin), Pi Cycle Top (Swift 2019: 111-day SMA crossing 2 x 350-day SMA) and Pi Cycle Bottom (150-day EMA
+# below 0.745 x 471-day SMA), weekly RSI 14 (30 / 80), the bull-market support band (20-week SMA and 21-week EMA). Fixed sell lines
+# missed the Oct 2025 top (peaks shrink each cycle); the buy lines fired at the Jun 2026 low.
+ZONE_MODELS = [
+    {"key": "mayer", "name": "Mayer multiple", "formula": "price ÷ 200-day MA", "buy": ("<", 0.8), "sell": (">", 2.4)},
+    {"key": "x2y", "name": "2-year MA multiplier", "formula": "price ÷ 2-year MA (sell line: 5 × the MA)", "buy": ("<", 1.0), "sell": (">", 5.0)},
+    {"key": "w200", "name": "200-week MA floor", "formula": "price ÷ 200-week MA", "buy": ("<", 1.0), "sell": None},
+    {"key": "pi_top", "name": "Pi Cycle top", "formula": "111-day MA ÷ (2 × 350-day MA); a cross above 1 marked every top to 2021", "buy": None, "sell": (">", 1.0)},
+    {"key": "pi_bottom", "name": "Pi Cycle bottom", "formula": "150-day EMA ÷ (0.745 × 471-day MA)", "buy": ("<", 1.0), "sell": None},
+    {"key": "rsi_w", "name": "Weekly RSI 14", "formula": "RSI of weekly closes", "buy": ("<", 30), "sell": (">", 80)},
+    {"key": "bmsb", "name": "Bull-market support band", "formula": "price ÷ max(20-week SMA, 21-week EMA); above = bull trend, below = bear", "buy": None, "sell": None},
+]
+
+
+def _rsi_weekly(px: pd.Series) -> pd.Series:
+    w = px.resample("W-SUN").last().dropna()
+    d = w.diff()
+    up, dn = d.clip(lower=0).ewm(alpha=1 / 14, adjust=False).mean(), (-d.clip(upper=0)).ewm(alpha=1 / 14, adjust=False).mean()
+    return (100 - 100 / (1 + up / dn.replace(0, np.nan))).reindex(px.index, method="ffill")
+
+
+def zone_series(px: pd.Series) -> pd.DataFrame:
+    px = px.resample("D").last().interpolate("time")
+    ma = lambda n: px.rolling(n).mean()
+    return pd.DataFrame({"price": px, "ma200": ma(200), "ma2y": ma(730), "ma200w": ma(1400),
+                         "mayer": px / ma(200), "x2y": px / ma(730), "w200": px / ma(1400),
+                         "pi_top": ma(111) / (2 * ma(350)), "pi_bottom": px.ewm(span=150, adjust=False).mean() / (0.745 * ma(471)),
+                         "rsi_w": _rsi_weekly(px), "bmsb": px / pd.concat([ma(140), px.ewm(span=147, adjust=False).mean()], axis=1).max(axis=1)})
+
+
+def _zone(m: dict, v) -> str | None:
+    if v is None or not np.isfinite(v):
+        return None
+    if m["buy"] and (v < m["buy"][1] if m["buy"][0] == "<" else v > m["buy"][1]):
+        return "buy"
+    if m["sell"] and (v > m["sell"][1] if m["sell"][0] == ">" else v < m["sell"][1]):
+        return "sell"
+    return "neither"
+
+
+def btc_zones(px: pd.Series, markers: list[dict]) -> dict:
+    """Today's reading and zone for each model, the readings at the doc's cycle peaks and lows, and the zone lines for the chart."""
+    z = zone_series(px)
+    last = z.iloc[-1]
+    at = lambda d: z.iloc[z.index.get_indexer([pd.Timestamp(d)], method="pad")[0]] if pd.Timestamp(d) >= z.index[0] else None
+    marks = [m for m in markers if pd.Timestamp(m["date"]) >= z.index[0] + pd.Timedelta(days=200)][-4:]
+    models = []
+    for m in ZONE_MODELS:
+        v = float(last[m["key"]]) if np.isfinite(last[m["key"]]) else None
+        hist = {}
+        for mk in marks:
+            r = at(mk["date"])
+            hist[mk["date"]] = _r(float(r[m["key"]]), 2) if r is not None and np.isfinite(r[m["key"]]) else None
+        models.append({**{k: m[k] for k in ("key", "name", "formula")}, "buy": m["buy"] and f"{m['buy'][0]} {m['buy'][1]:g}", "sell": m["sell"] and f"{m['sell'][0]} {m['sell'][1]:g}",
+                       "now": _r(v, 2), "zone": _zone(m, v), "at": hist})
+    scored = [m for m in models if m["buy"] or m["sell"]]
+    n_buy, n_sell = sum(m["zone"] == "buy" for m in scored), sum(m["zone"] == "sell" for m in scored)
+    w = lambda c: _pts(z[c].resample("W").last().dropna(), 2)
+    return {"models": models, "markers": [{"date": m["date"], "label": m["label"]} for m in marks], "n_buy": n_buy, "n_sell": n_sell, "n_models": len(scored),
+            "trend": "above" if np.isfinite(last["bmsb"]) and last["bmsb"] >= 1 else "below",
+            "lines": {"mayer_buy": _pts((0.8 * z["ma200"]).resample("W").last().dropna(), 2), "mayer_sell": _pts((2.4 * z["ma200"]).resample("W").last().dropna(), 2),
+                      "ma2y": w("ma2y"), "ma2y_x5": _pts((5 * z["ma2y"]).resample("W").last().dropna(), 2), "ma200w": w("ma200w")},
+            "series": {"mayer": w("mayer"), "x2y": w("x2y"), "w200": w("w200"), "pi_top": w("pi_top"), "pi_bottom": w("pi_bottom"), "rsi_w": w("rsi_w")}}
+
+
 def _weekly(s: pd.Series) -> pd.Series:
     return s.resample("W").last().dropna()
 
@@ -603,7 +671,8 @@ def _coin_full(c: dict, btc: pd.Series) -> dict:
                     "base_2027": proj[0]["base"] if proj else None, "base_2028": proj[1]["base"] if len(proj) > 1 else None,
                     **{f"{k}_{p['date'][:4]}": p[k] for p in proj for k in ("bear", "bull")},
                     **{f"mcap_base_{p['date'][:4]}": _r(p["base"] * supply / p["dilution"], 0) for p in proj if supply and p.get("dilution")},
-                    "factor_2028": proj[1].get("factor") if len(proj) > 1 else None},
+                    "factor_2028": proj[1].get("factor") if len(proj) > 1 else None,
+                    "float": F["kpi"].get("unlocked_share"), "unlock_12m": F["kpi"].get("unlock_12m")},
             "spark": _pts(coin_px.iloc[-90:], 6),
             "series": {"price": _pts(coin_px, 6), "btc_indexed": _pts(btc_px / btc_px.iloc[0] * coin_px.iloc[0], 6), "ratio": _pts(ratio, 10),
                        "rsi": _pts(r_coin, 1), "rsi_vs_btc": _pts(r_ratio, 1), "market_cap": _pts(mc, 0)},
@@ -690,6 +759,10 @@ def _cycles_now() -> dict:
                     "ma200": lambda: _pts(_weekly(ma200), 2), "overlay": lambda: halving_overlay(px), "drawdown": lambda: _pts(_weekly(drawdown(px)), 4)},
                    sources=[CM], as_of=str(t_now.date()))
     out.update(live)
+    try:
+        out["zones"] = btc_zones(px, R["markers"])
+    except Exception as e:
+        out["zones_error"] = type(e).__name__
     out["now"] = {"price": _r(now, 0), "date": str(t_now.date()), "vs_peak": _r(now / peak["price"] - 1, 4), "vs_low": _r(now / low["price"] - 1, 4),
                   "vs_ma200": _r(now / float(ma200.iloc[-1]) - 1, 4) if np.isfinite(ma200.iloc[-1]) else None,
                   "days_since_halving": (t_now - HALVINGS[-1]).days, "days_to_next_halving": (NEXT_HALVING - t_now).days,
@@ -826,6 +899,10 @@ def sector_status(coins: list[dict], metrics: dict, evidence: dict) -> list[dict
         reps = [by[t] for t in s.get("reps", []) if t in by]
         k = lambda f: med([c["kpi"][f] for c in reps if c["kpi"].get(f) is not None])
         rel, rsi_b, high = k("vs_btc_90d"), k("rsi_vs_btc"), k("from_high")
+        flt, unl = k("float"), k("unlock_12m")
+        # supply overhang (Binance Research 2024, GSR, Keyrock, The Tie): float under 20% of max supply lost 75-80% in a year on median;
+        # unlocks are negative nine times in ten. Heavy = float < 20% or 20%+ of supply added in the next 12 months; some = float < 50% or 10%+.
+        overhang = "heavy" if (flt is not None and flt < 0.2) or (unl is not None and unl >= 0.2) else "some" if (flt is not None and flt < 0.5) or (unl is not None and unl >= 0.1) else "light" if flt is not None or unl is not None else None
         usage, u = None, s.get("usage")
         if u:
             if u["source"] == "metrics" and metrics.get(u["key"]):
@@ -842,7 +919,7 @@ def sector_status(coins: list[dict], metrics: dict, evidence: dict) -> list[dict
         elif rel is not None and rel >= 0.15 and high is not None and high >= -0.25:
             st = "Priced in"
         elif usage is not None and usage >= 0.10 and (rel is None or rel <= -0.15):
-            st = "Undervalued"
+            st = "Undervalued" if overhang != "heavy" else "Neutral"                 # cheap against usage, but the supply still to come says wait
         elif high is not None and high <= -0.6 and rel is not None and rel > -0.15 and (usage is None or usage >= 0):
             st = "Awaiting rotation"
         else:
@@ -854,6 +931,8 @@ def sector_status(coins: list[dict], metrics: dict, evidence: dict) -> list[dict
                                "secondary": cls_.get(c["ticker"], {}).get("classifiers") if cls_.get(c["ticker"], {}).get("doc_sector") == "secondary" else None} for c in reps],
                      "no_token": s.get("no_token", []), "vs_btc_90d": _r(rel, 3), "rsi_vs_btc": _r(rsi_b, 1), "from_high": _r(high, 3),
                      "usage": _r(usage, 3), "usage_label": u["label"] if u else None,
+                     "float": _r(flt, 3), "unlock_12m": _r(unl, 3), "overhang": overhang,
+                     "overhang_note": "usage says undervalued, but the supply overhang keeps it neutral" if overhang == "heavy" and usage is not None and usage >= 0.10 and (rel is None or rel <= -0.15) else None,
                      "past": [{"cycle": h["cycle"], "sector": h["sector"], "m_start": h["m_start"], "m_end": h["m_end"]} for h in past]})
     return rows
 
@@ -929,6 +1008,10 @@ def READINGS() -> list[dict]:
         n = ENDPOINTS["cycles"]().get("now") or {}
         if n.get("vs_ma200") is not None:
             add("cycles", "btc_vs_200d", "BTC vs its 200-day average", _r(n["vs_ma200"], 3), 1 if n["vs_ma200"] > 0 else -1)
+        Z = ENDPOINTS["cycles"]().get("zones") or {}
+        if Z.get("n_models"):
+            add("cycles", "btc_zones", "BTC price models in a buy / sell zone", f"{Z['n_buy']} buy / {Z['n_sell']} sell of {Z['n_models']}",
+                1 if Z["n_buy"] and not Z["n_sell"] else -1 if Z["n_sell"] else 0, "Mayer, 2-year MA, 200-week MA, Pi Cycle, weekly RSI")
         if n.get("days_since_halving") is not None:
             m = n["days_since_halving"] / 30.44
             add("cycles", "halving_clock", "Months since the last halving", _r(m, 1), 1 if 6 <= m <= 18 else -1 if 18 < m <= 30 else 0,
@@ -971,7 +1054,8 @@ def READINGS() -> list[dict]:
                 add("candidates", "weakest", "Weakest candidate vs BTC, 90 days", ranked[0]["ticker"], 0, f"{ranked[0]['kpi']['vs_btc_90d']:+.0%}")
         for s in ENDPOINTS["rotation"]().get("status", []):
             add("sectors", "sector:" + str(s["rank"]), "Sector " + str(s["rank"]) + ": " + s["sector"], s["status"],
-                {"Undervalued": 1, "Awaiting rotation": 1, "Overvalued": -1, "Priced in": -1}.get(s["status"], 0))
+                {"Undervalued": 1, "Awaiting rotation": 1, "Overvalued": -1, "Priced in": -1}.get(s["status"], 0),
+                ("supply overhang: " + s["overhang"]) if s.get("overhang") in ("heavy", "some") else None)
     except Exception:
         pass
     return out

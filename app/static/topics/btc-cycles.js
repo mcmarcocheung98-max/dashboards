@@ -166,8 +166,12 @@ function statusCard(R) {
   const tone = { Undervalued: "ok", "Awaiting rotation": "", Neutral: "", "Priced in": "bad", Overvalued: "bad" };
   const col = { Undervalued: css("--up"), "Awaiting rotation": css("--accent"), Neutral: css("--muted"), "Priced in": css("--s2"), Overvalued: css("--down") };
   const p0 = v => v == null ? "–" : pct(v, 0);
-  const head = ["Sector", "Status", "Representatives (90 days vs BTC)", "90d vs BTC", "RSI vs BTC", "From 1-year high", "Usage, ~90 days", "Past bursts (months after halving)"];
-  const align = ["left", "left", "left", "right", "right", "right", "left", "left"];
+  const head = ["Sector", "Status", "Representatives (90 days vs BTC)", "90d vs BTC", "RSI vs BTC", "From 1-year high", "Usage, ~90 days", "Float · supply in 12 months", "Past bursts (months after halving)"];
+  const align = ["left", "left", "left", "right", "right", "right", "left", "left", "left"];
+  const ovCol = { heavy: css("--down"), some: css("--s2"), light: css("--up") };
+  const supply = s => s.float == null && s.unlock_12m == null ? el("span", { class: "muted" }, "no data") : el("span", { style: "white-space:nowrap", title: "Medians of the representatives: share of max supply circulating · supply added over the next 12 months (unlock schedule, else last year's growth)" },
+    (s.float == null ? "–" : Math.round(s.float * 100) + "%") + " · " + (s.unlock_12m == null ? "–" : (s.unlock_12m >= 0 ? "+" : "") + Math.round(s.unlock_12m * 100) + "%"),
+    s.overhang ? el("span", { class: "pill", style: "margin-left:6px;color:" + ovCol[s.overhang] }, s.overhang) : null);
   const rows = (R.status || []).map(s => el("tr", {},
     el("td", {}, el("b", {}, s.rank + " · " + s.sector)),
     el("td", { style: "text-align:left" }, el("span", { class: "pill " + (tone[s.status] || ""), style: "color:" + col[s.status] + ";white-space:nowrap" }, s.status)),
@@ -176,6 +180,7 @@ function statusCard(R) {
       : el("span", { class: "muted" }, "No liquid token: " + (s.no_token || []).join(", "))),
     el("td", { class: cls(s.vs_btc_90d), style: "text-align:right" }, p0(s.vs_btc_90d)), el("td", { style: "text-align:right" }, s.rsi_vs_btc == null ? "–" : s.rsi_vs_btc.toFixed(0)), el("td", { style: "text-align:right" }, p0(s.from_high)),
     el("td", { class: "wrap" }, s.usage == null ? el("span", { class: "muted" }, s.usage_label ? "no recent reading" : "no usage series") : el("span", {}, el("span", { class: cls(s.usage) }, p0(s.usage)), el("span", { class: "muted" }, " " + s.usage_label))),
+    el("td", { style: "text-align:left" }, supply(s), s.overhang_note ? el("div", { class: "muted", style: "font-size:12px;white-space:normal;max-width:220px" }, s.overhang_note) : null),
     el("td", { class: "wrap muted" }, s.past.length ? s.past.map(h => "C" + h.cycle + " " + Math.round(h.m_start) + "–" + Math.round(h.m_end)).join(", ") : "none")));
   return card("Where each 2026-27 candidate sector stands today",
     el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...head.map((h, i) => el("th", { style: "text-align:" + align[i] + ";vertical-align:bottom" }, h))), ...rows)),
@@ -195,6 +200,40 @@ function classCell(c) {
   return el("span", { title: tip, style: "white-space:nowrap" }, main, G && !G.ok ? el("span", { class: "down", style: "margin-left:4px", title: "CoinGecko files none of its categories under this sector" }, "⚠") : null);
 }
 
+// ---------- BTC buy and sell zones: the published price-only models, their lines on the price chart, and what they read at each top and low
+function zonesCard(Z) {
+  if (!Z || !Z.models) return null;
+  const zoneCls = z => z === "buy" ? "up" : z === "sell" ? "down" : "";
+  const zoneTxt = z => z === "buy" ? "buy zone" : z === "sell" ? "sell zone" : z ? "neither" : "–";
+  const fmt = (m, v) => v == null ? "–" : m.key === "rsi_w" ? v.toFixed(0) : v.toFixed(2) + "×";
+  const scored = Z.models.filter(m => m.buy || m.sell);
+  const verdict = Z.n_buy && !Z.n_sell ? Z.n_buy + " of " + Z.n_models + " in the buy zone" : Z.n_sell ? Z.n_sell + " of " + Z.n_models + " in the sell zone" : "No model in a buy or sell zone";
+  const kp = el("div", { class: "kpis" }, kpi("Price models", verdict, Z.n_buy && !Z.n_sell ? "up" : Z.n_sell ? "down" : ""),
+    ...scored.map(m => kpi(m.name + (m.zone === "neither" || !m.zone ? "" : " · " + zoneTxt(m.zone)), fmt(m, m.now), zoneCls(m.zone))),
+    kpi("Trend (bull-market support band)", Z.trend === "above" ? "above the band" : "below the band", Z.trend === "above" ? "up" : "down"));
+  const L = Z.lines || {};
+  const chart = linesChart([{ name: "BTC", points: L.price || [], color: css("--s1") }].filter(x => x.points.length).concat([
+    { name: "200-week MA (floor)", points: L.ma200w, color: css("--hold"), width: 2.5 },
+    { name: "2-year MA (buy below)", points: L.ma2y, color: css("--up"), dashed: true },
+    { name: "0.8 × 200-day MA (Mayer buy)", points: L.mayer_buy, color: css("--z5"), dashed: true },
+    { name: "2.4 × 200-day MA (Mayer sell)", points: L.mayer_sell, color: css("--down"), dashed: true },
+    { name: "5 × 2-year MA (sell above)", points: L.ma2y_x5, color: css("--z1"), width: 1 }].filter(x => x.points && x.points.length)), v => usd(v), { log: true });
+  const marks = Z.markers || [];
+  const head = ["Model", "Formula", "Buy", "Sell", "Now", "Zone", ...marks.map(m => m.label.replace("~", "") + " (" + m.date.slice(0, 7) + ")")];
+  const align = ["left", "left", "right", "right", "right", "left", ...marks.map(() => "right")];
+  const rows = Z.models.map(m => el("tr", {}, el("td", {}, el("b", {}, m.name)), el("td", { class: "wrap", style: "min-width:220px" }, m.formula),
+    el("td", { style: "text-align:right", class: "up" }, m.buy || "–"), el("td", { style: "text-align:right", class: "down" }, m.sell || "–"),
+    el("td", { style: "text-align:right" }, el("b", {}, fmt(m, m.now))), el("td", { style: "text-align:left" }, m.buy || m.sell ? el("span", { class: "pill " + (m.zone === "buy" ? "ok" : m.zone === "sell" ? "bad" : "") }, zoneTxt(m.zone)) : el("span", { class: "muted" }, "trend")),
+    ...marks.map(mk => el("td", { style: "text-align:right" }, fmt(m, m.at[mk.date])))));
+  return card("BTC buy and sell zones: the published price models on today's data", kp,
+    ...(L.ma200w ? [el("div", { style: "margin-top:8px" }, ...chart)] : []),
+    el("div", { class: "scroll", style: "margin-top:8px" }, el("table", {}, el("tr", {}, ...head.map((h, i) => el("th", { style: "text-align:" + align[i] + ";vertical-align:bottom" }, h))), ...rows)),
+    note("Lines as their authors and the data firms draw them: Mayer multiple (Trace Mayer; Glassnode's 0.8 and 2.4 bands), 2-year MA multiplier and 200-week MA (Philip Swift, LookIntoBitcoin), " +
+      "Pi Cycle top and bottom, weekly RSI, bull-market support band. Price only, from the Coin Metrics series above, so no on-chain data is needed. " +
+      "The last columns show each model at the doc's recent cycle peaks and lows: the fixed sell lines were set on 2013-21 and none fired at the Oct 2025 top (peaks shrink each cycle), " +
+      "while the buy lines did fire at the Jun 2026 low. Mechanical readings, not a view."));
+}
+
 // ---------- every candidate in one table: thesis, price cases, market cap against the sector's largest token
 function candidatesTable(k, rot, px, jump) {
   const coins = (k.coins || []).filter(c => c.kpi), L = k.leaders || {};
@@ -209,9 +248,9 @@ function candidatesTable(k, rot, px, jump) {
   });
   const COLS = [
     ["Coin", r => r.c.name.toLowerCase()], ["Sector", r => r.rank], ["Classifiers", r => (r.c.classification || {}).doc_sector || "~"], ["Status", r => r.status], ["Price", r => r.price], ["90 days", r => r.K.vs_btc_90d],
-    ["Market cap", r => r.mcap], ["vs sector leader", r => r.share], ["RSI vs BTC", r => r.K.rsi_vs_btc],
+    ["Market cap", r => r.mcap], ["vs sector leader", r => r.share], ["Float · 12-mo supply", r => r.K.unlock_12m == null ? null : -r.K.unlock_12m], ["RSI vs BTC", r => r.K.rsi_vs_btc],
     ["End-2027 bear / base / bull", r => r.up27], ["End-2028 bear / base / bull", r => r.up28], ["Base 2028 cap vs leader today", r => r.vsLeader28]];
-  const AL = ["left", "left", "left", "left", "right", "left", "right", "left", "right", "left", "left", "left"];
+  const AL = ["left", "left", "left", "left", "right", "left", "right", "left", "left", "right", "left", "left", "left"];
   let sortI = 1, dir = 1, sector = "all", q = "";
   const open = new Set();
   const tbody = el("tbody"), count = el("span", { class: "muted" });
@@ -246,6 +285,9 @@ function candidatesTable(k, rot, px, jump) {
           el("span", { style: "display:inline-block;vertical-align:middle;width:48px;height:6px;background:var(--line);border-radius:3px;margin-right:6px;position:relative" },
             el("span", { style: "position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:" + css("--s1") + ";width:" + Math.max(2, Math.min(100, Math.sqrt(r.share) * 100)) + "%" })),
           (r.share * 100 < 1 ? (r.share * 100).toFixed(2) : (r.share * 100).toFixed(1)) + "% of " + r.ld.symbol)) : "–"),
+        el("td", { style: "white-space:nowrap", class: (K.float != null && K.float < 0.2) || (K.unlock_12m != null && K.unlock_12m >= 0.2) ? "down" : "",
+          title: "Share of max supply circulating · supply added in the next 12 months. Under 20% float or 20%+ coming = heavy overhang (Binance Research, GSR, Keyrock)" },
+          K.float == null && K.unlock_12m == null ? el("span", { class: "muted" }, "–") : (K.float == null ? "–" : Math.round(K.float * 100) + "%") + " · " + (K.unlock_12m == null ? "–" : (K.unlock_12m >= 0 ? "+" : "") + Math.round(K.unlock_12m * 100) + "%")),
         el("td", { style: "text-align:right", class: K.rsi_vs_btc >= 70 ? "down" : K.rsi_vs_btc <= 30 ? "up" : "" }, K.rsi_vs_btc == null ? "–" : K.rsi_vs_btc.toFixed(0)),
         el("td", {}, cases(K, "2027"), el("div", { class: cls(r.up27), style: "font-size:12px" }, r.up27 == null ? "" : "base " + pct(r.up27, 0))),
         el("td", {}, cases(K, "2028"), el("div", { class: cls(r.up28), style: "font-size:12px" }, r.up28 == null ? "" : "base " + pct(r.up28, 0) + (K.factor_2028 != null && Math.abs(K.factor_2028 - 1) > 0.005 ? " · fundamentals ×" + K.factor_2028.toFixed(2) : ""))),
@@ -272,10 +314,10 @@ function candidatesTable(k, rot, px, jump) {
     oninput: e => { q = e.target.value.trim().toLowerCase(); draw(); } });
   const csv = el("button", { class: "pill", style: "cursor:pointer;border:0;font:inherit", onclick: () => {
     const hd = ["ticker", "name", "sector", "status", "price", "vs_btc_90d", "market_cap", "sector_leader", "leader_market_cap", "share_of_leader", "rsi_vs_btc",
-      "bear_2027", "base_2027", "bull_2027", "bear_2028", "base_2028", "bull_2028", "base_2028_mcap", "doc_sector_is", "classifiers", "thesis"];
+      "float", "supply_added_12m", "bear_2027", "base_2027", "bull_2027", "bear_2028", "base_2028", "bull_2028", "base_2028_mcap", "doc_sector_is", "classifiers", "thesis"];
     const esc = v => v == null ? "" : /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
     const lines = [hd.join(",")].concat(rows.map(r => [r.c.ticker, r.c.name, r.sector, r.status, r.price, r.K.vs_btc_90d, r.mcap, r.ld && r.ld.symbol, r.ld && r.ld.market_cap, r.share, r.K.rsi_vs_btc,
-      r.K.bear_2027, r.K.base_2027, r.K.bull_2027, r.K.bear_2028, r.K.base_2028, r.K.bull_2028, r.K.mcap_base_2028, (r.c.classification || {}).doc_sector, (r.c.classification || {}).classifiers, (r.c.notes || {}).thesis].map(esc).join(",")));
+      r.K.float, r.K.unlock_12m, r.K.bear_2027, r.K.base_2027, r.K.bull_2027, r.K.bear_2028, r.K.base_2028, r.K.bull_2028, r.K.mcap_base_2028, (r.c.classification || {}).doc_sector, (r.c.classification || {}).classifiers, (r.c.notes || {}).thesis].map(esc).join(",")));
     const a = el("a", { href: URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" })), download: "btc-cycles-candidates-" + (k.as_of || "") + ".csv" });
     document.body.append(a); a.click(); a.remove();
   } }, "Download CSV");
@@ -352,7 +394,8 @@ const VIEWS = {
     const dd = d.drawdown ? card("Drawdown from the running high", ...linesChart([{ name: "Drawdown", points: d.drawdown, color: css("--down") }], v => pct(v, 0), { small: true }),
       note("Cycle 4's -53% against -77% to -87% in the three before it.")) : null;
     const anat = fold("BTC cycle anatomy, 2011–2026", true, para(R.anatomy.intro), table(R.anatomy.columns, R.anatomy.rows), para(R.anatomy.after));
-    return [head, bottom, priceCard, ov, dd, anat];
+    const zones = d.zones ? zonesCard({ ...d.zones, lines: { ...d.zones.lines, price: d.price } }) : null;
+    return [head, bottom, priceCard, zones, ov, dd, anat];
   },
   async sectors() {
     const [d, rot] = await Promise.all([api("sectors"), api("rotation").catch(() => null)]);
