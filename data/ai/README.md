@@ -42,7 +42,7 @@ Whether AI hiring is growing at the expense of the professions: Indeed job posti
 | Headcount | US payroll employment | Legal services; finance & insurance; securities & investments; computer systems design; all private, with yearly and since-2020 change |
 | | Headcount since February 2020 (= 100) | The same five, indexed |
 | | Change on a year earlier | The same five, % |
-| | UK workforce jobs | Legal and financial services from `uk_headcount.csv` (empty until filled) |
+| | UK employee jobs | Financial & insurance (SIC K) and legal & accounting (SIC 69), thousands, with the change on the same quarter a year earlier |
 | AI vs the professions | AI-related vs law & finance postings | Average of the two AI sectors against the average of the four professions |
 | | The ratio | AI-sector index ÷ professions index |
 | | AI mentions as a share of all postings | The AI share for the chosen country |
@@ -54,7 +54,7 @@ Whether AI hiring is growing at the expense of the professions: Indeed job posti
 | Postings index by sector, US and UK | [Indeed Hiring Lab Job Postings Index](https://github.com/hiring-lab/job_postings_tracker), files `US/job_postings_by_sector_US.csv` and `GB/job_postings_by_sector_GB.csv`; aggregate files for "all postings" | Daily data, refreshed weekly | Automated |
 | AI share of postings, by country | [Indeed Hiring Lab AI Tracker](https://github.com/hiring-lab/ai-tracker), file `AI_posting.csv` | Daily data, refreshed monthly | Automated |
 | US payroll employment | BLS Current Employment Statistics via FRED: [CES6054110001](https://fred.stlouisfed.org/series/CES6054110001) legal services, CES5552000001 finance and insurance, CES5552300001 securities and investments, CES6054150001 computer systems design, CES0500000001 all private; seasonally adjusted, thousands | Monthly, first Friday | Automated (FRED's CSV, fetched with curl because FRED rejects Python's HTTP client) |
-| UK workforce jobs | [ONS JOBS03](https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/workforcejobsbyindustryjobs03), legal activities and financial & insurance activities, thousands | Quarterly | Hand-entered: `uk_headcount.csv` |
+| UK employee jobs | [ONS JOBS03: Employee jobs by industry](https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/employeejobsbyindustryjobs03), newest workbook (`jobs03<mon><yyyy>.xls`) linked from the dataset page; financial & insurance = divisions 64 + 65 + 66 (section K), legal & accounting = division 69; UK, thousands, not seasonally adjusted | Quarterly (Mar, Jun, Sep, Dec releases) | Automated (Oct 2026, parser not yet checked on the live workbook); `uk_headcount.csv` adds or overrides a quarter |
 
 Indeed data is CC BY 4.0 and must credit Indeed Hiring Lab (the footer does). BLS data is public domain; ONS data is Open Government Licence v3.0.
 
@@ -69,13 +69,9 @@ Indeed data is CC BY 4.0 and must credit Indeed Hiring Lab (the footer does). BL
 
 **Automated:** Indeed's files and FRED are fetched daily. Indeed's sector file is about 12 MB; it is filtered to the six sectors on the server. If Indeed renames a sector, it disappears from the table; the names are listed in `SECTORS` in `app/topics/ai_jobs.py`.
 
-**`uk_headcount.csv`** (`date,series,value,source,note`): each quarter, open the ONS JOBS03 workbook, copy the UK total for "Legal activities" (SIC 69.1) and "Financial and insurance activities" (SIC K) in thousands; `date` is the first month of the quarter. Example:
+**UK employee jobs (JOBS03)** are read from the newest workbook each day. The parser looks, on the all-employees sheet, for the header row carrying the SIC 2007 division codes and for rows labelled with a quarter ("Jun 2026"); it was written without seeing the live file (ONS is unreachable from the build container), so the network test `test_ons_jobs03` is the check. JOBS03 is published as a legacy `.xls`, which pandas reads only with `xlrd` (see Requests for shared code): until that is installed the card shows hand-entered quarters, if any, and names the reason. JOBS03 is at division level, so legal (69.1) is not separated from accounting (69.2); the London heatmap (BRES) does separate them.
 
-```
-2025-06-01,Legal activities,360,https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/workforcejobsbyindustryjobs03,Jun 2025 release
-```
-
-The file has no rows yet.
+**`uk_headcount.csv`** (`date,series,value,source,note`): only for a quarter the workbook lacks or gets wrong. `date` is the quarter's reference month (March, June, September, December), series `Financial & insurance` or `Legal & accounting`, value in thousands, source the JOBS03 workbook. A row here wins over the automated figure. The file has no rows.
 
 ### Checking it
 
@@ -181,3 +177,4 @@ The server saves the readings once a day; the Overview lists the ones whose lean
 # Requests for shared code
 
 - **`app/topics/_base.py` `fetch()`: let a caller validate a reply before it replaces the snapshot.** Today any 200 reply over `min_bytes` overwrites the disk copy. BLS answers an over-limit request with HTTP 200 and `{"status": "REQUEST_NOT_PROCESSED", ...}`, so on 26 Oct 2026 the good BLS data was replaced by an error body and the Headcount and Pay tabs lost their US data. A `validate=callable` argument (raise to reject: keep the old snapshot, mark it stale) would cover this for every dashboard. Until then `ai_jobs._bls_query` keeps its own last-good copy (`bls-good-*.json` beside the snapshots). The same check would also stop a restart from re-downloading when the snapshot is less than `ttl` old, which matters for rate-limited APIs.
+- **`xlrd>=2.0` in requirements.txt** (also asked for by housing, 25 Oct 2026; done 31 Oct 2026). ONS publishes JOBS03 (UK employee jobs by industry, Headcount tab) only as a legacy `.xls` (`jobs03sep2026.xls`, 15 Sep 2026); without `xlrd` `pd.read_excel` cannot open it and the UK card falls back to `uk_headcount.csv`.

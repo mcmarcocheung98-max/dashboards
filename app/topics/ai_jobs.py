@@ -12,8 +12,9 @@ london     employees by London borough and industry, yearly (ONS BRES via Nomis)
 hk headcount  C&SD table 215-16001 (quarterly persons engaged by industry section, JSON API): financing & insurance, professional,
            scientific & technical, information & communications
 
-Hand-entered (data/ai/): uk_headcount.csv (ONS workforce jobs for legal and financial services, quarterly: no stable
-free API, so a few points copied by hand with their source). Indeed data: CC BY 4.0, cite Indeed Hiring Lab.
+uk headcount  ONS JOBS03 employee jobs by industry (quarterly workbook, not seasonally adjusted, thousands): financial & insurance
+           (SIC section K) and legal & accounting (division 69); data/ai/uk_headcount.csv overrides or adds a quarter by hand.
+Indeed data: CC BY 4.0, cite Indeed Hiring Lab.
 """
 from __future__ import annotations
 
@@ -22,6 +23,7 @@ import json
 import time
 from io import StringIO
 
+import numpy as np
 import pandas as pd
 
 from . import _base
@@ -49,9 +51,12 @@ SOURCES = [{"name": "Indeed Hiring Lab job postings index", "url": "https://gith
            {"name": "US employment and pay by industry (BLS Current Employment Statistics, public API)", "url": "https://www.bls.gov/ces/", "cadence": "monthly"},
            {"name": "Hong Kong persons engaged by industry (C&SD table 215-16001)", "url": "https://www.censtatd.gov.hk/en/web_table.html?id=215-16001", "cadence": "quarterly"},
            {"name": "London employees by borough and industry (ONS Business Register and Employment Survey, via Nomis)", "url": "https://www.nomisweb.co.uk/datasets/newbrespub", "cadence": "yearly"},
-           {"name": "UK workforce jobs (ONS JOBS03, hand-entered)", "url": "https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/workforcejobsbyindustryjobs03", "cadence": "quarterly"}]
+           {"name": "UK employee jobs by industry (ONS JOBS03)", "url": "https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/employeejobsbyindustryjobs03", "cadence": "quarterly"}]
 NOTES = "Postings indexes are Indeed's seasonally adjusted counts relative to 1 February 2020 (= 100), 7-day average. 'AI share' counts postings whose text mentions AI terms (machine learning, data science, generative AI...), not only AI engineering jobs. Headcount is payroll employment, thousands."
 TTL = DAY
+# ONS JOBS03 "Employee jobs by industry": one workbook per quarterly release (jobs03sep2026.xls on 15 Sep 2026), linked from the page
+JOBS03_PAGE = "https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/employeejobsbyindustryjobs03"
+UK_INDUSTRIES = {"Financial & insurance": ("64", "65", "66"), "Legal & accounting": ("69",)}     # SIC 2007 divisions; K = 64 + 65 + 66
 
 
 # ------------------------------------------------------------------ parsers
@@ -114,6 +119,98 @@ def parse_bres(text: str) -> dict:
                   for sec in sectors} for b in boroughs}
     last = lambda b: (values[b].get("All jobs") or [None])[-1] or 0
     return {"years": years, "sectors": sectors, "boroughs": sorted(boroughs, key=last, reverse=True), "values": values}
+
+
+def jobs03_url(html: str) -> str:
+    """JOBS03 dataset page -> the newest workbook link (file name jobs03<mon><yyyy>.xls or .xlsx, e.g. jobs03sep2026.xls)."""
+    import re
+    links = re.findall(r'href="(/file\?uri=[^"]*employeejobsbyindustryjobs03[^"]*?jobs03([a-z]{3})(\d{4})\.xlsx?)"', html, flags=re.I)
+    dated = [(pd.to_datetime(m + y, format="%b%Y", errors="coerce"), u) for u, m, y in links]
+    dated = [x for x in dated if pd.notna(x[0])]
+    if not dated:
+        raise ValueError("ONS JOBS03 page layout changed: no jobs03<mon><yyyy> workbook link")
+    return "https://www.ons.gov.uk" + max(dated)[1]
+
+
+def _quarter(cell) -> pd.Timestamp | None:
+    """A JOBS03 row label -> the reference month (March, June, September or December), else None (titles, notes, blank rows).
+    Accepts a date cell or text such as "Jun 2026", "Jun-26", "June 2026"."""
+    if hasattr(cell, "month") and hasattr(cell, "year"):          # a date cell (datetime or Timestamp)
+        t = pd.Timestamp(cell)
+    else:
+        txt = str(cell or "").strip().split("(")[0].strip().rstrip("*").strip()
+        t = None
+        for fmt in ("%b %Y", "%b-%y", "%b %y", "%B %Y", "%b-%Y"):
+            t = pd.to_datetime(txt, format=fmt, errors="coerce")
+            if pd.notna(t):
+                break
+        if t is None or pd.isna(t):
+            return None
+    return pd.Timestamp(year=t.year, month=t.month, day=1) if t.month in (3, 6, 9, 12) and t.year >= 1990 else None
+
+
+def _code(cell) -> str:
+    v = str(cell if cell is not None else "").strip()
+    return v[:-2] if v.endswith(".0") else v
+
+
+def parse_jobs03_frame(d: pd.DataFrame) -> dict[str, pd.Series]:
+    """One JOBS03 sheet (read with header=None) -> {industry: employee jobs, thousands} for UK_INDUSTRIES.
+    Layout assumed (not yet seen from a server, Oct 2026): title lines, then header rows of which one carries the SIC 2007 division
+    codes ("01" ... "99", one per column, possibly with section letters or names in other rows), then one row per quarter labelled in
+    the first columns ("Jun 2026"). Financial & insurance is the sum of divisions 64, 65 and 66 (section K), so a section-letter row
+    whose merged cell sits over the first division cannot be mistaken for the section total. Values given as jobs, not thousands,
+    are divided by 1,000."""
+    head = None
+    for i in range(min(len(d), 40)):
+        codes = {_code(c): j for j, c in enumerate(d.iloc[i]) if _code(c).isdigit() and len(_code(c)) == 2}
+        if len(codes) >= 20 and all(c in codes for cs in UK_INDUSTRIES.values() for c in cs):
+            head = (i, codes)
+            break
+    if head is None:
+        raise ValueError("JOBS03 layout changed: no header row with SIC divisions 64, 65, 66 and 69")
+    i, codes = head
+    rows = {}
+    for _, r in d.iloc[i + 1:].iterrows():
+        t = next((q for q in (_quarter(c) for c in list(r)[:3]) if q is not None), None)
+        if t is None:
+            continue
+        vals = {n: [pd.to_numeric(r.iloc[codes[c]], errors="coerce") for c in cs] for n, cs in UK_INDUSTRIES.items()}
+        rows[t] = {n: float(sum(v)) if all(pd.notna(x) for x in v) else np.nan for n, v in vals.items()}
+    if not rows:
+        raise ValueError("JOBS03 layout changed: no quarter rows under the division codes")
+    f = pd.DataFrame.from_dict(rows, orient="index").sort_index()
+    f = f[~f.index.duplicated(keep="last")]
+    if f.stack().median() > 50_000:                                   # jobs rather than thousands of jobs
+        f = f / 1000
+    return {n: f[n].dropna() for n in f.columns if f[n].notna().any()}
+
+
+def parse_jobs03(content: bytes) -> dict[str, pd.Series]:
+    """JOBS03 workbook -> parse_jobs03_frame of the all-employees sheet (the workbook also splits by sex: those sheets are skipped
+    unless no other sheet has the division codes). A legacy .xls needs xlrd on the server."""
+    import re
+    from io import BytesIO
+    sheets = pd.read_excel(BytesIO(content), sheet_name=None, header=None)
+
+    def sex_only(name):
+        w = set(re.findall(r"[a-z]+", name.lower()))
+        return bool(w & {"male", "female", "men", "women"}) and not (w & {"total", "all", "persons"} or {"male", "female"} <= w or {"men", "women"} <= w)
+    last = None
+    for name in sorted(sheets, key=sex_only):                       # sheets for both sexes first, in workbook order
+        if name.lower().strip() in ("contents", "notes", "cover", "information"):
+            continue
+        try:
+            return parse_jobs03_frame(sheets[name])
+        except ValueError as e:
+            last = e
+    raise last or ValueError("JOBS03: no sheets")
+
+
+def jobs03() -> tuple[dict[str, pd.Series], str]:
+    """The newest JOBS03 workbook, parsed, and its file name."""
+    url = jobs03_url(fetch(JOBS03_PAGE, TTL, headers={"Accept": "text/html,*/*"}, min_bytes=5000))
+    return parse_jobs03(fetch(url, TTL, binary=True, min_bytes=10000, timeout=120).encode("latin-1")), url.rsplit("%2F", 1)[-1].rsplit("/", 1)[-1]
 
 
 def london() -> dict:
@@ -212,8 +309,30 @@ def _headcount_now() -> dict:
                                "date": str(s.index[-1].date())} for n, s in series.items()}}
 
     def uk():
+        """JOBS03 (automated) plus uk_headcount.csv, where a hand-entered quarter wins. Not seasonally adjusted, so the change is
+        against the same quarter a year earlier."""
+        try:
+            series, src, err = *jobs03(), None
+        except Exception as e:                                       # ONS unreachable, layout changed, or no xlrd for the .xls
+            series, src, err = {}, None, f"{type(e).__name__}: {str(e)[:160]}"
         m = manual("ai", "uk_headcount")
-        return {n: _pts(s, 0) for n, s in m.items()} if isinstance(m, dict) else {}
+        for n, v in (m.items() if isinstance(m, dict) else []):
+            x = pd.concat([series.get(n, pd.Series(dtype=float)), v])
+            series[n] = x[~x.index.duplicated(keep="last")].sort_index()
+        series = {n: s for n, s in series.items() if len(s)}
+        if not series:
+            raise ValueError(err or "no JOBS03 data and no rows in uk_headcount.csv")
+
+        def yoy_q(s):
+            prev = s.copy()
+            prev.index = prev.index + pd.DateOffset(years=1)
+            return ((s / prev.reindex(s.index) - 1) * 100).dropna()
+        since = pd.Timestamp("2010-01-01")
+        return {"levels": {n: _pts(s[s.index >= since], 1) for n, s in series.items()},
+                "yoy": {n: _pts(yoy_q(s)[lambda x: x.index >= since], 2) for n, s in series.items()},
+                "latest": {n: {"level": _r(s.iloc[-1], 1), "yoy": _r(yoy_q(s).iloc[-1], 2) if len(yoy_q(s)) else None, "date": str(s.index[-1].date())}
+                           for n, s in series.items()},
+                "workbook": src, "workbook_error": err}
 
     def hk():
         series = parse_csd_persons(json.loads(fetch(CSD, TTL, min_bytes=10000)))
@@ -222,7 +341,7 @@ def _headcount_now() -> dict:
             x = pd.concat([series.get(n, pd.Series(dtype=float)), v])
             series[n] = x[~x.index.duplicated(keep="last")].sort_index()
         return {n: _pts(s[s.index >= "2010-01-01"], 1) for n, s in series.items()}
-    out = payload({"US": us, "UK": uk, "HK": hk, "London": london}, sources=[BLS, CSD, BRES.format(ind=",".join(str(k) for k in LONDON_SECTORS))])
+    out = payload({"US": us, "UK": uk, "HK": hk, "London": london}, sources=[BLS, CSD, BRES.format(ind=",".join(str(k) for k in LONDON_SECTORS)), JOBS03_PAGE])
     try:
         out["as_of"] = (out.get("US") or {}).get("latest", {}).get("Legal services", {}).get("date")
     except Exception:

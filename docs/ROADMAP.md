@@ -35,23 +35,25 @@ Each item is one commit: module change + JS change + fixture test + README updat
 Finish a dashboard's "next" list before starting the following dashboard, so each one reaches "complete" rather than all
 four staying half done.
 
-### 2a. London housing (fully automatable, finish first)
-- Rents: ONS Price Index of Private Rents, London (monthly); card "Rents vs prices" on the Prices tab.
+### 2a. London housing (fully automatable, finish first) (done: all four items, see below)
+- Rents: ONS Price Index of Private Rents, London (monthly); card "Rents vs prices" on the Prices tab (done: rent, yield and
+  "Rents against prices" cards on the London tab, read from the monthly PIPR workbook).
 - Boroughs: UK HPI by local authority for the 33 London boroughs; new tab "Boroughs" with a sortable table
   (price, yearly change) and a small-multiples line chart. One download per borough is too many requests: use the
-  full-file CSV once a day and filter.
+  full-file CSV once a day and filter (done: "Boroughs: homes & rents" tab with table, map and top-3 picks; all regions and
+  boroughs come from the monthly UK HPI full file, fetched once a day).
 - London earnings: ONS ASHE London median full-time pay (yearly) to correct the price-to-earnings ratio; keep the
-  UK-wide monthly line as the trend.
+  UK-wide monthly line as the trend (done: Nomis NM_99_1 workplace median; the UK pay line stays dashed as the trend).
 - Mortgage rates: Bank of England quoted 2-year fixed 75% LTV rate (series IUMBV34) replacing "Bank Rate + 1.5" in
-  the illustration.
+  the illustration (done: IUMBV34 drives the illustration, Bank Rate + 1.5 only before the series starts or if it fails).
 
 ### 2b. AI jobs vs law & finance (almost automatable)
 - UK headcount: fill `uk_headcount.csv` from ONS JOBS03 for the last 12 quarters; or automate from the ONS API once a
   series id for the two industries is confirmed.
 - Occupation view: Indeed's sector file also has "IT Systems & Solutions" and "Scientific Research & Development";
-  add them to the AI group behind a toggle.
+  add them to the AI group behind a toggle (done: wider-AI toggle on the AI vs the professions tab).
 - Wages: BLS average hourly earnings for the same industries (FRED CES..03 series) as a third tab, since headcount
-  without pay tells half the story.
+  without pay tells half the story (done: Pay tab, from the BLS public API since FRED times out from servers).
 
 ### 2c. AI adoption (half hand-entered)
 - Confirm or fix the BTOS workbook parser against the live file; fill the sector file for the latest period.
