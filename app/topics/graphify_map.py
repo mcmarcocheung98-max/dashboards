@@ -55,7 +55,20 @@ def READINGS() -> list[dict]:
     return out
 
 
-ENDPOINTS = {"map": map_data, "savings": savings}
+def _slice(*keys):
+    """A tab's own endpoint: the parts of map.json it draws (the page itself loads 'map' once and reuses it)."""
+    return lambda: {k: v for k, v in map_data().items() if k in keys}
+
+
+COMMANDS = [["graphify query \"<question>\"", "walk the graph from the matching nodes; a small, scoped subgraph"],
+            ["graphify explain \"<node>\"", "one node and its most connected neighbours"],
+            ["graphify path \"<A>\" \"<B>\"", "the shortest path between two things"],
+            ["graphify update .", "rebuild the code half of the map (no model, no key)"],
+            ["bash scripts/graphify-setup.sh", "install graphify if missing and build graphify-out/"],
+            ["python scripts/graphify_export.py --bench", "refresh this dashboard's data"]]
+
+ENDPOINTS = {"map": map_data, "savings": savings, "how": _slice("built_at", "exported", "stats"), "gods": _slice("gods", "godlinks", "communities"),
+             "audit": _slice("stats", "surprises", "hyperedges"), "explore": _slice("nodes", "edges", "communities", "gods"), "use": lambda: {"commands": COMMANDS}}
 SOURCES = [{"name": "graphify (graphifyy on PyPI)", "url": "https://github.com/Graphify-Labs/graphify", "cadence": "rebuilt each session"},
            {"name": "This repository", "url": "https://github.com/mcmarcocheung98-max/dashboards", "cadence": "every push"}]
 NOTES = ("The map is a snapshot exported from graphify-out/ by scripts/graphify_export.py; the commit it was built from is shown on the Map tab. "
