@@ -23,6 +23,7 @@ import csv
 import json
 import math
 import os
+import re
 import time
 from urllib.parse import quote
 
@@ -58,6 +59,14 @@ HEALTH_KEYS = {"wiki_en": "https://wikimedia.org/api/rest_v1/metrics/pageviews/p
                "titles": "https://en.wikipedia.org/w/api.php?action=query", "hn": "https://hn.algolia.com/api/v1/search_by_date",
                "bsky": "https://api.bsky.app/xrpc/app.bsky.feed.searchPosts", "reddit": "https://www.reddit.com/r/<sub>/about.json",
                "github": "https://api.github.com/repos/<repo>"}
+
+# Sources that refuse this server outright (401/403) rather than failing for a while: no keyless way round, so the card falls back to
+# what was logged before (or hand-entered rows) and /api/health files them as handled instead of raising an alert every day.
+# Bluesky: since Oct 2026 app.bsky.feed.searchPosts answers 403 without a login on both public AppView hosts. Reddit: blocks
+# datacenter IPs on www, old and api.reddit.com.
+CLOSED = {"bsky": "Bluesky's search refuses this server (403; it needs a logged-in account): the card shows the days logged before, else 'not available'",
+          "reddit": "Reddit blocks cloud servers (403): counts come from data/trends/reddit.csv when hand-entered, else 'not available'"}
+_REFUSED = re.compile(r"\b(401|403)\b")
 
 PACE = {"wiki": 0.3, "hn": 0.4, "bsky": 1.0, "reddit": 3.0, "github": 1.5, "site": 0.5}
 WIKI_START = pd.Timestamp("2016-01-01")
@@ -271,6 +280,8 @@ def _health(results: dict[str, list]) -> None:
             if ok_at.get(src):
                 h["ok"] = h["ok"] or ok_at[src]
                 B.STALE[url] = ok_at[src]
+            if src in CLOSED and all(_REFUSED.search(str(e)) for e in errs):
+                B.handled(url, CLOSED[src])
     save("state", state)
 
 
@@ -704,16 +715,17 @@ def _social_now() -> dict:
     gh_rows = sorted([{"repo": k, "label": repo_lab.get(k, k), "stars": last(gh, k), "forks": last(ghf, k), "d7": gain(s, 7), "d30": gain(s, 30),
                        "since": str(s.index[0].date())} for k, s in gh.items()], key=lambda r: -(r["stars"] or 0))
     sub_theme = {s["subreddit"]: s.get("theme") for s in subreddits()}
+    closed = {k: B.HEALTH.get(HEALTH_KEYS[k], {}).get("handled_how") for k in CLOSED}     # the reason, while the source refuses this server
     rd_rows = sorted([{"sub": k, "theme": sub_theme.get(k), "subscribers": last(rs, k), "active": last(ra, k), "d30": gain(s, 30), "date": str(s.index[-1].date())}
                       for k, s in rs.items()], key=lambda r: -(r["subscribers"] or 0))
     bs_rows = sorted([{"key": k, "label": lab.get(k, k), "posts": last(bs, k), "capped": bool(k in capped and capped[k].index[-1] == s.index[-1]),
                        "avg7": _r(s.iloc[-7:].mean(), 0), "date": str(s.index[-1].date())} for k, s in bs.items()], key=lambda r: -(r["posts"] or 0))
     return {"hn": {"stories": [{"key": k, "name": lab[k], "points": _pts(st[k], 0)} for k in order[:6]], "comments": [{"key": k, "name": lab[k], "points": _pts(cm[k], 0)} for k in order[:6]],
                    "total_stories": _pts(tot_s, 0), "total_comments": _pts(tot_c, 0), "rows": hn_rows},
-            "bsky": {"lines": [{"key": r["key"], "name": r["label"], "points": _pts(bs[r["key"]], 0)} for r in bs_rows[:6]], "rows": bs_rows},
+            "bsky": {"lines": [{"key": r["key"], "name": r["label"], "points": _pts(bs[r["key"]], 0)} for r in bs_rows[:6]], "rows": bs_rows, "closed": closed["bsky"]},
             "github": {"lines": [{"key": r["repo"], "name": r["label"], "points": _pts(gh[r["repo"]], 0)} for r in gh_rows[:6]], "rows": gh_rows},
             "reddit": {"lines": [{"key": r["sub"], "name": "r/" + r["sub"], "points": _pts(rs[r["sub"]], 0)} for r in rd_rows[:6]], "rows": rd_rows,
-                       "cited": manual_sources(SLUG, "reddit")[:10]},
+                       "cited": manual_sources(SLUG, "reddit")[:10], "closed": closed["reddit"]},
             "as_of": str(tot_s.index[-1].date()) if len(tot_s) else None, "stale": _stale(), "updated": int(time.time()), **_meta(load("state"))}
 
 
