@@ -126,6 +126,10 @@ def _board_for(ticker: str, f: dict) -> dict:
         return {"status": "error", "why": type(e).__name__}
     S, FD = f.get("series") or {}, f.get("fundamentals") or {}
     FS = FD.get("series") or {}
+    raw = C.fundamentals(ticker)                                            # the compact fill file: DAILY fees and TVL for 400 days (the tab's series are weekly samples)
+    fees_daily, tvl_daily = C._ser(raw.get("fees")), C._ser(raw.get("tvl"))
+    fees_30d = fees_daily.rolling(30, min_periods=20).sum().dropna() if len(fees_daily) else _series(FS.get("fees_30d"))
+    tvl_series = tvl_daily if len(tvl_daily) else _series(FS.get("tvl"))
     now = pd.Timestamp.now("UTC").tz_localize(None).normalize()
     unlocked, circ = None, None
     try:
@@ -155,7 +159,7 @@ def _board_for(ticker: str, f: dict) -> dict:
     except Exception:
         pass
     try:
-        inp = CB.inputs(d.close, btc.close, _series(S.get("market_cap")), _series(FS.get("fees_30d")), _series(FS.get("tvl")), unlocked, circ, zone_pos, zone_score)
+        inp = CB.inputs(d.close, btc.close, _series(S.get("market_cap")), fees_30d, tvl_series, unlocked, circ, zone_pos, zone_score)
         out = CB.payload(inp)
     except Exception as e:
         return {"status": "error", "why": f"{type(e).__name__}: {e}"}

@@ -103,11 +103,11 @@ def inputs(price: pd.Series, btc: pd.Series | None = None, market_cap: pd.Series
         d["btc_mayer"] = (b / b.rolling(200, min_periods=120).mean()).reindex(idx, method="ffill")
     if market_cap is not None and len(market_cap):
         mc = market_cap.astype(float).sort_index().reindex(idx, method="ffill")
-        if fees_30d is not None and len(fees_30d) > 60:
+        if fees_30d is not None and len(fees_30d) > 30:
             f = fees_30d.astype(float).sort_index().reindex(idx, method="ffill")
             pf = (mc / (f * 365 / 30)).replace([np.inf, -np.inf], np.nan)
             d["p_fees_rel"] = pf / pf.rolling(365, min_periods=90).median()
-        if tvl is not None and len(tvl) > 60:
+        if tvl is not None and len(tvl) > 30:
             t = tvl.astype(float).sort_index().reindex(idx, method="ffill")
             pt = (mc / t).replace([np.inf, -np.inf], np.nan)
             d["p_tvl_rel"] = pt / pt.rolling(365, min_periods=90).median()
