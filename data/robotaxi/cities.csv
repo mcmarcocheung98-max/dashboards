@@ -7,5 +7,5 @@ date,operator,city,country,source,note
 2025-06-24,Waymo,Atlanta,US,https://waymo.com/blog/,via Uber
 2022-08-08,Baidu Apollo Go,Wuhan,CN,https://www.prnewswire.com/,fully driverless commercial permits
 2022-08-08,Baidu Apollo Go,Chongqing,CN,https://www.prnewswire.com/,fully driverless commercial permits
-2025-06-22,Tesla,Austin,US,https://www.tesla.com/,invite-only pilot with safety monitor - verify status
 2025-09-10,Zoox,Las Vegas,US,https://zoox.com/journal,
+2026-01-22,Tesla,Austin,US,https://driveteslacanada.ca/news/tesla-begins-public-unsupervised-robotaxi-rides-in-austin/,"first public rides with no safety monitor in the car (Musk on X, 22 Jan 2026, as reported); only part of the Austin fleet at first. The 22 Jun 2025 launch was invite-only with a safety monitor; the app opened to all on 4 Sep 2025 (https://www.insurancejournal.com/news/southcentral/2025/09/05/837907.htm), still with monitors"
