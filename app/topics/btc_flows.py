@@ -63,10 +63,15 @@ def parse_cnbc(j: dict) -> pd.Series:
 
 
 def stock_daily(yahoo: str, start: str = "2024-01-01") -> tuple[pd.Series, str, list[str]]:
-    """(closes, source name, what failed) for a listed stock: Yahoo (with Nasdaq for US tickers), then CNBC."""
-    tried = []
+    """(closes, source name, what failed) for a listed stock: Yahoo (with Nasdaq for US tickers), then CNBC. When Yahoo refused and
+    served its last good copy, CNBC is asked first and the copy is kept only if CNBC has nothing."""
+    tried, copy = [], None
     try:
-        return yahoo_daily(yahoo, start), "Yahoo" if "." in yahoo else "Yahoo / Nasdaq", tried
+        s = yahoo_daily(yahoo, start)
+        if B.yahoo_key(yahoo, start) not in B.STALE or not alt_symbols(yahoo):
+            return s, "Yahoo" if "." in yahoo else "Yahoo / Nasdaq", tried
+        copy = s
+        tried.append(f"Yahoo {yahoo}: refused, last good copy from {B.stale_info([B.yahoo_key(yahoo, start)]).get(B.yahoo_key(yahoo, start))}")
     except Exception as e:
         tried.append(f"Yahoo {yahoo}: {type(e).__name__}: {str(e)[:100]}")
     a, b = pd.Timestamp(start), pd.Timestamp.now()
@@ -80,6 +85,8 @@ def stock_daily(yahoo: str, start: str = "2024-01-01") -> tuple[pd.Series, str, 
             return s, "CNBC", tried
         except Exception as e:
             tried.append(f"CNBC {sym}: {type(e).__name__}: {str(e)[:100]}")
+    if copy is not None:
+        return copy, "Yahoo (last good copy)", tried
     raise LookupError("; ".join(tried))
 
 

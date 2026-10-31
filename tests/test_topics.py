@@ -684,6 +684,26 @@ def test_btc_treasury_prices_fall_back_from_yahoo(snapdir, monkeypatch):
     assert "price" not in hk and hk["price_error"].startswith("no price source") and len(hk["price_tried"]) == 3 and hk["rows"]
 
 
+def test_btc_treasury_prefers_cnbc_over_an_old_yahoo_copy(snapdir, monkeypatch):
+    from app.topics import btc_flows as F
+    days = pd.bdate_range(end="2026-10-20", periods=300)
+    cnbc = {"v": {"barData": {"priceBars": [{"tradeTimeinMills": str(int(d.timestamp() * 1000)), "close": "30"} for d in days]}}}
+
+    def fj(url, ttl, key=None, **k):                 # as fetch does on a 429 with a snapshot: the old copy, STALE set under the key
+        if "yahoo" in url:
+            B.STALE[key] = time.time() - 9 * 86400
+            return _yahoo(5.0, n=200)
+        return cnbc["v"]
+    monkeypatch.setattr(F, "fetch_json", fj)
+    s, src, tried = F.stock_daily("SWC.L")
+    assert src == "CNBC" and len(s) == 300 and "last good copy" in tried[0]
+    from app.cache import _cache
+    _cache.clear()
+    cnbc["v"] = {"barData": {"priceBars": []}}
+    s, src, tried = F.stock_daily("SWC.L")
+    assert src == "Yahoo (last good copy)" and len(s) == 200 and len(tried) == 2
+
+
 def test_farside_parser_rejects_a_changed_page():
     from app.topics.btc_flows import parse_farside, _num
     assert _num("(12.5)") == -12.5 and _num("-") == 0 and _num("1,234.5") == 1234.5
