@@ -1301,6 +1301,37 @@ def test_btc_sector_leaders_and_case_fields(snapdir, monkeypatch):
     assert K["bear_2027"] < K["base_2027"] < K["bull_2027"] and K["bear_2028"] < K["base_2028"] < K["bull_2028"] and K["mcap_base_2028"] > 0
 
 
+def test_btc_fundamentals_without_defillama_fees(snapdir, monkeypatch):
+    """Babylon: TVL from /protocol/babylon-protocol; DefiLlama has no fees for it (400), which is recorded on the coin, not as a failing source."""
+    import json as _json
+    import requests
+    from app.topics import btc_cycles as C
+    monkeypatch.setattr(C, "FUND_DIR", snapdir / "btc_fundamentals")
+    monkeypatch.setattr(C, "PACE", 0)
+    B.HEALTH.clear()
+    c = next(c for c in C.coins_list() if c["ticker"] == "BABY")
+    assert c["defillama_slug"] == "babylon-protocol" and c["coingecko_id"] == "babylon" and "verify id" not in c["note"]
+    days = pd.date_range(end="2026-10-30", periods=500)
+    tvl = {"tvl": [{"date": int(d.timestamp()), "totalLiquidityUSD": 3e9 + i} for i, d in enumerate(days)]}
+
+    class R400:
+        status_code, headers = 400, {}
+
+    def dl(url, *a, **k):
+        if "summary/fees/" in url or "emissions" in url:
+            raise requests.HTTPError("400 Client Error", response=R400())
+        if "/protocol/babylon-protocol" in url:
+            return _json.dumps(tvl)
+        if "coins/babylon" in url:
+            return _json.dumps({"market_data": {"circulating_supply": 2e9, "total_supply": 1e10, "max_supply": None}, "categories": ["Bitcoin Ecosystem"], "description": {"en": "x" * 600}})
+        raise AssertionError(url)
+    monkeypatch.setattr(B, "_download", dl)
+    out = C.fill_fundamentals(c)
+    assert len(out["tvl"]) > 300 and "fees" not in out and out["errors"]["fees"] == "none on DefiLlama" and out["supply"]["circulating_supply"] == 2e9
+    assert not [u for u in B.HEALTH if "summary/fees" in u] and C.LLAMA_PROTO.format(slug="babylon-protocol") in B.HEALTH
+    B.HEALTH.clear()
+
+
 def test_btc_sector_check_against_coingecko():
     from app.topics import btc_cycles as C
     assert C.sector_check(3, []) is None

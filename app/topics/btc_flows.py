@@ -23,6 +23,7 @@ import pandas as pd
 from ..cache import _cached
 from ..config import DATA_DIR
 from ._base import DAY, _pts, _r, fetch, fetch_json, manual, manual_rows, payload, stale_info
+from . import _base as B
 
 SLUG = "btc-cycles"
 FARSIDE = "https://farside.co.uk/bitcoin-etf-flow-all-data/"
@@ -71,9 +72,11 @@ def stock_daily(yahoo: str, start: str = "2024-01-01") -> tuple[pd.Series, str, 
     a, b = pd.Timestamp(start), pd.Timestamp.now()
     for sym in alt_symbols(yahoo):
         try:
-            s = parse_cnbc(fetch_json(CNBC_BARS.format(sym=sym, a=a.strftime("%Y%m%d"), b=b.strftime("%Y%m%d")), TTL, min_bytes=20))
+            url = CNBC_BARS.format(sym=sym, a=a.strftime("%Y%m%d"), b=b.strftime("%Y%m%d"))
+            s = parse_cnbc(fetch_json(url, TTL, min_bytes=20, key=url.replace(b.strftime("%Y%m%d") + "000000", "now")))   # one snapshot per symbol, not per day
             if len(s) < 20:
                 raise ValueError(f"{len(s)} rows")
+            B.handled(B.yahoo_key(yahoo, start), f"Yahoo refused; prices from CNBC ({sym})")
             return s, "CNBC", tried
         except Exception as e:
             tried.append(f"CNBC {sym}: {type(e).__name__}: {str(e)[:100]}")
