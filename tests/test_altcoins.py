@@ -248,6 +248,8 @@ def test_offline_volume_and_unlocks_degrade(tmp_path, monkeypatch):
     cache._cache.clear()
     d = A._volume_now()
     assert all(c["status"] in ("error", "not on Hyperliquid") for c in d["coins"]) and d["counts"]["coins"] == 0
+    sg = A._signals_now()
+    assert all(c["status"] in ("error", "not on Hyperliquid") for c in sg["coins"]) and sg["by_horizon"] == {} and sg["btc_error"] == "ConnectionError"
     u = A._unlocks_now()
     assert u["study_error"] == "ConnectionError" and u["next"] and len(u["events"]) > 80 and "price" not in u
     B.json_safe(u)
@@ -279,6 +281,12 @@ def test_signals_are_bounded_use_no_future_and_fire():
     d3 = pd.DataFrame({"open": o, "high": h, "low": l, "close": c, "volume": v}, index=idx)
     S3 = SG.signals(d3, None)
     assert S3.absorption.iloc[150] == 1 and S3.big_day.iloc[150] == 1 and S3.absorption.abs().sum() == 1
+    # the two flipped signs: inside a support zone reads -1, near the 1-year high reads +1
+    o5 = o.copy(); c5 = c.copy(); v5 = v.copy(); o5[100], c5[100], v5[100] = 10.0, 10.5, 2000.0; c5[101:] = 10.2; o5[101:] = 10.2   # a big buy day leaves support 10.0-10.5; the price then sits inside it
+    S5 = SG.signals(pd.DataFrame({"open": o5, "high": np.maximum(o5, c5) + 0.1, "low": np.minimum(o5, c5) - 0.1, "close": c5, "volume": v5}, index=idx), None)
+    assert S5.in_zone.iloc[105] == -1
+    rising = pd.DataFrame({"open": np.linspace(1, 3, 400), "high": np.linspace(1, 3, 400) * 1.01, "low": np.linspace(1, 3, 400) * 0.99, "close": np.linspace(1, 3, 400), "volume": np.ones(400)}, index=pd.date_range("2024-01-01", periods=400, freq="D"))
+    assert SG.signals(rising, None).range_1y.iloc[-1] == 1
     ev = pd.DataFrame({"date": [pd.Timestamp("2025-03-10")], "pct_of_circulating": [2.0]})
     S4 = SG.signals(d3, None, unlocks=ev)
     assert S4.unlock_window.loc["2025-03-08"] == -1 and S4.unlock_window.loc["2025-03-10"] == -1 and S4.unlock_window.loc["2025-03-14"] == 1 and S4.unlock_window.loc["2025-04-01"] == 0
@@ -320,9 +328,13 @@ def test_signals_tab(filled):
     B.json_safe(d)
     ok = [c for c in d["coins"] if c["status"] == "ok"]
     assert len(ok) == len(A.HL_COINS) and d["btc_error"] is None and len(d["signals"]) == 20 and d["weights"] and abs(sum(d["weights"].values()) - 1) < 1e-6
+    assert d["horizons"] == [7, 14, 30] and set(d["by_horizon"]) == {"7", "14", "30"} and d["horizon"] == 7
     c = next(x for x in ok if x["ticker"] == "ENA")
     assert c["label"] in ("strong buy", "lean buy", "neutral", "lean sell", "strong sell") and -1 <= c["score"] <= 1 and c["lean"] in (-1, 0, 1)
-    assert len(c["contributions"]) == 20 and len(c["today"]) == 20 and c["composite"] and c["backtest"]["days"] > 100 and "equity" in c["backtest"] and "equity" not in c["backtest_long_only"]
+    assert len(c["contributions"]) == 20 and len(c["today"]) == 20 and c["backtest"]["days"] > 100 and "equity" in c["backtest"] and "equity" not in c["backtest_long_only"] and c["backtest"]["hit_horizon"] == 7
+    h30 = d["by_horizon"]["30"]
+    assert h30["coins"]["ENA"]["composite"] and h30["coins"]["ENA"]["backtest"]["hit_horizon"] == 30 and len(h30["per_signal"]) == 20 and h30["pooled_backtest"]["coins"] == len(ok)
+    assert "signals_with_weight" in h30["pooled_backtest"] and h30["coins"]["ENA"]["score"] == h30["coins"]["ENA"]["score"]           # a number, never NaN
     assert c["unlock_schedule"] is True and next(x for x in ok if x["ticker"] == "SOL")["unlock_schedule"] is False
     assert d["counts"]["buy"] + d["counts"]["sell"] + d["counts"]["neutral"] == len(ok) and d["pooled_backtest"]["coins"] == len(ok) and len(d["per_signal"]) == 20
     r = {x["key"]: x for x in A.READINGS()}

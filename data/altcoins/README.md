@@ -55,7 +55,12 @@ the 60-day with price up (or down). **Price**: trend (close over the 50-day over
 50%+ over (−1). **Market**: BTC above or below its 200-day average. **Supply**: 1-7 days after an unlock of 1%+ of circulating (+1), the 3 days
 before (−1); coins without a schedule use the 26th-6th month-turn (−1).
 
-**Weighting rule.** Each signal is judged on the return over the next 7 days. Its weight is its Spearman rank correlation with that return over
+Two signs were flipped on 30 Oct 2026 after the first live fit: *inside a zone* now reads +1 in live resistance and −1 in live support, and
+*place in the 1-year range* reads +1 near the 1-year high and −1 near the low (the 52-week-high effect). Both had a significantly negative record
+at 7 days (rank correlation −0.048 and −0.045, t ≈ −3), so their record since that date is in-sample for the flip and should be read as such.
+
+**Weighting rule.** Each signal is judged on the return over the next 7 days by default; the page also fits and backtests the whole thing
+on 14 and 30 days (the "Judge on" switch and the horizon table), with the same trading rule. Its weight is its Spearman rank correlation with that return over
 every coin's history pooled, kept only when positive, at least 1.5 standard errors from zero and measured on 100+ active coin-days, and the kept
 correlations are scaled to sum to 1 with no single signal above 40% (equal weights if nothing qualifies, and the page says so). Final score = Σ weight × signal, clipped to ±1. Strong buy ≥ +0.5, lean buy ≥ +0.2,
 lean sell ≤ −0.2, strong sell ≤ −0.5.

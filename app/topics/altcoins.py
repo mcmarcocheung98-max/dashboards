@@ -5,8 +5,8 @@ zones    every coin's buy zone (rule below), where today's price sits against it
 volume   big-volume days (3x the 60-day median) and the support / resistance zones they leave, per coin, from Hyperliquid daily candles
          (_volume_zones.py); what each coin did after its own big days and zone retests
 signals  twenty daily signals on top of the zones (zone position, retests, breaks, big-day balance, trend, RSI, BTC, unlock windows ...),
-         each judged on the next 7 days, weighted by rank correlation on the pooled past of every coin and re-fitted every 30 days, one
-         final score per coin with a walk-forward backtest of trading it (_signals.py)
+         each judged on the next 7, 14 and 30 days, weighted by rank correlation on the pooled past of every coin and re-fitted every 30
+         days, one final score per coin and horizon with a walk-forward backtest of trading it (_signals.py)
 hype ... one tab per candidate (_coin_page.py): price against BTC, RSI, market cap, the case for it, fundamentals and the projection
 unlocks  ENA's full unlock schedule (data/altcoins/unlocks/ENA.csv) and what the price did before, into and after each unlock, with the
          simple short-before / buy-after rules and a placebo (_unlocks.py)
@@ -202,6 +202,7 @@ def _volume_now() -> dict:
 
 # ------------------------------------------------------------------ 20 signals on top of the zones, weighted into one reading per coin
 def _signals_now() -> dict:
+    """Every horizon in SG.HORIZONS is fitted and backtested separately; the page switches between them, READINGS use SG.HORIZON."""
     try:
         btc = hl_daily("BTC")
     except Exception as e:
@@ -221,55 +222,72 @@ def _signals_now() -> dict:
             ev = UL.events(c["ticker"]) if c["ticker"] in UL.coins() else None
             S = SG.signals(d, btc, VZ.zones(d, c["ticker"]), ev)
             per[c["ticker"]] = (S, d.close)
-            coins.append({**c, "status": "ok", "price": float(d.close.iloc[-1]), "since": str(d.index[0].date()), "days": len(d), "unlock_schedule": ev is not None})
+            coins.append({**c, "status": "ok", "price": float(d.close.iloc[-1]), "since": str(d.index[0].date()), "days": len(d), "unlock_schedule": ev is not None,
+                          "today": {k: float(S[k].iloc[-1]) for k in SG.SIGNALS}})
         except Exception as e:
             coins.append({**c, "status": "error", "why": type(e).__name__})
-    out = {"coins": coins, "signals": [{"key": k, "label": v[0], "family": v[1], "means": v[2]} for k, v in SG.SIGNALS.items()], "horizon": SG.HORIZON,
+    out = {"coins": coins, "signals": [{"key": k, "label": v[0], "family": v[1], "means": v[2]} for k, v in SG.SIGNALS.items()], "horizon": SG.HORIZON, "horizons": list(SG.HORIZONS),
            "enter": SG.ENTER, "refit_days": SG.REFIT_DAYS, "min_train_days": SG.MIN_TRAIN_DAYS, "cost_per_side": SG.COST_PER_SIDE, "btc_error": btc_err,
-           "stale": stale_info([HL_INFO]), "updated": int(time.time())}
+           "stale": stale_info([HL_INFO]), "updated": int(time.time()), "by_horizon": {}}
     if not per:
         return _scrub(out)
+    for h in SG.HORIZONS:
+        out["by_horizon"][str(h)] = _horizon_block(per, h)
+    main = out["by_horizon"].get(str(SG.HORIZON), {})
+    out |= {k: main.get(k) for k in ("weights", "how", "train_rows", "weights_drift", "per_signal", "pooled_backtest", "counts", "error")}
+    for c in coins:                                   # the default horizon's reading on the coin itself, for READINGS and the table
+        if c["status"] == "ok" and c["ticker"] in (main.get("coins") or {}):
+            r = main["coins"][c["ticker"]]
+            if r.get("status") == "ok":
+                c |= {k: r[k] for k in ("score", "label", "lean", "contributions", "backtest", "backtest_long_only")}
+            else:
+                c["status"], c["why"] = "error", r.get("why")
+    return _scrub(out)
+
+
+def _horizon_block(per: dict, h: int) -> dict:
+    """Weights, per-signal record, every coin's composite and backtest, all judged on the return `h` days ahead."""
+    block = {"horizon": h, "coins": {}}
     try:
-        wf = SG.walk_forward(per)
-    except Exception as e:                                   # the fit failing must not take the tab down: say so and show the coins
-        out["error"] = f"weights: {type(e).__name__}: {e}"
-        return _scrub(out)
-    out |= {"weights": wf["weights_now"], "how": wf["how_now"], "fits": [{k: v for k, v in f.items() if k != "weights"} for f in wf["fits"]], "train_rows": wf.get("train_rows_now")}
+        wf = SG.walk_forward(per, h=h)
+    except Exception as e:
+        block["error"] = f"weights: {type(e).__name__}: {e}"
+        return block
+    block |= {"weights": wf["weights_now"], "how": wf["how_now"], "fits": [{k: v for k, v in f.items() if k != "weights"} for f in wf["fits"]], "train_rows": wf.get("train_rows_now")}
     if wf["fits"] and wf["weights_now"]:
         last = wf["fits"][-1]["weights"]
-        out["weights_drift"] = float(sum(abs(wf["weights_now"][k] - last[k]) for k in SG.SIGNALS) / 2)
+        block["weights_drift"] = float(sum(abs(wf["weights_now"][k] - last[k]) for k in SG.SIGNALS) / 2)
     try:
-        pooled = pd.concat([S.assign(_fwd=SG.forward(c).reindex(S.index)) for S, c in per.values()])
-        out["per_signal"] = SG.evaluate(pooled[list(SG.SIGNALS)], pooled["_fwd"])
+        pooled = pd.concat([S.assign(_fwd=SG.forward(c, h).reindex(S.index)) for S, c in per.values()])
+        block["per_signal"] = SG.evaluate(pooled[list(SG.SIGNALS)], pooled["_fwd"])
     except Exception as e:
-        out["per_signal"], out["per_signal_error"] = [], f"{type(e).__name__}: {e}"
-    for c in coins:
-        if c["status"] != "ok":
-            continue
+        block["per_signal"], block["per_signal_error"] = [], f"{type(e).__name__}: {e}"
+    for ticker, (S, close) in per.items():
         try:
-            S, close = per[c["ticker"]]
-            comp = wf["composite"][c["ticker"]]
+            comp = wf["composite"][ticker]
             today = SG.composite(S.iloc[[-1]], wf["weights_now"]).iloc[0] if wf["weights_now"] else None
-            c["score"] = None if today is None or not np.isfinite(today) else float(today)
-            c["label"] = SG.label(c["score"])
-            c["lean"] = 0 if c["score"] is None else (1 if c["score"] >= SG.ENTER else -1 if c["score"] <= -SG.ENTER else 0)
-            c["contributions"] = SG.contributions(S.iloc[-1], wf["weights_now"] or {})
-            c["today"] = {k: float(S[k].iloc[-1]) for k in SG.SIGNALS}
-            c["composite"] = [[int(t.timestamp()), round(float(v), 3)] for t, v in comp.dropna().items()]
-            c["price_series"] = [[int(t.timestamp()), float(v)] for t, v in close.reindex(comp.dropna().index).items()]
-            c["backtest"] = SG.backtest(comp, close)
-            c["backtest_long_only"] = {k: v for k, v in SG.backtest(comp, close, long_short=False).items() if k not in ("equity", "hold_curve")}
-            c["own_eval"] = SG.evaluate(S, SG.forward(close))
+            score = None if today is None or not np.isfinite(today) else float(today)
+            r = {"status": "ok", "score": score, "label": SG.label(score), "lean": 0 if score is None else (1 if score >= SG.ENTER else -1 if score <= -SG.ENTER else 0),
+                 "contributions": SG.contributions(S.iloc[-1], wf["weights_now"] or {}),
+                 "composite": [[int(t.timestamp()), round(float(v), 3)] for t, v in comp.dropna().items()],
+                 "price_series": [[int(t.timestamp()), float(v)] for t, v in close.reindex(comp.dropna().index).items()],
+                 "backtest": SG.backtest(comp, close, h=h), "backtest_long_only": {k: v for k, v in SG.backtest(comp, close, long_short=False, h=h).items() if k not in ("equity", "hold_curve")},
+                 "own_eval": SG.evaluate(S, SG.forward(close, h))}
         except Exception as e:
-            c["status"], c["why"] = "error", f"{type(e).__name__}: {e}"
-    ok = [c for c in coins if c["status"] == "ok" and c.get("score") is not None]
-    out["counts"] = {"buy": sum(c["lean"] > 0 for c in ok), "sell": sum(c["lean"] < 0 for c in ok), "neutral": sum(c["lean"] == 0 for c in ok)}
-    bts = [c["backtest"] for c in ok if c["backtest"].get("total") is not None]
+            r = {"status": "error", "why": f"{type(e).__name__}: {e}"}
+        block["coins"][ticker] = r
+    ok = [r for r in block["coins"].values() if r.get("status") == "ok" and r.get("score") is not None]
+    block["counts"] = {"buy": sum(r["lean"] > 0 for r in ok), "sell": sum(r["lean"] < 0 for r in ok), "neutral": sum(r["lean"] == 0 for r in ok)}
+    bts = [r["backtest"] for r in ok if r["backtest"].get("total") is not None]
     if bts:
         med = lambda key: (lambda xs: float(np.median(xs)) if xs else None)([b[key] for b in bts if b.get(key) is not None and np.isfinite(b[key])])
-        out["pooled_backtest"] = {"coins": len(bts), "beat_hold": sum(b["total"] > b["hold"] for b in bts), "median_a_year": med("a_year"), "median_hold_a_year": med("hold_a_year"),
-                                  "median_sharpe": med("sharpe"), "median_worst_drop": med("worst_drop"), "median_hit_rate_7d": med("hit_rate_7d")}
-    return _scrub(out)
+        lo = [r["backtest_long_only"] for r in ok if r["backtest_long_only"].get("total") is not None]
+        medl = lambda key: (lambda xs: float(np.median(xs)) if xs else None)([b[key] for b in lo if b.get(key) is not None and np.isfinite(b[key])])
+        block["pooled_backtest"] = {"coins": len(bts), "beat_hold": sum(b["total"] > b["hold"] for b in bts), "median_a_year": med("a_year"), "median_hold_a_year": med("hold_a_year"),
+                                    "median_sharpe": med("sharpe"), "median_worst_drop": med("worst_drop"), "median_hit_rate_7d": med("hit_rate_7d"),
+                                    "long_only_beat_hold": sum(b["total"] > b["hold"] for b in lo), "long_only_median_a_year": medl("a_year"), "long_only_median_sharpe": medl("sharpe"),
+                                    "long_only_median_worst_drop": medl("worst_drop"), "signals_with_weight": sum(1 for v in (wf["weights_now"] or {}).values() if v > 0)}
+    return block
 
 
 def _scrub(x):
