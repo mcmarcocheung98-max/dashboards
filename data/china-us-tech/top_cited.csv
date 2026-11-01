@@ -1,5 +1,5 @@
 date,series,value,source,note
-2023-01-01,US,50,https://hai.stanford.edu/ai-index/2025-ai-index-report,AI Index 2025: of the 100 most-cited AI publications of 2023; read from a reproduction of the chart; verify
-2023-01-01,China,34,https://hai.stanford.edu/ai-index/2025-ai-index-report,AI Index 2025 (China excluding Hong Kong); verify
-2023-01-01,Hong Kong,7,https://hai.stanford.edu/ai-index/2025-ai-index-report,AI Index 2025; verify
-2023-01-01,Germany,7,https://hai.stanford.edu/ai-index/2025-ai-index-report,AI Index 2025; verify
+2023-01-01,US,50,https://hai-production.s3.amazonaws.com/files/hai_ai-index-report-2025_chapter1_final.pdf,"AI Index 2025, chapter 1, Figure 1.1.11 (number of highly cited publications in top 100, 2023); the text states the US count (50 in 2023)"
+2023-01-01,China,34,https://hai-production.s3.amazonaws.com/files/hai_ai-index-report-2025_chapter1_final.pdf,"AI Index 2025, Figure 1.1.11 (China excluding Hong Kong, which the figure shows separately); the text says China ranked second"
+2023-01-01,Hong Kong,7,https://hai-production.s3.amazonaws.com/files/hai_ai-index-report-2025_chapter1_final.pdf,"AI Index 2025, Figure 1.1.11"
+2023-01-01,Germany,7,https://hai-production.s3.amazonaws.com/files/hai_ai-index-report-2025_chapter1_final.pdf,"AI Index 2025, Figure 1.1.11"

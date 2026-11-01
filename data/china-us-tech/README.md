@@ -60,7 +60,9 @@ Each chart's card says what it shows and what 5-, 10- and 20-year question it an
 All rows carry a `source` URL. **Rows whose `note` says `verify` were written from memory or from a secondary summary (a search result,
 a news site) and must be checked against the cited page**; replace the value and drop `verify` once checked. Rows checked against a
 primary or close-to-primary page on 2026-10-26: PCT 2024 and 2025 for China, US, Japan, Korea and Germany (WIPO); CAAM 2025 NEV
-exports (via CnEVPost); SNE Research 2025 shares and the 2024 CATL, BYD and LGES shares (via CnEVPost). Everything else is `verify`.
+exports (via CnEVPost); SNE Research 2025 shares and the 2024 CATL, BYD and LGES shares (via CnEVPost). Checked against the primary page on 2026-11-01: `hstech.csv` 2021-2025 (BlackRock's 3067 factsheet,
+as at 30 Sep 2026; the earlier search-summary values were wrong and were replaced) and `top_cited.csv` 2023 (AI Index 2025
+chapter 1, Figure 1.1.11). Everything else is `verify`.
 
 - `leaderboard.csv`: `date,series,value,model,source,note`, series `US best` / `China best`, value = Arena score of the top model of that
   country on the LMArena text leaderboard (default view) on that date. LMArena re-scales scores, so only compare the two on the same date.
