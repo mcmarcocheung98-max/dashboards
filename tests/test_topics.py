@@ -1168,6 +1168,35 @@ def test_yahoo_429_serves_snapshot_then_nasdaq_marks_handled(snapdir, monkeypatc
     B.COOLDOWN.clear(), B.HEALTH.clear()
 
 
+def test_robotaxi_tsla_asks_nasdaq_first_and_yahoo_only_when_it_fails(snapdir, monkeypatch):
+    from app import cache
+    from app.topics import robotaxi as R
+    B.HEALTH.clear(), B.COOLDOWN.clear()
+    yahoo, seen, mode = json.dumps(_yahoo(250, n=250)), [], {"nasdaq": "ok"}
+
+    def dl(url, *a, **k):
+        seen.append(url.split("/")[2])
+        if "nasdaq" in url:
+            if mode["nasdaq"] != "ok":
+                raise _http(403)
+            rows = [{"date": d.strftime("%m/%d/%Y"), "close": f"${100 + i}"} for i, d in enumerate(pd.bdate_range(end="2026-10-20", periods=60))]
+            return json.dumps({"data": {"tradesTable": {"rows": rows}}})
+        return yahoo
+    monkeypatch.setattr(B, "_download", dl)
+    s = R.yahoo("TSLA")
+    assert len(s) == 60 and s.iloc[-1] == 159 and seen == ["api.nasdaq.com"]     # Yahoo never asked
+    assert not [u for u in B.HEALTH if "yahoo" in u]
+    cache._cache.clear()
+    mode["nasdaq"] = "down"
+    assert len(R.yahoo("TSLA")) == 60 and "yahoo" not in "".join(seen)          # Nasdaq down: its copy from earlier today is served
+    for f in snapdir.iterdir():                                                # no Nasdaq copy at all: Yahoo is the fallback
+        f.unlink()
+    cache._cache.clear()
+    s = R.yahoo("TSLA")
+    assert len(s) == 250 and "query1.finance.yahoo.com" in seen
+    B.COOLDOWN.clear(), B.HEALTH.clear()
+
+
 def test_robotaxi_cpuc_links():
     from app.topics import robotaxi as R
     html = ('<a class="x" href="/-/media/cpuc-website/q1-2026-waymo.xlsx?rev=ab&amp;hash=1"><span>Waymo\n Q1 2026</span></a>'

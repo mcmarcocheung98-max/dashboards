@@ -130,8 +130,14 @@ def _safety_now() -> dict:
 
 
 def yahoo(sym: str, start: str = "2019-01-01") -> pd.Series:
-    from ._base import yahoo_daily
-    return yahoo_daily(sym, start, lambda *a, **k: fetch_json(*a, **k))
+    """Daily closes of a US ticker (TSLA): Nasdaq's quote API first, since Yahoo answers Railway with 429 most days; Yahoo (and its
+    last good copy) only when Nasdaq fails, so a working Nasdaq means Yahoo is never asked and never shows in /api/health."""
+    from ._base import nasdaq_daily, yahoo_daily
+    fetcher = lambda *a, **k: fetch_json(*a, **k)
+    try:
+        return nasdaq_daily(sym, start, fetcher)
+    except Exception:
+        return yahoo_daily(sym, start, fetcher)
 
 
 # Quarterly series in tesla.csv set against the TSLA price; "pct" metrics compare by % change, "diff" ones (margins, EPS, cash flow,
