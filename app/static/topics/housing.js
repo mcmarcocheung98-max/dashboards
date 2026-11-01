@@ -78,9 +78,9 @@ function rentOrBuy(v) {
 }
 const CALC = { code: "E12000007", type: "flat" };
 // Profile: who the calculator is for. Defaults are the owner's own profile; edits are kept in this browser only.
-const PROFILE_DEFAULT = { age: 26, household: "single", dog: true, drives: false, officeDays: 3, social: "sometimes", gym: true, pay: null, budget: 40 };
-let PROFILE = (() => { try { return { ...PROFILE_DEFAULT, ...JSON.parse(localStorage.getItem("housing:profile") || "{}") }; } catch (e) { return { ...PROFILE_DEFAULT }; } })();
-const saveProfile = () => { try { localStorage.setItem("housing:profile", JSON.stringify(PROFILE)); } catch (e) {} };
+const PROFILE_DEFAULT = { age: 26, household: "single", dog: true, drives: false, officeDays: 3, social: "sometimes", gym: true, pay: 63000, budget: 40 };
+let PROFILE = (() => { try { return { ...PROFILE_DEFAULT, ...JSON.parse(localStorage.getItem("housing:profile:v2") || "{}") }; } catch (e) { return { ...PROFILE_DEFAULT }; } })();
+const saveProfile = () => { try { localStorage.setItem("housing:profile:v2", JSON.stringify(PROFILE)); } catch (e) {} };
 // Take-home pay a year in England, 2025/26: personal allowance £12,570 (tapered above £100,000), income tax 20% / 40% / 45%, employee NI 8% / 2%
 function takeHome(gross) {
   const pa = Math.max(0, 12570 - Math.max(0, gross - 100000) / 2), taxable = Math.max(0, gross - pa);
@@ -151,7 +151,7 @@ function calcView(d) {
       lab("Housing budget (% of take-home)", pnum("budget", 1))),
     el("div", { style: "display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap" },
       el("button", { class: "pill", style: "cursor:pointer;border:1px solid var(--line);font:inherit", onclick: () => { PROFILE = { ...PROFILE_DEFAULT }; saveProfile(); location.reload(); } }, "Reset to default profile"),
-      el("span", { class: "muted" }, "Kept in this browser only. Default: 26, single, a dog, no car, 3 office days in central London, nightlife from time to time, a gym.")),
+      el("span", { class: "muted" }, "Kept in this browser only. Default: 26, single, a dog, no car, 3 office days in central London, nightlife from time to time, a gym, £63,000 gross pay.")),
     fitsHost);
   function profileChanged() { saveProfile(); Object.assign(PROFILE, P); applyProfile(); resetFromData(); }
   function fits() {
