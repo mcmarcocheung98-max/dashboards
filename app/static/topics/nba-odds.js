@@ -2,7 +2,15 @@
 // Everything here reads the server's latest snapshot: the page never calls The Odds API. The bankroll for the quarter-Kelly stakes is kept
 // only in this browser (localStorage).
 (() => {
-const BOOK = { ladbrokes_uk: ["Ladbrokes", "--s1"], pinnacle: ["Pinnacle", "--s2"], betfair_ex_uk: ["Betfair Exchange", "--s3"] };
+const BOOK = { ladbrokes_uk: ["Ladbrokes", "--s1"], pinnacle: ["Pinnacle", "--s2"], betfair_ex_uk: ["Betfair Exchange", "--s3"], polymarket: ["Polymarket", "--s4"], kalshi: ["Kalshi", "--s5"] };
+const CROWD = { polymarket: "Polymarket", kalshi: "Kalshi" };
+// the crowd's price on a moneyline row: probability and the EV of Ladbrokes' price against it, with a link to the market
+const crowdCell = r => {
+  const cs = Object.entries(r.crowd || {});
+  if (!cs.length) return el("td", { class: "muted" }, "–");
+  return el("td", {}, ...cs.flatMap(([k, c], i) => [i ? el("br") : null, link(CROWD[k] || k, c.url), " " + prob(c.p) + " · ", el("span", { class: c.ev >= 0 ? "up" : "down" }, evp(c.ev))]));
+};
+const hasCrowd = rows => rows.some(r => r.crowd && Object.keys(r.crowd).length);
 const MKT = { h2h: "Moneyline", spreads: "Spread", totals: "Total" };
 const odds = v => v == null ? "–" : Number(v).toFixed(2);
 const evp = v => v == null ? "–" : pct(v, 1);
@@ -66,16 +74,35 @@ function valueTable(rows, live) {
 function gameCard(g, extra) {
   const rows = ["h2h", "spreads", "totals"].flatMap(m => g.markets[m] || []);
   const margins = ["h2h", "spreads", "totals"].map(m => (g.markets[m] || [])[0]).filter(Boolean).map(r => MKT[r.market] + " " + pct(r.margin, 1).replace("+", ""));
+  const crowd = hasCrowd(rows);                            // prediction markets matched to this game: the crowd's moneyline
   const model = !!g.model;                                 // live only: the synthetic-trained model's second opinion on the moneyline
   const mcell = r => r.model_p == null ? el("td", { class: "muted" }, "–") : el("td", { class: r.model_ev >= 0 ? "up" : "down" }, prob(r.model_p) + " · " + evp(r.model_ev));
   return card(g.game + (g.live ? " · LIVE" : " · " + ukDay(g.commence) + " " + ukTime(g.commence) + " UK"), extra || null,
     el("div", { class: "scroll" }, el("table", {},
-      el("tr", {}, ...["Market", "Bet", "Ladbrokes", "Fair odds", "Fair %", "EV", "¼ Kelly", "Best UK", "Open → now"].concat(model ? ["Model % · EV"] : []).map(h => el("th", {}, h))),
+      el("tr", {}, ...["Market", "Bet", "Ladbrokes", "Fair odds", "Fair %", "EV", "¼ Kelly", "Best UK", "Open → now"].concat(crowd ? ["Crowd % · EV"] : [], model ? ["Model % · EV"] : []).map(h => el("th", {}, h))),
       ...rows.map(r => el("tr", { style: r.value ? "background:color-mix(in srgb, var(--up) 10%, transparent)" : "" }, el("td", {}, MKT[r.market]), el("td", {}, r.label),
         el("td", {}, odds(r.lad)), el("td", {}, odds(r.fair_odds)), el("td", {}, prob(r.fair_p)), evCell(r), el("td", {}, r.value ? stake(r.kelly) : "–"),
-        el("td", {}, r.best ? odds(r.best.price) + " " + r.best.book : "–"), moveCell(r), model ? mcell(r) : null)))),
+        el("td", {}, r.best ? odds(r.best.price) + " " + r.best.book : "–"), moveCell(r), crowd ? crowdCell(r) : null, model ? mcell(r) : null)))),
     note("Ladbrokes margin: " + (margins.join(" · ") || "–") + ". Sharp lines: " + (rows[0] ? sharpAge(rows[0]) : "–") + ". Fair needs a sharp book on the same line; a spread or total Ladbrokes prices on a line Pinnacle and the Exchange do not show has no fair."
+      + (crowd ? " Crowd: Polymarket's and Kalshi's game markets (no margin, normalised to 100%), " + (FAIR_CROWD ? "in the fair median with the sharps." : "a comparison only (NBA_FAIR_CROWD=1 puts them in the fair).") : "")
       + (model ? " Model: the live win-probability model from the Simulator tab (trained on synthetic games" + (g.model.spread != null ? ", pre-game spread " + (g.model.spread > 0 ? "+" : "") + g.model.spread : "") + "): a second opinion on the moneyline, never a flag." : "")));
+}
+
+// Today: every game's moneyline at Ladbrokes (implied, margin in), the sharp fair, and the crowd, side by side with the gap
+function crowdCard(games) {
+  const rows = games.flatMap(g => (g.markets.h2h || []).filter(r => r.crowd && Object.keys(r.crowd).length).map(r => ({ g, r })));
+  if (!rows.length) return null;
+  const gap = (a, b) => a == null || b == null ? "–" : pp((a - b) * 100, 1);
+  return card("The crowd against the books: moneylines",
+    el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Game", "Side", "Ladbrokes implied", "Sharp fair", "Polymarket", "Kalshi", "Crowd − sharp", "Ladbrokes − crowd"].map(h => el("th", {}, h))),
+      ...rows.map(({ g, r }) => { const pm = (r.crowd.polymarket || {}).p, ka = (r.crowd.kalshi || {}).p, cr = pm != null && ka != null ? (pm + ka) / 2 : pm != null ? pm : ka;
+        return el("tr", {}, wrap(g.game + (g.live ? " · LIVE" : "")), el("td", {}, r.label.replace(" to win", "")), el("td", {}, prob(1 / r.lad)), el("td", {}, prob(r.fair_p)),
+          el("td", {}, pm == null ? "–" : [link(prob(pm), r.crowd.polymarket.url)]), el("td", {}, ka == null ? "–" : [link(prob(ka), r.crowd.kalshi.url)]),
+          el("td", { class: cls(cr != null && r.fair_p != null ? cr - r.fair_p : null) }, gap(cr, r.fair_p)), el("td", { class: cls(cr != null ? 1 / r.lad - cr : null) }, gap(1 / r.lad, cr))); }))),
+    note("Polymarket's NBA game markets and Kalshi's NBA series, matched to each game by team and date; a two-sided market normalised to 100%, so no margin to remove. " +
+      "A crowd price well above the sharp fair on one side is where a Ladbrokes price can look like value to the crowd and not to Pinnacle (or the other way round). " +
+      (FAIR_CROWD ? "The crowd is in the fair median (NBA_FAIR_CROWD=1)." : "Comparison only: the fair uses the sharps; NBA_FAIR_CROWD=1 adds the crowd to the median.") +
+      " Prediction-market prices move with the game, so on the Live tab they refresh every minute without spending a credit."));
 }
 
 function flagList(flags) {
@@ -90,11 +117,12 @@ function flagList(flags) {
 }
 const kellyOf = (o, p) => { const b = o - 1; return b > 0 ? Math.max(0, (b * p - (1 - p)) / b) : 0; };
 
-let pickGame = null, pickLine = null;
+let pickGame = null, pickLine = null, FAIR_CROWD = false;
 
 const VIEWS = {
   async today() {
     const d = await api("today"), daily = d.daily || {}, c = d.credits || {};
+    FAIR_CROWD = !!d.fair_crowd;
     const has = p => p && p.length >= 2;
     const fig = [kpi("Value bets now", num(d.value.length)), kpi("Best EV now", evp(d.value.length ? d.value[0].ev : null), d.value.length ? "up" : ""),
       kpi("Games on the slate", num(d.games.length)), kpi("Credits left", num(c.remaining))];
@@ -111,6 +139,7 @@ const VIEWS = {
         note("A value bet: EV = Ladbrokes price × fair probability − 1 of at least " + pct(d.min_ev, 1).replace("+", "") + ", with a sharp line under " + d.fresh_pre / 60 +
           " minutes old. Fair = the margin removed from Pinnacle and the Betfair Exchange (after " + pct(d.commission, 0).replace("+", "") + " commission), " +
           (d.devig === "power" ? "power" : "multiplicative") + " method, median of the two. Maths on prices, not tips.")),
+      crowdCard(d.games),
       ...d.games.map(g => gameCard(g)),
       d.props && d.props.length ? card("Player props at Ladbrokes (on demand)", el("div", { class: "scroll" }, el("table", {},
         el("tr", {}, ...["Game", "Market", "Selection", "Line", "Ladbrokes"].map(h => el("th", {}, h))),
@@ -124,6 +153,7 @@ const VIEWS = {
 
   async live() {
     const d = await api("live");
+    FAIR_CROWD = !!d.fair_crowd;
     const games = d.games || [];
     const flagsBox = el("div", {}, flagList(d.flags || []));
     const stamp = el("div", { class: "muted", style: "margin-top:6px" });

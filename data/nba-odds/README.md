@@ -16,6 +16,7 @@ Code: `app/topics/nba_odds.py` (data, maths, poller), `app/static/topics/nba-odd
 | Live clock and period | NBA.com `cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json`, else ESPN's public scoreboard | page request, cached 1 minute (free) |
 | Form, rest days, back-to-backs | NBA.com season schedule `scheduleLeagueV2_1.json`, else ESPN's scoreboard over the last 30 days | every 6 hours (free) |
 | Injuries | ESPN's public injuries feed, plus `injuries.csv` here | hourly (free) |
+| The crowd's moneyline: Polymarket's NBA game markets and Kalshi's NBA game series | Gamma `events?tag_slug=nba&closed=false` (`outcomes`, `outcomePrices`, `bestBid`/`bestAsk`, `gameStartTime`); Kalshi `markets?series_ticker=KXNBAGAME` (`NBA_KALSHI_SERIES` to change it) | with each pull (10 min cache pre-game, 1 min live); every minute on the Live tab (free, no credits) |
 | Player props | The Odds API `events/{id}/odds`, **off by default** (quota-heavy): set `NBA_PROPS_MARKETS` (e.g. `player_points`) to fetch them once per game in its first pre-game pull | on demand |
 
 Ladbrokes has no public feed, and scraping it breaks its terms, so it is not scraped: its prices come only through The Odds API.
@@ -24,6 +25,22 @@ Bookmaker keys (from The Odds API's bookmaker list): `ladbrokes_uk`, `pinnacle` 
 price: `williamhill`, `paddypower`, `skybet`, `betvictor`, `coral`, plus any key ending `_uk` in a response (exchanges excluded), plus
 `NBA_UK_BOOKS`. The Today tab lists every key the latest pull returned, so a missing book can be added by its exact key. Ladbrokes is also
 found by its title if its key ever changes. `pytest -m network tests/test_nba_odds.py` (6 credits) prints the keys the API actually sends.
+
+## Prediction markets inside this dashboard
+
+The public Prediction Markets dashboard (`/prediction-markets`) stays separate: this page is private and that one is not. Instead its
+sources come here. Polymarket's NBA game markets and Kalshi's NBA series are matched to each game by the two team nicknames and a start
+within 30 hours of the tip-off, and carried as two **pseudo-books**, `polymarket` and `kalshi`, in the same shape as a bookmaker: the
+moneyline as decimal odds `1 / p`, with `p` the two-sided market normalised to 100% (Polymarket: the middle of the best bid and ask of
+the first outcome when the API sends them, else the last prices; Kalshi: the last trade or the bid/ask middle of each team's Yes market,
+read by `prediction_markets.parse_kalshi`). They have no margin, so nothing is removed.
+
+Where they show: a **Crowd % · EV** column on every moneyline row (Today and Live), the **crowd against the books** card on Today
+(Ladbrokes implied, sharp fair, Polymarket, Kalshi, and the gaps), the Line moves tab (their history is logged with the books'), and
+the books-seen list. On the Live tab the crowd refreshes every minute from the free APIs while the Odds API side stays as polled.
+By default they are a comparison; `NBA_FAIR_CROWD=1` adds them to the fair median next to Pinnacle and the Exchange (same freshness
+rule), which makes the flags follow the crowd too. Thin markets move on small trades: check the liquidity (in the row's link) before
+trusting a gap. Spreads and totals are not matched (Polymarket lists them as separate Yes/No markets; a later step).
 
 ## The method
 
@@ -78,6 +95,8 @@ found by its title if its key ever changes. `pytest -m network tests/test_nba_od
 | `NBA_DEVIG` | mult | `power` for the power method |
 | `NBA_UK_BOOKS` | none | extra bookmaker keys for the best UK price, comma-separated |
 | `NBA_PROPS_MARKETS` | none | e.g. `player_points,player_rebounds`; costs markets × 2 credits per game |
+| `NBA_FAIR_CROWD` | off | `1` puts Polymarket and Kalshi in the fair median with the sharps |
+| `NBA_KALSHI_SERIES` | KXNBAGAME | Kalshi's NBA game series ticker, if it changes |
 
 ## Hand-entered injuries (`injuries.csv`)
 

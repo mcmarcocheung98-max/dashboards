@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import statistics
 import time
 
 import pandas as pd
@@ -81,7 +82,34 @@ def schedule(now: float = NOW) -> dict:
 INJ = {"injuries": [{"displayName": "Boston Celtics", "injuries": [{"athlete": {"displayName": "Jayson Tatum"}, "status": "Out", "shortComment": "Achilles", "date": "2026-10-20T00:00Z"}]}]}
 
 
+def poly_nba(now: float = NOW) -> list:
+    """Gamma NBA events: the moneyline of Lakers @ Nuggets (crowd 36/64 by the bid-ask middle) plus a spread market to ignore, and an
+    unrelated game."""
+    mk = lambda q, outs, prices, **k: {"question": q, "outcomes": json.dumps(outs), "outcomePrices": json.dumps(prices), "closed": False, "active": True,
+                                       "liquidityNum": 52000.0, "volume24hr": 131000.0, "gameStartTime": _iso(now - H), **k}
+    return [{"slug": "nba-lal-den-2026-10-28", "title": "Lakers vs. Nuggets", "startDate": _iso(now - H), "tags": [{"slug": "nba"}, {"slug": "sports"}],
+             "markets": [mk("Lakers vs. Nuggets", ["Lakers", "Nuggets"], ["0.37", "0.63"], bestBid=0.35, bestAsk=0.37),
+                         mk("Spread: Lakers (+3.5)", ["Yes", "No"], ["0.5", "0.5"])]},
+            {"slug": "nba-mia-chi", "title": "Heat vs. Bulls", "startDate": _iso(now + 5 * H), "tags": [{"slug": "nba"}],
+             "markets": [mk("Heat vs. Bulls", ["Heat", "Bulls"], ["0.55", "0.45"])]},
+            {"slug": "nba-closed", "title": "Lakers vs. Nuggets", "startDate": _iso(now - 20 * 86400), "tags": [{"slug": "nba"}],
+             "markets": [mk("Lakers vs. Nuggets", ["Lakers", "Nuggets"], ["0.9", "0.1"], closed=True)]}]
+
+
+def kalshi_nba(now: float = NOW) -> dict:
+    mk = lambda t, sub, last, bid, ask: {"ticker": "KXNBAGAME-26OCT28LALDEN-" + t, "event_ticker": "KXNBAGAME-26OCT28LALDEN", "title": "Los Angeles Lakers vs Denver Nuggets Winner?",
+                                         "yes_sub_title": sub, "status": "active", "last_price_dollars": last, "yes_bid_dollars": bid, "yes_ask_dollars": ask,
+                                         "volume_fp": "12000", "volume_24h_fp": "3000", "close_time": _iso(now + 3 * H), "expected_expiration_time": _iso(now + 3 * H)}
+    return {"markets": [mk("LAL", "Los Angeles Lakers", "0.40", "0.39", "0.41"), mk("DEN", "Denver Nuggets", "0.62", "0.61", "0.63"),
+                        {"ticker": "KXNBAGAME-X-BOS", "event_ticker": "KXNBAGAME-X", "title": "Boston Celtics vs New York Knicks Winner?", "yes_sub_title": "Boston Celtics",
+                         "status": "active", "last_price_dollars": "0.5", "volume_fp": "1", "close_time": _iso(now + 4 * H)}]}      # one side only: no pair
+
+
 def fake_fetch_json(url, ttl=0, **kw):
+    if "gamma-api.polymarket.com" in url:
+        return poly_nba()
+    if "kalshi.com" in url:
+        return kalshi_nba()
     if "todaysScoreboard" in url:
         return SCOREBOARD
     if "scheduleLeague" in url:
@@ -391,6 +419,76 @@ def test_payloads(mocked):
     rd = M.READINGS()
     assert {r["key"] for r in rd} == {"value_n", "best_ev", "live_flags", "clv30"}
     assert next(r for r in rd if r["key"] == "value_n")["lean"] == 1
+
+
+# ------------------------------------------------------------------ prediction markets as the crowd's price
+def test_parse_poly_nba_keeps_moneylines_only_and_uses_the_bid_ask_middle():
+    ms = M.parse_poly_nba(poly_nba())
+    assert [sorted(m["teams"]) for m in ms] == [["Lakers", "Nuggets"], ["Bulls", "Heat"]]        # the spread market and the closed event are dropped
+    lal = ms[0]
+    assert lal["teams"]["Lakers"] == pytest.approx(0.36) and lal["teams"]["Nuggets"] == pytest.approx(0.64)
+    assert lal["url"] == "https://polymarket.com/event/nba-lal-den-2026-10-28" and lal["liq"] == 52000 and lal["start"] == NOW - H
+    assert ms[1]["teams"]["Heat"] == pytest.approx(0.55)
+
+
+def test_parse_kalshi_nba_pairs_the_two_yes_markets():
+    ms = M.parse_kalshi_nba(kalshi_nba())
+    assert len(ms) == 1 and ms[0]["teams"]["Lakers"] == pytest.approx(0.40 / 1.02) and ms[0]["teams"]["Nuggets"] == pytest.approx(0.62 / 1.02)
+    assert ms[0]["vol24"] == 6000 and ms[0]["bid"] == 0.39 and ms[0]["url"].startswith("https://kalshi.com/markets/kxnbagame")
+
+
+def test_match_crowd_by_teams_and_date():
+    games = M.parse_odds(odds_raw())
+    ms = M.parse_poly_nba(poly_nba())
+    by = M.match_crowd(games, ms)
+    assert set(by) == {"g2"} and by["g2"]["teams"]["Nuggets"] == pytest.approx(0.64)
+    far = [dict(m, start=NOW - 3 * 86400) for m in ms]
+    assert M.match_crowd(games, far) == {}
+
+
+def test_attach_crowd_and_evaluate_columns(mocked, monkeypatch):
+    games = M.parse_odds(odds_raw())
+    assert M.attach_crowd(games, NOW, 60) == 2
+    g2 = next(g for g in games if g["id"] == "g2")
+    assert g2["books"]["polymarket"]["title"] == "Polymarket (crowd)" and g2["books"]["kalshi"]["markets"]["h2h"]["outcomes"][0]["name"] == DEN
+    assert g2["books"]["polymarket"]["markets"]["h2h"]["outcomes"][0]["price"] == pytest.approx(1 / 0.64, abs=1e-3)
+    rows = M.evaluate(games, {}, NOW)
+    den = next(r for r in rows if r["event_id"] == "g2" and r["name"] == DEN)
+    assert den["crowd"]["polymarket"]["p"] == pytest.approx(0.64, abs=1e-3) and den["crowd"]["polymarket"]["ev"] == pytest.approx(1.5 * 0.64 - 1, abs=1e-3)
+    assert den["crowd"]["kalshi"]["p"] == pytest.approx(0.62 / 1.02, abs=1e-3) and den["crowd"]["polymarket"]["url"]
+    assert "polymarket" not in den["sharp"]                          # crowd prices are not in the fair unless asked
+    pin = M.devig([1.55, 2.55])[0]
+    assert den["fair_p"] == pytest.approx(pin, abs=1e-4)
+    monkeypatch.setenv("NBA_FAIR_CROWD", "1")
+    rows = M.evaluate(games, {}, NOW)
+    den = next(r for r in rows if r["event_id"] == "g2" and r["name"] == DEN)
+    assert set(den["sharp"]) == {"pinnacle", "polymarket", "kalshi"}
+    assert den["fair_p"] == pytest.approx(statistics.median([pin, 0.64, 0.62 / 1.02]), abs=1e-3)
+    g1 = next(r for r in rows if r["event_id"] == "g1" and r["market"] == "h2h")
+    assert g1["crowd"] == {}                                           # no market for that game: nothing claimed
+    assert not any(r["crowd"] for r in rows if r["market"] != "h2h")  # the crowd has a moneyline only
+
+
+def test_poll_carries_the_crowd_into_history_and_moves(mocked):
+    M.poll_once("live", NOW)
+    lt = M._latest()
+    assert lt["books_seen"]["polymarket"] == "Polymarket (crowd)"
+    assert any(h[1] == "polymarket" for h in M.read_history("g2")) and any(h[1] == "kalshi" for h in M.read_history("g2"))
+    mv = M.moves()
+    g2 = next(g for g in mv["games"] if g["id"] == "g2")
+    assert any("polymarket" in s["books"] for s in g2["series"]) and "polymarket" in mv["books"]
+    lv = M.live()
+    den = next(r for r in next(g for g in lv["games"] if g["id"] == "g2")["markets"]["h2h"] if r["name"] == DEN)
+    assert den["crowd"]["polymarket"]["p"] == pytest.approx(0.64, abs=1e-3) and lv["fair_crowd"] is False
+    for fn in M.ENDPOINTS.values():
+        B.json_safe(fn())
+
+
+def test_crowd_sources_down_do_not_break_the_pull(mocked, monkeypatch):
+    monkeypatch.setattr(M, "fetch_json", lambda url, ttl=0, **k: (_ for _ in ()).throw(ConnectionError("down")))
+    r = M.poll_once("live", NOW)
+    assert "error" not in r and r["games"] == 2
+    assert "polymarket" not in M._latest()["books_seen"]
 
 
 def test_scoreboard_falls_back_to_espn(monkeypatch):

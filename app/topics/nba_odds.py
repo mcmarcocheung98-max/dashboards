@@ -10,6 +10,9 @@ teams     form, rest days, back-to-backs and injuries for tonight's teams: conte
 sim       the synthetic lab (nba_sim.py): how live odds move on simulated games, the live win-probability model trained on them, and
           where and at what polling cadence the pipeline's flags are really exploitable; its fitted model gives the Live tab's "model fair"
 
+Prediction markets ride along as the crowd's price: Polymarket's NBA game markets and Kalshi's NBA series (free, live) are matched to
+each game by team and date and carried as pseudo-books (`polymarket`, `kalshi`) through the same rows, history and Line moves tab; a
+column on Today and Live compares Ladbrokes with them, and NBA_FAIR_CROWD=1 lets them into the fair median next to the sharps.
 All odds come from The Odds API v4 (paid key in ODDS_API_KEY). Ladbrokes has no public feed and is not scraped. Polling runs only in the
 background thread started by BACKGROUND and writes snapshots under SNAPSHOT_DIR/nba-odds/; page requests read those files and never call
 the Odds API. The credit budget (ODDS_MONTHLY_BUDGET) is enforced in decide(): one pull at 10:00 UK, every 30 minutes from 3 hours before
@@ -55,7 +58,15 @@ LAD = "ladbrokes_uk"
 PINNACLE = "pinnacle"
 EXCHANGE = "betfair_ex_uk"
 SHARPS = (PINNACLE, EXCHANGE)
-HISTORY_BOOKS = (LAD, PINNACLE, EXCHANGE)
+# prediction markets, carried as pseudo-books (the crowd's moneyline, no margin: a two-outcome market normalised to sum to 1), free and
+# live; next to Ladbrokes and the sharps on every tab, in the fair median only with NBA_FAIR_CROWD=1 (see data/nba-odds/README.md)
+POLY, KALSHI = "polymarket", "kalshi"
+CROWD = (POLY, KALSHI)
+CROWD_TITLES = {POLY: "Polymarket (crowd)", KALSHI: "Kalshi (crowd)"}
+HISTORY_BOOKS = (LAD, PINNACLE, EXCHANGE, POLY, KALSHI)
+GAMMA_NBA = "https://gamma-api.polymarket.com/events?closed=false&tag_slug=nba&limit=100&order=startDate&ascending=true"
+KALSHI_NBA = "https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker={series}&status=open&limit=200"
+CROWD_TTL_PRE, CROWD_TTL_LIVE = 600, 60
 # UK books for the best price: keys listed by The Odds API for its uk region (bookmaker-apis page); any other key ending in _uk that a
 # response carries joins them, as do keys in NBA_UK_BOOKS. Exchanges are left out (the Exchange is a sharp input, not a book to beat).
 UK_BOOKS = (LAD, "williamhill", "paddypower", "skybet", "betvictor", "coral")
@@ -81,6 +92,8 @@ NBA_NICKNAMES = ("Trail Blazers", "76ers", "Hawks", "Celtics", "Nets", "Hornets"
 
 SOURCES = [{"name": "The Odds API v4 (Ladbrokes, Pinnacle, Betfair Exchange and the UK books: moneyline, spread, total; scores)", "url": "https://the-odds-api.com/liveapi/guides/v4/",
             "cadence": "10:00 UK, every 30 min from 3 h before tip-off, every 5 min live, within a monthly credit budget"},
+           {"name": "Polymarket NBA game markets (Gamma API, tag nba) and Kalshi's NBA game series: the crowd's moneyline, pre-game and live", "url": "https://polymarket.com/sports/nba",
+            "cadence": "with each pull; every minute on the Live tab"},
            {"name": "NBA.com live scoreboard and season schedule (cdn.nba.com)", "url": "https://www.nba.com/schedule", "cadence": "every minute live; schedule every 6 hours"},
            {"name": "ESPN public scoreboard and injuries (fallback and injuries)", "url": "https://www.espn.com/nba/injuries", "cadence": "hourly"},
            {"name": "Hand-entered injuries where no feed answers (data/nba-odds/injuries.csv)", "url": "", "cadence": "as entered"}]
@@ -123,6 +136,14 @@ def reset_day() -> int:
 
 def props_markets() -> list[str]:
     return [m.strip() for m in os.environ.get("NBA_PROPS_MARKETS", "").split(",") if m.strip()]
+
+
+def fair_crowd() -> bool:
+    return os.environ.get("NBA_FAIR_CROWD", "") not in ("", "0", "false", "no")
+
+
+def kalshi_series() -> str:
+    return os.environ.get("NBA_KALSHI_SERIES", "KXNBAGAME").strip()
 
 
 def uk_books(seen=()) -> set[str]:
@@ -299,7 +320,8 @@ def evaluate(games: list[dict], scores: dict, now: float, opens: dict | None = N
             if not lm:
                 continue
             sharp = {}
-            for key, c in ((PINNACLE, None), (EXCHANGE, comm)):
+            inputs = [(PINNACLE, None), (EXCHANGE, comm)] + ([(b, None) for b in CROWD] if fair_crowd() else [])
+            for key, c in inputs:
                 sm = (g["books"].get(key) or {}).get("markets", {}).get(market)
                 if sm:
                     age = now - (sm["last_update"] or now)
@@ -324,7 +346,14 @@ def evaluate(games: list[dict], scores: dict, now: float, opens: dict | None = N
                             best = {"price": bo["price"], "book": book["title"], "key": bk}
                 e = ev(o["price"], fair_p) if fair_p else None
                 op = opens.get(f"{g['id']}|{k}")
-                rows.append({"event_id": g["id"], "game": f"{g['away']} @ {g['home']}", "home": g["home"], "away": g["away"], "commence": g["commence"],
+                crowd = {}
+                for b in CROWD:
+                    cb = g["books"].get(b)
+                    co = next((x for x in ((cb or {}).get("markets", {}).get(market) or {}).get("outcomes", []) if x["name"] == o["name"] and x["point"] == o["point"]), None)
+                    if co:
+                        crowd[b] = {"p": _r(1 / co["price"], 4), "ev": _r(ev(o["price"], 1 / co["price"]), 4), "age": int(now - (cb["last_update"] or now)),
+                                    **{x: (cb.get("meta") or {}).get(x) for x in ("url", "liq", "vol24", "bid", "ask")}}
+                rows.append({"crowd": crowd,"event_id": g["id"], "game": f"{g['away']} @ {g['home']}", "home": g["home"], "away": g["away"], "commence": g["commence"],
                              "live": live, "market": market, "name": o["name"], "point": o["point"], "key": f"{g['id']}|{k}",
                              "label": label(market, o["name"], o["point"]), "lad": o["price"], "lad_age": int(now - (lm["last_update"] or now)),
                              "fair_p": _r(fair_p, 5), "fair_odds": _r(1 / fair_p, 3) if fair_p else None, "ev": _r(e, 5),
@@ -637,6 +666,10 @@ def poll_once(why: str = "manual", now: float | None = None) -> dict:
         state.pop("error", None)
         scores = dict(prev.get("scores") or {})
         on = any(g["commence"] and g["commence"] <= now for g in games)
+        try:
+            attach_crowd(games, now, CROWD_TTL_LIVE if on else CROWD_TTL_PRE)
+        except Exception as e:                      # free sources: never a reason to lose the pull
+            res["crowd_error"] = type(e).__name__
         settle_due = state.get("settle_due") or why == "10:00 pull"
         if on or settle_due:
             try:
@@ -683,6 +716,139 @@ def fetch_props(state: dict, games: list[dict], now: float, props: dict) -> dict
             props[g["id"]] = {"t": int(now), "error": str(e)}
     _write("props.json", {k: v for k, v in props.items() if (v.get("t") or 0) > now - 3 * 86400})
     return props
+
+
+# ------------------------------------------------------------------ prediction markets: the crowd's moneyline as pseudo-books
+def parse_poly_nba(events: list) -> list[dict]:
+    """Gamma NBA events -> [{teams: {nickname: p}, start, url, liq, vol24, bid, ask, updated}]: the moneyline market of each event (two
+    outcomes that are NBA teams), prices normalised to sum to 1; bid/ask of the first outcome when the API sends them."""
+    from .prediction_markets import _f, _jlist
+    out = []
+    for e in events or []:
+        if not isinstance(e, dict):
+            continue
+        for m in e.get("markets") or []:
+            if m.get("closed") or m.get("active") is False:
+                continue
+            outs, prices = [str(x) for x in _jlist(m.get("outcomes"))], [_f(x) for x in _jlist(m.get("outcomePrices"))]
+            if len(outs) != 2 or len(prices) != 2 or None in prices:
+                continue
+            nicks = [nickname(o) for o in outs]
+            if not all(n in NBA_NICKNAMES for n in nicks) or nicks[0] == nicks[1]:
+                continue
+            bid, ask = _f(m.get("bestBid")), _f(m.get("bestAsk"))
+            p0 = (bid + ask) / 2 if bid is not None and ask is not None and 0 < bid <= ask < 1 else prices[0]
+            p1 = prices[1] if bid is None or ask is None else 1 - p0
+            tot = p0 + p1
+            if tot <= 0 or p0 <= 0 or p1 <= 0:
+                continue
+            slug = e.get("slug") or ""
+            out.append({"teams": {nicks[0]: p0 / tot, nicks[1]: p1 / tot}, "start": _ts(m.get("gameStartTime") or e.get("startDate") or e.get("endDate")),
+                        "url": f"https://polymarket.com/event/{slug}" if slug else None, "liq": _f(m.get("liquidityNum")) if m.get("liquidityNum") is not None else _f(m.get("liquidity")),
+                        "vol24": _f(m.get("volume24hr")), "bid": bid, "ask": ask, "updated": _ts(m.get("updatedAt")) })
+            break                                              # one moneyline per event; spreads and totals are other markets of the same event
+    return out
+
+
+def parse_kalshi_nba(j: dict) -> list[dict]:
+    """Kalshi's NBA game series -> [{teams: {nickname: p}, start, url, vol24, bid, ask}]: the two Yes markets of each event, one per team,
+    normalised to sum to 1 (prediction_markets.parse_kalshi reads the prices: last trade, else the bid/ask middle)."""
+    from .prediction_markets import parse_kalshi, _f
+    by_event: dict = {}
+    raw = {m.get("ticker"): m for m in (j or {}).get("markets") or []}
+    for m in parse_kalshi(j):
+        team = nickname(m["sub"]) or nickname(m["title"])
+        if team not in NBA_NICKNAMES or not m["event"]:
+            continue
+        ev_ = by_event.setdefault(m["event"], {"teams": {}, "url": m["url"], "vol24": 0.0, "close": m["close"], "start": None, "bid": None, "ask": None})
+        ev_["teams"][team] = m["yes"]
+        ev_["vol24"] += m["vol24"] or 0.0
+        r = raw.get(m["ticker"]) or {}
+        ev_["start"] = ev_["start"] or _ts(r.get("expected_expiration_time") or r.get("close_time"))
+        if ev_["bid"] is None:
+            ev_["bid"], ev_["ask"] = _f(r.get("yes_bid_dollars")), _f(r.get("yes_ask_dollars"))
+    out = []
+    for ev_ in by_event.values():
+        if len(ev_["teams"]) != 2:
+            continue
+        tot = sum(ev_["teams"].values())
+        if tot <= 0:
+            continue
+        ev_["teams"] = {k: v / tot for k, v in ev_["teams"].items()}
+        out.append(ev_)
+    return out
+
+
+def match_crowd(games: list[dict], markets: list[dict], window: float = 30 * HOUR) -> dict:
+    """{event id: market} where the market's two teams are the game's and its start (or close) is within `window` of the tip-off."""
+    out = {}
+    for g in games:
+        pair = {nickname(g["home"]), nickname(g["away"])}
+        best = None
+        for m in markets:
+            if set(m["teams"]) != pair:
+                continue
+            gap = abs((m.get("start") or g["commence"] or 0) - (g["commence"] or 0))
+            if gap <= window and (best is None or gap < best[0]):
+                best = (gap, m)
+        if best:
+            out[g["id"]] = best[1]
+    return out
+
+
+def crowd_markets(ttl: float) -> dict[str, list[dict]]:
+    """{polymarket: [...], kalshi: [...]} from the free APIs (each guarded: one down leaves the other)."""
+    out = {}
+    try:
+        out[POLY] = parse_poly_nba(fetch_json(GAMMA_NBA, ttl, min_bytes=2, timeout=30))
+    except Exception:
+        out[POLY] = []
+    try:
+        out[KALSHI] = parse_kalshi_nba(fetch_json(KALSHI_NBA.format(series=kalshi_series()), ttl, min_bytes=2, timeout=30))
+    except Exception:
+        out[KALSHI] = []
+    return out
+
+
+def crowd_book(m: dict, g: dict, now: float) -> dict:
+    """A pseudo-book in the shape parse_odds gives: the moneyline as decimal odds 1/p for each side."""
+    outs = []
+    for full in (g["home"], g["away"]):
+        p = m["teams"].get(nickname(full))
+        if p:
+            outs.append({"name": full, "price": round(1 / p, 4), "point": None})
+    t = int(m.get("updated") or now)
+    return {"title": None, "last_update": t, "markets": {"h2h": {"last_update": t, "outcomes": outs}},
+            "meta": {k: m.get(k) for k in ("url", "liq", "vol24", "bid", "ask")}}
+
+
+def attach_crowd(games: list[dict], now: float, ttl: float) -> int:
+    """Add the crowd pseudo-books to each matched game's books (in place); returns how many games got at least one."""
+    n = 0
+    for key, markets in crowd_markets(ttl).items():
+        for gid, m in match_crowd(games, markets).items():
+            g = next(x for x in games if x["id"] == gid)
+            b = crowd_book(m, g, now)
+            if b["markets"]["h2h"]["outcomes"]:
+                b["title"] = CROWD_TITLES[key]
+                g["books"][key] = b
+                n += 1
+    return n
+
+
+def refresh_crowd(rows: list[dict], games: list[dict], now: float) -> None:
+    """The Live tab's minute refresh: the crowd's latest prices on the snapshot's moneyline rows (the Odds API side stays as polled)."""
+    gs = [dict(g, books={}) for g in games]
+    attach_crowd(gs, now, CROWD_TTL_LIVE)
+    books = {g["id"]: g["books"] for g in gs}
+    for r in rows:
+        if r["market"] != "h2h":
+            continue
+        for b in CROWD:
+            cb = books.get(r["event_id"], {}).get(b)
+            co = next((x for x in ((cb or {}).get("markets", {}).get("h2h") or {}).get("outcomes", []) if x["name"] == r["name"]), None)
+            if co:
+                r.setdefault("crowd", {})[b] = {"p": _r(1 / co["price"], 4), "ev": _r(ev(r["lad"], 1 / co["price"]), 4), "age": int(now - cb["last_update"]), **cb["meta"]}
 
 
 # ------------------------------------------------------------------ the background poller
@@ -897,6 +1063,7 @@ def today() -> dict:
     todays = [g for g in _game_rows(rows) if g["commence"] and (slate_date(g["commence"]) == slate or g["commence"] > now)]
     return {"as_of": lt.get("t"), "slate": slate, "min_ev": min_ev(), "fresh_pre": FRESH_PRE, "fresh_live": FRESH_LIVE, "devig": devig_method(),
             "commission": commission(), "value": value, "games": todays, "credits": credits(st, lt.get("games") or []), "daily": _daily_flags(st.get("flags", [])),
+            "fair_crowd": fair_crowd(),
             "books_seen": lt.get("books_seen") or {}, "props": _props_summary(), "updated": int(now)}
 
 
@@ -922,6 +1089,10 @@ def live() -> dict:
         board_err = None
     except Exception as e:
         board, board_err = {}, type(e).__name__
+    try:
+        refresh_crowd(rows, [g for g in lt.get("games") or [] if g["id"] in {r["event_id"] for r in rows}], now)
+    except Exception:
+        pass
     scores = lt.get("scores") or {}
     games = []
     from . import nba_sim
@@ -935,7 +1106,7 @@ def live() -> dict:
         games.append(g)
     recent = [f for f in st.get("flags", []) if f["live"] and (f["status"] == "active" or (f.get("gone") or 0) > now - 2 * HOUR)]
     recent.sort(key=lambda f: (f["status"] != "active", -(f.get("last_ev") or f["ev"] or 0)))
-    return {"as_of": lt.get("t"), "games": games, "flags": recent, "min_ev": min_ev(), "fresh_live": FRESH_LIVE, "board_error": board_err,
+    return {"as_of": lt.get("t"), "games": games, "flags": recent, "min_ev": min_ev(), "fresh_live": FRESH_LIVE, "board_error": board_err, "fair_crowd": fair_crowd(),
             "credits": credits(st, lt.get("games") or []), "updated": int(now)}
 
 
@@ -1006,7 +1177,8 @@ def moves() -> dict:
         out.append({"id": gid, "game": f"{away} @ {home}" if home else gid, "home": home, "away": away, "commence": st["games"].get(gid),
                     "series": [{"key": k, "market": k.split("|")[0], "label": label(k.split("|")[0], k.split("|")[1], _num(k.split("|")[2]) if k.split("|")[2] else None),
                                 "books": v} for k, v in series.items()]})
-    return {"as_of": lt.get("t"), "games": out, "books": {LAD: "Ladbrokes", PINNACLE: "Pinnacle", EXCHANGE: "Betfair Exchange (raw back price)"}, "updated": int(now)}
+    return {"as_of": lt.get("t"), "games": out, "books": {LAD: "Ladbrokes", PINNACLE: "Pinnacle", EXCHANGE: "Betfair Exchange (raw back price)",
+                                                            POLY: "Polymarket (1 / crowd probability)", KALSHI: "Kalshi (1 / crowd probability)"}, "updated": int(now)}
 
 
 def track(flags: list[dict], days: int = 400) -> dict:
