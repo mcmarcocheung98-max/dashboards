@@ -45,13 +45,21 @@ def funding_daily(coin: str, days: int = FUNDING_DAYS) -> pd.Series:
     edge = pd.Timestamp("2023-01-01") + pd.Timedelta(days=((start - pd.Timestamp("2023-01-01")).days // FUNDING_WINDOW_DAYS) * FUNDING_WINDOW_DAYS)
     rows = []
     t = edge
+    from ..cache import _cache
     while t <= today:
         a, b = t, min(t + pd.Timedelta(days=FUNDING_WINDOW_DAYS), today + pd.Timedelta(days=1))
-        try:
-            j = fetch_json(HL_INFO, TTL if b >= today else 30 * DAY, post={"type": "fundingHistory", "coin": coin, "startTime": int(a.timestamp() * 1000), "endTime": int(b.timestamp() * 1000)}, min_bytes=2)
-            rows += [(int(r["time"]), float(r["fundingRate"])) for r in j if "time" in r and "fundingRate" in r]
-        except Exception:
-            pass
+        post = {"type": "fundingHistory", "coin": coin, "startTime": int(a.timestamp() * 1000), "endTime": int(b.timestamp() * 1000)}
+        cached = f"topic:{HL_INFO}#" + __import__("json").dumps(post, sort_keys=True) in _cache
+        for attempt in range(2):                                        # Hyperliquid rate-limits a cold burst: pace the downloads and retry once
+            try:
+                j = fetch_json(HL_INFO, TTL if b >= today else 30 * DAY, post=post, min_bytes=2)
+                rows += [(int(r["time"]), float(r["fundingRate"])) for r in j if "time" in r and "fundingRate" in r]
+                break
+            except Exception:
+                if attempt == 0:
+                    time.sleep(1.0)
+        if not cached:
+            time.sleep(0.08)
         t = b
     if not rows:
         return pd.Series(dtype=float)
