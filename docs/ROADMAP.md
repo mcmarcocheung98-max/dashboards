@@ -29,7 +29,8 @@ Goal: nobody has to open four pages to know they are healthy.
 
 Done when: a dead source shows up as an issue the next morning without anyone looking at the page.
 
-## Phase 2: content, one dashboard at a time, in this order
+## Phase 2: content, one dashboard at a time, in this order (done in code for 2a–2d, Nov 2026; what is left is checking the
+automated parsers against the live files, Phase 0 step 3)
 
 Each item is one commit: module change + JS change + fixture test + README update + (if hand-entered) CSV rows.
 Finish a dashboard's "next" list before starting the following dashboard, so each one reaches "complete" rather than all
@@ -47,26 +48,32 @@ four staying half done.
 - Mortgage rates: Bank of England quoted 2-year fixed 75% LTV rate (series IUMBV34) replacing "Bank Rate + 1.5" in
   the illustration (done: IUMBV34 drives the illustration, Bank Rate + 1.5 only before the series starts or if it fails).
 
-### 2b. AI jobs vs law & finance (almost automatable)
+### 2b. AI jobs vs law & finance (almost automatable) (done: all three items)
 - UK headcount: fill `uk_headcount.csv` from ONS JOBS03 for the last 12 quarters; or automate from the ONS API once a
-  series id for the two industries is confirmed.
+  series id for the two industries is confirmed. (done: automated Oct 2026 from the newest JOBS03 workbook, SIC K and 69;
+  layout to confirm on the live site with `pytest -m network -k jobs03`)
 - Occupation view: Indeed's sector file also has "IT Systems & Solutions" and "Scientific Research & Development";
   add them to the AI group behind a toggle (done: wider-AI toggle on the AI vs the professions tab).
 - Wages: BLS average hourly earnings for the same industries (FRED CES..03 series) as a third tab, since headcount
   without pay tells half the story (done: Pay tab, from the BLS public API since FRED times out from servers).
 
-### 2c. AI adoption (half hand-entered)
+### 2c. AI adoption (half hand-entered) (done in code: all four items; the Sector workbook layout still to confirm on the live site)
 - Confirm or fix the BTOS workbook parser against the live file; fill the sector file for the latest period. (parser done Oct 2026; sector shares
   automated from the BTOS Sector workbook Nov 2026, layout to confirm on the live site)
-- Ramp AI Index: twelve monthly points; set a monthly reminder (below) to add the next.
+- Ramp AI Index: twelve monthly points; set a monthly reminder (below) to add the next. (done: automated Oct 2026 from the records the
+  Ramp page embeds, Jul 2023 onward; `ramp_ai_index.csv` only overrides a month, so no monthly hand entry is needed)
 - Add one survey series with a consistent method (the Census BTOS "expect to use AI in the next six months" question is
-  in the same workbook, so it is free): "using now" vs "expect to use" on one chart.
-- Agents: keep the timeline; add a `kind` filter on the page.
+  in the same workbook, so it is free): "using now" vs "expect to use" on one chart. (done: same parser with the "six months"
+  question, `btos_ai_expect_us.csv` as the fallback; "Using AI now vs expecting to within six months" card on the Firms tab)
+- Agents: keep the timeline; add a `kind` filter on the page. (done: All / one-`kind` pills with counts narrow the bars and the timeline)
 
-### 2d. Autonomous cars (mostly hand-entered)
-- `miles.csv` (operator, cumulative rider-only miles, date, source) so crash reports become reports per million miles.
-- CPUC quarterly driverless trip counts: try to automate from the published spreadsheet; fall back to hand entry.
-- Rides per week for Baidu, Pony.ai, WeRide, Zoox, Tesla when they announce a weekly figure.
+### 2d. Autonomous cars (mostly hand-entered) (done in code: miles and CPUC; weekly rides wait on the operators)
+- `miles.csv` (operator, cumulative rider-only miles, date, source) so crash reports become reports per million miles. (done: Waymo;
+  Tesla and Zoox left out on purpose because their ADS reports cover supervised fleets, reason in the file's header)
+- CPUC quarterly driverless trip counts: try to automate from the published spreadsheet; fall back to hand entry. (done: automated
+  Oct 2026 from the CPUC deployment zips; `cpuc_trips.csv` only for quarters the files miss)
+- Rides per week for Baidu, Pony.ai, WeRide, Zoox, Tesla when they announce a weekly figure. (Baidu in `rides.csv`; as of 25 Oct
+  2026 Pony.ai, WeRide, Zoox and Tesla publish no weekly figure, noted in the file; add a row when one does)
 
 ## Phase 3: working rules (done: written into `data/README.md` as a "Contributing" section)
 
