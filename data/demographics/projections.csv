@@ -1,6 +1,6 @@
 date,series,value,source,note
 # National projections, for comparison with the UN's. value is the figure in the unit named in series.
-2032-07-01,UK population (ONS 2022-based; millions),72.5,https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationprojections,verify: written from memory; mid-2032
-2080-07-01,US population peak (Census 2023 projections; millions),370,https://www.census.gov/programs-surveys/popproj.html,verify: written from memory; main series peaks around 2080
-2046-07-01,Hong Kong population (C&SD 2022-based; millions),8.19,https://www.censtatd.gov.hk/en/,verify: written from memory
-2046-07-01,Hong Kong share aged 65+ (C&SD 2022-based; %),36,https://www.censtatd.gov.hk/en/,verify: written from memory
+2032-07-01,UK population (ONS 2022-based; millions),72.5,https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationprojections/bulletins/nationalpopulationprojections/2022based,"ONS National population projections: 2022-based (28 Jan 2025): from 67.6 million in mid-2022 to 72.5 million in mid-2032"
+2080-07-01,US population peak (Census 2023 projections; millions),370,https://www.census.gov/newsroom/press-releases/2023/population-projections.html,"Census Bureau release, 9 Nov 2023: main series peaks at 370 million in 2080, then 366 million in 2100"
+2046-07-01,Hong Kong population (C&SD 2022-based; millions),8.19,https://www.censtatd.gov.hk/en/data/stat_report/product/B1120015/att/B1120015092023XXXXB01.pdf,"C&SD Hong Kong Population Projections 2022-2046 (Aug 2023), section 2.2 and Table 3: 8 190.4 thousand in mid-2046, including foreign domestic helpers"
+2046-07-01,Hong Kong share aged 65+ (C&SD 2022-based; %),36,https://www.censtatd.gov.hk/en/data/stat_report/product/B1120015/att/B1120015092023XXXXB01.pdf,"C&SD Hong Kong Population Projections 2022-2046, section 2.4: 36.0% in 2046 excluding foreign domestic helpers; including them, Table 3's 65+ age groups sum to 2 745.9 thousand of 8 190.4 (33.5%)"

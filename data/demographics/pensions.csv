@@ -3,6 +3,6 @@ date,series,value,source,note
 2024-10-01,UK state pension (OBR),5.0,https://www.actuarialpost.co.uk/downloads/cat_1/OBR-Fiscal-risks-and-sustainability-report-July-2025.pdf,OBR Fiscal risks and sustainability July 2025 (copy of the OBR report): about 5% of GDP (£138bn) now
 2073-10-01,UK state pension (OBR),7.7,https://www.actuarialpost.co.uk/downloads/cat_1/OBR-Fiscal-risks-and-sustainability-report-July-2025.pdf,OBR FRS July 2025: early 2070s projection
 2025-04-01,US Social Security (CBO),5.2,https://www.cbo.gov/topics/budget/long-term-budget-projections,CBO Long-Term Budget Outlook March 2025: fiscal year 2025
-2035-04-01,US Social Security (CBO),6.0,https://www.cbo.gov/topics/budget/long-term-budget-projections,verify: written from memory
+2035-04-01,US Social Security (CBO),6.0,https://www.cbo.gov/system/files/2025-03/61187-Long-Term-Outlook-2025.pdf,"CBO Long-Term Budget Outlook March 2025: 2035 (summary table p.4 and Table 1-1; text: from 5.2 percent in 2025 to 6.0 percent in 2035)"
 2055-04-01,US Social Security (CBO),6.1,https://www.cbo.gov/topics/budget/long-term-budget-projections,CBO Long-Term Budget Outlook March 2025: 2055; assumes full benefits are paid after the trust funds run out (2034)
 2023-07-01,China basic pension insurance (MOF),5.6,https://www.mof.gov.cn/,verify: written from memory; urban employee and urban-rural resident schemes' fund expenditure over GDP
