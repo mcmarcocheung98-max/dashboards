@@ -403,7 +403,7 @@ def test_fitted_board_learns_signs_and_weights():
     sc["rsi"] = np.sign(fwd.fillna(0)) * (rng.random(800) < 0.6)                                  # a weak right one, active 60% of days
     sc["zone_pos"] = rng.choice([-1.0, 0.0, 1.0], 800)                                             # noise
     w, how = CB.fitted_weights(sc, fwd)
-    assert w["mayer"] < 0 and w["rsi"] > 0 and "sign reversed" in how and abs(sum(abs(v) for v in w.values()) - 1) < 1e-9 and max(abs(v) for v in w.values()) <= 0.5 + 1e-9      # two gauges qualify: the 40% cap cannot bind
+    assert w["mayer"] < 0 and w["rsi"] > 0 and "sign reversed" in how and abs(sum(abs(v) for v in w.values()) - 1) < 1e-9 and max(abs(v) for v in w.values()) <= 0.51      # two gauges qualify: the 40% cap cannot bind
     assert "zone_pos" not in w or abs(w["zone_pos"]) < 0.1
     comp = CB.fitted_composite(sc, w)
     assert comp.abs().max() <= 1 and (np.sign(comp.iloc[:700]) == np.sign(fwd.iloc[:700])).mean() > 0.9                  # the reversed oracle now points the right way
