@@ -1,32 +1,32 @@
 date,series,value,country,source,note
-2020-01-01,CATL,24.0,China,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2020-01-01,BYD,6.7,China,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2020-01-01,LGES,23.5,Korea,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2020-01-01,Panasonic,18.5,Japan,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2020-01-01,SK On,5.4,Korea,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2020-01-01,Samsung SDI,5.8,Korea,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2021-01-01,CATL,32.6,China,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2021-01-01,BYD,8.8,China,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2021-01-01,LGES,20.3,Korea,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2021-01-01,Panasonic,12.2,Japan,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2021-01-01,SK On,5.6,Korea,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2021-01-01,Samsung SDI,4.5,Korea,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2022-01-01,CATL,37.0,China,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2022-01-01,BYD,13.6,China,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2022-01-01,LGES,13.6,Korea,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2022-01-01,Panasonic,7.3,Japan,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2022-01-01,SK On,5.4,Korea,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2022-01-01,Samsung SDI,4.7,Korea,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2023-01-01,CATL,36.8,China,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2023-01-01,BYD,15.8,China,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2023-01-01,LGES,13.6,Korea,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2023-01-01,Panasonic,6.4,Japan,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2023-01-01,SK On,4.9,Korea,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2023-01-01,Samsung SDI,4.6,Korea,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
+2020-01-01,CATL,24.0,China,https://thelec.net/news/articleView.html?idxno=2381,SNE Research full year 2020 as reported by TheElec
+2020-01-01,BYD,6.7,China,https://insideevs.com/news/488274/sne-research-global-xev-battery-market-2020/,SNE Research 2020: 9.6 GWh of 142.8 GWh as reported by InsideEVs (share not stated in the article; 9.6/142.8 = 6.7)
+2020-01-01,LGES,23.5,Korea,https://thelec.net/news/articleView.html?idxno=2381,SNE Research full year 2020 as reported by TheElec
+2020-01-01,Panasonic,18.5,Japan,https://thelec.net/news/articleView.html?idxno=2381,SNE Research full year 2020 as reported by TheElec
+2020-01-01,SK On,5.4,Korea,https://thelec.net/news/articleView.html?idxno=2381,SNE Research full year 2020 as reported by TheElec
+2020-01-01,Samsung SDI,5.8,Korea,https://thelec.net/news/articleView.html?idxno=2381,SNE Research full year 2020 as reported by TheElec
+2021-01-01,CATL,32.6,China,https://insideevs.com/news/568640/global-battery-market-2021/,SNE Research full year 2021 ranking table (296.8 GWh total) as reported by InsideEVs
+2021-01-01,BYD,8.8,China,https://insideevs.com/news/568640/global-battery-market-2021/,SNE Research full year 2021 ranking table (296.8 GWh total) as reported by InsideEVs
+2021-01-01,LGES,20.3,Korea,https://insideevs.com/news/568640/global-battery-market-2021/,SNE Research full year 2021 ranking table (296.8 GWh total) as reported by InsideEVs
+2021-01-01,Panasonic,12.2,Japan,https://insideevs.com/news/568640/global-battery-market-2021/,SNE Research full year 2021 ranking table (296.8 GWh total) as reported by InsideEVs
+2021-01-01,SK On,5.6,Korea,https://insideevs.com/news/568640/global-battery-market-2021/,SNE Research full year 2021 ranking table (296.8 GWh total) as reported by InsideEVs
+2021-01-01,Samsung SDI,4.5,Korea,https://insideevs.com/news/568640/global-battery-market-2021/,SNE Research full year 2021 ranking table (296.8 GWh total) as reported by InsideEVs
+2022-01-01,CATL,37.0,China,https://cnevpost.com/2023/02/08/global-ev-battery-market-share-2022-catl-37-byd-13-6/,SNE Research full year 2022 as reported by CnEVPost
+2022-01-01,BYD,13.6,China,https://cnevpost.com/2023/02/08/global-ev-battery-market-share-2022-catl-37-byd-13-6/,SNE Research full year 2022 as reported by CnEVPost
+2022-01-01,LGES,13.6,Korea,https://cnevpost.com/2023/02/08/global-ev-battery-market-share-2022-catl-37-byd-13-6/,SNE Research full year 2022 as reported by CnEVPost
+2022-01-01,Panasonic,7.3,Japan,https://cnevpost.com/2023/02/08/global-ev-battery-market-share-2022-catl-37-byd-13-6/,SNE Research full year 2022 as reported by CnEVPost
+2022-01-01,SK On,5.4,Korea,https://cnevpost.com/2023/02/08/global-ev-battery-market-share-2022-catl-37-byd-13-6/,SNE Research full year 2022 as reported by CnEVPost
+2022-01-01,Samsung SDI,4.7,Korea,https://cnevpost.com/2023/02/08/global-ev-battery-market-share-2022-catl-37-byd-13-6/,SNE Research full year 2022 as reported by CnEVPost
+2023-01-01,CATL,36.8,China,https://cnevpost.com/2024/02/07/global-ev-battery-market-share-in-2023/,SNE Research full year 2023 as reported by CnEVPost
+2023-01-01,BYD,15.8,China,https://cnevpost.com/2024/02/07/global-ev-battery-market-share-in-2023/,SNE Research full year 2023 as reported by CnEVPost
+2023-01-01,LGES,13.6,Korea,https://cnevpost.com/2024/02/07/global-ev-battery-market-share-in-2023/,SNE Research full year 2023 as reported by CnEVPost
+2023-01-01,Panasonic,6.4,Japan,https://cnevpost.com/2024/02/07/global-ev-battery-market-share-in-2023/,SNE Research full year 2023 as reported by CnEVPost
+2023-01-01,SK On,4.9,Korea,https://cnevpost.com/2024/02/07/global-ev-battery-market-share-in-2023/,SNE Research full year 2023 as reported by CnEVPost
+2023-01-01,Samsung SDI,4.6,Korea,https://cnevpost.com/2024/02/07/global-ev-battery-market-share-in-2023/,SNE Research full year 2023 as reported by CnEVPost
 2024-01-01,BYD,16.9,China,https://cnevpost.com/2026/02/04/global-ev-battery-market-share-2025/,2024 share given alongside the 2025 figures
-2024-01-01,Panasonic,3.9,Japan,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2024-01-01,SK On,4.4,Korea,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
-2024-01-01,Samsung SDI,3.3,Korea,https://www.sneresearch.com/en/insight/release/,share of EV battery installations (%); from memory; verify
+2024-01-01,Panasonic,3.9,Japan,https://cnevpost.com/2025/02/11/global-ev-battery-market-share-2024/,SNE Research full year 2024 as reported by CnEVPost
+2024-01-01,SK On,4.4,Korea,https://cnevpost.com/2025/02/11/global-ev-battery-market-share-2024/,SNE Research full year 2024 as reported by CnEVPost
+2024-01-01,Samsung SDI,3.3,Korea,https://cnevpost.com/2025/02/11/global-ev-battery-market-share-2024/,SNE Research full year 2024 as reported by CnEVPost
 2024-01-01,CATL,38.0,China,https://cnevpost.com/2026/02/04/global-ev-battery-market-share-2025/,2024 share given alongside the 2025 figures
 2024-01-01,LGES,10.9,Korea,https://cnevpost.com/2026/02/04/global-ev-battery-market-share-2025/,2024 share given alongside the 2025 figures
 2025-01-01,CATL,39.2,China,https://cnevpost.com/2026/02/04/global-ev-battery-market-share-2025/,SNE Research full year as reported by CnEVPost

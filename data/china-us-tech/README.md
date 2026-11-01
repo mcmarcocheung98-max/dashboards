@@ -62,7 +62,10 @@ a news site) and must be checked against the cited page**; replace the value and
 primary or close-to-primary page on 2026-10-26: PCT 2024 and 2025 for China, US, Japan, Korea and Germany (WIPO); CAAM 2025 NEV
 exports (via CnEVPost); SNE Research 2025 shares and the 2024 CATL, BYD and LGES shares (via CnEVPost). Checked against the primary page on 2026-11-01: `hstech.csv` 2021-2025 (BlackRock's 3067 factsheet,
 as at 30 Sep 2026; the earlier search-summary values were wrong and were replaced) and `top_cited.csv` 2023 (AI Index 2025
-chapter 1, Figure 1.1.11). Everything else is `verify`.
+chapter 1, Figure 1.1.11). `battery_share.csv` 2020-2024 checked on 2026-11-01 against SNE Research's year-end releases as
+reported by TheElec (2020), InsideEVs (2020 BYD GWh; 2021 table) and CnEVPost (2022-2024); every value matched and none changed.
+SNE's own 2024 release gave CATL 37.9, BYD 17.2 and LGES 10.8; the file keeps the restated 38.0, 16.9 and 10.9 from the 2025 release
+so 2024 and 2025 compare on the same basis. Everything else is `verify`.
 
 - `leaderboard.csv`: `date,series,value,model,source,note`, series `US best` / `China best`, value = Arena score of the top model of that
   country on the LMArena text leaderboard (default view) on that date. LMArena re-scales scores, so only compare the two on the same date.
