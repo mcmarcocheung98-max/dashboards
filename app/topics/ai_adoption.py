@@ -1,7 +1,8 @@
 """AI tool & agent adoption: the adoption half of /ai. Free data where it exists; the rest hand-entered with its source.
 
 firms    share of US businesses using AI in the last two weeks, national and by sector (US Census Bureau Business Trends and Outlook
-         Survey, every two weeks, from the National workbook; data/ai/btos_ai_use_us.csv adds periods by hand if it lacks one); Ramp AI Index (share of US businesses paying for AI tools,
+         Survey, every two weeks, from the National and Sector workbooks; data/ai/btos_ai_use_us.csv and btos_ai_use_by_sector.csv add
+         periods by hand if they lack one); Ramp AI Index (share of US businesses paying for AI tools,
          monthly, read from the records its page embeds); UK share of firms using AI (ONS BICS, quarterly, newest wave workbook that carries the AI questions)
 users    consumer reach: weekly active users of ChatGPT and other reported milestones (hand-entered, each with its source)
 agents   a dated timeline of agent products and protocols (hand-entered)
@@ -18,6 +19,14 @@ import pandas as pd
 from ._base import DAY, _pts, _r, fetch, manual, manual_rows, manual_sources, monthly, payload
 
 BTOS_XLSX = "https://www.census.gov/hfp/btos/downloads/National.xlsx"
+BTOS_SECTOR_XLSX = "https://www.census.gov/hfp/btos/downloads/Sector.xlsx"
+NAICS = {"11": "Agriculture, Forestry, Fishing and Hunting", "21": "Mining, Quarrying, and Oil and Gas Extraction", "22": "Utilities",
+         "23": "Construction", "31": "Manufacturing", "42": "Wholesale Trade", "44": "Retail Trade", "48": "Transportation and Warehousing",
+         "51": "Information", "52": "Finance and Insurance", "53": "Real Estate and Rental and Leasing",
+         "54": "Professional, Scientific, and Technical Services", "55": "Management of Companies and Enterprises",
+         "56": "Administrative and Support and Waste Management and Remediation Services", "61": "Educational Services",
+         "62": "Health Care and Social Assistance", "71": "Arts, Entertainment, and Recreation", "72": "Accommodation and Food Services",
+         "81": "Other Services (except Public Administration)"}
 RAMP_PAGE = "https://ramp.com/data/ai-index"
 RAMP_KEYS = {"date_month", "adoption_rate_pct", "mom_change_pp", "yoy_change_pp"}      # the overall series; breakdowns carry a dimension key
 BICS_PAGE = "https://www.ons.gov.uk/economy/economicoutputandproductivity/output/datasets/businessinsightsandimpactontheukeconomy"
@@ -84,6 +93,80 @@ def parse_btos(content: bytes, needle: str = "two weeks") -> pd.Series:
         if len(s):
             return s
     raise ValueError("BTOS AI question not found")
+
+
+def _btos_ref_dates(xl: pd.ExcelFile | None) -> dict:
+    """{period code: reference period end} from a workbook's 'Collection and Reference Dates' sheet."""
+    if xl is None or "Collection and Reference Dates" not in xl.sheet_names:
+        return {}
+    dates = xl.parse("Collection and Reference Dates", dtype=str)
+    dates.columns = [str(c).strip() for c in dates.columns]
+    return dict(zip(dates["Smpdt"].str.strip(), pd.to_datetime(dates["Ref End"], errors="coerce")))
+
+
+def _naics_name(code: str) -> str:
+    c = str(code).strip()
+    return NAICS.get(c.split("-")[0][:2], c) if c[:2].isdigit() else c
+
+
+def parse_btos_sectors(content: bytes, ref: dict | None = None, needle: str = "two weeks") -> dict[str, pd.Series]:
+    """The 'Yes' share by reference period for each NAICS sector, from the BTOS Sector workbook. Expected layout (the National
+    workbook's, plus a sector column): sheet 'Response Estimates' with a header row holding 'Sector' (or 'NAICS'), 'Question' and
+    'Answer', and period codes (e.g. 202621) as the other columns; sector cells are 2-digit NAICS codes ('51', '31-33') or names.
+    Period codes are dated from the workbook's own 'Collection and Reference Dates' sheet, else from `ref` (the National
+    workbook's). Raises when the sheet, the columns or the AI question are missing, so /api/health shows the source as failing."""
+    xl = pd.ExcelFile(BytesIO(content))
+    if "Response Estimates" not in xl.sheet_names:
+        raise ValueError(f"BTOS Sector workbook: no 'Response Estimates' sheet (sheets: {xl.sheet_names})")
+    dates = _btos_ref_dates(xl) or (ref or {})
+    if not dates:
+        raise ValueError("BTOS Sector workbook: no reference dates for its period codes")
+    d = xl.parse("Response Estimates", header=None, dtype=str)
+    head = [str(c).strip() for c in d.iloc[0].tolist()]
+    low = [h.lower() for h in head]
+    try:
+        qi, ai = low.index("question"), low.index("answer")
+        si = next(i for i, h in enumerate(low) if h in ("sector", "naics", "naics sector", "sector code") or h.startswith("naics"))
+    except (ValueError, StopIteration):
+        raise ValueError(f"BTOS Sector workbook: expected Sector, Question and Answer columns, found {head[:6]}")
+    periods = [(i, dates[h]) for i, h in enumerate(head) if h in dates and pd.notna(dates[h])]
+    if not periods:
+        raise ValueError(f"BTOS Sector workbook: no period-code columns found in {head[:8]}")
+    q, a = d[qi].fillna("").str.lower(), d[ai].fillna("").str.strip().str.lower()
+    hit = d[(q.str.contains("artificial intelligence") | q.str.contains("super intelligence")) & q.str.contains(needle) & a.eq("yes")]
+    if hit.empty:
+        raise ValueError(f"BTOS Sector workbook: AI question ({needle}) not found")
+    out = {}
+    for _, row in hit.iterrows():
+        name = _naics_name(row[si])
+        if not name or name.lower() in ("nan", "total", "xx", "all sectors"):
+            continue
+        s = pd.Series({t: _pct(row[i]) for i, t in periods}, dtype=float).dropna().sort_index()
+        if len(s):
+            out[name] = s
+    if not out:
+        raise ValueError("BTOS Sector workbook: AI question has no sector values")
+    return out
+
+
+def btos_sectors() -> dict[str, pd.Series]:
+    """Automated sector series plus btos_ai_use_by_sector.csv; a hand-entered (sector, date) wins."""
+    auto: dict[str, pd.Series] = {}
+    try:
+        try:
+            ref = _btos_ref_dates(pd.ExcelFile(BytesIO(fetch(BTOS_XLSX, TTL, min_bytes=1000, binary=True).encode("latin-1"))))
+        except Exception:
+            ref = {}
+        auto = parse_btos_sectors(fetch(BTOS_SECTOR_XLSX, TTL, min_bytes=1000, binary=True).encode("latin-1"), ref)
+    except Exception:
+        pass
+    hand = manual(SLUG, "btos_ai_use_by_sector")
+    hand = hand if isinstance(hand, dict) else {}
+    out = {}
+    for k in set(auto) | set(hand):
+        s = pd.concat([auto.get(k, pd.Series(dtype=float)), hand.get(k, pd.Series(dtype=float))])
+        out[k] = s[~s.index.duplicated(keep="last")].sort_index()
+    return out
 
 
 def btos(needle: str = "two weeks", hand_file: str = "btos_ai_use_us") -> pd.Series:
@@ -198,13 +281,12 @@ def _year_ago(pts: list, within_days: int = 60) -> float | None:
 
 def _firms_now() -> dict:
     def sectors():
-        m = manual(SLUG, "btos_ai_use_by_sector")
-        return {k: _pts(v, 2) for k, v in m.items()} if isinstance(m, dict) else {}
+        return {k: _pts(v, 2) for k, v in sorted(btos_sectors().items())}
     def countries():
         return {k: _pts(v, 2) for k, v in firm_adoption_intl().items()}
     out = payload({"btos_us": lambda: _pts(btos(), 2), "btos_expect": lambda: _pts(btos("six months", "btos_ai_expect_us"), 2), "btos_sectors": sectors,
                    "ramp": lambda: _pts(ramp(), 2), "uk_hk": countries},
-                  sources=[BTOS_XLSX, BICS_PAGE, RAMP_PAGE])
+                  sources=[BTOS_XLSX, BTOS_SECTOR_XLSX, BICS_PAGE, RAMP_PAGE])
     b = out.get("btos_us") or []
     out["now"] = {"btos": b[-1][1] if b else None, "btos_date": pd.Timestamp(b[-1][0], unit="s").strftime("%Y-%m-%d") if b else None,
                   "btos_year_ago": _year_ago(b, 21),

@@ -28,7 +28,12 @@ def mock_sources() -> None:
     housing.fetch_json = lambda url, ttl, **k: T.HIBOR
     housing.full_file_url = lambda: "http://publicdata.landregistry.gov.uk/x.csv"
     ai_jobs.fetch = T.jobs_fetch
-    ai_adoption.fetch = lambda url, ttl, **k: (_ for _ in ()).throw(ConnectionError("fixture: no workbook"))
+    btos_wb = {ai_adoption.BTOS_XLSX: T.btos_national_xlsx, ai_adoption.BTOS_SECTOR_XLSX: T.btos_sector_xlsx}
+    def adoption(url, ttl, **k):                                                 # the two Census workbooks; every other workbook is missing
+        if url in btos_wb:
+            return btos_wb[url]().decode("latin-1")
+        raise ConnectionError("fixture: no workbook")
+    ai_adoption.fetch = adoption
     robotaxi.fetch = lambda url, ttl, **k: T.SGO
     robotaxi.fetch_json = lambda url, ttl, **k: T._yahoo(250)
     charts = T._chart(mult=1.6)

@@ -98,7 +98,7 @@ How fast businesses and people are taking up AI tools and agents: the Census Bur
 |---|---|---|
 | Firms | Headline figures | Share of US businesses using AI now and a year earlier, the change, share paying for AI tools |
 | | Share of US businesses that used AI in the last two weeks | Census BTOS national figure; Ramp AI Index |
-| | By sector | Latest BTOS share per sector (empty until the sector file is filled) |
+| | By sector | Latest BTOS share per NAICS sector, highest first (full sector name on tap) |
 | Users | Reported users | One line per product, joining announcements |
 | | Announcements | Every row of `users.csv` with its source |
 | Agents | Launches by year | Count of rows in `agent_milestones.csv` per year; a filter above it (All, or one `kind`: agents, coding agents, protocol, tools…, with counts) narrows the bars and the timeline |
@@ -111,7 +111,7 @@ How fast businesses and people are taking up AI tools and agents: the Census Bur
 | Series | Source | Cadence | How |
 |---|---|---|---|
 | Businesses using AI (national) | [US Census Bureau, Business Trends and Outlook Survey](https://www.census.gov/hfp/btos/), question "In the last two weeks, did this business use Super Intelligence or SI (formerly referred to as Artificial Intelligence or AI) in any of its business functions?" (wording since the period ending 16 Nov 2025), share answering yes | Every two weeks | Automated from the National workbook; `btos_ai_use_us.csv` adds a missing period by hand (a hand-entered date wins) |
-| Businesses using AI, by sector | Same survey, Sector workbook | Every two weeks | Hand-entered: `btos_ai_use_by_sector.csv` |
+| Businesses using AI, by sector | Same survey, [Sector workbook](https://www.census.gov/hfp/btos/downloads/Sector.xlsx) | Every two weeks | Automated (Nov 2026): the AI question's "Yes" rows per NAICS code, dated from the National workbook's reference dates; `btos_ai_use_by_sector.csv` adds or overrides a (sector, period) |
 | Businesses paying for AI tools | [Ramp AI Index](https://ramp.com/data/ai-index): share of US businesses on Ramp with an observed payment for an AI product or service in the month | Monthly | Automated (Oct 2026) from the records the page embeds: the overall series is the set with exactly `date_month, adoption_rate_pct, mom_change_pp, yoy_change_pp` (Jul 2023 onward); `ramp_ai_index.csv` overrides a month |
 | Reported users | Company announcements and press reports | As announced | Hand-entered: `users.csv` |
 | Agent launches | Company announcements | As announced | Hand-entered: `agent_milestones.csv` |
@@ -134,7 +134,7 @@ US federal data is public domain. Indeed data must be credited to Indeed Hiring 
 
 The nine seed rows (Sep 2023 to Sep 2025, 3.7% to 9.7%) were removed in Oct 2026. They were rounded figures from memory, and they belong to the earlier wording ("use Artificial Intelligence in producing goods or services"). The live workbook has only the current wording ("Super Intelligence or SI (formerly ... AI) in any of its business functions"), from the period ending 16 Nov 2025, at 17.3% and rising to 24.6% (period ending 4 Oct 2026). The two wordings are not one series, so the chart starts in Nov 2025, and "a year earlier" appears once a year of the new wording exists.
 
-**`btos_ai_use_by_sector.csv`** (`date,series,value,source,note`): same workbook, Sector tab; `series` is the sector name as Census writes it (e.g. `Information`, `Professional, Scientific, and Technical Services`). Empty on purpose until filled.
+**`btos_ai_use_by_sector.csv`** (`date,series,value,source,note`): only for a period the Sector workbook lacks or gets wrong; `series` is the NAICS sector name the page uses (e.g. `Information`, `Professional, Scientific, and Technical Services`; codes map to names in `NAICS` in `ai_adoption.py`).
 
 **`ramp_ai_index.csv`** (`date,value,source,note`): only to override a month the page gets wrong or lacks; date = first of the month.
 
@@ -145,7 +145,7 @@ The nine seed rows (Sep 2023 to Sep 2025, 3.7% to 9.7%) were removed in Oct 2026
 ### Checking it
 
 ```
-pytest -m network tests/test_sources.py -k "btos or indeed"
+pytest -m network tests/test_sources.py -k "btos or indeed"     # includes the Sector workbook
 ```
 
 Local preview: `python -m app.server`, then open `/ai`.
@@ -153,7 +153,7 @@ Local preview: `python -m app.server`, then open `/ai`.
 ### Known gaps
 
 - The BTOS workbook parser was rewritten against the live workbook (Oct 2026, via `/api/ai/layout`): sheet `Response Estimates`, period codes as columns, dates from `Collection and Reference Dates`.
-- The BTOS sector file is empty; its card says so. Ramp's figures cover businesses on Ramp's platform, which lean towards tech and finance, so they run well above the Census share.
+- The Sector workbook parser (Nov 2026) was written for the National workbook's layout plus a `Sector` (or `NAICS`) column, without a live copy to hand (census.gov refused the build environment). If the layout differs, `/api/health` shows `Sector.xlsx` failing, the card says "Not read yet", and `pytest -m network tests/test_sources.py -k sector` names what it found. Ramp's figures cover businesses on Ramp's platform, which lean towards tech and finance, so they run well above the Census share.
 - Usage surveys with a consistent series (Stanford AI Index, McKinsey's annual survey) are not included; they would fit `users.csv` or a new file with the same format.
 - "Agent adoption" has no public time series yet; the timeline is a list of launches, not a measure of use.
 

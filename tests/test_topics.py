@@ -336,6 +336,8 @@ def test_ai_adoption_payloads(snapdir, monkeypatch):
     def fake(url, ttl, **k):
         if url == A.BTOS_XLSX:
             return btos_national_xlsx().decode("latin-1")
+        if url == A.BTOS_SECTOR_XLSX:
+            return btos_sector_xlsx().decode("latin-1")
         if url == A.RAMP_PAGE:
             return ramp_page()
         raise ConnectionError("blocked")                                         # ONS unreachable: the UK card says so
@@ -347,6 +349,8 @@ def test_ai_adoption_payloads(snapdir, monkeypatch):
         assert not [k for k in d if k.endswith("_error")], d
     assert f["now"]["btos"] == 24.6 and f["as_of"] == "2026-10-11" and f["now"]["btos_year_ago"] is None and f["btos_expect"][-1][1] == 28.6
     assert f["now"]["ramp"] == 55.86 and len(f["ramp"]) == 39
+    assert set(f["btos_sectors"]) == {"Information", "Manufacturing", "Professional, Scientific, and Technical Services"}
+    assert f["btos_sectors"]["Information"][-1][1] == 41.2 and A.BTOS_SECTOR_XLSX not in f["stale"]
     assert f["uk_hk"] == {} and not [r for r in B.manual_rows("ai", "btos_ai_use_us") if "verify" in r.get("note", "")]
     assert u["rows"][0]["date"] >= u["rows"][-1]["date"] and any(v for v in u["series"].values())
     assert g["rows"] and g["by_year"] and set(s["share"]) == {"US", "GB", "DE"}
@@ -383,6 +387,40 @@ def btos_national_xlsx() -> bytes:
         est.to_excel(w, sheet_name="Response Estimates", index=False, header=False)
         dates.to_excel(w, sheet_name="Collection and Reference Dates", index=False)
     return buf.getvalue()
+
+
+def btos_sector_xlsx(with_dates: bool = False) -> bytes:
+    """The Sector workbook in the National layout plus a Sector column of NAICS codes (with a total row), '.' for no estimate."""
+    import io
+    q7 = "In the last two weeks, did this business use Super Intelligence or SI (formerly referred to as Artificial Intelligence or AI) in any of its business functions?"
+    est = pd.DataFrame([["Sector", "Question ID", "Question", "Answer ID", "Answer", "202621", "202620", "202319"],
+                        ["XX", "7", q7, "1", "Yes", "24.6%", "23.8%", "3.7%"],
+                        ["51", "7", q7, "1", "Yes", "41.2%", "40.5%", "13.8%"], ["51", "7", q7, "2", "No", "50.1%", "51.0%", "80.0%"],
+                        ["31-33", "7", q7, "1", "Yes", "15.0%", "14.1%", "."],
+                        ["54", "7", q7, "1", "Yes", "36.0%", "35.2%", "8.9%"], ["54", "3", "Overall performance?", "1", "Yes", "9%", "9%", "9%"]])
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf) as w:
+        est.to_excel(w, sheet_name="Response Estimates", index=False, header=False)
+        if with_dates:
+            pd.DataFrame({"Smpdt": ["202319", "202620", "202621"], "Ref End": ["2023-09-10", "2026-09-27", "2026-10-11"]}).to_excel(
+                w, sheet_name="Collection and Reference Dates", index=False)
+    return buf.getvalue()
+
+
+def test_btos_sector_parser():
+    from app.topics.ai_adoption import _btos_ref_dates, parse_btos_sectors
+    pytest.importorskip("openpyxl")
+    import io
+    ref = _btos_ref_dates(pd.ExcelFile(io.BytesIO(btos_national_xlsx())))
+    s = parse_btos_sectors(btos_sector_xlsx(), ref)                             # dates borrowed from the National workbook
+    assert set(s) == {"Information", "Manufacturing", "Professional, Scientific, and Technical Services"}   # the XX total is left out
+    assert s["Information"].tolist() == [13.8, 40.5, 41.2] and s["Information"].index[-1] == pd.Timestamp("2026-10-11")
+    assert s["Manufacturing"].tolist() == [14.1, 15.0]                           # '.' = no estimate
+    assert parse_btos_sectors(btos_sector_xlsx(with_dates=True))["Information"].iloc[-1] == 41.2
+    with pytest.raises(ValueError, match="reference dates"):
+        parse_btos_sectors(btos_sector_xlsx())
+    with pytest.raises(ValueError, match="Response Estimates"):
+        parse_btos_sectors(bics_wave_xlsx(), ref)
 
 
 def bics_wave_xlsx(with_ai: bool = True) -> bytes:

@@ -67,6 +67,14 @@ def test_census_btos_workbook():
     assert len(s) > 10 and 0 < s.iloc[-1] < 100
 
 
+def test_census_btos_sector_workbook():
+    import io
+    from app.topics import ai_adoption as A
+    ref = A._btos_ref_dates(pd.ExcelFile(io.BytesIO(B.fetch(A.BTOS_XLSX, 0, binary=True, min_bytes=1000).encode("latin-1"))))
+    s = A.parse_btos_sectors(B.fetch(A.BTOS_SECTOR_XLSX, 0, binary=True, min_bytes=1000).encode("latin-1"), ref)
+    assert len(s) >= 15 and "Information" in s and all(0 < v.iloc[-1] < 100 for v in s.values())
+
+
 def test_nhtsa_sgo():
     from app.topics import robotaxi as R
     d, archived = R.sgo_parts()
