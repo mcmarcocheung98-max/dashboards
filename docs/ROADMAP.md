@@ -56,7 +56,8 @@ four staying half done.
   without pay tells half the story (done: Pay tab, from the BLS public API since FRED times out from servers).
 
 ### 2c. AI adoption (half hand-entered)
-- Confirm or fix the BTOS workbook parser against the live file; fill the sector file for the latest period.
+- Confirm or fix the BTOS workbook parser against the live file; fill the sector file for the latest period. (parser done Oct 2026; sector shares
+  automated from the BTOS Sector workbook Nov 2026, layout to confirm on the live site)
 - Ramp AI Index: twelve monthly points; set a monthly reminder (below) to add the next.
 - Add one survey series with a consistent method (the Census BTOS "expect to use AI in the next six months" question is
   in the same workbook, so it is free): "using now" vs "expect to use" on one chart.

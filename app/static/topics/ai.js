@@ -148,9 +148,13 @@ const VIEWS = {
       note("UK: ONS Business Insights and Conditions Survey, asked about once a quarter: businesses using at least one AI technology (100% minus 'does not use' minus 'not sure'), weighted. Hong Kong has no comparable periodic survey yet; hand-entered points, if any, are listed below."),
       ...((d.uk_hk_rows || []).length ? [table(["Date", "Series", "%", "Source"], d.uk_hk_rows.map(r => [r.date, r.series, r.value, "[" + host(r.source) + "](" + r.source + ")"]))] : []), stale(d))
       : card("UK and Hong Kong", el("div", { class: "muted" }, "Not available right now: the ONS BICS workbook could not be read. Hand-entered points go in data/ai/firm_adoption_uk_hk.csv."));
-    const sec = Object.entries(d.btos_sectors || {}).filter(([, p]) => p.length);
-    const sectors = sec.length ? card("By sector (latest)", ...svgBars(sec.map(([k]) => k), [{ name: "Using AI", values: sec.map(([, p]) => p[p.length - 1][1]), color: css("--s1") }], { yFmt: sh, labelW: 90 }))
-      : card("By sector", el("div", { class: "muted" }, "No sector points entered yet: copy the sector rows of the BTOS workbook into data/ai/btos_ai_use_by_sector.csv."));
+    const sec = Object.entries(d.btos_sectors || {}).filter(([, p]) => p.length).sort((a, b) => b[1][b[1].length - 1][1] - a[1][a[1].length - 1][1]);
+    const short = k => k.split(/[ ,]/)[0];                                  // "Professional, Scientific, ..." -> "Professional"; the full name shows on tap
+    const secAsOf = sec.length ? month(Math.max(...sec.map(([, p]) => p[p.length - 1][0]))) : "";
+    const sectors = sec.length ? card("By sector (latest, " + secAsOf + ")", ...svgBars(sec.map(([k]) => short(k)), [{ name: "Using AI", values: sec.map(([, p]) => p[p.length - 1][1]), color: css("--s1") }],
+        { yFmt: sh, labelW: 90, catName: i => sec[i][0], catHead: "sector" }),
+      note("Same Census question by NAICS sector, highest first, from the BTOS Sector workbook; a row in data/ai/btos_ai_use_by_sector.csv overrides a period."), stale(d))
+      : card("By sector", el("div", { class: "muted" }, "Not read yet: the Census BTOS Sector workbook was not reachable or its layout changed (see /api/health); sector rows can be added by hand to data/ai/btos_ai_use_by_sector.csv."));
     return [head, btos, expect, sectors, intl];
   },
   async users() {
