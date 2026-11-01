@@ -1,6 +1,6 @@
 date,value,source,note
-2021-01-01,-31.25,https://secure.fundsupermart.com/fsmone/etf/factsheet/26986554/iShares-Hang-Seng-TECH-ETF,iShares Hang Seng TECH ETF calendar-year return % (HKD; tracks the net total return index); read from a search summary of the factsheet; verify
-2022-01-01,-27.349,https://secure.fundsupermart.com/fsmone/etf/factsheet/26986554/iShares-Hang-Seng-TECH-ETF,verify
-2023-01-01,-10.594,https://secure.fundsupermart.com/fsmone/etf/factsheet/26986554/iShares-Hang-Seng-TECH-ETF,verify
-2024-01-01,24.625,https://secure.fundsupermart.com/fsmone/etf/factsheet/26986554/iShares-Hang-Seng-TECH-ETF,verify
-2025-01-01,16.409,https://secure.fundsupermart.com/fsmone/etf/factsheet/26986554/iShares-Hang-Seng-TECH-ETF,verify
+2021-01-01,-32.64,https://www.blackrock.com/hk/en/literature/fact-sheet/3067-ishares-hang-seng-tech-etf-fund-fact-sheet-en-hk.pdf,"iShares Hang Seng TECH ETF (3067) calendar-year fund return % (HKD; benchmark Hang Seng TECH Net Total Return Index, -32.47); BlackRock factsheet as at 30 Sep 2026"
+2022-01-01,-26.89,https://www.blackrock.com/hk/en/literature/fact-sheet/3067-ishares-hang-seng-tech-etf-fund-fact-sheet-en-hk.pdf,"BlackRock factsheet as at 30 Sep 2026 (benchmark -26.67)"
+2023-01-01,-8.54,https://www.blackrock.com/hk/en/literature/fact-sheet/3067-ishares-hang-seng-tech-etf-fund-fact-sheet-en-hk.pdf,"BlackRock factsheet as at 30 Sep 2026 (benchmark -8.26)"
+2024-01-01,19.48,https://www.blackrock.com/hk/en/literature/fact-sheet/3067-ishares-hang-seng-tech-etf-fund-fact-sheet-en-hk.pdf,"BlackRock factsheet as at 30 Sep 2026 (benchmark 19.89)"
+2025-01-01,24.34,https://www.blackrock.com/hk/en/literature/fact-sheet/3067-ishares-hang-seng-tech-etf-fund-fact-sheet-en-hk.pdf,"BlackRock factsheet as at 30 Sep 2026 (benchmark 24.68)"
