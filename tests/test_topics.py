@@ -1021,6 +1021,16 @@ def test_housing_readings(snapdir, monkeypatch):
     assert _daily._clean(H.READINGS()) and len(_daily._clean(H.READINGS())) == len(r)
 
 
+def test_housing_calc_payload(snapdir, monkeypatch):
+    H = housing_mocks(monkeypatch)
+    c = H.ENDPOINTS["calc"]()
+    B.json_safe(c)
+    assert c["rows"][0]["code"] == "E12000007" and c["rows"][0]["flat"] and c["rows"][0]["rent_2bed"] == 1600 + 400 + 140 * 5
+    assert len(c["rows"]) == 34 and c["rate_now"] == c["fixed_2y"][-1][1] and c["fixed_2y"]
+    assert [v for v in c["history"]["values"]["flat"]["E12000007"] if v][-1] == 250000 and c["history"]["values"]["rent_2bed"]["E09000033"][-1] == 3600
+    assert "calc" in {k for k, _ in topics.REGISTRY["housing"].tabs}
+
+
 def test_housing_rents_from_pipr(snapdir, monkeypatch):
     H = housing_mocks(monkeypatch)
     assert H.pipr_url(PIPR_PAGE).endswith("/21october2026/priceindexofprivaterentsukmonthlypricestatistics.xlsx")

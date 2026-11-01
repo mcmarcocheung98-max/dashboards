@@ -720,6 +720,37 @@ def _layout_now() -> dict:
     return out
 
 
+def _calc_now() -> dict:
+    """Rent or buy: what the calculator tab needs, from the cached boroughs and affordability payloads plus London's own flat price and
+    2-bed rent. The arithmetic runs in the browser so every input can change without a round trip."""
+    b, a = ENDPOINTS["boroughs"](), ENDPOINTS["afford"]()
+    lon = hpi("london")
+    london = {"borough": "London (all boroughs)", "code": "E12000007", "flat": _r(lon["avg_flat"].dropna().iloc[-1], 0) if lon["avg_flat"].notna().any() else None,
+              "terraced": _r(lon["avg_terraced"].dropna().iloc[-1], 0) if lon["avg_terraced"].notna().any() else None,
+              "semi": _r(lon["avg_semi"].dropna().iloc[-1], 0) if lon["avg_semi"].notna().any() else None,
+              "detached": _r(lon["avg_detached"].dropna().iloc[-1], 0) if lon["avg_detached"].notna().any() else None, "rent_2bed": None, "yoy": None}
+    hist = dict((b.get("map") or {}).get("history") or {})
+    try:
+        lr = rents()["London average rent"]
+        london["rent_2bed"] = _r(lr["rent_2bed"].dropna().iloc[-1], 0) if lr["rent_2bed"].notna().any() else None
+        if hist:
+            idx = pd.date_range(hist["start"] + "-01", periods=hist["months"], freq="MS")
+            vals = {m: dict(v) for m, v in hist["values"].items()}
+            series = {"flat": lon["avg_flat"], "terraced": lon["avg_terraced"], "semi": lon["avg_semi"], "detached": lon["avg_detached"], "rent_2bed": lr["rent_2bed"]}
+            for m, s in series.items():
+                step = 1 if m == "rent_2bed" else 100
+                vals.setdefault(m, {})["E12000007"] = [None if pd.isna(v) else int(round(v / step) * step) for v in s.groupby(s.index).last().reindex(idx).to_numpy()]
+            hist = {**hist, "values": vals}
+    except Exception:
+        pass
+    keep = ("borough", "code", "flat", "terraced", "semi", "detached", "rent_2bed", "yoy", "rent_yoy", "change_5y")
+    rows = [london] + sorted(({k: r.get(k) for k in keep} for r in b.get("rows") or [] if r.get("code")), key=lambda r: r["borough"])
+    fx, br = a.get("fixed_2y") or [], a.get("bank_rate") or []
+    return {"rows": rows, "history": hist, "fixed_2y": fx, "bank_rate": br, "rate_now": fx[-1][1] if fx else (br[-1][1] + 1.5 if br else None),
+            "as_of": b.get("as_of"), "rent_month": next((r.get("rent_month") for r in b.get("rows") or [] if r.get("rent_month")), None),
+            "stale": {}, "updated": int(time.time())}
+
+
 def _cached_ep(name, fn, ttl=6 * 3600):
     from ..cache import _cached
     return lambda: _cached(f"topic:housing:{name}", ttl, fn)
@@ -727,7 +758,7 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 
 ENDPOINTS = {"prices": _cached_ep("prices", _prices_now), "market": _cached_ep("market", _market_now), "afford": _cached_ep("afford", _afford_now),
              "boroughs": _cached_ep("boroughs", _boroughs_now), "global": _cached_ep("global", _global_now),
-             "layout": _cached_ep("layout", _layout_now, 1800)}
+             "calc": _cached_ep("calc", lambda: _calc_now()), "layout": _cached_ep("layout", _layout_now, 1800)}
 
 
 # ------------------------------------------------------------------ what changed since yesterday

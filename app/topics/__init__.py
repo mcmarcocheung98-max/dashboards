@@ -47,8 +47,8 @@ class Topic:
 
 BUILTIN = (
     Topic("housing", "Housing: London, US & Hong Kong", "London house prices, boroughs, sales, rents and affordability, against the UK, the US and Hong Kong.",
-          "housing", (("prices", "London"), ("boroughs", "Boroughs: homes & rents"), ("market", "Types & volume"), ("afford", "Rates & affordability"), ("global", "London vs US vs HK")),
-          ("prices", "market", "afford", "boroughs", "global")),
+          "housing", (("prices", "London"), ("boroughs", "Boroughs: homes & rents"), ("market", "Types & volume"), ("afford", "Rates & affordability"), ("calc", "Rent or buy"), ("global", "London vs US vs HK")),
+          ("prices", "market", "afford", "boroughs", "calc", "global")),
     Topic("ai", "AI: Jobs & Adoption", "AI job openings against hiring, headcount and pay in law and finance, and how fast firms and people take up AI tools and agents, in the US, UK and Hong Kong.",
           "ai", (("openings", "Openings"), ("headcount", "Headcount"), ("wages", "Pay"), ("ratio", "AI vs the professions"), ("firms", "Firms adopting"),
                  ("users", "Users"), ("agents", "Agents"), ("skills", "Skills demand")), ("openings", "headcount", "wages", "ratio", "firms", "skills")),

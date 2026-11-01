@@ -4,7 +4,7 @@ What London homes cost, how that compares with the rest of the UK and with infla
 
 ## What it shows
 
-Tabs, in order: **London** (key `prices`), **Boroughs: homes & rents** (`boroughs`), Types & volume, Rates & affordability, London vs US vs HK.
+Tabs, in order: **London** (key `prices`), **Boroughs: homes & rents** (`boroughs`), Types & volume, Rates & affordability, **Rent or buy** (`calc`), London vs US vs HK.
 
 | Tab | Cards | Series |
 |---|---|---|
@@ -16,6 +16,10 @@ Tabs, in order: **London** (key `prices`), **Boroughs: homes & rents** (`borough
 | | Rents against prices | London rent and London average price, both January 2015 = 100 |
 | | Gross rental yield | A year's average London rent ÷ the average London price, monthly since 2015 |
 | | London's premium | London average price ÷ UK average price |
+| Rent or buy | Calculator | Every input editable: borough (or all London), home type, price, rent instead, deposit %, mortgage rate, term, buying fees, owner's running costs (% of value a year), house price growth, rent growth, return on savings, selling costs, years you stay, first-time buyer. Price and rent start from the latest borough averages (UK HPI by type; ONS PIPR 2-bed rent), the rate from the BoE quoted 2-year fixed at 75% LTV. Shows the monthly mortgage, monthly cost to own vs rent, cash needed (deposit + stamp duty + fees), stamp duty (England rates from 1 April 2025, first-time buyer relief to £500,000), wealth after N years if you buy or rent, and when buying pulls ahead |
+| | Year by year | Buyer's and renter's wealth from today to the year you leave, and the cumulative money paid to own and in rent. Each month whoever pays less invests the difference at the savings return; the rate is held for the whole term |
+| | Top 3 picks | Cheapest to rent (2-bed), cheapest flats, where owning a flat costs least against the 2-bed rent and where renting is cheapest against owning, recomputed from the deposit, rate, term and running costs entered |
+| | Then and now | For the chosen borough and home type: the monthly mortgage on its average price at the 2-year fixed rate of each month (with the deposit and term entered) against its average 2-bed rent, since 2005 / 2015 |
 | Boroughs: homes & rents · Top 3 | Top 3 boroughs by measure | Cheapest flats, cheapest terraced houses, cheapest 2-bed rent, highest gross yield (2-bed rent × 12 ÷ flat price), prices rising fastest on a year, most growth over 5 years, rents rising slowest on a year (PIPR annual change, all homes), most expensive homes. Rankings, not recommendations |
 | Types & volume | Headline figures | Latest average by property type; sales last month and last 12 months |
 | | Average price by property type | Detached, semi-detached, terraced, flat / maisonette |
