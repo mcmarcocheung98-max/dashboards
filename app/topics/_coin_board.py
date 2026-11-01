@@ -311,3 +311,150 @@ def payload(d: pd.DataFrame, years: float = 2.0) -> dict:
             "gauges_available": [g.key for g in GAUGES if g.key in d and d[g.key].notna().any()], "gauges_missing": [g.key for g in GAUGES if g.key not in d or not d[g.key].notna().any()],
             "sell_days_12m": int((st.loc[d.index[-1] - pd.Timedelta(days=365):] > 0).sum())}
     return out
+
+
+# ------------------------------------------------------------------ the fitted board: the same gauges, signs and weights learned from their record
+FIT_HORIZON = 30                 # days ahead the gauges are judged on (the record tables start at 30 days)
+FIT_MIN_T = 1.5                  # a gauge earns weight when its rank correlation is this many standard errors from zero (either sign)
+FIT_MIN_ACTIVE = 100             # ... on at least this many coin-days where the gauge was not neutral
+FIT_MAX_WEIGHT = 0.4             # no gauge above this share of the final score (by absolute weight)
+FIT_REFIT_DAYS = 30
+FIT_MIN_TRAIN = 180
+
+
+def gauge_record(scores: pd.DataFrame, fwd: pd.Series) -> list[dict]:
+    """Per gauge: rank correlation of its zone score with the forward return (sign kept: negative means the zone is backwards),
+    the t-stat, the average forward return after buy-zone and sell-zone readings, and the hit rate of its sign."""
+    out = []
+    f = fwd.reindex(scores.index)
+    for g in GAUGES:
+        if g.key not in scores:
+            continue
+        s = scores[g.key]
+        m = f.notna() & s.notna() & (s != 0)
+        n = int(m.sum())
+        row = {"key": g.key, "name": g.name, "group": g.group, "days_active": n}
+        if n >= 30 and s[m].nunique() > 1:
+            ic = float(s[m].rank().corr(f[m].rank()))
+            row |= {"ic": ic, "t": ic * np.sqrt(n), "after_buy": float(f[m & (s > 0)].mean()) if (m & (s > 0)).any() else None,
+                    "after_sell": float(f[m & (s < 0)].mean()) if (m & (s < 0)).any() else None, "hit_rate": float((np.sign(s[m]) == np.sign(f[m])).mean())}
+        else:
+            row |= {"ic": None, "t": None, "after_buy": None, "after_sell": None, "hit_rate": None}
+        out.append(row)
+    return out
+
+
+def fitted_weights(scores: pd.DataFrame, fwd: pd.Series) -> tuple[dict, str]:
+    """Signed weights: a gauge's rank correlation with the forward return (so a backwards zone gets a negative weight), kept when at least
+    FIT_MIN_T standard errors from zero on FIT_MIN_ACTIVE+ active coin-days, scaled so the absolute weights sum to 1 with none above
+    FIT_MAX_WEIGHT; empty (no reading) when nothing qualifies."""
+    rec = gauge_record(scores, fwd)
+    w = {r["key"]: r["ic"] for r in rec if r["ic"] is not None and r["t"] is not None and abs(r["t"]) >= FIT_MIN_T and r["days_active"] >= FIT_MIN_ACTIVE}
+    w = {k: v for k, v in w.items() if v != 0}
+    if not w:
+        return {}, "no gauge cleared the bar"
+    for _ in range(len(w)):
+        tot = sum(abs(v) for v in w.values())
+        w = {k: v / tot for k, v in w.items()}
+        over = {k for k, v in w.items() if abs(v) > FIT_MAX_WEIGHT + 1e-12}
+        if not over or len(over) == len(w):
+            break
+        excess = sum(abs(w[k]) - FIT_MAX_WEIGHT for k in over)
+        free = sum(abs(v) for k, v in w.items() if k not in over)
+        w = {k: (np.sign(v) * FIT_MAX_WEIGHT if k in over else v + np.sign(v) * excess * abs(v) / free) for k, v in w.items()}
+    flipped = sorted(k for k, v in w.items() if v < 0)
+    return w, f"{len(w)} gauges by rank correlation" + (f", {len(flipped)} with the sign reversed ({', '.join(NAMES[k].name for k in flipped)})" if flipped else "")
+
+
+def fitted_composite(scores: pd.DataFrame, w: dict) -> pd.Series:
+    if not w:
+        return pd.Series(np.nan, index=scores.index)
+    cols = [k for k in w if k in scores]
+    return (scores[cols].fillna(0).mul(pd.Series({k: w[k] for k in cols}), axis=1).sum(axis=1)).clip(-1, 1).where(scores[cols].notna().any(axis=1))
+
+
+def fitted_walk_forward(per_coin: dict[str, tuple[pd.DataFrame, pd.Series]], h: int = FIT_HORIZON, refit: int = FIT_REFIT_DAYS, min_train: int = FIT_MIN_TRAIN) -> dict:
+    """per_coin: {coin: (gauge zone scores frame, close)}. Weights re-fitted every `refit` days on every coin's rows whose forward return was
+    known at the fit date, applied until the next fit; today's weights fitted on everything known."""
+    keys = [g.key for g in GAUGES]
+    pooled = pd.concat([S.reindex(columns=keys).assign(_fwd=(c.shift(-h) / c - 1).reindex(S.index), _coin=k) for k, (S, c) in per_coin.items()]).sort_index()
+    dates = pooled.index.unique().sort_values()
+    comp = {k: pd.Series(np.nan, index=S.index) for k, (S, _) in per_coin.items()}
+    if len(dates) < min_train + h + 1:
+        return {"composite": comp, "fits": [], "weights_now": {}, "how_now": "not enough history"}
+    fit_dates = dates[min_train::refit]
+    fits = []
+    for j, t in enumerate(fit_dates):
+        train = pooled[pooled.index < t - pd.Timedelta(days=h)]
+        w, how = fitted_weights(train[keys], train["_fwd"])
+        until = fit_dates[j + 1] if j + 1 < len(fit_dates) else dates[-1] + pd.Timedelta(days=1)
+        fits.append({"date": str(t.date()), "until": str((until - pd.Timedelta(days=1)).date()), "weights": w, "how": how, "train_rows": int(len(train))})
+        for k, (S, _) in per_coin.items():
+            m = (S.index >= t) & (S.index < until)
+            if m.any() and w:
+                comp[k][m] = fitted_composite(S[m].reindex(columns=keys), w).to_numpy()
+    known = pooled[pooled["_fwd"].notna()]
+    w_now, how_now = fitted_weights(known[keys], known["_fwd"])
+    return {"composite": comp, "fits": fits, "weights_now": w_now, "how_now": how_now, "train_rows_now": int(len(known)), "record": gauge_record(known[keys], known["_fwd"])}
+
+
+def zone_returns_of(score_series: pd.Series, px: pd.Series, horizons=(30, 90, 180)) -> list[dict]:
+    """The record-by-zone table for any score series (the fitted board's composite, for instance)."""
+    zone = score_series.shift(1).map(lambda a: label(a) if a == a else None)
+    rows = []
+    for z in ZONES:
+        m = zone == z
+        r = {"zone": z, "days": int(m.sum())}
+        for h in horizons:
+            f = (px.shift(-h) / px - 1)[m].dropna()
+            r[f"{h}d"] = float(f.median()) if len(f) else None
+            r[f"{h}d_up"] = float((f > 0).mean()) if len(f) else None
+        rows.append(r)
+    allr = {"zone": "ALL DAYS", "days": int(score_series.notna().sum())}
+    for h in horizons:
+        f = (px.shift(-h) / px - 1)[score_series.notna()].dropna()
+        allr[f"{h}d"], allr[f"{h}d_up"] = (float(f.median()), float((f > 0).mean())) if len(f) else (None, None)
+    return rows + [allr]
+
+
+def fitted_backtest(comp: pd.Series, px: pd.Series, enter: float = LEVELS["buy"], cost: float = 0.00095, long_short: bool = True, h: int = FIT_HORIZON) -> dict:
+    """Trade the fitted score close to close: long at or above `enter`, short at or below -enter (or flat), the next day's move, costs on every change;
+    a short losing over 100% in a day ends the account at zero."""
+    x = comp.dropna()
+    if len(x) < 60:
+        return {"days": int(len(x))}
+    p = px.reindex(x.index)
+    pos = pd.Series(np.where(x >= enter, 1.0, np.where(x <= -enter, -1.0 if long_short else 0.0, 0.0)), index=x.index)
+    r = p.pct_change().shift(-1)
+    turn = pos.diff().abs().fillna(pos.abs())
+    strat = (pos * r - turn * cost).dropna().clip(lower=-1.0)
+    eq = (1 + strat).cumprod()
+    hold = p / p.iloc[0]
+    days = len(strat)
+    direction = np.sign(x.where(x.abs() >= enter)).dropna()
+    hit = float((direction == np.sign((p.shift(-h) / p - 1).reindex(direction.index))).mean()) if len(direction) else None
+    return {"days": days, "from": str(x.index[0].date()), "to": str(x.index[-1].date()), "total": float(eq.iloc[-1] - 1), "hold": float(hold.iloc[-1] - 1),
+            "a_year": float(eq.iloc[-1] ** (365 / days) - 1) if eq.iloc[-1] > 0 else -1.0, "hold_a_year": float(hold.iloc[-1] ** (365 / days) - 1),
+            "sharpe": float(strat.mean() / strat.std() * np.sqrt(365)) if strat.std() > 0 else None, "worst_drop": float((eq / eq.cummax() - 1).min()),
+            "hold_worst_drop": float((hold / hold.cummax() - 1).min()), "time_long": float((pos > 0).mean()), "time_short": float((pos < 0).mean()), "changes": int((turn > 0).sum()),
+            "hit_rate": hit, "hit_horizon": h, "readings": int(len(direction)),
+            "equity": [[int(t.timestamp()), round(float(v), 5)] for t, v in eq.items()], "hold_curve": [[int(t.timestamp()), round(float(v), 5)] for t, v in hold.reindex(eq.index).items()]}
+
+
+def fitted_today(scores: pd.DataFrame, d: pd.DataFrame, w: dict) -> dict:
+    """Today's fitted reading: the score, label, and each gauge's signed weight and push."""
+    if not w or scores.empty:
+        return {"status": "no reading"}
+    day = scores.index[-1]
+    comp = fitted_composite(scores.iloc[[-1]].reindex(columns=[g.key for g in GAUGES]), w).iloc[0]
+    if not np.isfinite(comp):
+        return {"status": "no reading"}
+    rows = []
+    for g in GAUGES:
+        if g.key in scores and np.isfinite(scores.loc[day, g.key]):
+            sc = float(scores.loc[day, g.key]); wt = float(w.get(g.key, 0.0))
+            rows.append({"key": g.key, "name": g.name, "value": g.fmt.format(d.loc[day, g.key]) if g.key in d else "", "zone_score": sc, "weight": wt, "push": sc * wt,
+                         "flipped": wt < 0})
+    rows.sort(key=lambda r: -abs(r["push"]))
+    return {"status": "ok", "score": float(comp), "label": label(float(comp)), "lean": 1 if comp >= LEVELS["buy"] else -1 if comp <= LEVELS["sell"] else 0, "rows": rows,
+            "weights": {k: float(v) for k, v in w.items()}}

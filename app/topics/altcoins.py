@@ -2,6 +2,8 @@
 and a buy zone for every coin on one tab.
 
 zones    every coin's buy zone (rule below), where today's price sits against it, RSI and the 30-day move
+boards   every coin's signal board (_coin_board.py): the BTC spot signal's set-up per coin, and the fitted board (the same gauges with signs and
+         weights learned from their pooled record, walk-forward); the candidates' tabs show their own
 volume   big-volume days (3x the 60-day median) and the support / resistance zones they leave, per coin, from Hyperliquid daily candles
          (_volume_zones.py); what each coin did after its own big days and zone retests
 signals  twenty daily signals on top of the zones (zone position, retests, breaks, big-day balance, trend, RSI, BTC, unlock windows ...),
@@ -48,11 +50,11 @@ from ._base import DAY, _r, fetch_json, stale_info
 
 SLUG = "altcoins"
 CANDIDATES = ("HYPE", "ENA", "SOL", "NEAR")
-TABS = (("zones", "Buy zones"), ("volume", "Volume zones"), ("signals", "Signals"), *((t.lower(), t) for t in CANDIDATES), ("unlocks", "ENA unlocks"), ("basket", "Memecoins"), ("season", "Meme season"))
+TABS = (("zones", "Buy zones"), ("boards", "Signal boards"), ("volume", "Volume zones"), ("signals", "Signals"), *((t.lower(), t) for t in CANDIDATES), ("unlocks", "ENA unlocks"), ("basket", "Memecoins"), ("season", "Meme season"))
 TOPIC = Topic(SLUG, "Altcoin Study",
               "HYPE, ENA, SOL and NEAR in full (price against BTC, fundamentals, the bear / base / bull projection), the memecoin basket and meme "
               "season, a buy zone for every coin, the big-volume days and the support / resistance zones they leave, and ENA around every token unlock.",
-              "altcoins", TABS, ("zones", "volume", "signals", "unlocks", "basket", "season"), icon="chart", order=12)
+              "altcoins", TABS, ("zones", "boards", "volume", "signals", "unlocks", "basket", "season"), icon="chart", order=12)
 MA_DAYS = 200
 VALUE_MULT = 2.0                               # the base case to end-2028 must at least double from the top of the zone
 SIBLINGS = {t: f"#{t.lower()}" for t in CANDIDATES}
@@ -94,7 +96,7 @@ def buy_zone(prices: pd.Series, base_2028: float | None = None) -> dict:
 
 
 def _series(pts) -> pd.Series:
-    return pd.Series([v for _, v in pts], index=pd.to_datetime([t for t, _ in pts], unit="s"))
+    return pd.Series({pd.to_datetime(int(t), unit="s"): v for t, v in (pts or []) if v is not None}, dtype=float).sort_index()
 
 
 def _coin_tab(ticker: str) -> dict:
@@ -111,60 +113,117 @@ def _coin_tab(ticker: str) -> dict:
     return f
 
 
-def _series(pts) -> pd.Series:
-    return pd.Series({pd.to_datetime(int(t), unit="s"): v for t, v in (pts or []) if v is not None}, dtype=float).sort_index()
-
-
-def _board_for(ticker: str, f: dict) -> dict:
-    """The coin's signal board (the BTC spot signal's set-up, per coin): Hyperliquid daily closes and BTC's, CoinGecko market cap, DefiLlama fees
-    and TVL from the fundamentals fill, the unlock schedule (hand-entered file, else DefiLlama's curve), and the volume-zone position and
-    twenty-signal score from the Signals tab. Any input that is missing leaves its gauge out; the board needs four."""
+def _board_for(ticker: str, f: dict | None = None) -> dict:
+    """The coin's board from the shared boards endpoint (one computation for every coin, so the fitted weights see all of them)."""
     try:
-        d = hl_daily(ticker)
-        btc = hl_daily("BTC")
+        all_ = ENDPOINTS["boards"]()
     except Exception as e:
         return {"status": "error", "why": type(e).__name__}
-    S, FD = f.get("series") or {}, f.get("fundamentals") or {}
-    FS = FD.get("series") or {}
-    raw = C.fundamentals(ticker)                                            # the compact fill file: DAILY fees and TVL for 400 days (the tab's series are weekly samples)
-    fees_daily, tvl_daily = C._ser(raw.get("fees")), C._ser(raw.get("tvl"))
-    fees_30d = fees_daily.rolling(30, min_periods=20).sum().dropna() if len(fees_daily) else _series(FS.get("fees_30d"))
-    tvl_series = tvl_daily if len(tvl_daily) else _series(FS.get("tvl"))
-    now = pd.Timestamp.now("UTC").tz_localize(None).normalize()
-    unlocked, circ = None, None
+    row = next((c for c in (all_ or {}).get("coins", []) if c["ticker"] == ticker), None)
+    if row is None:
+        return {"status": "error", "why": "not in the boards"}
+    if row.get("status") != "ok":
+        return {"status": row.get("status", "error"), "why": row.get("why")}
+    return {**row["board"], "fitted": row.get("fitted"), "fitted_weights": (all_.get("fitted") or {}).get("weights_now"), "fitted_how": (all_.get("fitted") or {}).get("how_now")}
+
+
+def _coin_inputs(c: dict, btc: pd.DataFrame, zone_scores: dict) -> pd.DataFrame:
+    """Everything the board needs for one coin: Hyperliquid daily closes, BTC's, CoinGecko market cap (what the fills already hold), DefiLlama daily
+    fees and TVL (candidates), the unlock schedule (hand-entered file, else DefiLlama's curve), the flipped zone position and the 20-signal score."""
+    t = c["ticker"]
+    d = hl_daily(t)
+    if len(d) < 120:
+        raise ValueError(f"only {len(d)} days")
+    mc = None
     try:
-        if ticker in UL.coins():
-            ev = UL.events(ticker)
+        _, mc = C.coin_chart(c["coingecko_id"])
+    except Exception:
+        pass
+    raw = C.fundamentals(t)
+    fees_daily, tvl_daily = C._ser(raw.get("fees")), C._ser(raw.get("tvl"))
+    fees_30d = fees_daily.rolling(30, min_periods=20).sum().dropna() if len(fees_daily) else None
+    tvl = tvl_daily if len(tvl_daily) else None
+    unlocked = circ = None
+    now = pd.Timestamp.now("UTC").tz_localize(None).normalize()
+    try:
+        if t in UL.coins():
+            ev = UL.events(t)
             unlocked = pd.Series(ev.cumulative_m.to_numpy() * 1e6, index=pd.DatetimeIndex(ev.date))
             circ = float(ev[ev.date <= now].amount_m.sum()) * 1e6 or None
-        elif FS.get("schedule"):
-            unlocked = _series(FS["schedule"])
-            circ = _series(FS.get("supply")) if FS.get("supply") else None                      # circulating supply over time
-            if circ is None or circ.empty:
-                circ = ((FD.get("supply") or {}).get("circulating_supply")) or None
-            if circ is None and f.get("kpi", {}).get("market_cap") and f["kpi"].get("price"):
-                circ = f["kpi"]["market_cap"] / f["kpi"]["price"]
+        elif raw.get("schedule"):
+            unlocked = C._ser(raw["schedule"])
+            circ = (raw.get("supply") or {}).get("circulating_supply") or (float(mc.iloc[-1] / d.close.iloc[-1]) if mc is not None and len(mc) else None)
     except Exception:
-        unlocked, circ = None, None
-    zone_pos = zone_score = None
+        unlocked = circ = None
+    ev_sig = UL.events(t) if t in UL.coins() else None
+    zone_pos = None
     try:
-        ev_for_signals = UL.events(ticker) if ticker in UL.coins() else None
-        zone_pos = SG.signals(d, btc, VZ.zones(d, ticker), ev_for_signals)["in_zone"]
+        zone_pos = SG.signals(d, btc, VZ.zones(d, t), ev_sig)["in_zone"]
     except Exception:
         pass
+    return CB.inputs(d.close, btc.close, mc, fees_30d, tvl, unlocked, circ, zone_pos, zone_scores.get(t))
+
+
+def _boards_now() -> dict:
+    """Every coin's board (the BTC board's set-up) plus the fitted board: the same gauges with signs and weights learned from their pooled record,
+    walk-forward. Memecoins have no fees or TVL, so their boards run on the price, BTC, unlock and zone gauges."""
     try:
-        blk = (ENDPOINTS["signals"]() or {}).get("by_horizon", {}).get(str(SG.HORIZON), {}).get("coins", {}).get(ticker) or {}
-        if blk.get("composite"):
-            zone_score = _series(blk["composite"])
-    except Exception:
-        pass
-    try:
-        inp = CB.inputs(d.close, btc.close, _series(S.get("market_cap")), fees_30d, tvl_series, unlocked, circ, zone_pos, zone_score)
-        out = CB.payload(inp)
+        btc = hl_daily("BTC")
     except Exception as e:
-        return {"status": "error", "why": f"{type(e).__name__}: {e}"}
-    out["sources"] = {"price": "Hyperliquid daily closes", "btc": "Hyperliquid BTC daily closes", "market_cap": "CoinGecko (365 days)", "fees_tvl": "DefiLlama via the fundamentals fill (400 days)",
-                      "unlocks": "data/altcoins/unlocks/" + ticker + ".csv" if ticker in UL.coins() else "DefiLlama emissions curve", "zones": "Volume zones and Signals tabs"}
+        return _scrub({"coins": [{**c, "status": "error", "why": f"BTC candles: {type(e).__name__}"} for c in _all_coins()], "fitted": {}, "updated": int(time.time()), "stale": stale_info([HL_INFO])})
+    zone_scores = {}
+    try:
+        blk = (ENDPOINTS["signals"]() or {}).get("by_horizon", {}).get(str(SG.HORIZON), {}).get("coins", {})
+        zone_scores = {t: _series(r.get("composite")) for t, r in blk.items() if r.get("composite")}
+    except Exception:
+        pass
+    cg = {c["ticker"]: c["coingecko_id"] for c in C.coins_list()} | {c["ticker"]: c["coingecko_id"] for c in M.coins_list()}
+    coins, per, frames = [], {}, {}
+    for c in _all_coins():
+        if c["ticker"] not in HL_COINS:
+            coins.append({**c, "status": "not on Hyperliquid"})
+            continue
+        try:
+            d = _coin_inputs({**c, "coingecko_id": cg.get(c["ticker"])}, btc, zone_scores)
+            sc = CB.board(d)
+            per[c["ticker"]] = (sc[[g.key for g in CB.GAUGES if g.key in sc]], d["price"])
+            frames[c["ticker"]] = (d, sc)
+            coins.append({**c, "status": "ok", "board": CB.payload(d)})
+        except Exception as e:
+            coins.append({**c, "status": "error", "why": f"{type(e).__name__}: {e}"})
+    out = {"coins": coins, "fitted": {"horizon": CB.FIT_HORIZON, "levels": CB.LEVELS, "refit_days": CB.FIT_REFIT_DAYS, "min_train_days": CB.FIT_MIN_TRAIN}, "updated": int(time.time()), "stale": stale_info([HL_INFO])}
+    if not per:
+        return _scrub(out)
+    try:
+        wf = CB.fitted_walk_forward(per)
+    except Exception as e:
+        out["fitted"]["error"] = f"{type(e).__name__}: {e}"
+        return _scrub(out)
+    out["fitted"] |= {"weights_now": wf["weights_now"], "how_now": wf["how_now"], "train_rows": wf.get("train_rows_now"), "record": wf.get("record", []),
+                      "fits": [{k: v for k, v in f.items() if k != "weights"} for f in wf["fits"]], "flipped": sorted(k for k, v in (wf["weights_now"] or {}).items() if v < 0)}
+    for c in coins:
+        if c["status"] != "ok":
+            continue
+        t = c["ticker"]
+        d, sc = frames[t]
+        comp = wf["composite"][t]
+        try:
+            today = CB.fitted_today(per[t][0], d, wf["weights_now"])
+            since = d.index[-1] - pd.Timedelta(days=730)
+            c["fitted"] = {**today, "series": [[int(x.timestamp()), None if not np.isfinite(comp.loc[x]) else round(float(comp.loc[x]), 3), round(float(d.loc[x, "price"]), 8)] for x in d.index if x >= since],
+                           "record": CB.zone_returns_of(comp, d["price"]), "backtest": CB.fitted_backtest(comp, d["price"]),
+                           "backtest_long_only": {k: v for k, v in CB.fitted_backtest(comp, d["price"], long_short=False).items() if k not in ("equity", "hold_curve")},
+                           "history_from": str(comp.dropna().index[0].date()) if comp.notna().any() else None}
+        except Exception as e:
+            c["fitted"] = {"status": "error", "why": f"{type(e).__name__}: {e}"}
+    ok = [c for c in coins if c["status"] == "ok"]
+    out["counts"] = {"classic": {"buy": sum("BUY" in c["board"]["label"] for c in ok), "sell": sum("SELL" in c["board"]["label"] for c in ok)},
+                     "fitted": {"buy": sum((c.get("fitted") or {}).get("lean") == 1 for c in ok), "sell": sum((c.get("fitted") or {}).get("lean") == -1 for c in ok), "readings": sum((c.get("fitted") or {}).get("status") == "ok" for c in ok)}}
+    bts = [c["fitted"]["backtest"] for c in ok if (c.get("fitted") or {}).get("backtest", {}).get("total") is not None]
+    if bts:
+        med = lambda key: (lambda xs: float(np.median(xs)) if xs else None)([b[key] for b in bts if b.get(key) is not None and np.isfinite(b[key])])
+        out["fitted"]["pooled_backtest"] = {"coins": len(bts), "beat_hold": sum(b["total"] > b["hold"] for b in bts), "median_a_year": med("a_year"), "median_hold_a_year": med("hold_a_year"),
+                                            "median_sharpe": med("sharpe"), "median_worst_drop": med("worst_drop"), "median_hit_rate": med("hit_rate")}
     return _scrub(out)
 
 
@@ -401,14 +460,15 @@ def READINGS() -> list[dict]:
            for r in (ENDPOINTS["zones"]() or {}).get("coins", []) if r["status"] in ("in zone", "above zone", "no zone")]
     out += [{"tab": "volume", "key": f"vz_{c['ticker'].lower()}", "label": f"{c['ticker']} volume zones", "value": c["read"], "lean": c["lean"]}
             for c in (ENDPOINTS["volume"]() or {}).get("coins", []) if c.get("status") == "ok"]
-    for t in CANDIDATES:
-        try:
-            b = (ENDPOINTS[t.lower()]() or {}).get("board") or {}
-        except Exception:
-            b = {}
-        if b.get("status") == "ok":
-            out.append({"tab": t.lower(), "key": f"board_{t.lower()}", "label": f"{t} signal board", "value": b["label"], "lean": 1 if "BUY" in b["label"] else -1 if "SELL" in b["label"] else 0,
-                        "note": f"score {b['aggregate']:+.2f}, {b['sell']['words']}"})
+    for c in (ENDPOINTS["boards"]() or {}).get("coins", []):
+        if c.get("status") != "ok":
+            continue
+        t, b, ft = c["ticker"], c["board"], c.get("fitted") or {}
+        tab = t.lower() if t in CANDIDATES else "boards"
+        out.append({"tab": tab, "key": f"board_{t.lower()}", "label": f"{t} signal board", "value": b["label"], "lean": 1 if "BUY" in b["label"] else -1 if "SELL" in b["label"] else 0,
+                    "note": f"score {b['aggregate']:+.2f}, {b['sell']['words']}"})
+        if ft.get("status") == "ok":
+            out.append({"tab": "boards", "key": f"fitted_{t.lower()}", "label": f"{t} fitted board", "value": ft["label"], "lean": ft["lean"], "note": f"score {ft['score']:+.2f}"})
     out += [{"tab": "signals", "key": f"sig_{c['ticker'].lower()}", "label": f"{c['ticker']} final signal", "value": c["label"], "lean": c["lean"],
              "note": f"score {c['score']:+.2f}"} for c in (ENDPOINTS["signals"]() or {}).get("coins", []) if c.get("status") == "ok" and c.get("score") is not None]
     u = ENDPOINTS["unlocks"]() or {}
@@ -423,7 +483,7 @@ def _cached_ep(name, fn, ttl=3600):
     return lambda: _cached(f"topic:{SLUG}:{name}", ttl, fn)
 
 
-ENDPOINTS = {"zones": _cached_ep("zones", _zones_now, 900), "volume": _cached_ep("volume", _volume_now, HL_TTL), "signals": _cached_ep("signals", _signals_now, HL_TTL),
+ENDPOINTS = {"zones": _cached_ep("zones", _zones_now, 900), "boards": _cached_ep("boards", _boards_now, HL_TTL), "volume": _cached_ep("volume", _volume_now, HL_TTL), "signals": _cached_ep("signals", _signals_now, HL_TTL),
              **{t.lower(): _cached_ep(t.lower(), (lambda t: lambda: _coin_tab(t))(t)) for t in CANDIDATES},
              "unlocks": _cached_ep("unlocks", _unlocks_now, HL_TTL), "basket": M.ENDPOINTS["basket"], "season": M.ENDPOINTS["season"]}
 BACKGROUND = M.BACKGROUND                       # the memecoin prices; the candidates come with btc_cycles' own fill

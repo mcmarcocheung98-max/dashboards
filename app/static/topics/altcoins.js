@@ -530,6 +530,90 @@ function boardCard(f) {
   return el("div", {}, head, chart, gauges, why, fl, rec);
 }
 
+// the fitted board: the same gauges, signs and weights learned from their pooled record (walk-forward)
+function fittedCard(f, F) {
+  const ft = f.board && f.board.fitted;
+  if (!ft) return null;
+  if (ft.status !== "ok") return card(f.ticker + " fitted board", note(ft.status === "error" ? "Not available right now (" + (ft.why || "") + ")." : "No reading: no gauge has cleared the bar yet (" + (F && F.how_now || "") + ")."));
+  const B = ft.backtest || {}, L = ft.backtest_long_only || {};
+  const host = el("div", { class: "chart", style: "height:280px" });
+  setTimeout(() => {
+    const c = newChart(host, { leftPriceScale: { visible: true, borderVisible: false }, rightPriceScale: { borderVisible: false, mode: 1 } });
+    const pxs = c.addLineSeries({ priceScaleId: "right", color: css("--muted"), lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false, priceFormat: { type: "custom", formatter: px, minMove: 0.0001 } });
+    const sc = c.addHistogramSeries({ priceScaleId: "left", priceFormat: { type: "price", precision: 2, minMove: 0.01 }, base: 0, priceLineVisible: false, lastValueVisible: false });
+    const ser = ft.series || [];
+    pxs.setData(ser.filter(r => r[2] != null).map(r => ({ time: r[0], value: r[2] })));
+    sc.setData(ser.filter(r => r[1] != null).map(r => ({ time: r[0], value: r[1], color: r[1] >= 0.5 ? css("--up") : r[1] <= -0.2 ? css("--s2") : "rgba(128,128,128,.35)" })));
+    syncAdd(c, pxs, ser.filter(r => r[2] != null).map(r => ({ time: r[0], value: r[2] })));
+  });
+  return card(f.ticker + " fitted board · " + ft.label + " (" + sgn2(ft.score) + ")",
+    el("div", { style: "font-size:22px;font-weight:650;margin-bottom:6px" }, el("span", { class: BOARD_CLS[ft.label] || "" }, ft.label), " ", el("span", { class: "muted", style: "font-size:14px" }, "score " + sgn2(ft.score))),
+    el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Gauge", "Reading", "Zone score", "Learned weight", "Push"].map((h, i) => el("th", { style: (i > 1 ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
+      ...(ft.rows || []).map(r => el("tr", {}, el("td", {}, r.name, r.flipped ? el("span", { class: "pill", style: "margin-left:6px" }, "sign reversed") : null), el("td", {}, r.value),
+        el("td", { style: "text-align:right", class: cls(r.zone_score) }, sgn2(r.zone_score)), el("td", { style: "text-align:right", class: r.weight < 0 ? "down" : r.weight > 0 ? "" : "muted" }, sgn2(r.weight)),
+        el("td", { style: "text-align:right", class: cls(r.push) }, sgn2(r.push)))))),
+    note((F && F.how_now ? "Weights today: " + F.how_now + ". " : "") + "A negative weight means the zone has been backwards on these coins: being 'washed out' kept falling, so the gauge now counts the other way. Same five levels as the board above."),
+    host, note("Fitted score (bars, left) and price (right, log), last 2 years; every day uses weights fitted on earlier data" + (ft.history_from ? ", from " + ft.history_from : "") + "."),
+    B.total != null ? el("div", { class: "kpis", style: "margin-top:8px" },
+      kpi("Walk-forward, long + short", pct(B.total, 0) + " vs hold " + pct(B.hold, 0), cls(B.total - B.hold)), kpi("A year: strategy / hold", pctOrDash(B.a_year, 0) + " / " + pctOrDash(B.hold_a_year, 0), cls((B.a_year || 0) - (B.hold_a_year || 0))),
+      kpi("Sharpe", B.sharpe == null ? "–" : B.sharpe.toFixed(2)), kpi("Worst fall: strategy / hold", pct(B.worst_drop, 0) + " / " + pct(B.hold_worst_drop, 0)),
+      kpi("Right over " + B.hit_horizon + " days", B.hit_rate == null ? "–" : Math.round(B.hit_rate * 100) + "% of " + B.readings), kpi("Long only: total / a year", pctOrDash(L.total, 0) + " / " + pctOrDash(L.a_year, 0), cls(L.total))) : note("Not enough history after the first fit for a backtest."),
+    el("div", { class: "scroll", style: "margin-top:8px" }, el("table", {}, el("tr", {}, ...["Fitted zone", "Days", "30 days", "90 days", "180 days"].map((h, i) => el("th", { style: (i ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
+      ...(ft.record || []).map(r => el("tr", { style: r.zone === "ALL DAYS" ? "font-style:italic" : "" }, el("td", { class: BOARD_CLS[r.zone] || "" }, r.zone), el("td", { style: "text-align:right" }, r.days),
+        ...[30, 90, 180].map(h => el("td", { style: "text-align:right", class: cls(r[h + "d"]) }, r[h + "d"] == null ? "–" : pct(r[h + "d"], 0) + " (" + Math.round(r[h + "d_up"] * 100) + "% up)")))))),
+    note("Long above +0.2, short below −0.2 at the close, next day's move, 0.095% a side on every change; weights re-fitted every " + (F && F.refit_days || 30) + " days on every coin's past, so the backtest is out of sample for the weights but not for the gauge definitions or the two levels."));
+}
+
+function fittedRecordCard(F) {
+  if (!F || !F.record) return null;
+  const W = F.weights_now || {};
+  return card("Each gauge's record across every coin, and the weight it earns (" + (F.how_now || "") + ")",
+    el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Gauge", "Group", "Active coin-days", "Rank corr. with " + F.horizon + "-day return", "t", "After a buy reading", "After a sell reading", "Hit rate", "Weight"].map((h, i) => el("th", { style: (i > 1 ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
+      ...F.record.map(r => el("tr", {}, el("td", {}, r.name), el("td", { class: "muted" }, r.group), el("td", { style: "text-align:right" }, num(r.days_active)),
+        el("td", { style: "text-align:right", class: cls(r.ic) }, r.ic == null ? "–" : (r.ic > 0 ? "+" : "") + r.ic.toFixed(3)), el("td", { style: "text-align:right" }, r.t == null ? "–" : r.t.toFixed(1)),
+        el("td", { style: "text-align:right", class: cls(r.after_buy) }, pctOrDash(r.after_buy, 1)), el("td", { style: "text-align:right", class: cls(r.after_sell) }, pctOrDash(r.after_sell, 1)),
+        el("td", { style: "text-align:right", class: r.hit_rate > 0.5 ? "up" : r.hit_rate < 0.5 ? "down" : "" }, r.hit_rate == null ? "–" : Math.round(r.hit_rate * 100) + "%"),
+        el("td", { style: "text-align:right", class: (W[r.key] || 0) < 0 ? "down" : (W[r.key] || 0) > 0 ? "" : "muted" }, W[r.key] == null ? "0" : sgn2(W[r.key])))))),
+    note("A gauge's zone score (+1 buy zone to −1 sell zone) against the coin's return over the next " + F.horizon + " days, every coin pooled (" + num(F.train_rows || 0) + " coin-days). A negative correlation means the zone has been backwards. " +
+      "Weight = the correlation when it is 1.5+ standard errors from zero on 100+ active coin-days, scaled so the absolute weights sum to 1 (none above 40%)." +
+      (F.pooled_backtest ? " Trading the fitted score walk-forward: beat holding on " + F.pooled_backtest.beat_hold + " of " + F.pooled_backtest.coins + " coins, median Sharpe " + (F.pooled_backtest.median_sharpe == null ? "–" : F.pooled_backtest.median_sharpe.toFixed(2)) + ", median worst fall " + pctOrDash(F.pooled_backtest.median_worst_drop, 0) + ", median hit rate " + (F.pooled_backtest.median_hit_rate == null ? "–" : Math.round(F.pooled_backtest.median_hit_rate * 100) + "%") + "." : "")));
+}
+
+let BD_COIN = null;
+try { BD_COIN = sessionStorage.getItem("bd:coin"); } catch (e) {}
+function boardsTable(coins) {
+  const H = ["Coin", "BTC-style board", "Score", "Sell signal", "Fitted board", "Score", "Fitted walk-forward: a year", "Hold a year", "Hit rate", "Gauges"];
+  return el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...H.map((h, i) => el("th", { style: ([2, 5, 6, 7, 8, 9].includes(i) ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
+    ...coins.map(c => { if (c.status !== "ok") return el("tr", {}, el("td", {}, el("b", {}, c.ticker)), el("td", { colspan: H.length - 1, class: "muted" }, c.status === "error" ? "Not available right now (" + (c.why || "") + ")." : c.status + "."));
+      const b = c.board, ft = c.fitted || {}, B = ft.backtest || {};
+      return el("tr", { style: "cursor:pointer", onclick: () => { BD_COIN = c.ticker; try { sessionStorage.setItem("bd:coin", c.ticker); } catch (e) {} render(); } },
+        el("td", {}, el("b", {}, c.ticker), " ", el("span", { class: "muted" }, c.group === "Memecoin" ? "meme" : "candidate")),
+        el("td", { class: BOARD_CLS[b.label] || "" }, b.label), el("td", { style: "text-align:right", class: cls(b.aggregate) }, sgn2(b.aggregate)), el("td", { class: b.sell.state ? "down" : "muted" }, b.sell.words),
+        el("td", { class: BOARD_CLS[ft.label] || "muted" }, ft.status === "ok" ? ft.label : "no reading"), el("td", { style: "text-align:right", class: cls(ft.score) }, ft.status === "ok" ? sgn2(ft.score) : "–"),
+        el("td", { style: "text-align:right", class: cls(B.a_year) }, pctOrDash(B.a_year, 0)), el("td", { style: "text-align:right", class: cls(B.hold_a_year) }, pctOrDash(B.hold_a_year, 0)),
+        el("td", { style: "text-align:right", class: B.hit_rate > 0.5 ? "up" : B.hit_rate < 0.5 ? "down" : "" }, B.hit_rate == null ? "–" : Math.round(B.hit_rate * 100) + "%"),
+        el("td", { style: "text-align:right" }, b.n)); })));
+}
+
+const BOARD_VIEWS = {
+  async boards() {
+    const d = await api("boards");
+    const ok = (d.coins || []).filter(c => c.status === "ok");
+    if (!ok.length) return [card(null, el("div", { class: "muted" }, "Candles are loading in the background, back in a few minutes."), stale(d))];
+    if (!BD_COIN || !ok.some(c => c.ticker === BD_COIN)) BD_COIN = ok[0].ticker;
+    const c = ok.find(x => x.ticker === BD_COIN), C = d.counts || {}, F = d.fitted || {};
+    const head = card(null, el("div", { class: "kpis" },
+      kpi("Coins with a board", ok.length + " of " + (d.coins || []).length), kpi("BTC-style: buy / sell", (C.classic || {}).buy + " / " + (C.classic || {}).sell),
+      kpi("Fitted: buy / sell", (C.fitted || {}).buy + " / " + (C.fitted || {}).sell + " of " + (C.fitted || {}).readings), kpi("Gauges with the sign reversed", (F.flipped || []).length ? F.flipped.join(", ") : "none")),
+      note("Two boards per coin. The BTC-style board scores nine gauges in hand-set buy / sell zones and averages them, as the bot's BTC spot signal does. The fitted board keeps the gauges but learns each one's sign and weight from its record across every coin here, " +
+        "re-fitted every " + (F.refit_days || 30) + " days on earlier data only. Information only, not advice."));
+    const pick = el("div", { class: "seg", style: "flex-wrap:wrap;margin-bottom:6px" }, ...ok.map(x => el("button", { class: x.ticker === BD_COIN ? "on" : "", onclick: () => { BD_COIN = x.ticker; try { sessionStorage.setItem("bd:coin", x.ticker); } catch (e) {} render(); } }, x.ticker)));
+    const f = { ticker: c.ticker, board: { ...c.board, fitted: c.fitted } };
+    return [head, card("Every coin's two boards", boardsTable(d.coins || []), note("Click a row to open its boards. Fitted walk-forward = trading the fitted score long + short with costs over the days it existed, against holding the coin.")),
+      card(null, pick), boardCard(f), fittedCard(f, F), fittedRecordCard(F), stale(d)];
+  },
+};
+
 function unlockMiniCard(f) {
   const U = f.unlocks;
   if (!U) return null;
@@ -596,7 +680,7 @@ async function coinView(t) {
   const f = await coinData(t);
   if (!f.series || !f.series.price) return [header(f), card(null, el("div", { class: "muted" }, "Not available right now: prices are loading in the background."), stale(f))];
   const S = f.series;
-  return [header(f), card(null, strip(f)), boardCard(f), zoneCard(f), unlockMiniCard(f), notesCard(f),
+  return [header(f), card(null, strip(f)), boardCard(f), fittedCard(f, { how_now: f.board && f.board.fitted_how, refit_days: 30 }), zoneCard(f), unlockMiniCard(f), notesCard(f),
     card(f.ticker + " and BTC rebased to the same start (log)", ...linesChart([{ name: f.ticker, points: S.price }, { name: "BTC, rebased", points: S.btc_indexed, dashed: true, color: css("--hold") }], px, { log: true })),
     el("div", { class: "grid2" },
       card(f.ticker + " ÷ BTC (log): rising = beating BTC", ...linesChart([{ name: f.ticker + "/BTC", points: S.ratio }], v => v == null ? "–" : v.toPrecision(3), { log: true, small: true })),
@@ -669,6 +753,6 @@ const VIEWS = {
     return [head, ratio, el("div", { class: "grid2" }, rsi, ew, caps), share, stale(d)];
   },
 };
-Object.assign(VIEWS, VIEWS_EXTRA, SIGNAL_VIEWS);
+Object.assign(VIEWS, VIEWS_EXTRA, SIGNAL_VIEWS, BOARD_VIEWS);
 window.TOPIC = { VIEWS };
 })();

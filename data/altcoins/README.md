@@ -8,6 +8,7 @@ dashboard. It replaces the separate pages `/hype`, `/ena`, `/sol`, `/near` and `
 | Tab | What it shows |
 |---|---|
 | Buy zones | Every coin's zone (top, mid, floor), where today's price sits against it, what set the top, the 30-day move and RSI 14; sorted in-zone first |
+| Signal boards | Every coin's two boards: the BTC-style board (nine gauges in hand-set zones, averaged) and the fitted board (the same gauges with signs and weights learned from their pooled record, walk-forward), with each gauge's record across all coins and a walk-forward backtest of the fitted score |
 | Volume zones | Per coin (pick one): daily candles with the big-volume days marked and the support / resistance zones they left, what the coin did after its own big days and zone retests, and a table of every coin against its zones |
 | Signals | Twenty daily signals on top of the volume zones, each scored −1 to +1, weighted by their record across every coin and summed into one final signal per coin; a table of all coins, each coin's 20 signals with weights, the score day by day and a walk-forward backtest of trading it |
 | HYPE, ENA, SOL, NEAR | One tab per candidate: its signal board (below), price against BTC, RSI, market cap, the case for it, its buy zone on a price chart, then Fundamentals (fees, TVL, supply and unlocks against price, the multiples, the unlock schedule) and the Projection (bear / base / bull to end-2028) |
@@ -50,6 +51,14 @@ day (valuation gauges count double; at least four gauges or no score), read at t
 score is ≤ −0.2; *sell, trend break* when a valuation gauge was fully in its sell zone in the last 4 months AND the price is below its 20-week
 average AND the score is not a buy. **Action words**: BUY at ≥ +0.5, SELL at either sell level, else HOLD. Information only.
 
+**The fitted board** keeps the nine gauges' zone scores but learns each one's sign and weight: a gauge's weight is the Spearman rank
+correlation of its zone score with the coin's return over the next 30 days, pooled across every coin on the study (memecoins included),
+kept when at least 1.5 standard errors from zero on 100+ active coin-days, with the sign kept (a backwards zone gets a negative weight and
+counts the other way), scaled so the absolute weights sum to 1 with none above 40%. Weights are first fitted after 180 pooled days and
+re-fitted every 30 days on rows whose forward return was already known, so every day's fitted score uses earlier data only. The same five
+levels apply. Its backtest trades the fitted score close to close (long ≥ +0.2, short ≤ −0.2, also long only, 0.095% a side on every
+change) and its record-by-zone table is shown next to the BTC-style one.
+
 The tab also shows why the score is what it is (what pushes it each way, what moved since the day before, the distance to the next level),
 the price levels that would move the price-based gauges into their zones, and the coin's median move over the next 30 / 90 / 180 days after
 each zone, over the coin's own Hyperliquid history.
@@ -61,6 +70,7 @@ each zone, over the coin's own Hyperliquid history.
 - Fees and TVL come from the fundamentals fill (400 days) and market cap from CoinGecko (365 days), so the valuation multiples exist for about a
   year and their "own median" is short. Coins without fees or TVL (memecoins have none; they have no board) simply lose those gauges.
 - The volume-zone gauges were flipped on 30 Oct 2026 on the same data they are now scored on (see the signals section).
+- The fitted board is out of sample for the weights, not for the gauge definitions, the zone thresholds or the two levels; and the ten coins move together, so its pooled record is fewer independent observations than the coin-day count suggests.
 
 ## The volume-zone rule (`app/topics/_volume_zones.py`)
 

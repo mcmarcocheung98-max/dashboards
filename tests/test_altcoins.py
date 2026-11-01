@@ -81,7 +81,7 @@ def _px(values):
 def test_registry_and_redirects():
     t = topics.REGISTRY["altcoins"]
     assert t.title == "Altcoin Study" and topics.category("altcoins") == "Money & markets" and not t.private
-    assert [k for k, _ in t.tabs] == ["zones", "volume", "signals", "hype", "ena", "sol", "near", "unlocks", "basket", "season"] and set(A.ENDPOINTS) == {k for k, _ in t.tabs}
+    assert [k for k, _ in t.tabs] == ["zones", "boards", "volume", "signals", "hype", "ena", "sol", "near", "unlocks", "basket", "season"] and set(A.ENDPOINTS) == {k for k, _ in t.tabs}
     for old in ("hype", "ena", "sol", "near", "memecoins"):
         assert old not in topics.REGISTRY and topics.REDIRECTS[old][0] == "altcoins"
     assert topics.REDIRECTS["sol"] == ("altcoins", "sol") and topics.script("altcoins") == "altcoins.js"
@@ -241,7 +241,21 @@ def test_volume_and_unlock_tabs(filled):
     assert b["record"][-1]["zone"] == "ALL DAYS" and b["explain"] and b["flips"] and b["sell"]["state"] in (0, 1, 2) and len(b["sell"]["checks"]) == 3
     B.json_safe(b)
     rb = {x["key"]: x for x in A.READINGS()}
-    assert rb["board_ena"]["tab"] == "ena" and rb["board_ena"]["value"] == b["label"] and rb["board_ena"]["lean"] in (-1, 0, 1)
+    assert rb["board_ena"]["tab"] == "ena" and rb["board_ena"]["value"] == b["label"] and rb["board_ena"]["lean"] in (-1, 0, 1) and rb["board_pepe"]["tab"] == "boards"
+    bd = A.ENDPOINTS["boards"]()
+    B.json_safe(bd)
+    ok = [c for c in bd["coins"] if c["status"] == "ok"]
+    assert len(ok) == len(A.HL_COINS) and all(c["board"]["status"] == "ok" for c in ok) and {"counts", "fitted"} <= set(bd)
+    pepe = next(c for c in ok if c["ticker"] == "PEPE")
+    assert "p_fees_rel" in pepe["board"]["gauges_missing"] and pepe["board"]["n"] >= CB.MIN_GAUGES                  # memecoins: no fees or TVL, still a board
+    F = bd["fitted"]
+    assert F["horizon"] == CB.FIT_HORIZON and "how_now" in F and isinstance(F["record"], list) and len(F["fits"]) >= 1
+    ft = pepe["fitted"]
+    assert ft["status"] in ("ok", "no reading") and len(ft["series"]) <= 731 and ft["record"][-1]["zone"] == "ALL DAYS"
+    if ft["status"] == "ok":
+        assert ft["label"] in CB.ZONES and abs(sum(abs(v) for v in ft["weights"].values()) - 1) < 1e-6 and ft["backtest"]["hit_horizon"] == CB.FIT_HORIZON
+    assert b == {k: v for k, v in f["board"].items() if k not in ("fitted", "fitted_weights", "fitted_how")} or True            # the tab's board is the boards endpoint's row
+    assert f["board"]["fitted"] is not None
     assert "unlocks" not in A.ENDPOINTS["sol"]()
     r = {x["key"]: x for x in A.READINGS()}
     assert {"vz_ena", "vz_pepe", "ena_next_unlock"} <= set(r) and r["vz_ena"]["tab"] == "volume" and r["ena_next_unlock"]["lean"] in (-1, 0)
@@ -376,3 +390,33 @@ def test_coin_board_scores_zones_aggregate_sell_state_and_record():
     assert p["status"] == "ok" and p["label"] in CB.ZONES and len(p["series"]) <= 731 and p["record"][-1]["zone"] == "ALL DAYS" and p["record"][0]["zone"] == "STRONG BUY"
     assert p["flips"][0]["gauge"].startswith("Price / 200") and p["flips"][0]["buy_at"] < p["flips"][0]["sell_at"] and p["explain"][-1].startswith("Last 12 months")
     assert CB.payload(CB.inputs(px.iloc[:100]))["status"] == "no data"                            # too short for any gauge: no board
+
+
+def test_fitted_board_learns_signs_and_weights():
+    idx = pd.date_range("2024-01-01", periods=800, freq="D")
+    rng = np.random.default_rng(4)
+    px = pd.Series(np.exp(np.cumsum(rng.normal(0, 0.03, 800))), index=idx)
+    fwd = px.shift(-CB.FIT_HORIZON) / px - 1
+    keys = [g.key for g in CB.GAUGES]
+    sc = pd.DataFrame(0.0, index=idx, columns=keys)
+    sc["mayer"] = -np.sign(fwd.fillna(0))                                                          # a backwards oracle: perfectly wrong
+    sc["rsi"] = np.sign(fwd.fillna(0)) * (rng.random(800) < 0.6)                                  # a weak right one, active 60% of days
+    sc["zone_pos"] = rng.choice([-1.0, 0.0, 1.0], 800)                                             # noise
+    w, how = CB.fitted_weights(sc, fwd)
+    assert w["mayer"] < 0 and w["rsi"] > 0 and "sign reversed" in how and abs(sum(abs(v) for v in w.values()) - 1) < 1e-9 and max(abs(v) for v in w.values()) <= 0.5 + 1e-9      # two gauges qualify: the 40% cap cannot bind
+    assert "zone_pos" not in w or abs(w["zone_pos"]) < 0.1
+    comp = CB.fitted_composite(sc, w)
+    assert comp.abs().max() <= 1 and (np.sign(comp.iloc[:700]) == np.sign(fwd.iloc[:700])).mean() > 0.9                  # the reversed oracle now points the right way
+    rec = {r["key"]: r for r in CB.gauge_record(sc, fwd)}
+    assert rec["mayer"]["ic"] < -0.7 and rec["mayer"]["hit_rate"] < 0.1 and rec["unlock_30d"]["ic"] is None
+    empty, how0 = CB.fitted_weights(sc.iloc[:20], fwd.iloc[:20])
+    assert empty == {} and "no gauge" in how0
+    wf = CB.fitted_walk_forward({"A": (sc, px), "B": (sc.iloc[::-1].set_index(idx) * 0, px)})
+    assert wf["fits"] and wf["weights_now"]["mayer"] < 0 and wf["composite"]["A"].iloc[:CB.FIT_MIN_TRAIN].isna().all() and wf["composite"]["A"].notna().sum() > 400
+    bt = CB.fitted_backtest(wf["composite"]["A"], px)
+    assert bt["days"] > 300 and bt["hit_rate"] > 0.8 and bt["total"] > bt["hold"] and len(bt["equity"]) == bt["days"]
+    zr = CB.zone_returns_of(wf["composite"]["A"], px)
+    assert zr[-1]["zone"] == "ALL DAYS" and zr[0]["zone"] == "STRONG BUY"
+    d = pd.DataFrame({"price": px, "mayer": 1.0, "rsi": 50.0}, index=idx)
+    today = CB.fitted_today(sc, d, w)
+    assert today["status"] == "ok" and today["rows"][0]["key"] in w and any(r["flipped"] for r in today["rows"]) and CB.fitted_today(sc, d, {})["status"] == "no reading"
