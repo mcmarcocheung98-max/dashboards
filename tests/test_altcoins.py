@@ -24,7 +24,8 @@ from tests.test_topics import _chart
 def smoke_patch():
     TM.smoke_patch()
     real = B._download
-    B._download = lambda url, *a, **k: hl_candles(_post(a, k)) if url.startswith(A.HL_INFO) else real(url, *a, **k)
+    fake = fake_download(_chart(mult=1.0))
+    B._download = lambda url, *a, **k: fake(url, *a, **k) if (url.startswith(A.HL_INFO) or llama_extra(url) is not None) else real(url, *a, **k)
 
 
 def hl_candles(post: dict, n: int = 900) -> str:
@@ -51,9 +52,43 @@ def _post(a, k):
     return k.get("post") if "post" in k else (a[4] if len(a) > 4 else None)
 
 
+def hl_funding(post: dict) -> str:
+    """Fake Hyperliquid funding history for one 15-day window: hourly rates around a small positive mean, a crowded-long spike for ENA."""
+    coin = post["coin"]
+    a, b = int(post["startTime"]), int(post["endTime"])
+    rng = np.random.default_rng((a // 3600000 + sum(map(ord, coin))) % 2**32)
+    ts = range(a, b, 3600000)
+    return json.dumps([{"coin": coin, "fundingRate": f"{rng.normal(0.0000125 if coin != 'ENA' else 0.00005, 0.00002):.8f}", "premium": "0", "time": t} for t in ts])
+
+
+def llama_extra(url: str) -> str | None:
+    """Fake DefiLlama stablecoin, DEX, derivatives and emissions pages."""
+    from app.topics import _narrative as NR
+    days = pd.date_range("2024-01-01", periods=700, freq="D")
+    ts = [int(t.timestamp()) for t in days]
+    if url.startswith(NR.LLAMA_STABLE_LIST):
+        return json.dumps({"peggedAssets": [{"id": "146", "name": "Ethena USDe", "symbol": "USDe"}, {"id": "1", "name": "Tether", "symbol": "USDT"}]})
+    if "stablecoincharts/all?stablecoin=" in url or "stablecoincharts/" in url:
+        return json.dumps([{"date": str(t), "totalCirculating": {"peggedUSD": 1e9 + i * 5e6}, "totalCirculatingUSD": {"peggedUSD": 1e9 + i * 5e6}} for i, t in enumerate(ts)])
+    if "/overview/dexs/" in url:
+        return json.dumps({"totalDataChart": [[t, 2e9 + (i % 50) * 1e7] for i, t in enumerate(ts)]})
+    if "/overview/derivatives" in url:
+        return json.dumps({"totalDataChartBreakdown": [[t, {"Hyperliquid": 5e9 + i * 1e6, "Other": 4e9}] for i, t in enumerate(ts)]})
+    if "defillama-datasets.llama.fi/emissions/" in url:
+        return json.dumps({"documentedData": {"data": [{"label": "Team", "data": [{"timestamp": t, "unlocked": 1e8 + (i // 30) * 2e7} for i, t in enumerate(ts)]}]}})
+    return None
+
+
 def fake_download(charts):
     cg = TM._fake_download(charts)
-    return lambda url, *a, **k: hl_candles(_post(a, k)) if url.startswith(A.HL_INFO) else cg(url, *a, **k)
+
+    def dl(url, *a, **k):
+        if url.startswith(A.HL_INFO):
+            post = _post(a, k)
+            return hl_funding(post) if post and post.get("type") == "fundingHistory" else hl_candles(post)
+        extra = llama_extra(url)
+        return extra if extra is not None else cg(url, *a, **k)
+    return dl
 
 
 @pytest.fixture()
@@ -248,6 +283,12 @@ def test_volume_and_unlock_tabs(filled):
     assert len(ok) == len(A.HL_COINS) and all(c["board"]["status"] == "ok" for c in ok) and {"counts", "fitted"} <= set(bd)
     pepe = next(c for c in ok if c["ticker"] == "PEPE")
     assert "p_fees_rel" in pepe["board"]["gauges_missing"] and pepe["board"]["n"] >= CB.MIN_GAUGES                  # memecoins: no fees or TVL, still a board
+    ena = next(c for c in ok if c["ticker"] == "ENA")
+    assert {"funding_z", "sector_rs", "sector_heat", "alt_share", "stable_growth", "basis_yield", "post_unlock"} <= set(ena["board"]["gauges_available"]), ena["board"]["gauges_missing"]
+    assert {"funding_z", "sector_rs", "meme_season", "dex_momentum", "alt_share"} <= set(pepe["board"]["gauges_available"]) and "basis_yield" in pepe["board"]["gauges_missing"]
+    hype = next(c for c in ok if c["ticker"] == "HYPE")
+    assert {"deriv_share_trend", "stable_growth"} <= set(hype["board"]["gauges_available"])      # no DefiLlama fee history in the fixture, so no fees momentum
+    assert "ENA" in bd["context"]["funding"] and "USDe" in bd["context"]["stablecoins"] and "Solana" in bd["context"]["dex_volume"]
     F = bd["fitted"]
     assert F["horizon"] == CB.FIT_HORIZON and "how_now" in F and isinstance(F["record"], list) and len(F["fits"]) >= 1
     ft = pepe["fitted"]
@@ -420,3 +461,30 @@ def test_fitted_board_learns_signs_and_weights():
     d = pd.DataFrame({"price": px, "mayer": 1.0, "rsi": 50.0}, index=idx)
     today = CB.fitted_today(sc, d, w)
     assert today["status"] == "ok" and today["rows"][0]["key"] in w and any(r["flipped"] for r in today["rows"]) and CB.fitted_today(sc, d, {})["status"] == "no reading"
+
+
+def test_narrative_gauges_from_synthetic_inputs():
+    from app.topics import _narrative as NR
+    idx = pd.date_range("2024-01-01", periods=400, freq="D")
+    rng = np.random.default_rng(3)
+    px = pd.Series(np.exp(np.cumsum(rng.normal(0.002, 0.03, 400))), index=idx)
+    flat = pd.Series(1.0, index=idx)
+    f = pd.Series(0.0000125, index=idx); f.iloc[-7:] = 0.0005                                     # a crowded-long week
+    z = NR.funding_z(f, idx)
+    assert z.iloc[-1] > 2 and np.isnan(z.iloc[10])
+    ctx = {"closes": {"BTC": flat, "AAVE": flat, "PENDLE": flat, "ETHFI": flat}, "funding": {"ENA": f, "BTC": pd.Series(0.0001, index=idx), "ETH": pd.Series(0.0001, index=idx)},
+           "mcaps": {"ENA": px * 1e9, "SOL": flat * 1e10, "HYPE": flat * 1e10, "DOGE": flat * 1e10}, "btc_mcap": flat * 1e12,
+           "stables": {"USDe": pd.Series(np.linspace(1e9, 2e9, 400), index=idx)}, "fees30": pd.Series(np.linspace(1e6, 3e6, 400), index=idx),
+           "unlock_events": pd.DatetimeIndex([idx[300]])}
+    out = NR.extra_inputs("ENA", px, ctx)
+    assert set(out) == {"funding_z", "sector_rs", "sector_heat", "alt_share", "stable_growth", "fees_momentum", "basis_yield", "post_unlock"}
+    assert out["sector_rs"].iloc[-1] == pytest.approx(min(1, (px.iloc[-1] / px.iloc[-91] - 1) / 0.3)) and out["sector_heat"].iloc[-1] == 0        # a flat basket against a flat BTC
+    assert out["stable_growth"].iloc[-1] > 0 and out["fees_momentum"].iloc[-1] > 0 and out["basis_yield"].iloc[-1] == pytest.approx(min(1, (0.0001 * 24 * 365 - 0.05) / 0.15))
+    assert out["post_unlock"].loc[idx[301]] == 1 and out["post_unlock"].loc[idx[310]] == 1 and out["post_unlock"].loc[idx[311]] == 0 and out["post_unlock"].loc[idx[300]] == 0
+    assert all(v.abs().max() <= 1 + 1e-9 for k, v in out.items() if k != "funding_z")
+    meme = NR.extra_inputs("PEPE", px, {**ctx, "mcaps": {m: flat * 1e9 for m in NR.MEMES}, "dex": {"Ethereum": pd.Series(np.linspace(1e9, 2e9, 400), index=idx)}, "closes": {"BTC": flat, **{m: flat for m in NR.MEMES}}})
+    assert {"meme_season", "dex_momentum", "sector_rs", "alt_share"} <= set(meme) and "basis_yield" not in meme and "stable_growth" not in meme
+    curve = pd.Series([1e9, 1e9, 1.05e9, 1.05e9, 1.2e9], index=pd.to_datetime(["2025-01-01", "2025-01-08", "2025-01-15", "2025-01-22", "2025-01-29"]))
+    assert list(NR.unlock_event_days(curve)) == [pd.Timestamp("2025-01-15"), pd.Timestamp("2025-01-29")]
+    d = CB.inputs(px, None, extra=out)
+    assert {"funding_z", "sector_rs", "post_unlock"} <= set(d.columns) and CB.score(d.funding_z.iloc[-1], CB.NAMES["funding_z"]) == -1

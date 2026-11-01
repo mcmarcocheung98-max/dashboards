@@ -46,6 +46,22 @@ day (valuation gauges count double; at least four gauges or no score), read at t
 | BTC price / its 200-day average | market | < 1.0 (0.8) | > 1.8 (2.4) | the BTC Mayer zones: altcoins bottom and top with BTC |
 | Volume zone the price sits in | volume zones | inside resistance = +1 | inside support = −1 | the flipped zone signal (record at 7-30 days: t 3.5-5.6) |
 | Twenty-signal final score, 7 days | volume zones | the score itself | the score itself | the Signals tab, walk-forward weights |
+| Funding vs its last quarter | positioning | < −1σ (−2σ) | > +1σ (+2σ) | Hyperliquid hourly funding, 7-day mean against the 90-day; contrarian as the BTC board's funding gauge |
+| Strength against its sector, 90 days | narrative | score = (coin − sector basket 90-day return) ÷ 30% | | HYPE: AAVE UNI PENDLE · ENA: AAVE PENDLE ETHFI · SOL: ETH SUI AVAX · NEAR: TAO FET RENDER · memes: the other memes |
+| Sector heat against BTC, 30 days | narrative | score = (basket − BTC 30-day return) ÷ 20% | | Hyperliquid closes |
+| Altcoin share of BTC, 30-day change | narrative | score = change ÷ 15% | | the ten coins' market caps over BTC's (CoinGecko) |
+| Meme season, 90 days | narrative | score = change ÷ 25% | | the six memecoins' market cap over BTC's; memecoins only |
+| Stablecoin supply growth, 30 days | product | score = growth ÷ 15% | | ENA: USDe; SOL, NEAR, HYPE: the chain's stablecoins (DefiLlama) |
+| Fees momentum, 30 days | product | score = growth ÷ 50% | | 30-day fees against the 30 before (DefiLlama); candidates |
+| Chain DEX volume momentum, 30 days | product | score = growth ÷ 50% | | Solana for SOL BONK WIF TRUMP, Ethereum for SHIB PEPE (DefiLlama) |
+| Perp-DEX market share, 30-day change | product | score = change ÷ 5 points | | Hyperliquid's share of all perp-DEX volume (DefiLlama); HYPE |
+| Basis yield | product | score = (BTC + ETH funding, 30-day mean, annualised − 5%) ÷ 15% | | ENA's product earns it; Hyperliquid funding |
+| Relief after an unlock | supply | +1 for 10 days after an unlock of 1%+ of circulating | | the unlock file (ENA) or DefiLlama's emissions curve (the rest) |
+
+The second block of gauges (added 1 Nov 2026) is coin-specific: positioning from Hyperliquid funding, the coin's narrative read through a
+hand-picked sector basket and the altcoin and meme shares of BTC, its product through stablecoin supply, fees, chain DEX volume, perp-DEX market
+share and the basis yield, and relief after an unlock. The direct-score gauges have no zones: the reading is the score, scaled to ±1 at the
+stated size. The fitted board decides what each is worth.
 
 **Sell signal, two levels** (the BTC board's shape; altcoins have no halving clock, so the top-season check is dropped): *take profit* when the
 score is ≤ −0.2; *sell, trend break* when a valuation gauge was fully in its sell zone in the last 4 months AND the price is below its 20-week

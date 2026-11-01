@@ -41,6 +41,7 @@ from ..cache import _cached
 from . import Topic
 from . import _coin_board as CB
 from . import _coin_page as P
+from . import _narrative as NR
 from . import _signals as SG
 from . import _unlocks as UL
 from . import _volume_zones as VZ
@@ -127,7 +128,65 @@ def _board_for(ticker: str, f: dict | None = None) -> dict:
     return {**row["board"], "fitted": row.get("fitted"), "fitted_weights": (all_.get("fitted") or {}).get("weights_now"), "fitted_how": (all_.get("fitted") or {}).get("how_now")}
 
 
-def _coin_inputs(c: dict, btc: pd.DataFrame, zone_scores: dict) -> pd.DataFrame:
+def _board_context(coins: list[dict], btc: pd.DataFrame) -> dict:
+    """What the coin-specific gauges share: closes and funding for every market involved, market caps, stablecoin, DEX and derivatives series.
+    Each piece is optional and fetched once; a failure leaves that gauge out for the coins that need it."""
+    ctx = {"closes": {"BTC": btc.close}, "funding": {}, "mcaps": {}, "btc_mcap": None, "stables": {}, "dex": {}, "deriv_share": {}}
+    markets = {c["ticker"] for c in coins if c["ticker"] in HL_COINS}
+    for t in markets:
+        cfg = NR.COINS.get(t, {})
+        markets_needed = set(cfg.get("sector") or []) | set(cfg.get("basis") or [])
+        for m in markets_needed:
+            if m not in ctx["closes"]:
+                try:
+                    ctx["closes"][m] = hl_daily(m).close
+                except Exception:
+                    pass
+    for t in markets:
+        try:
+            ctx["closes"].setdefault(t, hl_daily(t).close)
+        except Exception:
+            pass
+    for m in markets | {"BTC", "ETH"}:
+        try:
+            f = NR.funding_daily(HL_COINS.get(m, (m, 1))[0])
+            if len(f):
+                ctx["funding"][m] = f
+        except Exception:
+            pass
+    cg = {c["ticker"]: c["coingecko_id"] for c in C.coins_list()} | {c["ticker"]: c["coingecko_id"] for c in M.coins_list()}
+    for t in markets:
+        try:
+            _, mc = C.coin_chart(cg[t])
+            if len(mc):
+                ctx["mcaps"][t] = mc
+        except Exception:
+            pass
+    try:
+        _, ctx["btc_mcap"] = C.coin_chart("bitcoin")
+    except Exception:
+        pass
+    sources = {("stable", k): (lambda k=k: NR.stable_supply(k)) for k in {v.get("stable") for v in NR.COINS.values() if v.get("stable")}}
+    sources |= {("chain", k): (lambda k=k: NR.chain_stables(k)) for k in {v.get("chain_stables") for v in NR.COINS.values() if v.get("chain_stables")}}
+    for key, fn in sources.items():
+        try:
+            ctx["stables"][key[1]] = fn()
+        except Exception:
+            pass
+    for ch in {v.get("dex_chain") for v in NR.COINS.values() if v.get("dex_chain")}:
+        try:
+            ctx["dex"][ch] = NR.chain_dex_volume(ch)
+        except Exception:
+            pass
+    for pr in {v.get("deriv_share") for v in NR.COINS.values() if v.get("deriv_share")}:
+        try:
+            ctx["deriv_share"][pr] = NR.derivatives_share(pr)
+        except Exception:
+            pass
+    return ctx
+
+
+def _coin_inputs(c: dict, btc: pd.DataFrame, zone_scores: dict, ctx: dict | None = None) -> pd.DataFrame:
     """Everything the board needs for one coin: Hyperliquid daily closes, BTC's, CoinGecko market cap (what the fills already hold), DefiLlama daily
     fees and TVL (candidates), the unlock schedule (hand-entered file, else DefiLlama's curve), the flipped zone position and the 20-signal score."""
     t = c["ticker"]
@@ -144,15 +203,20 @@ def _coin_inputs(c: dict, btc: pd.DataFrame, zone_scores: dict) -> pd.DataFrame:
     fees_30d = fees_daily.rolling(30, min_periods=20).sum().dropna() if len(fees_daily) else None
     tvl = tvl_daily if len(tvl_daily) else None
     unlocked = circ = None
+    unlock_days = None
     now = pd.Timestamp.now("UTC").tz_localize(None).normalize()
     try:
         if t in UL.coins():
             ev = UL.events(t)
             unlocked = pd.Series(ev.cumulative_m.to_numpy() * 1e6, index=pd.DatetimeIndex(ev.date))
             circ = float(ev[ev.date <= now].amount_m.sum()) * 1e6 or None
-        elif raw.get("schedule"):
-            unlocked = C._ser(raw["schedule"])
-            circ = (raw.get("supply") or {}).get("circulating_supply") or (float(mc.iloc[-1] / d.close.iloc[-1]) if mc is not None and len(mc) else None)
+            unlock_days = pd.DatetimeIndex(ev[ev.pct_of_circulating.fillna(np.inf) >= 1.0].date)
+        else:
+            curve = C._ser(raw["schedule"]) if raw.get("schedule") else NR.emissions_curve(c.get("coingecko_id") or t.lower())      # memecoins have no fill file: DefiLlama's curve
+            if len(curve) > 2:
+                unlocked = curve
+                circ = (raw.get("supply") or {}).get("circulating_supply") or (float(mc.iloc[-1] / d.close.iloc[-1]) if mc is not None and len(mc) else None)
+                unlock_days = NR.unlock_event_days(curve)
     except Exception:
         unlocked = circ = None
     ev_sig = UL.events(t) if t in UL.coins() else None
@@ -161,7 +225,13 @@ def _coin_inputs(c: dict, btc: pd.DataFrame, zone_scores: dict) -> pd.DataFrame:
         zone_pos = SG.signals(d, btc, VZ.zones(d, t), ev_sig)["in_zone"]
     except Exception:
         pass
-    return CB.inputs(d.close, btc.close, mc, fees_30d, tvl, unlocked, circ, zone_pos, zone_scores.get(t))
+    extra = {}
+    if ctx is not None:
+        try:
+            extra = NR.extra_inputs(t, d.close, {**ctx, "fees30": fees_30d, "unlock_events": unlock_days})
+        except Exception:
+            extra = {}
+    return CB.inputs(d.close, btc.close, mc, fees_30d, tvl, unlocked, circ, zone_pos, zone_scores.get(t), extra)
 
 
 def _boards_now() -> dict:
@@ -179,19 +249,26 @@ def _boards_now() -> dict:
         pass
     cg = {c["ticker"]: c["coingecko_id"] for c in C.coins_list()} | {c["ticker"]: c["coingecko_id"] for c in M.coins_list()}
     coins, per, frames = [], {}, {}
-    for c in _all_coins():
+    all_coins = _all_coins()
+    try:
+        ctx = _board_context(all_coins, btc)
+    except Exception:
+        ctx = None
+    for c in all_coins:
         if c["ticker"] not in HL_COINS:
             coins.append({**c, "status": "not on Hyperliquid"})
             continue
         try:
-            d = _coin_inputs({**c, "coingecko_id": cg.get(c["ticker"])}, btc, zone_scores)
+            d = _coin_inputs({**c, "coingecko_id": cg.get(c["ticker"])}, btc, zone_scores, ctx)
             sc = CB.board(d)
             per[c["ticker"]] = (sc[[g.key for g in CB.GAUGES if g.key in sc]], d["price"])
             frames[c["ticker"]] = (d, sc)
             coins.append({**c, "status": "ok", "board": CB.payload(d)})
         except Exception as e:
             coins.append({**c, "status": "error", "why": f"{type(e).__name__}: {e}"})
-    out = {"coins": coins, "fitted": {"horizon": CB.FIT_HORIZON, "levels": CB.LEVELS, "refit_days": CB.FIT_REFIT_DAYS, "min_train_days": CB.FIT_MIN_TRAIN}, "updated": int(time.time()), "stale": stale_info([HL_INFO])}
+    out = {"coins": coins, "fitted": {"horizon": CB.FIT_HORIZON, "levels": CB.LEVELS, "refit_days": CB.FIT_REFIT_DAYS, "min_train_days": CB.FIT_MIN_TRAIN}, "updated": int(time.time()), "stale": stale_info([HL_INFO]),
+           "context": {k: sorted(v) for k, v in {"funding": (ctx or {}).get("funding", {}), "market_caps": (ctx or {}).get("mcaps", {}), "stablecoins": (ctx or {}).get("stables", {}),
+                                                 "dex_volume": (ctx or {}).get("dex", {}), "derivatives_share": (ctx or {}).get("deriv_share", {}), "closes": (ctx or {}).get("closes", {})}.items()}}
     if not per:
         return _scrub(out)
     try:

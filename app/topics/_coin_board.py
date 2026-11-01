@@ -47,6 +47,18 @@ GAUGES = [
     Gauge("btc_mayer", "BTC price / its 200-day average", "market", 0.8, 1.0, 1.8, 2.4, "BTC Mayer multiple zones (Glassnode): altcoins bottom when BTC is washed out and top when it is stretched", "{:.2f}x"),
     Gauge("zone_pos", "Volume zone the price sits in", "volume zones", None, None, None, None, "the Volume zones tab, flipped: inside volume-backed resistance +1, inside support -1 (rank correlation +0.05 to +0.08 at 7-30 days)", "{:+.0f}", 1.0, True),
     Gauge("zone_score", "Twenty-signal final score (7 days)", "volume zones", None, None, None, None, "the Signals tab's weighted score, walk-forward weights", "{:+.2f}", 1.0, True),
+    # ---- coin-specific: positioning, sector and narrative, product, supply (app/topics/_narrative.py)
+    Gauge("funding_z", "Funding vs its last quarter", "positioning", -2.0, -1.0, 1.0, 2.0, "Hyperliquid hourly funding, 7-day mean against the 90-day mean in standard deviations; contrarian as on the BTC board: crowded shorts = buy, crowded longs = sell", "{:+.1f}"),
+    Gauge("sector_rs", "Strength against its sector, 90 days", "narrative", None, None, None, None, "the coin's 90-day return minus its sector basket's (HYPE: AAVE UNI PENDLE; ENA: AAVE PENDLE ETHFI; SOL: ETH SUI AVAX; NEAR: TAO FET RENDER; memes: the other memes); +-30% = full score", "{:+.2f}", 1.0, True),
+    Gauge("sector_heat", "Sector heat against BTC, 30 days", "narrative", None, None, None, None, "the sector basket's 30-day return minus BTC's; +-20% = full score", "{:+.2f}", 1.0, True),
+    Gauge("alt_share", "Altcoin share of BTC, 30-day change", "narrative", None, None, None, None, "the ten coins' market caps over BTC's, 30-day change; +-15% = full score (CoinGecko)", "{:+.2f}", 1.0, True),
+    Gauge("meme_season", "Meme season, 90 days", "narrative", None, None, None, None, "the six memecoins' market cap over BTC's, 90-day change; +-25% = full score", "{:+.2f}", 1.0, True),
+    Gauge("stable_growth", "Stablecoin supply growth, 30 days", "product", None, None, None, None, "ENA: USDe supply; SOL, NEAR, HYPE: stablecoins on the chain (DefiLlama); +-15% = full score", "{:+.2f}", 1.0, True),
+    Gauge("fees_momentum", "Fees momentum, 30 days", "product", None, None, None, None, "30-day fees against the previous 30 days (DefiLlama); +-50% = full score", "{:+.2f}", 1.0, True),
+    Gauge("dex_momentum", "Chain DEX volume momentum, 30 days", "product", None, None, None, None, "the chain's DEX volume, last 30 days against the 30 before (DefiLlama; Solana for SOL BONK WIF TRUMP, Ethereum for SHIB PEPE); +-50% = full score", "{:+.2f}", 1.0, True),
+    Gauge("deriv_share_trend", "Perp-DEX market share, 30-day change", "product", None, None, None, None, "Hyperliquid's share of all perp-DEX volume (DefiLlama), change over 30 days; +-5 points = full score", "{:+.2f}", 1.0, True),
+    Gauge("basis_yield", "Basis yield (BTC + ETH funding, annualised)", "product", None, None, None, None, "ENA's product earns perp funding: the 30-day mean of BTC and ETH funding on Hyperliquid, annualised; 5% = 0, 20% = +1", "{:+.2f}", 1.0, True),
+    Gauge("post_unlock", "Relief after an unlock", "supply", None, None, None, None, "+1 for the 10 days after an unlock of 1%+ of circulating (the hand-entered file or DefiLlama's curve): the supply has landed", "{:+.0f}", 1.0, True),
 ]
 NAMES = {g.key: g for g in GAUGES}
 SELL_WORDS = {2: "SELL - TREND BREAK", 1: "TAKE PROFIT (early warning)", 0: "no sell signal"}
@@ -85,7 +97,8 @@ def rsi(s: pd.Series, n: int = 14) -> pd.Series:
 
 # ------------------------------------------------------------------ inputs: one column per gauge, daily
 def inputs(price: pd.Series, btc: pd.Series | None = None, market_cap: pd.Series | None = None, fees_30d: pd.Series | None = None, tvl: pd.Series | None = None,
-           unlocked: pd.Series | None = None, circulating: float | pd.Series | None = None, zone_pos: pd.Series | None = None, zone_score: pd.Series | None = None) -> pd.DataFrame:
+           unlocked: pd.Series | None = None, circulating: float | pd.Series | None = None, zone_pos: pd.Series | None = None, zone_score: pd.Series | None = None,
+           extra: dict | None = None) -> pd.DataFrame:
     """Daily gauge values on the price's index. price: daily closes. btc: BTC daily closes (any index). market_cap, fees_30d (rolling 30-day fees),
     tvl: daily series. unlocked: cumulative unlocked tokens over time (past and scheduled). circulating: tokens now, or a series.
     zone_pos / zone_score: already scores in -1..+1. Everything is forward-filled onto the price index and uses nothing later than the day."""
@@ -123,6 +136,9 @@ def inputs(price: pd.Series, btc: pd.Series | None = None, market_cap: pd.Series
         d["zone_pos"] = zone_pos.astype(float).reindex(idx).fillna(0.0)
     if zone_score is not None and len(zone_score):
         d["zone_score"] = zone_score.astype(float).reindex(idx)              # NaN before the first weight fit: the gauge is simply absent then
+    for k, s in (extra or {}).items():                                       # the coin-specific series (_narrative.py), already on this index
+        if k in NAMES and s is not None and len(s):
+            d[k] = s.astype(float).reindex(idx)
     return d
 
 
