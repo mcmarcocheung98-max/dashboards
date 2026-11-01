@@ -77,12 +77,48 @@ function rentOrBuy(v) {
   return { loan, M, sdlt, upfront, years, breakeven, firstOwn: M + v.price * v.running / 100 / 12 };
 }
 const CALC = { code: "E12000007", type: "flat" };
+// Profile: who the calculator is for. Defaults are the owner's own profile; edits are kept in this browser only.
+const PROFILE_DEFAULT = { age: 26, household: "single", dog: true, drives: false, officeDays: 3, social: "sometimes", gym: true, pay: null, budget: 40 };
+let PROFILE = (() => { try { return { ...PROFILE_DEFAULT, ...JSON.parse(localStorage.getItem("housing:profile") || "{}") }; } catch (e) { return { ...PROFILE_DEFAULT }; } })();
+const saveProfile = () => { try { localStorage.setItem("housing:profile", JSON.stringify(PROFILE)); } catch (e) {} };
+// Take-home pay a year in England, 2025/26: personal allowance £12,570 (tapered above £100,000), income tax 20% / 40% / 45%, employee NI 8% / 2%
+function takeHome(gross) {
+  const pa = Math.max(0, 12570 - Math.max(0, gross - 100000) / 2), taxable = Math.max(0, gross - pa);
+  const tax = Math.min(taxable, 37700) * 0.2 + Math.max(0, Math.min(taxable, 125140 - pa) - 37700) * 0.4 + Math.max(0, gross - 125140) * 0.45;
+  const ni = Math.max(0, Math.min(gross, 50270) - 12570) * 0.08 + Math.max(0, gross - 50270) * 0.02;
+  return gross - tax - ni;
+}
+const bedsFor = p => p.household === "family" ? 2 : 1;
+const rentFor = (r, p) => bedsFor(p) === 2 ? r.rent_2bed : (r.rent_1bed ?? r.rent_2bed);
+const homeFor = p => p.household === "family" ? "terraced" : "flat";
+const clamp01 = x => Math.max(0, Math.min(1, x));
+// Fit of a borough for the profile, 0-100: a weighted mean of what the profile cares about. cost = the monthly housing cost to judge.
+function fitScore(r, p, cost, monthlyPay) {
+  if (cost == null || r.km_to_centre == null) return null;
+  const share = cost / monthlyPay, budget = p.budget / 100;
+  const parts = [
+    ["afford", 1.5, clamp01(1.5 - share / budget), "£" + Math.round(cost).toLocaleString("en-GB") + " a month, " + Math.round(share * 100) + "% of take-home"],
+    ["commute", 0.2 + 0.25 * p.officeDays, clamp01(1 - (r.km_to_centre - 2) / 20), r.km_to_centre + " km to the centre"],
+    ["transport", p.drives ? 0.2 : 0.8, clamp01(1 - (r.zone - 1) / 5), "zone " + r.zone],
+    ["green", (p.dog ? 0.9 : 0.2) + (p.household === "family" ? 0.5 : 0), clamp01((r.green_pct - 5) / 45), r.green_pct + "% green space"],
+    ["night", { rarely: 0, sometimes: 0.5, often: 1 }[p.social] ?? 0.5, clamp01((r.nightlife - 1) / 4), "nightlife " + r.nightlife + "/5"],
+    ["gym", p.gym ? 0.4 : 0.1, clamp01((r.amenities - 1) / 4), "gyms & amenities " + r.amenities + "/5"]];
+  const W = parts.reduce((a, x) => a + x[1], 0), score = Math.round(100 * parts.reduce((a, x) => a + x[1] * x[2], 0) / W);
+  const why = [parts[0][3], ...parts.slice(1).filter(x => x[1] > 0).sort((a, b) => b[1] * b[2] - a[1] * a[2]).slice(0, 2).map(x => x[3])];   // cost first, then the two strongest reasons
+  return { score, why, share };
+}
 function calcView(d) {
   const rows = d.rows || [], byCode = Object.fromEntries(rows.map(r => [r.code, r]));
   const TYPES = [["flat", "Flat"], ["terraced", "Terraced house"], ["semi", "Semi-detached"], ["detached", "Detached"]];
   const v = { price: 0, rent: 0, deposit: 10, rate: d.rate_now != null ? Math.round(d.rate_now * 100) / 100 : 4.5, term: 25, ftb: true, fees: 3000, running: 1.0,
     growth: 3, rentGrowth: 3, invest: 5, sell: 1.5, horizon: 10 };
-  const pick = () => { const r = byCode[CALC.code] || rows[0] || {}; v.price = r[CALC.type] || 0; v.rent = r.rent_2bed || 0; };
+  const pick = () => { const r = byCode[CALC.code] || rows[0] || {}; v.price = r[CALC.type] || 0; v.rent = rentFor(r, PROFILE) || 0; };
+  const P = PROFILE, monthlyPay = () => takeHome(P.pay ?? d.london_pay ?? 45000) / 12;
+  const ownCost = (r, type) => r[type] ? payment(r[type] * (1 - v.deposit / 100), v.rate, v.term) + r[type] * v.running / 100 / 12 : null;
+  const ranked = mode => rows.filter(r => r.code !== "E12000007").map(r => ({ r, f: fitScore(r, P, mode === "rent" ? rentFor(r, P) : ownCost(r, homeFor(P)), monthlyPay()) }))
+    .filter(x => x.f).sort((a, b) => b.f.score - a.f.score);
+  const applyProfile = () => { const best = ranked("buy")[0]; if (best) CALC.code = best.r.code; CALC.type = homeFor(P); };
+  applyProfile();
   pick();
   const inputs = {};
   const field = (key, label, step, suffix) => {
@@ -93,12 +129,49 @@ function calcView(d) {
   };
   const sel = (opts, cur, onchange) => el("select", { style: "width:100%;padding:5px 7px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);font:inherit", onchange },
     ...opts.map(([k, l]) => { const o = el("option", { value: k }, l); if (k === cur) o.selected = true; return o; }));
-  const resetFromData = () => { pick(); inputs.price.value = v.price; inputs.rent.value = v.rent; compute(); history(); };
+  const resetFromData = () => { pick(); inputs.price.value = v.price; inputs.rent.value = v.rent; boroughSel.value = CALC.code; typeSel.value = CALC.type; compute(); history(); fits(); };
   const ftb = el("input", { type: "checkbox", onchange: e => { v.ftb = e.target.checked; compute(); } }); ftb.checked = v.ftb;
+  const boroughSel = sel(rows.map(r => [r.code, r.borough]), CALC.code, e => { CALC.code = e.target.value; resetFromData(); });
+  const typeSel = sel(TYPES, CALC.type, e => { CALC.type = e.target.value; resetFromData(); });
+  // ---- the profile card
+  const lab = (text, ctl) => el("label", { style: "display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--ink2)" }, text, ctl);
+  const pnum = (key, step, ph) => { const i = el("input", { type: "number", step, value: P[key] ?? "", placeholder: ph || "", style: "width:100%;box-sizing:border-box;padding:5px 7px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);font:inherit",
+    onchange: e => { const x = parseFloat(e.target.value); P[key] = isNaN(x) ? null : x; profileChanged(); } }); return i; };
+  const psel = (key, opts) => sel(opts, String(P[key]), e => { const x = e.target.value; P[key] = x === "true" ? true : x === "false" ? false : isNaN(+x) ? x : +x; profileChanged(); });
+  const yn = [["true", "Yes"], ["false", "No"]];
+  const fitsHost = el("div", {});
+  const profileCard = card("Your profile: who is this for?",
+    el("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px 12px" },
+      lab("Age", pnum("age", 1)), lab("Household", psel("household", [["single", "Single"], ["couple", "Couple"], ["family", "Family with children"]])),
+      lab("Dog", psel("dog", yn)), lab("Drive a car", psel("drives", yn)),
+      lab("Office days in central London a week", psel("officeDays", [0, 1, 2, 3, 4, 5].map(n => [String(n), String(n)]))),
+      lab("Social life and nightlife", psel("social", [["rarely", "Rarely"], ["sometimes", "From time to time"], ["often", "Often"]])),
+      lab("Need a gym nearby", psel("gym", yn)),
+      lab("Gross pay a year (£, blank = London median)", pnum("pay", 1000, d.london_pay ? String(Math.round(d.london_pay)) : "")),
+      lab("Housing budget (% of take-home)", pnum("budget", 1))),
+    el("div", { style: "display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap" },
+      el("button", { class: "pill", style: "cursor:pointer;border:1px solid var(--line);font:inherit", onclick: () => { PROFILE = { ...PROFILE_DEFAULT }; saveProfile(); location.reload(); } }, "Reset to default profile"),
+      el("span", { class: "muted" }, "Kept in this browser only. Default: 26, single, a dog, no car, 3 office days in central London, nightlife from time to time, a gym.")),
+    fitsHost);
+  function profileChanged() { saveProfile(); Object.assign(PROFILE, P); applyProfile(); resetFromData(); }
+  function fits() {
+    const pay = monthlyPay(), beds = bedsFor(P), home = homeFor(P) === "flat" ? "flat" : "terraced house";
+    const list = (mode, title, sub) => el("div", { style: "border:1px solid var(--line);border-radius:10px;padding:10px 12px" }, el("div", { style: "font-weight:600" }, title), el("div", { class: "muted", style: "margin-bottom:6px" }, sub),
+      ...ranked(mode).slice(0, 3).map((x, i) => el("div", { style: "padding:4px 0;border-top:" + (i ? "1px solid var(--line)" : "0") },
+        el("div", { style: "display:flex;justify-content:space-between;gap:8px" }, el("span", {}, el("span", { class: "muted" }, (i + 1) + ". "), el("b", {}, x.r.borough)),
+          el("span", { class: x.f.share <= P.budget / 100 ? "up" : "down", style: "font-weight:650" }, x.f.score + "/100")),
+        el("div", { class: "muted" }, x.f.why.join(" · ")))));
+    const lisa = P.age != null && P.age < 40 && v.ftb ? " Under 40 and buying a first home: a Lifetime ISA adds 25% to up to £4,000 a year (homes up to £450,000)." : "";
+    fitsHost.replaceChildren(el("h2", { style: "margin-top:14px" }, "Best fits for your profile"),
+      el("div", { class: "muted", style: "margin-bottom:8px" }, "Take-home about " + gbp(pay) + " a month; budget " + P.budget + "% = " + gbp(pay * P.budget / 100) + ". Looking at a " + beds + "-bed to rent and a " + home + " to buy." + lisa),
+      el("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px" },
+        list("rent", "Top 3 to rent", "Average " + beds + "-bed rent"), list("buy", "Top 3 to buy a " + home, "Monthly cost to own, with the deposit, rate and term below")),
+      note("Fit weighs what your profile cares about: cost against your budget (most), distance to the centre (more with more office days), Tube/rail zone (more without a car), green space (more with a dog or children), nightlife and gyms. Distances are computed from the borough boundaries; zone, green space, nightlife and amenity scores are estimates (data/housing/borough_profile.csv, marked verify). The calculator below starts on the top borough to buy."));
+  }
   const form = el("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px 12px" },
-    el("label", { style: "display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--ink2)" }, "Borough", sel(rows.map(r => [r.code, r.borough]), CALC.code, e => { CALC.code = e.target.value; resetFromData(); })),
-    el("label", { style: "display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--ink2)" }, "Home to buy", sel(TYPES, CALC.type, e => { CALC.type = e.target.value; resetFromData(); })),
-    field("price", "Price", 5000, "£"), field("rent", "Rent instead", 50, "£ a month"), field("deposit", "Deposit", 1, "%"), field("rate", "Mortgage rate", 0.05, "% a year"),
+    el("label", { style: "display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--ink2)" }, "Borough", boroughSel),
+    el("label", { style: "display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--ink2)" }, "Home to buy", typeSel),
+    field("price", "Price", 5000, "£"), field("rent", "Rent instead (" + bedsFor(P) + "-bed)", 50, "£ a month"), field("deposit", "Deposit", 1, "%"), field("rate", "Mortgage rate", 0.05, "% a year"),
     field("term", "Mortgage term", 1, "years"), field("fees", "Buying fees: legal, survey", 250, "£"), field("running", "Owner's running costs", 0.1, "% of value a year"),
     field("growth", "House price growth", 0.5, "% a year"), field("rentGrowth", "Rent growth", 0.5, "% a year"), field("invest", "Return on savings", 0.5, "% a year"),
     field("sell", "Selling costs", 0.25, "% of value"), field("horizon", "Stay for", 1, "years"),
@@ -128,13 +201,13 @@ function calcView(d) {
     const box = (title, list, fmt, sub) => el("div", { style: "border:1px solid var(--line);border-radius:10px;padding:10px 12px" }, el("div", { style: "font-weight:600" }, title),
       el("div", { class: "muted", style: "margin-bottom:6px" }, sub), ...(list.length ? list.map((r, i) => el("div", { style: "display:flex;justify-content:space-between;gap:8px;padding:2px 0" },
         el("span", {}, el("span", { class: "muted" }, (i + 1) + ". "), r.borough), el("b", { style: "font-variant-numeric:tabular-nums" }, fmt(r)))) : [el("div", { class: "muted" }, "No figures yet.")]));
-    const ratio = r => r.rent_2bed && mort(r) ? mort(r) / r.rent_2bed : null;
+    const ratio = r => rentFor(r, PROFILE) && mort(r) ? mort(r) / rentFor(r, PROFILE) : null;
     picksHost.replaceChildren(card("Top 3 picks: renting and buying a flat",
       el("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px" },
-        box("Cheapest to rent", top(r => r.rent_2bed, 1), r => gbp(r.rent_2bed) + " a month", "Average 2-bed rent"),
+        box("Cheapest to rent", top(r => rentFor(r, PROFILE), 1), r => gbp(rentFor(r, PROFILE)) + " a month", "Average " + bedsFor(PROFILE) + "-bed rent"),
         box("Cheapest flats to buy", top(r => r.flat, 1), r => money(r.flat), "Average flat price"),
-        box("Where buying a flat beats renting most", top(ratio, 1), r => gbp(mort(r)) + " vs " + gbp(r.rent_2bed), "Monthly cost to own a flat vs 2-bed rent"),
-        box("Where renting beats buying most", top(ratio, -1), r => gbp(r.rent_2bed) + " vs " + gbp(mort(r)), "2-bed rent vs monthly cost to own a flat")),
+        box("Where buying a flat beats renting most", top(ratio, 1), r => gbp(mort(r)) + " vs " + gbp(rentFor(r, PROFILE)), "Monthly cost to own a flat vs " + bedsFor(PROFILE) + "-bed rent"),
+        box("Where renting beats buying most", top(ratio, -1), r => gbp(rentFor(r, PROFILE)) + " vs " + gbp(mort(r)), bedsFor(PROFILE) + "-bed rent vs monthly cost to own a flat")),
       note("Cost to own uses your deposit, rate, term and running costs above, so the picks move as you change them. A flat's average price and a 2-bed's average rent are not the same homes; rankings, not recommendations.")));
   }
   function history() {
@@ -142,7 +215,8 @@ function calcView(d) {
     if (!n) { histHost.replaceChildren(); return; }
     const [y0, m0] = H.start.split("-").map(Number), t0 = Date.UTC(y0, m0 - 1, 1) / 1000;
     const tAt = i => Date.UTC(y0, m0 - 1 + i, 1) / 1000;
-    const prices = (V[CALC.type] || {})[CALC.code] || [], rentsH = (V.rent_2bed || {})[CALC.code] || [], FX = d.fixed_2y || [];
+    const rk = bedsFor(PROFILE) === 2 ? "rent_2bed" : "rent_1bed";
+    const prices = (V[CALC.type] || {})[CALC.code] || [], rentsH = (V[rk] || {})[CALC.code] || [], FX = d.fixed_2y || [];
     const own = [], rentPts = [];
     for (let i = 0; i < n; i++) {
       const t = tAt(i), p = prices[i], rate = valueAt(FX, t);
@@ -150,14 +224,15 @@ function calcView(d) {
       if (rentsH[i] != null) rentPts.push([t, rentsH[i]]);
     }
     const name = (byCode[CALC.code] || {}).borough || "", type = TYPES.find(x => x[0] === CALC.type)[1].toLowerCase();
-    histHost.replaceChildren(card("Then and now: monthly mortgage on the average " + type + " in " + name + " vs the average 2-bed rent",
+    histHost.replaceChildren(card("Then and now: monthly mortgage on the average " + type + " in " + name + " vs the average " + bedsFor(PROFILE) + "-bed rent",
       ...linesChart([{ name: "Mortgage payment (" + v.deposit + "% deposit, " + v.term + " years, 2-year fixed rate of the day)", points: own },
-        { name: "2-bed rent", points: rentPts, color: css("--s2") }], x => gbp(x)),
+        { name: bedsFor(PROFILE) + "-bed rent", points: rentPts, color: css("--s2") }], x => gbp(x)),
       note("Each month: the borough's average price for that home type (UK HPI) with your deposit and term at the Bank of England's quoted 2-year fixed rate (75% LTV) of that month, against the average 2-bed rent (ONS PIPR, from 2015).")));
   }
   for (const k of ["deposit", "term"]) inputs[k].addEventListener("change", history);           // the history chart redraws when you leave the box
-  compute(); history();
-  return [card("Rent or buy: every number is yours to change", form,
+  for (const k of ["deposit", "rate", "term", "running"]) inputs[k].addEventListener("change", fits);
+  compute(); history(); fits();
+  return [profileCard, card("Rent or buy: every number is yours to change", form,
     el("div", { class: "muted", style: "margin-top:8px" }, "Price and rent start from the latest averages for the borough and home type (prices " + (d.as_of || "").slice(0, 7) + ", rents " + (d.rent_month || "").slice(0, 7) +
       "); the rate from the Bank of England's quoted 2-year fixed at 75% LTV. Stamp duty: England rates from April 2025, with first-time buyer relief up to £500,000."), out),
     picksHost, histHost];

@@ -159,7 +159,8 @@ def _pipr_xlsx():
         for code, name, reg, base in areas:
             rent = base if base == "[x]" else base + i * 5
             two = base if base == "[x]" else base + 400 + i * 5
-            ws.append([t.to_pydatetime(), code, name, reg, 100, "[x]" if i == 0 else 0.3, "[x]" if i < 12 else 5.0, rent, 100, 0.3, 5.0, 1, 100, 0.3, 5.0, two])
+            one = base if base == "[x]" else base - 300 + i * 5
+            ws.append([t.to_pydatetime(), code, name, reg, 100, "[x]" if i == 0 else 0.3, "[x]" if i < 12 else 5.0, rent, 100, 0.3, 5.0, one, 100, 0.3, 5.0, two])
     buf = io.BytesIO(); wb.save(buf)
     return buf.getvalue().decode("latin-1")
 
@@ -1000,7 +1001,7 @@ def test_housing_borough_map(snapdir, monkeypatch):
     assert w["code"] == "E09000033" and w["rent_2bed"] == 3600 and w["flat"] and w["terraced"] and w["rent_month"] == "2026-09-01"
     assert next(r for r in b["rows"] if r["borough"] == "City of London")["rent_2bed"] is None and b["rents_error"] is None
     h = b["map"]["history"]
-    assert h["start"] == "2005-01" and set(h["values"]) == {"flat", "terraced", "semi", "detached", "rent_2bed"}
+    assert h["start"] == "2005-01" and set(h["values"]) == {"flat", "terraced", "semi", "detached", "rent_2bed", "rent_1bed"}
     wf, wr = h["values"]["flat"]["E09000033"], h["values"]["rent_2bed"]["E09000033"]
     assert len(wf) == len(wr) == h["months"] and all(v % 100 == 0 for v in wf if v is not None)        # prices to the nearest £100
     assert wr[(2014 - 2005) * 12] is None and wr[(2015 - 2005) * 12] == 2900 and wr[-1] == 3600         # rents start in 2015
@@ -1029,6 +1030,9 @@ def test_housing_calc_payload(snapdir, monkeypatch):
     assert len(c["rows"]) == 34 and c["rate_now"] == c["fixed_2y"][-1][1] and c["fixed_2y"]
     assert [v for v in c["history"]["values"]["flat"]["E12000007"] if v][-1] == 250000 and c["history"]["values"]["rent_2bed"]["E09000033"][-1] == 3600
     assert "calc" in {k for k, _ in topics.REGISTRY["housing"].tabs}
+    w = next(r for r in c["rows"] if r["code"] == "E09000033")
+    assert w["rent_1bed"] == 2200 + 140 * 5 and w["km_to_centre"] == 2.6 and w["zone"] == 1 and set(w) >= {"green_pct", "nightlife", "amenities"}
+    assert c["rows"][0]["rent_1bed"] == 1300 + 140 * 5 and len(H.borough_profile()) == 33
 
 
 def test_housing_rents_from_pipr(snapdir, monkeypatch):

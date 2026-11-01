@@ -234,15 +234,16 @@ def parse_pipr(content: bytes) -> dict[str, pd.DataFrame]:
                 head = [str(c or "").strip().lower() for c in r]
                 code, rent, ann = head.index("area code"), head.index("rental price"), head.index("annual change")
                 two = head.index("rental price two bed") if "rental price two bed" in head else None
+                one = head.index("rental price one bed") if "rental price one bed" in head else None
             continue
         c = r[code]
         if c in RENT_AREAS or str(c).startswith("E09"):          # E09: the London boroughs, kept for the map
             num = lambda i: pd.to_numeric(r[i], errors="coerce") if i is not None else np.nan
-            rows.setdefault(c, []).append((pd.Timestamp(r[0]), num(rent), num(ann), num(two)))
+            rows.setdefault(c, []).append((pd.Timestamp(r[0]), num(rent), num(ann), num(two), num(one)))
     wb.close()
     if head is None:
         raise ValueError("PIPR layout changed: no 'Time period' header row")
-    out = {RENT_AREAS.get(k, k): pd.DataFrame(v, columns=["t", "rent", "yoy", "rent_2bed"]).set_index("t").sort_index() for k, v in rows.items() if v}
+    out = {RENT_AREAS.get(k, k): pd.DataFrame(v, columns=["t", "rent", "yoy", "rent_2bed", "rent_1bed"]).set_index("t").sort_index() for k, v in rows.items() if v}
     if "London average rent" not in out or out["London average rent"]["rent"].dropna().empty:
         raise ValueError("PIPR layout changed: no London rents")
     return out
@@ -547,7 +548,8 @@ def _afford_now() -> dict:
     return out
 
 
-MAP_HISTORY = {"flat": "avg_flat", "terraced": "avg_terraced", "semi": "avg_semi", "detached": "avg_detached", "rent_2bed": "rent_2bed"}   # map measure -> column
+MAP_HISTORY = {"flat": "avg_flat", "terraced": "avg_terraced", "semi": "avg_semi", "detached": "avg_detached", "rent_2bed": "rent_2bed",
+               "rent_1bed": "rent_1bed"}   # map / calculator measure -> column
 MAP_SINCE = "2005-01-01"        # the map's timeline starts here (rents start in 2015 and are blank before)
 
 
@@ -582,12 +584,13 @@ def _boroughs_now() -> dict:
                          "change_5y": _r(a.iloc[-1] / five.iloc[-1] - 1, 4) if len(five) else None, "month": str(a.index[-1].date()),
                          "flat": last(d["avg_flat"]), "terraced": last(d["avg_terraced"]), "semi": last(d["avg_semi"]), "detached": last(d["avg_detached"]),
                          "rent_2bed": last(rf["rent_2bed"]) if rf is not None else None, "rent": last(rf["rent"]) if rf is not None else None,
+                         "rent_1bed": last(rf["rent_1bed"]) if rf is not None else None,
                          "rent_yoy": _r(rf["yoy"].dropna().iloc[-1], 2) if rf is not None and rf["yoy"].notna().any() else None,
                          "rent_month": str(rf["rent_2bed"].dropna().index[-1].date()) if rf is not None and rf["rent_2bed"].notna().any() else None})
             series[name] = _pts(_rebase(a, "2015-01-01"), 1)
             if code:
                 for m, col in MAP_HISTORY.items():
-                    frame = rf if m == "rent_2bed" else d
+                    frame = rf if m.startswith("rent_") else d
                     if frame is not None:
                         hist[m][code] = frame[col]
         except Exception as e:
@@ -609,7 +612,7 @@ def _map_history(hist: dict[str, dict[str, pd.Series]]) -> dict:
     idx = pd.date_range(MAP_SINCE, max(ends), freq="MS")
     vals = {}
     for m, by in hist.items():
-        step = 1 if m == "rent_2bed" else 100
+        step = 1 if m.startswith("rent_") else 100
         vals[m] = {c: [None if pd.isna(v) else int(round(v / step) * step) for v in s.groupby(s.index).last().reindex(idx).to_numpy()] for c, s in by.items()}
     return {"start": idx[0].strftime("%Y-%m"), "months": len(idx), "values": vals}
 
@@ -720,6 +723,20 @@ def _layout_now() -> dict:
     return out
 
 
+def borough_profile() -> dict[str, dict]:
+    """data/housing/borough_profile.csv -> {code: {km_to_centre, zone, green_pct, nightlife, amenities}} for the profile fit. km is computed;
+    the rest are estimates marked verify in the file."""
+    import csv
+    from ._base import MANUAL_DIR
+    f = MANUAL_DIR / "housing" / "borough_profile.csv"
+    if not f.exists():
+        return {}
+    with f.open(newline="", encoding="utf-8") as fh:
+        rows = [r for r in csv.DictReader(fh) if r.get("code") and not r["code"].startswith("#")]
+    num = lambda v: float(v) if v not in (None, "") else None
+    return {r["code"]: {k: num(r.get(k)) for k in ("km_to_centre", "zone", "green_pct", "nightlife", "amenities")} for r in rows}
+
+
 def _calc_now() -> dict:
     """Rent or buy: what the calculator tab needs, from the cached boroughs and affordability payloads plus London's own flat price and
     2-bed rent. The arithmetic runs in the browser so every input can change without a round trip."""
@@ -733,20 +750,23 @@ def _calc_now() -> dict:
     try:
         lr = rents()["London average rent"]
         london["rent_2bed"] = _r(lr["rent_2bed"].dropna().iloc[-1], 0) if lr["rent_2bed"].notna().any() else None
+        london["rent_1bed"] = _r(lr["rent_1bed"].dropna().iloc[-1], 0) if lr["rent_1bed"].notna().any() else None
         if hist:
             idx = pd.date_range(hist["start"] + "-01", periods=hist["months"], freq="MS")
             vals = {m: dict(v) for m, v in hist["values"].items()}
-            series = {"flat": lon["avg_flat"], "terraced": lon["avg_terraced"], "semi": lon["avg_semi"], "detached": lon["avg_detached"], "rent_2bed": lr["rent_2bed"]}
+            series = {"flat": lon["avg_flat"], "terraced": lon["avg_terraced"], "semi": lon["avg_semi"], "detached": lon["avg_detached"], "rent_2bed": lr["rent_2bed"],
+                      "rent_1bed": lr["rent_1bed"]}
             for m, s in series.items():
-                step = 1 if m == "rent_2bed" else 100
+                step = 1 if m.startswith("rent_") else 100
                 vals.setdefault(m, {})["E12000007"] = [None if pd.isna(v) else int(round(v / step) * step) for v in s.groupby(s.index).last().reindex(idx).to_numpy()]
             hist = {**hist, "values": vals}
     except Exception:
         pass
-    keep = ("borough", "code", "flat", "terraced", "semi", "detached", "rent_2bed", "yoy", "rent_yoy", "change_5y")
-    rows = [london] + sorted(({k: r.get(k) for k in keep} for r in b.get("rows") or [] if r.get("code")), key=lambda r: r["borough"])
+    keep = ("borough", "code", "flat", "terraced", "semi", "detached", "rent_2bed", "rent_1bed", "yoy", "rent_yoy", "change_5y")
+    prof = borough_profile()
+    rows = [london] + sorted(({**{k: r.get(k) for k in keep}, **prof.get(r.get("code"), {})} for r in b.get("rows") or [] if r.get("code")), key=lambda r: r["borough"])
     fx, br = a.get("fixed_2y") or [], a.get("bank_rate") or []
-    return {"rows": rows, "history": hist, "fixed_2y": fx, "bank_rate": br, "rate_now": fx[-1][1] if fx else (br[-1][1] + 1.5 if br else None),
+    return {"rows": rows, "history": hist, "london_pay": (a.get("now") or {}).get("london_pay"), "fixed_2y": fx, "bank_rate": br, "rate_now": fx[-1][1] if fx else (br[-1][1] + 1.5 if br else None),
             "as_of": b.get("as_of"), "rent_month": next((r.get("rent_month") for r in b.get("rows") or [] if r.get("rent_month")), None),
             "stale": {}, "updated": int(time.time())}
 
