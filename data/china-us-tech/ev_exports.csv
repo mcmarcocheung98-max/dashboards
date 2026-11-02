@@ -1,7 +1,7 @@
 date,value,source,note
-2020-01-01,0.223,http://en.caam.org.cn/,China NEV exports (million vehicles) from memory of CAAM releases; verify
-2021-01-01,0.310,http://en.caam.org.cn/,from memory of CAAM releases; verify
-2022-01-01,0.679,http://en.caam.org.cn/,from memory of CAAM releases; verify
-2023-01-01,1.203,http://en.caam.org.cn/,from memory of CAAM releases; verify
-2024-01-01,1.284,http://en.caam.org.cn/,from memory of CAAM releases; verify
+2020-01-01,0.077,https://cs.com.cn/xwzx/hg/202202/t20220222_6243815.html,China NEV exports (million vehicles); CAAM gives no 2020 total in this release: 0.31 million in 2021 up 304.6% implies about 77000 (the earlier 0.223 was wrong); checked 2026-11-02
+2021-01-01,0.310,https://cs.com.cn/xwzx/hg/202202/t20220222_6243815.html,CAAM 2021: 31万 NEV exports; checked 2026-11-02
+2022-01-01,0.679,https://www.caixinglobal.com/2023-01-14/tesla-lifts-chinas-new-energy-vehicle-exports-to-a-record-101989218.html,CAAM full year as reported by Caixin; checked 2026-11-02
+2023-01-01,1.203,https://news.cgtn.com/news/2024-01-11/China-s-automobile-production-and-sales-volume-both-hit-30m-record-1qh8LdNbwDS/share_amp.html,CAAM full year as reported by CGTN; checked 2026-11-02
+2024-01-01,1.284,https://news.cgtn.com/news/2025-01-13/China-s-NEVs-production-sales-in-2024-hit-record-breaking-12-million-1A83tCRTGVO/share_amp.html,CAAM full year as reported by CGTN (up 6.7%); checked 2026-11-02
 2025-01-01,2.615,https://cnevpost.com/2026/01/14/china-nev-sales-1-71-million-dec-2025-caam/,CAAM full year as reported by CnEVPost (about double 2024)
