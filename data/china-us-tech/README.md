@@ -65,7 +65,10 @@ as at 30 Sep 2026; the earlier search-summary values were wrong and were replace
 chapter 1, Figure 1.1.11). `battery_share.csv` 2020-2024 checked on 2026-11-01 against SNE Research's year-end releases as
 reported by TheElec (2020), InsideEVs (2020 BYD GWh; 2021 table) and CnEVPost (2022-2024); every value matched and none changed.
 SNE's own 2024 release gave CATL 37.9, BYD 17.2 and LGES 10.8; the file keeps the restated 38.0, 16.9 and 10.9 from the 2025 release
-so 2024 and 2025 compare on the same basis. Everything else is `verify`.
+so 2024 and 2025 compare on the same basis. `byd_tesla.csv` 2019-2025 checked on 2026-11-02: Tesla against its Q4 delivery releases
+(ir.tesla.com for 2025; Electrive and InsideEVs reports of the releases for 2019-2024), BYD passenger BEVs against CnEVPost's December
+reports of BYD's HKEX filings; every value matched and none changed. Tesla's 2020 figure is the release's 499,550, not the 10-K's later
+499,647. Everything else is `verify`.
 
 - `leaderboard.csv`: `date,series,value,model,source,note`, series `US best` / `China best`, value = Arena score of the top model of that
   country on the LMArena text leaderboard (default view) on that date. LMArena re-scales scores, so only compare the two on the same date.

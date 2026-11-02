@@ -1,14 +1,14 @@
 date,series,value,source,note
-2019-01-01,Tesla,367500,https://ir.tesla.com/,deliveries (all BEV); from memory; verify
-2020-01-01,Tesla,499550,https://ir.tesla.com/,from memory; verify
-2021-01-01,Tesla,936222,https://ir.tesla.com/,from memory; verify
-2022-01-01,Tesla,1313851,https://ir.tesla.com/,from memory; verify
-2023-01-01,Tesla,1808581,https://ir.tesla.com/,from memory; verify
-2024-01-01,Tesla,1789226,https://ir.tesla.com/,from memory; verify
-2025-01-01,Tesla,1636129,https://ir.tesla.com/,from memory; verify
-2020-01-01,BYD,130970,https://www.hkexnews.hk/,BEV passenger cars from BYD's monthly volume filings (HKEX 1211); from memory; verify
-2021-01-01,BYD,320810,https://www.hkexnews.hk/,from memory; verify
-2022-01-01,BYD,911140,https://www.hkexnews.hk/,from memory; verify
-2023-01-01,BYD,1574822,https://www.hkexnews.hk/,from memory; verify
-2024-01-01,BYD,1764992,https://www.hkexnews.hk/,from memory; verify
-2025-01-01,BYD,2256714,https://www.hkexnews.hk/,from memory; verify
+2019-01-01,Tesla,367500,https://www.electrive.com/2021/01/03/tesla-reached-499550-vehicle-deliveries-in-2020,deliveries (all BEV); Tesla's Q4 2019 release gave about 367500; checked 2026-11-02
+2020-01-01,Tesla,499550,https://www.electrive.com/2021/01/03/tesla-reached-499550-vehicle-deliveries-in-2020,Q4 2020 release figure; checked 2026-11-02
+2021-01-01,Tesla,936222,https://insideevs.com/news/563407/tesla-2021q4-final-delivery-numbers/,checked 2026-11-02
+2022-01-01,Tesla,1313851,https://electrive.com/2024/01/02/tesla-beats-target-of-1-8-million-vehicles-for-2023,checked 2026-11-02
+2023-01-01,Tesla,1808581,https://electrive.com/2024/01/02/tesla-beats-target-of-1-8-million-vehicles-for-2023,checked 2026-11-02
+2024-01-01,Tesla,1789226,https://insideevs.com/news/745958/tesla-q4-2024-production-deliveries-sales/,checked 2026-11-02
+2025-01-01,Tesla,1636129,https://ir.tesla.com/press-release/tesla-fourth-quarter-2025-production-deliveries-deployments,checked 2026-11-02
+2020-01-01,BYD,130970,https://cnevpost.com/2021/01/05/byds-nev-sales-reach-28841-units-in-dec-up-120-percent-year-on-year/,BEV passenger cars from BYD's monthly volume filings (HKEX 1211); checked 2026-11-02
+2021-01-01,BYD,320810,https://cnevpost.com/2023/01/02/byd-sells-235197-nevs-in-dec/,checked 2026-11-02
+2022-01-01,BYD,911140,https://cnevpost.com/2023/01/02/byd-sells-235197-nevs-in-dec/,checked 2026-11-02
+2023-01-01,BYD,1574822,https://cnevpost.com/2024/01/01/byd-sells-341043-nevs-dec/,checked 2026-11-02
+2024-01-01,BYD,1764992,https://cnevpost.com/2025/01/01/byd-sales-dec-2024/,checked 2026-11-02
+2025-01-01,BYD,2256714,https://cnevpost.com/2026/01/01/byd-nev-sales-dec-2025/,checked 2026-11-02
