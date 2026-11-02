@@ -1,9 +1,9 @@
 {
- "updated": "2026-11-01",
+ "updated": "2026-11-02",
  "actions": [
-  {"id": "railway-anthropic-key", "title": "Add ANTHROPIC_API_KEY to the dashboards service on Railway", "area": "Ask Claude", "priority": "high", "since": "2026-10-27", "status": "open",
+  {"id": "railway-anthropic-key", "title": "Add ANTHROPIC_API_KEY to the dashboards service on Railway", "area": "Ask Claude", "priority": "high", "since": "2026-10-27", "status": "done", "done": "2026-11-02",
    "detail": "Until it is set, the Ask Claude icon on every dashboard says it is not set up. Use the same key as the trading bot, or the reference ${{<bot service>.ANTHROPIC_API_KEY}}. Click Deploy if Railway shows an Apply changes banner.", "link": "https://railway.app"},
-  {"id": "railway-onedrive", "title": "Add ONEDRIVE_RCLONE_CONF to the dashboards service on Railway", "area": "Archive", "priority": "high", "since": "2026-10-26", "status": "open",
+  {"id": "railway-onedrive", "title": "Add ONEDRIVE_RCLONE_CONF to the dashboards service on Railway", "area": "Archive", "priority": "high", "since": "2026-10-26", "status": "done", "done": "2026-11-02",
    "detail": "The month-end OneDrive archive stays off until the server has the rclone login. Copy the value from the trading bot's variables; any paste shape is repaired. The first copy appears within about ten minutes of the deploy.", "link": "https://railway.app"},
   {"id": "railway-odds", "title": "Subscribe to The Odds API (20K plan) and add ODDS_API_KEY on Railway", "area": "NBA odds", "priority": "medium", "since": "2026-10-28", "status": "open",
    "detail": "The private NBA odds dashboard polls nothing without the key. About $30 a month; the poller stays inside the monthly credit budget on its own.", "link": "https://the-odds-api.com"},
@@ -17,8 +17,10 @@
    "detail": "The server does the OneDrive copy itself now; the workflow no longer reads this secret.", "link": "https://github.com/mcmarcocheung98-max/dashboards/settings/secrets/actions"}
  ],
  "pending": [
-  {"id": "routine-rebind", "title": "Daily check routine: bind it to a session that has the repo", "owner": "parent", "status": "in_progress", "since": "2026-10-31",
-   "detail": "Both test runs on 30 Oct did nothing: the fresh session the task started had no repo, no GitHub tools and a blocked network. The parent session is moving the task onto a standing session that has the repo attached."},
+  {"id": "routine-rebind", "title": "Daily check routine: bind it to a session that has the repo", "owner": "parent", "status": "done", "since": "2026-10-31",
+   "detail": "Both test runs on 30 Oct did nothing: the fresh session the task started had no repo, no GitHub tools and a blocked network. Done 2 Nov: the first run from the standing session had the repo, the GitHub tools and the live-check workflow."},
+  {"id": "altcoins-llama-sources", "title": "Altcoin Study: DefiLlama derivatives overview now needs a paid key; four memecoin emissions pages are gone", "owner": "parent", "status": "waiting", "since": "2026-11-02",
+   "detail": "Five alerting sources in the coin gauges (_narrative): api.llama.fi/overview/derivatives answers 402 Payment Required and defillama-datasets.llama.fi/emissions/{bonk,dogwifcoin,pepe,shiba-inu} answer 404. Swap the source or drop those gauges. Altcoin Study has no session in the daily check's list, so the parent routes it."},
   {"id": "follow-heads", "title": "Top card follows the timeline on every dashboard", "owner": "sessions", "status": "in_progress", "since": "2026-10-26",
    "detail": "Done: Housing, BTC Cycles, AI, Debt & rates, Demographics. Built and waiting for your push confirmation: Space. Still working: Autonomous cars, Compute & chips, Climate, China vs US tech, Longevity, Pokémon cards, Prediction markets, Trends, NBA odds."},
   {"id": "graphify-sessions", "title": "graphify set up in every open dashboard session", "owner": "sessions", "status": "in_progress", "since": "2026-10-30",
@@ -63,6 +65,7 @@
  "log": [
   {"date": "2026-10-30", "run": "manual test", "result": "did_not_run", "summary": "The session the task started had no repository, no GitHub tools and no route to the live site. Nothing was checked.", "fixed": [], "handed": []},
   {"date": "2026-10-30", "run": "manual test (second attempt)", "result": "did_not_run", "summary": "Same blockers.", "fixed": [], "handed": []},
-  {"date": "2026-11-01", "run": "scheduled", "result": "did_not_run", "summary": "First scheduled run, same blockers: no repository and no GitHub tools in the session the task started. The task now wakes a standing session that has the repo attached; the next run is 2 Nov.", "fixed": [], "handed": []}
+  {"date": "2026-11-01", "run": "scheduled", "result": "did_not_run", "summary": "First scheduled run, same blockers: no repository and no GitHub tools in the session the task started. The task now wakes a standing session that has the repo attached; the next run is 2 Nov.", "fixed": [], "handed": []},
+  {"date": "2026-11-02", "run": "scheduled", "result": "problems", "summary": "First working run. 319 offline tests pass and every tab of every public dashboard loads in light and dark mode (NBA odds skipped: no PRIVATE_PASSCODE secret). Five alerting sources in Altcoin Study's coin gauges (DefiLlama 402 and 404) and three failing sources on the private NBA odds page; HKMA, Bluesky, Reddit, Yahoo and Hyperliquid had short blocks below the alert thresholds. Two robotaxi tabs failed to load for 20 s while Railway redeployed after PR #32 merged mid-check. Ask Claude and the OneDrive archive are now set up.", "fixed": ["c834b06"], "handed": ["parent"]}
  ]
 }
