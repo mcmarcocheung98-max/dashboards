@@ -131,7 +131,7 @@ def _board_for(ticker: str, f: dict | None = None) -> dict:
 def _board_context(coins: list[dict], btc: pd.DataFrame) -> dict:
     """What the coin-specific gauges share: closes and funding for every market involved, market caps, stablecoin, DEX and derivatives series.
     Each piece is optional and fetched once; a failure leaves that gauge out for the coins that need it."""
-    ctx = {"closes": {"BTC": btc.close}, "funding": {}, "mcaps": {}, "btc_mcap": None, "stables": {}, "dex": {}, "deriv_share": {}}
+    ctx = {"closes": {"BTC": btc.close}, "funding": {}, "mcaps": {}, "btc_mcap": None, "stables": {}, "dex": {}}
     markets = {c["ticker"] for c in coins if c["ticker"] in HL_COINS}
     for t in markets:
         cfg = NR.COINS.get(t, {})
@@ -176,11 +176,6 @@ def _board_context(coins: list[dict], btc: pd.DataFrame) -> dict:
     for ch in {v.get("dex_chain") for v in NR.COINS.values() if v.get("dex_chain")}:
         try:
             ctx["dex"][ch] = NR.chain_dex_volume(ch)
-        except Exception:
-            pass
-    for pr in {v.get("deriv_share") for v in NR.COINS.values() if v.get("deriv_share")}:
-        try:
-            ctx["deriv_share"][pr] = NR.derivatives_share(pr)
         except Exception:
             pass
     return ctx
@@ -268,7 +263,7 @@ def _boards_now() -> dict:
             coins.append({**c, "status": "error", "why": f"{type(e).__name__}: {e}"})
     out = {"coins": coins, "fitted": {"horizon": CB.FIT_HORIZON, "levels": CB.LEVELS, "refit_days": CB.FIT_REFIT_DAYS, "min_train_days": CB.FIT_MIN_TRAIN}, "updated": int(time.time()), "stale": stale_info([HL_INFO]),
            "context": {k: sorted(v) for k, v in {"funding": (ctx or {}).get("funding", {}), "market_caps": (ctx or {}).get("mcaps", {}), "stablecoins": (ctx or {}).get("stables", {}),
-                                                 "dex_volume": (ctx or {}).get("dex", {}), "derivatives_share": (ctx or {}).get("deriv_share", {}), "closes": (ctx or {}).get("closes", {})}.items()}}
+                                                 "dex_volume": (ctx or {}).get("dex", {}), "closes": (ctx or {}).get("closes", {})}.items()}}
     if not per:
         return _scrub(out)
     try:

@@ -287,8 +287,8 @@ def test_volume_and_unlock_tabs(filled):
     assert {"funding_z", "sector_rs", "sector_heat", "alt_share", "stable_growth", "basis_yield", "post_unlock"} <= set(ena["board"]["gauges_available"]), ena["board"]["gauges_missing"]
     assert {"funding_z", "sector_rs", "meme_season", "dex_momentum", "alt_share"} <= set(pepe["board"]["gauges_available"]) and "basis_yield" in pepe["board"]["gauges_missing"]
     hype = next(c for c in ok if c["ticker"] == "HYPE")
-    assert {"deriv_share_trend", "stable_growth"} <= set(hype["board"]["gauges_available"])      # no DefiLlama fee history in the fixture, so no fees momentum
-    assert "ENA" in bd["context"]["funding"] and "USDe" in bd["context"]["stablecoins"] and "Solana" in bd["context"]["dex_volume"]
+    assert "stable_growth" in hype["board"]["gauges_available"] and "deriv_share_trend" not in CB.NAMES      # no DefiLlama fee history in the fixture, so no fees momentum
+    assert "ENA" in bd["context"]["funding"] and "USDe" in bd["context"]["stablecoins"] and "Solana" in bd["context"]["dex_volume"] and "derivatives_share" not in bd["context"]
     F = bd["fitted"]
     assert F["horizon"] == CB.FIT_HORIZON and "how_now" in F and isinstance(F["record"], list) and len(F["fits"]) >= 1
     ft = pepe["fitted"]

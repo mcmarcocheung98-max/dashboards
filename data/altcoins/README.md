@@ -54,13 +54,13 @@ day (valuation gauges count double; at least four gauges or no score), read at t
 | Stablecoin supply growth, 30 days | product | score = growth ÷ 15% | | ENA: USDe; SOL, NEAR, HYPE: the chain's stablecoins (DefiLlama) |
 | Fees momentum, 30 days | product | score = growth ÷ 50% | | 30-day fees against the 30 before (DefiLlama); candidates |
 | Chain DEX volume momentum, 30 days | product | score = growth ÷ 50% | | Solana for SOL BONK WIF TRUMP, Ethereum for SHIB PEPE (DefiLlama) |
-| Perp-DEX market share, 30-day change | product | score = change ÷ 5 points | | Hyperliquid's share of all perp-DEX volume (DefiLlama); HYPE |
 | Basis yield | product | score = (BTC + ETH funding, 30-day mean, annualised − 5%) ÷ 15% | | ENA's product earns it; Hyperliquid funding |
 | Relief after an unlock | supply | +1 for 10 days after an unlock of 1%+ of circulating | | the unlock file (ENA) or DefiLlama's emissions curve (the rest) |
 
 The second block of gauges (added 1 Nov 2026) is coin-specific: positioning from Hyperliquid funding, the coin's narrative read through a
-hand-picked sector basket and the altcoin and meme shares of BTC, its product through stablecoin supply, fees, chain DEX volume, perp-DEX market
-share and the basis yield, and relief after an unlock. The direct-score gauges have no zones: the reading is the score, scaled to ±1 at the
+hand-picked sector basket and the altcoin and meme shares of BTC, its product through stablecoin supply, fees, chain DEX volume and the basis yield, and
+relief after an unlock. (A perp-DEX market-share gauge for HYPE was dropped on 2 Nov 2026 when DefiLlama put its derivatives overview behind a
+paid key; the emissions curve is an optional download, since most memecoins have no page.) The direct-score gauges have no zones: the reading is the score, scaled to ±1 at the
 stated size. The fitted board decides what each is worth.
 
 **Sell signal, two levels** (the BTC board's shape; altcoins have no halving clock, so the top-season check is dropped): *take profit* when the

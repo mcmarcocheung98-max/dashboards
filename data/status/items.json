@@ -1,71 +1,319 @@
 {
  "updated": "2026-11-02",
  "actions": [
-  {"id": "railway-anthropic-key", "title": "Add ANTHROPIC_API_KEY to the dashboards service on Railway", "area": "Ask Claude", "priority": "high", "since": "2026-10-27", "status": "done", "done": "2026-11-02",
-   "detail": "Until it is set, the Ask Claude icon on every dashboard says it is not set up. Use the same key as the trading bot, or the reference ${{<bot service>.ANTHROPIC_API_KEY}}. Click Deploy if Railway shows an Apply changes banner.", "link": "https://railway.app"},
-  {"id": "railway-onedrive", "title": "Add ONEDRIVE_RCLONE_CONF to the dashboards service on Railway", "area": "Archive", "priority": "high", "since": "2026-10-26", "status": "done", "done": "2026-11-02",
-   "detail": "The month-end OneDrive archive stays off until the server has the rclone login. Copy the value from the trading bot's variables; any paste shape is repaired. The first copy appears within about ten minutes of the deploy.", "link": "https://railway.app"},
-  {"id": "railway-odds", "title": "Subscribe to The Odds API (20K plan) and add ODDS_API_KEY on Railway", "area": "NBA odds", "priority": "medium", "since": "2026-10-28", "status": "open",
-   "detail": "The private NBA odds dashboard polls nothing without the key. About $30 a month; the poller stays inside the monthly credit budget on its own.", "link": "https://the-odds-api.com"},
-  {"id": "railway-passcode", "title": "Set PRIVATE_PASSCODE on Railway, and the same value as a GitHub repository secret", "area": "Private pages", "priority": "medium", "since": "2026-10-28", "status": "open",
-   "detail": "The Railway variable unlocks /nba-odds in your browser for 30 days at a time. The GitHub secret lets the live-check workflow open private pages too; without it they are skipped.", "link": "https://github.com/mcmarcocheung98-max/dashboards/settings/secrets/actions"},
-  {"id": "space-push-confirm", "title": "Tell the Space session to push its follow-the-timeline heads", "area": "Space", "priority": "low", "since": "2026-10-26", "status": "open",
-   "detail": "It finished the work on all five tabs and ran the checks, but only pushes on your word because the request came through the parent thread. Reply \"yes, push\" in that session.", "link": "https://claude.ai/code/session_01NWRBg9G3RhsJj6HU51qjDD"},
-  {"id": "ai-cities-confirm", "title": "Confirm the cities & remote work tab in the AI session", "area": "AI", "priority": "low", "since": "2026-10-26", "status": "open",
-   "detail": "The AI session did the readings but held the new tab until you confirm it there: work-from-home share, office occupancy and population flows for NY, SF, London and HK.", "link": "https://claude.ai/code/session_01V4gwm4gpbgR2T3g3neGZfo"},
-  {"id": "github-secret-cleanup", "title": "Delete the unused RCLONE_CONFIG GitHub secret", "area": "Archive", "priority": "low", "since": "2026-10-27", "status": "open",
-   "detail": "The server does the OneDrive copy itself now; the workflow no longer reads this secret.", "link": "https://github.com/mcmarcocheung98-max/dashboards/settings/secrets/actions"}
+  {
+   "id": "railway-anthropic-key",
+   "title": "Add ANTHROPIC_API_KEY to the dashboards service on Railway",
+   "area": "Ask Claude",
+   "priority": "high",
+   "since": "2026-10-27",
+   "status": "done",
+   "done": "2026-11-02",
+   "detail": "Until it is set, the Ask Claude icon on every dashboard says it is not set up. Use the same key as the trading bot, or the reference ${{<bot service>.ANTHROPIC_API_KEY}}. Click Deploy if Railway shows an Apply changes banner.",
+   "link": "https://railway.app"
+  },
+  {
+   "id": "railway-onedrive",
+   "title": "Add ONEDRIVE_RCLONE_CONF to the dashboards service on Railway",
+   "area": "Archive",
+   "priority": "high",
+   "since": "2026-10-26",
+   "status": "done",
+   "done": "2026-11-02",
+   "detail": "The month-end OneDrive archive stays off until the server has the rclone login. Copy the value from the trading bot's variables; any paste shape is repaired. The first copy appears within about ten minutes of the deploy.",
+   "link": "https://railway.app"
+  },
+  {
+   "id": "railway-odds",
+   "title": "Subscribe to The Odds API (20K plan) and add ODDS_API_KEY on Railway",
+   "area": "NBA odds",
+   "priority": "medium",
+   "since": "2026-10-28",
+   "status": "open",
+   "detail": "The private NBA odds dashboard polls nothing without the key. About $30 a month; the poller stays inside the monthly credit budget on its own.",
+   "link": "https://the-odds-api.com"
+  },
+  {
+   "id": "railway-passcode",
+   "title": "Set PRIVATE_PASSCODE on Railway, and the same value as a GitHub repository secret",
+   "area": "Private pages",
+   "priority": "medium",
+   "since": "2026-10-28",
+   "status": "open",
+   "detail": "The Railway variable unlocks /nba-odds in your browser for 30 days at a time. The GitHub secret lets the live-check workflow open private pages too; without it they are skipped.",
+   "link": "https://github.com/mcmarcocheung98-max/dashboards/settings/secrets/actions"
+  },
+  {
+   "id": "space-push-confirm",
+   "title": "Tell the Space session to push its follow-the-timeline heads",
+   "area": "Space",
+   "priority": "low",
+   "since": "2026-10-26",
+   "status": "open",
+   "detail": "It finished the work on all five tabs and ran the checks, but only pushes on your word because the request came through the parent thread. Reply \"yes, push\" in that session.",
+   "link": "https://claude.ai/code/session_01NWRBg9G3RhsJj6HU51qjDD"
+  },
+  {
+   "id": "ai-cities-confirm",
+   "title": "Confirm the cities & remote work tab in the AI session",
+   "area": "AI",
+   "priority": "low",
+   "since": "2026-10-26",
+   "status": "open",
+   "detail": "The AI session did the readings but held the new tab until you confirm it there: work-from-home share, office occupancy and population flows for NY, SF, London and HK.",
+   "link": "https://claude.ai/code/session_01V4gwm4gpbgR2T3g3neGZfo"
+  },
+  {
+   "id": "github-secret-cleanup",
+   "title": "Delete the unused RCLONE_CONFIG GitHub secret",
+   "area": "Archive",
+   "priority": "low",
+   "since": "2026-10-27",
+   "status": "open",
+   "detail": "The server does the OneDrive copy itself now; the workflow no longer reads this secret.",
+   "link": "https://github.com/mcmarcocheung98-max/dashboards/settings/secrets/actions"
+  }
  ],
  "pending": [
-  {"id": "routine-rebind", "title": "Daily check routine: bind it to a session that has the repo", "owner": "parent", "status": "done", "since": "2026-10-31",
-   "detail": "Both test runs on 30 Oct did nothing: the fresh session the task started had no repo, no GitHub tools and a blocked network. Done 2 Nov: the first run from the standing session had the repo, the GitHub tools and the live-check workflow."},
-  {"id": "altcoins-llama-sources", "title": "Altcoin Study: DefiLlama derivatives overview now needs a paid key; four memecoin emissions pages are gone", "owner": "parent", "status": "waiting", "since": "2026-11-02",
-   "detail": "Five alerting sources in the coin gauges (_narrative): api.llama.fi/overview/derivatives answers 402 Payment Required and defillama-datasets.llama.fi/emissions/{bonk,dogwifcoin,pepe,shiba-inu} answer 404. Swap the source or drop those gauges. Altcoin Study has no session in the daily check's list, so the parent routes it."},
-  {"id": "follow-heads", "title": "Top card follows the timeline on every dashboard", "owner": "sessions", "status": "in_progress", "since": "2026-10-26",
-   "detail": "Done: Housing, BTC Cycles, AI, Debt & rates, Demographics. Built and waiting for your push confirmation: Space. Still working: Autonomous cars, Compute & chips, Climate, China vs US tech, Longevity, Pokémon cards, Prediction markets, Trends, NBA odds."},
-  {"id": "graphify-sessions", "title": "graphify set up in every open dashboard session", "owner": "sessions", "status": "in_progress", "since": "2026-10-30",
-   "detail": "Confirmed: Housing, AI, BTC Cycles, Demographics, Debt & rates, Space, Trends. Not yet heard from: Autonomous cars, Compute & chips, Climate, China vs US tech, Longevity, Pokémon cards, Prediction markets, NBA odds. New sessions get it from the environment's setup script."},
-  {"id": "nba-post-route", "title": "POST route for private dashboards (NBA placed-bets tracker)", "owner": "parent", "status": "waiting", "since": "2026-10-28",
-   "detail": "The NBA session asked for POST /api/<slug>/<name> behind the passcode gate, routed to module.ACTIONS, so bets you place are stored on the server instead of in the browser. Also a META footer so the 18+ / BeGambleAware line comes from the module."},
-  {"id": "shared-requests", "title": "Small shared-code requests from the dashboard READMEs", "owner": "parent", "status": "waiting", "since": "2026-10-30",
-   "detail": "An assetclass argument on nasdaq_daily (China vs US); a reduce hook on fetch for large files (Compute & chips); a stable key on fetch for dated URLs (Trends); more PROBE_URLS (Space, Demographics, Compute & chips); the Chromium path in smoke.py from an environment variable (Demographics); dashboard table rows in the READMEs (Compute & chips)."},
-  {"id": "live-parsers", "title": "Confirm two workbook layouts against the live files", "owner": "sessions", "status": "waiting", "since": "2026-10-25",
-   "detail": "The ONS JOBS03 workbook (UK headcount) and the Census BTOS Sector workbook (firm adoption by sector) were automated from documentation; the AI session still has to confirm their layout on the live site."},
-  {"id": "hk-rents", "title": "Hong Kong rents from the RVD workbooks", "owner": "session:housing", "status": "in_progress", "since": "2026-10-31",
-   "detail": "xlrd was added to requirements on 31 Oct, so the .xls workbooks can be read on the server; the Housing session now checks the price index parse on live data and adds the rental index."}
+  {
+   "id": "routine-rebind",
+   "title": "Daily check routine: bind it to a session that has the repo",
+   "owner": "parent",
+   "status": "done",
+   "since": "2026-10-31",
+   "detail": "Both test runs on 30 Oct did nothing: the fresh session the task started had no repo, no GitHub tools and a blocked network. Done 2 Nov: the first run from the standing session had the repo, the GitHub tools and the live-check workflow."
+  },
+  {
+   "id": "altcoins-llama-sources",
+   "title": "Altcoin Study: DefiLlama derivatives overview now needs a paid key; four memecoin emissions pages are gone",
+   "owner": "parent",
+   "status": "done",
+   "since": "2026-11-02",
+   "detail": "Five alerting sources in the coin gauges (_narrative): api.llama.fi/overview/derivatives answers 402 Payment Required and defillama-datasets.llama.fi/emissions/{bonk,dogwifcoin,pepe,shiba-inu} answer 404. Swap the source or drop those gauges. Altcoin Study has no session in the daily check's list, so the parent routes it. Done 2 Nov: the perp-DEX market-share gauge was dropped (no free source), the emissions curve became an optional download so a coin without a page is not a failing source; the other coin gauges are unchanged."
+  },
+  {
+   "id": "follow-heads",
+   "title": "Top card follows the timeline on every dashboard",
+   "owner": "sessions",
+   "status": "in_progress",
+   "since": "2026-10-26",
+   "detail": "Done: Housing, BTC Cycles, AI, Debt & rates, Demographics. Built and waiting for your push confirmation: Space. Still working: Autonomous cars, Compute & chips, Climate, China vs US tech, Longevity, Pokémon cards, Prediction markets, Trends, NBA odds."
+  },
+  {
+   "id": "graphify-sessions",
+   "title": "graphify set up in every open dashboard session",
+   "owner": "sessions",
+   "status": "in_progress",
+   "since": "2026-10-30",
+   "detail": "Confirmed: Housing, AI, BTC Cycles, Demographics, Debt & rates, Space, Trends. Not yet heard from: Autonomous cars, Compute & chips, Climate, China vs US tech, Longevity, Pokémon cards, Prediction markets, NBA odds. New sessions get it from the environment's setup script."
+  },
+  {
+   "id": "nba-post-route",
+   "title": "POST route for private dashboards (NBA placed-bets tracker)",
+   "owner": "parent",
+   "status": "waiting",
+   "since": "2026-10-28",
+   "detail": "The NBA session asked for POST /api/<slug>/<name> behind the passcode gate, routed to module.ACTIONS, so bets you place are stored on the server instead of in the browser. Also a META footer so the 18+ / BeGambleAware line comes from the module."
+  },
+  {
+   "id": "shared-requests",
+   "title": "Small shared-code requests from the dashboard READMEs",
+   "owner": "parent",
+   "status": "waiting",
+   "since": "2026-10-30",
+   "detail": "An assetclass argument on nasdaq_daily (China vs US); a reduce hook on fetch for large files (Compute & chips); a stable key on fetch for dated URLs (Trends); more PROBE_URLS (Space, Demographics, Compute & chips); the Chromium path in smoke.py from an environment variable (Demographics); dashboard table rows in the READMEs (Compute & chips)."
+  },
+  {
+   "id": "live-parsers",
+   "title": "Confirm two workbook layouts against the live files",
+   "owner": "sessions",
+   "status": "waiting",
+   "since": "2026-10-25",
+   "detail": "The ONS JOBS03 workbook (UK headcount) and the Census BTOS Sector workbook (firm adoption by sector) were automated from documentation; the AI session still has to confirm their layout on the live site."
+  },
+  {
+   "id": "hk-rents",
+   "title": "Hong Kong rents from the RVD workbooks",
+   "owner": "session:housing",
+   "status": "in_progress",
+   "since": "2026-10-31",
+   "detail": "xlrd was added to requirements on 31 Oct, so the .xls workbooks can be read on the server; the Housing session now checks the price index parse on live data and adds the rental index."
+  }
  ],
  "roadmap": [
-  {"id": "r-routine-maintains", "title": "The daily check keeps this page current", "horizon": "now", "status": "in_progress", "area": "Routine",
-   "detail": "Each morning's run updates data/status/items.json: closes actions it sees resolved in /api/health, adds new owner actions, records handoffs as pending items, and appends to the check log."},
-  {"id": "r-first-archive", "title": "First OneDrive archive copy confirmed", "horizon": "now", "status": "planned", "area": "Archive",
-   "detail": "Once ONEDRIVE_RCLONE_CONF is set, /api/health shows the path and size of the first zip; the routine confirms it and closes the action."},
-  {"id": "r-ask-cost", "title": "Review Ask Claude usage and cost after the first month", "horizon": "next", "status": "planned", "area": "Ask Claude",
-   "detail": "Questions, visitors and estimated spend are on /api/health; adjust ASK_DAILY_USD and the per-visitor limits from what people actually ask."},
-  {"id": "r-custom-domain", "title": "Custom domain on Railway", "horizon": "next", "status": "planned", "area": "Site",
-   "detail": "So shared links do not carry the Railway subdomain. Roadmap phase 4; needs a domain and a DNS record."},
-  {"id": "r-graphify-docs-refresh", "title": "Refresh the graphify documentation layer monthly", "horizon": "next", "status": "planned", "area": "Graphify",
-   "detail": "graphify update keeps the code half current every session; the READMEs and docs are re-read only by /graphify. Run it monthly and scripts/graphify_export.py --bench afterwards so /graphify shows the latest map and savings."},
-  {"id": "r-weekly-rides", "title": "Weekly robotaxi rides for Pony.ai, WeRide, Zoox and Tesla", "horizon": "later", "status": "planned", "area": "Autonomous cars",
-   "detail": "None of them publishes a weekly figure yet; a row goes into rides.csv when one does."},
-  {"id": "r-hstech", "title": "A free, server-reachable source for the Hang Seng TECH index", "horizon": "later", "status": "planned", "area": "China vs US tech",
-   "detail": "Hang Seng Indexes publishes no documented CSV; hstech.csv is hand-entered until one is found."},
-  {"id": "r-london-tmax", "title": "A current daily maximum temperature for London", "horizon": "later", "status": "planned", "area": "Climate",
-   "detail": "Met Office MIDAS Open needs a CEDA account; a token as an environment variable would let the Climate dashboard read Heathrow's daily series."},
-  {"id": "r-verify-rows", "title": "No rows marked verify left in any data file", "horizon": "next", "status": "in_progress", "area": "Data",
-   "detail": "Roadmap phase 0 step 4: every hand-entered row either cites its source or goes. The sessions clear their own; the routine counts what is left."},
-  {"id": "r-phase1", "title": "Self-reporting: /api/health, daily source-health issue, live-check workflow", "horizon": "done", "status": "done", "area": "Site", "done": "2026-10-25"},
-  {"id": "r-phase2", "title": "Content phase: housing, AI, autonomous cars, BTC cycles filled in", "horizon": "done", "status": "done", "area": "Dashboards", "done": "2026-10-26"},
-  {"id": "r-ten-ideas", "title": "Ten more dashboards built, each in its own session", "horizon": "done", "status": "done", "area": "Dashboards", "done": "2026-10-28"},
-  {"id": "r-changes", "title": "What changed since yesterday, on every dashboard", "horizon": "done", "status": "done", "area": "Site", "done": "2026-10-26"},
-  {"id": "r-ask", "title": "Ask Claude floating icon on every tab", "horizon": "done", "status": "done", "area": "Ask Claude", "done": "2026-10-28"},
-  {"id": "r-private", "title": "Private dashboards behind a passcode", "horizon": "done", "status": "done", "area": "Private pages", "done": "2026-10-28"},
-  {"id": "r-graphify", "title": "graphify in every session, map-first rule, Graphify Map dashboard", "horizon": "done", "status": "done", "area": "Graphify", "done": "2026-10-31"},
-  {"id": "r-method-csv", "title": "Method tab from each README, CSV download on every chart", "horizon": "done", "status": "done", "area": "Site", "done": "2026-10-30"}
+  {
+   "id": "r-routine-maintains",
+   "title": "The daily check keeps this page current",
+   "horizon": "now",
+   "status": "in_progress",
+   "area": "Routine",
+   "detail": "Each morning's run updates data/status/items.json: closes actions it sees resolved in /api/health, adds new owner actions, records handoffs as pending items, and appends to the check log."
+  },
+  {
+   "id": "r-first-archive",
+   "title": "First OneDrive archive copy confirmed",
+   "horizon": "now",
+   "status": "planned",
+   "area": "Archive",
+   "detail": "Once ONEDRIVE_RCLONE_CONF is set, /api/health shows the path and size of the first zip; the routine confirms it and closes the action."
+  },
+  {
+   "id": "r-ask-cost",
+   "title": "Review Ask Claude usage and cost after the first month",
+   "horizon": "next",
+   "status": "planned",
+   "area": "Ask Claude",
+   "detail": "Questions, visitors and estimated spend are on /api/health; adjust ASK_DAILY_USD and the per-visitor limits from what people actually ask."
+  },
+  {
+   "id": "r-custom-domain",
+   "title": "Custom domain on Railway",
+   "horizon": "next",
+   "status": "planned",
+   "area": "Site",
+   "detail": "So shared links do not carry the Railway subdomain. Roadmap phase 4; needs a domain and a DNS record."
+  },
+  {
+   "id": "r-graphify-docs-refresh",
+   "title": "Refresh the graphify documentation layer monthly",
+   "horizon": "next",
+   "status": "planned",
+   "area": "Graphify",
+   "detail": "graphify update keeps the code half current every session; the READMEs and docs are re-read only by /graphify. Run it monthly and scripts/graphify_export.py --bench afterwards so /graphify shows the latest map and savings."
+  },
+  {
+   "id": "r-weekly-rides",
+   "title": "Weekly robotaxi rides for Pony.ai, WeRide, Zoox and Tesla",
+   "horizon": "later",
+   "status": "planned",
+   "area": "Autonomous cars",
+   "detail": "None of them publishes a weekly figure yet; a row goes into rides.csv when one does."
+  },
+  {
+   "id": "r-hstech",
+   "title": "A free, server-reachable source for the Hang Seng TECH index",
+   "horizon": "later",
+   "status": "planned",
+   "area": "China vs US tech",
+   "detail": "Hang Seng Indexes publishes no documented CSV; hstech.csv is hand-entered until one is found."
+  },
+  {
+   "id": "r-london-tmax",
+   "title": "A current daily maximum temperature for London",
+   "horizon": "later",
+   "status": "planned",
+   "area": "Climate",
+   "detail": "Met Office MIDAS Open needs a CEDA account; a token as an environment variable would let the Climate dashboard read Heathrow's daily series."
+  },
+  {
+   "id": "r-verify-rows",
+   "title": "No rows marked verify left in any data file",
+   "horizon": "next",
+   "status": "in_progress",
+   "area": "Data",
+   "detail": "Roadmap phase 0 step 4: every hand-entered row either cites its source or goes. The sessions clear their own; the routine counts what is left."
+  },
+  {
+   "id": "r-phase1",
+   "title": "Self-reporting: /api/health, daily source-health issue, live-check workflow",
+   "horizon": "done",
+   "status": "done",
+   "area": "Site",
+   "done": "2026-10-25"
+  },
+  {
+   "id": "r-phase2",
+   "title": "Content phase: housing, AI, autonomous cars, BTC cycles filled in",
+   "horizon": "done",
+   "status": "done",
+   "area": "Dashboards",
+   "done": "2026-10-26"
+  },
+  {
+   "id": "r-ten-ideas",
+   "title": "Ten more dashboards built, each in its own session",
+   "horizon": "done",
+   "status": "done",
+   "area": "Dashboards",
+   "done": "2026-10-28"
+  },
+  {
+   "id": "r-changes",
+   "title": "What changed since yesterday, on every dashboard",
+   "horizon": "done",
+   "status": "done",
+   "area": "Site",
+   "done": "2026-10-26"
+  },
+  {
+   "id": "r-ask",
+   "title": "Ask Claude floating icon on every tab",
+   "horizon": "done",
+   "status": "done",
+   "area": "Ask Claude",
+   "done": "2026-10-28"
+  },
+  {
+   "id": "r-private",
+   "title": "Private dashboards behind a passcode",
+   "horizon": "done",
+   "status": "done",
+   "area": "Private pages",
+   "done": "2026-10-28"
+  },
+  {
+   "id": "r-graphify",
+   "title": "graphify in every session, map-first rule, Graphify Map dashboard",
+   "horizon": "done",
+   "status": "done",
+   "area": "Graphify",
+   "done": "2026-10-31"
+  },
+  {
+   "id": "r-method-csv",
+   "title": "Method tab from each README, CSV download on every chart",
+   "horizon": "done",
+   "status": "done",
+   "area": "Site",
+   "done": "2026-10-30"
+  }
  ],
  "log": [
-  {"date": "2026-10-30", "run": "manual test", "result": "did_not_run", "summary": "The session the task started had no repository, no GitHub tools and no route to the live site. Nothing was checked.", "fixed": [], "handed": []},
-  {"date": "2026-10-30", "run": "manual test (second attempt)", "result": "did_not_run", "summary": "Same blockers.", "fixed": [], "handed": []},
-  {"date": "2026-11-01", "run": "scheduled", "result": "did_not_run", "summary": "First scheduled run, same blockers: no repository and no GitHub tools in the session the task started. The task now wakes a standing session that has the repo attached; the next run is 2 Nov.", "fixed": [], "handed": []},
-  {"date": "2026-11-02", "run": "scheduled", "result": "problems", "summary": "First working run. 319 offline tests pass and every tab of every public dashboard loads in light and dark mode (NBA odds skipped: no PRIVATE_PASSCODE secret). Five alerting sources in Altcoin Study's coin gauges (DefiLlama 402 and 404) and three failing sources on the private NBA odds page; HKMA, Bluesky, Reddit, Yahoo and Hyperliquid had short blocks below the alert thresholds. Two robotaxi tabs failed to load for 20 s while Railway redeployed after PR #32 merged mid-check. Ask Claude and the OneDrive archive are now set up.", "fixed": ["c834b06"], "handed": ["parent"]}
+  {
+   "date": "2026-10-30",
+   "run": "manual test",
+   "result": "did_not_run",
+   "summary": "The session the task started had no repository, no GitHub tools and no route to the live site. Nothing was checked.",
+   "fixed": [],
+   "handed": []
+  },
+  {
+   "date": "2026-10-30",
+   "run": "manual test (second attempt)",
+   "result": "did_not_run",
+   "summary": "Same blockers.",
+   "fixed": [],
+   "handed": []
+  },
+  {
+   "date": "2026-11-01",
+   "run": "scheduled",
+   "result": "did_not_run",
+   "summary": "First scheduled run, same blockers: no repository and no GitHub tools in the session the task started. The task now wakes a standing session that has the repo attached; the next run is 2 Nov.",
+   "fixed": [],
+   "handed": []
+  },
+  {
+   "date": "2026-11-02",
+   "run": "scheduled",
+   "result": "problems",
+   "summary": "First working run. 319 offline tests pass and every tab of every public dashboard loads in light and dark mode (NBA odds skipped: no PRIVATE_PASSCODE secret). Five alerting sources in Altcoin Study's coin gauges (DefiLlama 402 and 404) and three failing sources on the private NBA odds page; HKMA, Bluesky, Reddit, Yahoo and Hyperliquid had short blocks below the alert thresholds. Two robotaxi tabs failed to load for 20 s while Railway redeployed after PR #32 merged mid-check. Ask Claude and the OneDrive archive are now set up.",
+   "fixed": [
+    "c834b06"
+   ],
+   "handed": [
+    "parent"
+   ]
+  }
  ]
 }

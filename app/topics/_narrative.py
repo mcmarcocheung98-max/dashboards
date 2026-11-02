@@ -18,7 +18,6 @@ LLAMA_STABLE_LIST = "https://stablecoins.llama.fi/stablecoins?includePrices=fals
 LLAMA_STABLE_ONE = "https://stablecoins.llama.fi/stablecoincharts/all?stablecoin={id}"
 LLAMA_STABLE_CHAIN = "https://stablecoins.llama.fi/stablecoincharts/{chain}"
 LLAMA_DEX_CHAIN = "https://api.llama.fi/overview/dexs/{chain}?excludeTotalDataChart=false&excludeTotalDataChartBreakdown=true"
-LLAMA_DERIVS = "https://api.llama.fi/overview/derivatives?excludeTotalDataChart=false&excludeTotalDataChartBreakdown=false"
 LLAMA_EMISSIONS = "https://defillama-datasets.llama.fi/emissions/{slug}"
 TTL = 6 * 3600
 FUNDING_WINDOW_DAYS = 15          # Hyperliquid returns at most 500 hourly records per call: 15 days = 360
@@ -27,7 +26,7 @@ FUNDING_DAYS = 730
 # per coin: the sector basket (Hyperliquid markets), the stablecoin or chain whose supply is its product, the chain whose DEX volume is its activity,
 # whether it is a memecoin, and extras. Baskets are hand-picked proxies for the narrative each coin trades on.
 COINS = {
-    "HYPE": {"sector": ["AAVE", "UNI", "PENDLE"], "chain_stables": "Hyperliquid L1", "deriv_share": "Hyperliquid", "fees": True},
+    "HYPE": {"sector": ["AAVE", "UNI", "PENDLE"], "chain_stables": "Hyperliquid L1", "fees": True},     # perp-DEX share dropped 2 Nov 2026: DefiLlama's derivatives overview went behind a paid key (402)
     "ENA": {"sector": ["AAVE", "PENDLE", "ETHFI"], "stable": "USDe", "basis": ["BTC", "ETH"], "fees": True},
     "SOL": {"sector": ["ETH", "SUI", "AVAX"], "chain_stables": "Solana", "dex_chain": "Solana", "fees": True},
     "NEAR": {"sector": ["TAO", "FET", "RENDER"], "chain_stables": "Near", "fees": True},
@@ -87,22 +86,10 @@ def chain_dex_volume(chain: str) -> pd.Series:
     return pd.Series({pd.to_datetime(int(t), unit="s"): float(v) for t, v in (j.get("totalDataChart") or [])}).sort_index()
 
 
-def derivatives_share(protocol: str) -> pd.Series:
-    """One protocol's share of all perp-DEX volume per day (DefiLlama derivatives overview with the per-protocol breakdown)."""
-    j = fetch_json(LLAMA_DERIVS, TTL, min_bytes=1000)
-    out = {}
-    for t, by in j.get("totalDataChartBreakdown") or []:
-        tot = sum(float(v or 0) for v in by.values())
-        if tot > 0:
-            out[pd.to_datetime(int(t), unit="s")] = float(by.get(protocol) or 0) / tot
-    return pd.Series(out).sort_index()
-
-
 def emissions_curve(slug: str) -> pd.Series:
     """Cumulative unlocked supply over time from DefiLlama's free emissions dataset (the sum of every allocation's unlocked curve)."""
-    from .btc_cycles import parse_emissions
-    j = fetch_json(LLAMA_EMISSIONS.format(slug=slug), DAY, min_bytes=100)
-    return parse_emissions(j)
+    from .btc_cycles import _optional_json, parse_emissions
+    return parse_emissions(_optional_json(LLAMA_EMISSIONS.format(slug=slug)))       # plain download: a coin without a page (most memecoins) is not a failing source
 
 
 # ------------------------------------------------------------------ gauge series (pure)
@@ -126,7 +113,7 @@ def basket_return(members: dict[str, pd.Series], n: int, idx: pd.DatetimeIndex) 
 
 def extra_inputs(ticker: str, price: pd.Series, ctx: dict) -> dict[str, pd.Series]:
     """The coin's extra gauge series on the price's index. ctx: {"closes": {market: close series}, "funding": {market: daily funding}, "mcaps": {ticker: series},
-    "btc_mcap": series, "stables": {key: series}, "dex": {chain: series}, "deriv_share": {protocol: series}, "fees30": series|None, "unlock_events": DatetimeIndex|None}."""
+    "btc_mcap": series, "stables": {key: series}, "dex": {chain: series}, "fees30": series|None, "unlock_events": DatetimeIndex|None}."""
     cfg = COINS.get(ticker, {})
     idx = price.index
     out: dict[str, pd.Series] = {}
@@ -159,10 +146,6 @@ def extra_inputs(ticker: str, price: pd.Series, ctx: dict) -> dict[str, pd.Serie
     if cfg.get("dex_chain") in dex and len(dex[cfg["dex_chain"]]) > 60:
         v = dex[cfg["dex_chain"]].reindex(idx, method="ffill").rolling(30).sum()
         out["dex_momentum"] = (_ret(v, 30)).clip(-0.5, 0.5) / 0.5
-    ds = ctx.get("deriv_share", {})
-    if cfg.get("deriv_share") in ds and len(ds[cfg["deriv_share"]]) > 60:
-        sh = ds[cfg["deriv_share"]].reindex(idx, method="ffill")
-        out["deriv_share_trend"] = ((sh - sh.shift(30))).clip(-0.05, 0.05) / 0.05
     if cfg.get("basis"):
         fs = [funding[m] for m in cfg["basis"] if m in funding and len(funding[m])]
         if fs:

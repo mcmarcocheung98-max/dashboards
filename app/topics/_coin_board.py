@@ -56,7 +56,6 @@ GAUGES = [
     Gauge("stable_growth", "Stablecoin supply growth, 30 days", "product", None, None, None, None, "ENA: USDe supply; SOL, NEAR, HYPE: stablecoins on the chain (DefiLlama); +-15% = full score", "{:+.2f}", 1.0, True),
     Gauge("fees_momentum", "Fees momentum, 30 days", "product", None, None, None, None, "30-day fees against the previous 30 days (DefiLlama); +-50% = full score", "{:+.2f}", 1.0, True),
     Gauge("dex_momentum", "Chain DEX volume momentum, 30 days", "product", None, None, None, None, "the chain's DEX volume, last 30 days against the 30 before (DefiLlama; Solana for SOL BONK WIF TRUMP, Ethereum for SHIB PEPE); +-50% = full score", "{:+.2f}", 1.0, True),
-    Gauge("deriv_share_trend", "Perp-DEX market share, 30-day change", "product", None, None, None, None, "Hyperliquid's share of all perp-DEX volume (DefiLlama), change over 30 days; +-5 points = full score", "{:+.2f}", 1.0, True),
     Gauge("basis_yield", "Basis yield (BTC + ETH funding, annualised)", "product", None, None, None, None, "ENA's product earns perp funding: the 30-day mean of BTC and ETH funding on Hyperliquid, annualised; 5% = 0, 20% = +1", "{:+.2f}", 1.0, True),
     Gauge("post_unlock", "Relief after an unlock", "supply", None, None, None, None, "+1 for the 10 days after an unlock of 1%+ of circulating (the hand-entered file or DefiLlama's curve): the supply has landed", "{:+.0f}", 1.0, True),
 ]
