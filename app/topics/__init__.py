@@ -52,9 +52,8 @@ BUILTIN = (
     Topic("ai", "AI: Jobs & Adoption", "AI job openings against hiring, headcount and pay in law and finance, and how fast firms and people take up AI tools and agents, in the US, UK and Hong Kong.",
           "ai", (("openings", "Openings"), ("headcount", "Headcount"), ("wages", "Pay"), ("ratio", "AI vs the professions"), ("firms", "Firms adopting"),
                  ("users", "Users"), ("agents", "Agents"), ("skills", "Skills demand")), ("openings", "headcount", "wages", "ratio", "firms", "skills")),
-    Topic("btc-cycles", "BTC Cycles & Sector Rotation", "Four Bitcoin cycles, which altcoin sectors won each one, what the winners had in common, and the 2026-27 candidates, checked daily against live data.",
-          "btc_cycles", (("cycles", "Cycles"), ("sectors", "Sectors"), ("metrics", "Winner metrics"), ("candidates", "Candidates 2026-27"), ("etf", "ETFs"),
-                         ("mstr", "Strategy (MSTR)"), ("signals", "Signals")),
+    Topic("btc-cycles", "BTC Cycles", "Four Bitcoin cycles on the halving clock, the published buy and sell zone models on today's price, US spot ETF flows, Strategy's mNAV and exit window, and the doc's six signals checked daily. The altcoin half (sectors, candidates, coin pages) is the Altcoin Study.",
+          "btc_cycles", (("cycles", "Cycles"), ("etf", "ETFs"), ("mstr", "Strategy (MSTR)"), ("signals", "Signals")),
           ("cycles", "metrics", "candidates", "signals", "etf", "mstr")),
 )
 

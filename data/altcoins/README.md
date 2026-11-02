@@ -1,20 +1,21 @@
-# Altcoin Study (`/altcoins`)
+# Altcoin Study & Sector Rotation (`/altcoins`)
 
-The four BTC Cycles candidates (HYPE, ENA, SOL, NEAR) in full, the memecoin basket and meme season, and a buy zone for every coin, on one
-dashboard. It replaces the separate pages `/hype`, `/ena`, `/sol`, `/near` and `/memecoins`, which now redirect to the matching tab.
+The altcoin half of the BTC Cycles research on one dashboard, in five tabs: which sectors won each Bitcoin cycle and where the 2026-27
+candidate sectors stand today; every candidate coin with its thesis, price cases and fundamentals; HYPE, ENA, SOL and NEAR in full; the
+buy zones, signal boards, volume zones and twenty daily signals for every coin; and the memecoin basket. It replaced the separate pages
+`/hype`, `/ena`, `/sol`, `/near` and `/memecoins` (which redirect here) and, on 2 Nov 2026, took over the Sectors, Winner metrics and
+Candidates tabs of `/btc-cycles`. The old tab addresses (`#zones`, `#boards`, `#volume`, `#hype` ... `#unlocks`, `#basket`, `#season`)
+open the matching new tab.
 
 ## Tabs
 
 | Tab | What it shows |
 |---|---|
-| Buy zones | Every coin's zone (top, mid, floor), where today's price sits against it, what set the top, the 30-day move and RSI 14; sorted in-zone first |
-| Signal boards | Every coin's two boards: the BTC-style board (nine gauges in hand-set zones, averaged) and the fitted board (the same gauges with signs and weights learned from their pooled record, walk-forward), with each gauge's record across all coins and a walk-forward backtest of the fitted score |
-| Volume zones | Per coin (pick one): daily candles with the big-volume days marked and the support / resistance zones they left, what the coin did after its own big days and zone retests, and a table of every coin against its zones |
-| Signals | Twenty daily signals on top of the volume zones, each scored −1 to +1, weighted by their record across every coin and summed into one final signal per coin; a table of all coins, each coin's 20 signals with weights, the score day by day and a walk-forward backtest of trading it |
-| HYPE, ENA, SOL, NEAR | One tab per candidate: its signal board (below), price against BTC, RSI, market cap, the case for it, its buy zone on a price chart, then Fundamentals (fees, TVL, supply and unlocks against price, the multiples, the unlock schedule) and the Projection (bear / base / bull to end-2028) |
-| ENA unlocks | ENA's full unlock schedule (past and ahead), the next unlock, what the price did before / into / after every unlock against an ordinary day, simple short-before / buy-after rules with costs and a placebo, and a date check of each listed day against volume |
-| Memecoins | The basket of six memecoins (see `data/memecoins/README.md`) |
-| Meme season | The basket against BTC and the season reading (see `data/memecoins/README.md`) |
+| Sectors | Where each 2026-27 candidate sector stands today (undervalued / awaiting rotation / neutral / priced in / overvalued, with the supply-overhang check and 3-5 representatives each); the four cycles' sector bursts on one timeline (halving clock or calendar); folded: the live usage metrics behind the status (DeFi TVL, stablecoin supply, Hyperliquid TVL, revenue and fees, DEX volume, the doc's "common metrics of cycle winners") and the doc's per-cycle sector tables with their peak multiples and the cross-cycle comparison. Rules and data: `data/btc-cycles/README.md` |
+| Candidates | Every candidate coin in one sortable table (sector and its status, classifiers, price with a 90-day sparkline and its move against BTC, market cap against the sector leader, float and supply coming in 12 months, RSI vs BTC, bear / base / bull for end-2027 and end-2028, the base-case 2028 cap against the leader; filter, search, CSV); a sort-and-jump index; a card per coin with its KPIs, sparkline and, on demand, its charts, fundamentals and projection; the projection method, the doc's ranked table and the hand-entered sector evidence, folded |
+| Coins | One candidate at a time (pick HYPE, ENA, SOL or NEAR): its signal board and fitted board, buy zone, token unlocks, the case for it, price against BTC, RSI, market cap, then Fundamentals (fees, TVL, supply and unlocks against price, the multiples, the unlock schedule) and the Projection (bear / base / bull to end-2028). For ENA, the full unlock study is a folded section at the bottom: the schedule (past and ahead), the next unlock, what the price did before / into / after every unlock against an ordinary day, simple short-before / buy-after rules with costs and a placebo, and a date check of each listed day against volume |
+| Signals | Every coin's readings on one table (buy zone, BTC-style board, fitted board, twenty-signal score at the chosen horizon, volume-zone position), sorted by how many lean to buying; pick a coin for each in full, as folded sections: the BTC-style board (nine gauges in hand-set zones, averaged; why the score is what it is, what would move it, its record by zone), the fitted board (the same gauges with signs and weights learned from their pooled record, walk-forward, each gauge's record across all coins, every coin's boards), the twenty daily signals (judged on 7, 14 or 30 days; the grid, the score day by day, the walk-forward backtest, today's weights, every coin's final signal), the volume zones (daily candles with the big-volume days and the support / resistance zones they left, what the coin did after its own big days and retests, every coin against its zones) and the buy zones of every coin (top, mid, floor) |
+| Memecoins | The meme-season reading and the basket of six memecoins: the sortable table, each coin and BTC rebased, the basket against BTC (ratio, RSI, equal weight, market caps), the memes' share of the whole market, and 90-day sparklines (see `data/memecoins/README.md`) |
 
 ## The buy zone rule (`app/topics/altcoins.py`, `buy_zone`)
 
@@ -168,8 +169,9 @@ funding not included; also long-only. A short that loses more than 100% in one d
 
 ## Where the numbers come from
 
-The candidates' prices, market caps, fees, TVL and the DefiLlama unlock curve come with BTC Cycles' background fill (CoinGecko, DefiLlama;
-`data/btc-cycles/README.md`), the projection levels from `data/btc-cycles/scenarios.json`, and the memecoins' prices from the memecoin fill
+The sector status, rotation history, usage metrics and every candidate's prices, market caps, fees, TVL and the DefiLlama unlock curve come
+with BTC Cycles' background fill and endpoints (CoinGecko, DefiLlama, the hand-entered files in `data/btc-cycles/`; `data/btc-cycles/README.md`),
+the projection levels from `data/btc-cycles/scenarios.json`, and the memecoins' prices from the memecoin fill
 (CoinGecko; `data/memecoins/README.md`). The Volume zones and ENA unlocks tabs download Hyperliquid's daily candles themselves (one POST per
 coin to `api.hyperliquid.xyz/info`, cached for 6 hours, kept as a snapshot). The ENA schedule is hand-entered in `data/altcoins/unlocks/ENA.csv`
 from the Binance Launchpool announcement (initial supply), Ethena's tokenomics docs (allocations, vesting start), crypto.news / Bitget /
@@ -179,9 +181,11 @@ announcement with CoinMarketCap / KuCoin / Bitbase coverage (October 2026 accele
 ## Adding an unlock schedule for another coin
 
 One CSV per coin in `data/altcoins/unlocks/<TICKER>.csv` with the ENA file's columns (the amount column is named `<ticker>_m`, in millions).
-The Volume zones chart marks the coin's unlock days as soon as the file exists; the ENA unlocks tab is ENA only (`UNLOCK_COIN` in `altcoins.py`).
+The volume-zone chart marks the coin's unlock days as soon as the file exists; the unlock study (Coins tab, ENA) is ENA only (`UNLOCK_COIN` in `altcoins.py`).
 
 ## Adding a coin
 
-A candidate: add its ticker to `CANDIDATES` in `app/topics/altcoins.py` (it must be a row in `data/btc-cycles/coins.csv`), a tab
-function in `VIEWS` in `app/static/topics/altcoins.js`, and its link in `PAGES` in `btc-cycles.js`. A memecoin: a row in `data/memecoins/coins.csv`.
+A full coin page: add its ticker to `CANDIDATES` in `app/topics/altcoins.py` (it must be a row in `data/btc-cycles/coins.csv`) and to
+`CANDS` in `app/static/topics/altcoins.js`; the Coins tab's picker, the Candidates tab's "Full page" link and the old-address map follow.
+A candidate without a full page: a row in `data/btc-cycles/coins.csv` and `coin_notes.json` (see `data/btc-cycles/README.md`). A memecoin:
+a row in `data/memecoins/coins.csv`.

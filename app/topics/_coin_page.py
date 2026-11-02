@@ -1,4 +1,4 @@
-"""One BTC Cycles candidate coin in full, for its tab on Altcoin Study (/altcoins#hype, #ena, #sol, #near; see altcoins.py).
+"""One BTC Cycles candidate coin in full, for the Coins tab of Altcoin Study (/altcoins#coins, pick HYPE, ENA, SOL or NEAR; see altcoins.py).
 
 Nothing is downloaded here: btc_cycles' background fill already keeps each candidate's 365-day price and market cap (CoinGecko) and its
 fundamentals (DefiLlama TVL, fees, unlock schedule; CoinGecko supply). The tab shows price against BTC, RSI, market cap, the notes and what

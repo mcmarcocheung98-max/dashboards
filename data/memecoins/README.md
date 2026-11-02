@@ -1,4 +1,4 @@
-# Memecoins (the Memecoins and Meme season tabs of Altcoin Study, `/altcoins#basket`)
+# Memecoins (the Memecoins tab of Altcoin Study, `/altcoins#memes`)
 
 Was its own dashboard at `/memecoins`, which now redirects. Buy zones for these coins are on the Buy zones tab (`data/altcoins/README.md`).
 

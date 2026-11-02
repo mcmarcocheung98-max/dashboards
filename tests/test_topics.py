@@ -1377,8 +1377,12 @@ def test_btc_readings(snapdir, monkeypatch):
         "mstr": lambda: {"kpi": {"mnav": 0.9}, "held": [[0, 100.0], [1, 110.0]], "strategies": {"checklist": [{"rule": "BTC trend", "state": "clear"}]}}})
     r = {x["key"]: x for x in _daily._clean(C.READINGS())}
     assert r["btc_vs_200d"]["lean"] == 1 and r["halving_clock"]["lean"] == 1 and r["etf_5d"]["value"] == 25 and r["mnav"]["lean"] == -1
-    assert r["mstr_bought_week"]["value"] == 10 and r["rsi_breadth"]["value"] == "2/3" and r["strongest"]["value"] == "A" and r["weakest"]["value"] == "B"
-    assert r["sector:1"]["lean"] == 1 and r["sig:Stablecoin supply rising"]["lean"] == 1 and {x["tab"] for x in r.values()} >= {"cycles", "signals", "etf", "mstr", "candidates", "sectors"}
+    assert r["mstr_bought_week"]["value"] == 10 and r["sig:Stablecoin supply rising"]["lean"] == 1
+    assert {x["tab"] for x in r.values()} == {"cycles", "signals", "etf", "mstr"} == {t for t, _ in topics.REGISTRY["btc-cycles"].tabs}
+    from app.topics import altcoins as A                      # the candidates' and sectors' readings moved to Altcoin Study with their tabs
+    a = {x["key"]: x for x in _daily._clean(A.candidate_readings())}
+    assert a["rsi_breadth"]["value"] == "2/3" and a["strongest"]["value"] == "A" and a["weakest"]["value"] == "B" and a["sector:1"]["lean"] == 1
+    assert {x["tab"] for x in a.values()} == {"candidates", "sectors"}
 
 
 def test_btc_fundamentals_parse_and_factors(snapdir, monkeypatch):

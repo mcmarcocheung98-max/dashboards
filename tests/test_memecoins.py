@@ -59,7 +59,7 @@ def test_basket_file():
     assert [c["ticker"] for c in coins] == ["DOGE", "SHIB", "PEPE", "BONK", "WIF", "TRUMP"]
     assert all(c["coingecko_id"] and c["chain"] for c in coins)
     assert "memecoins" not in topics.REGISTRY and topics.REDIRECTS["memecoins"] == ("altcoins", "basket")       # now tabs of Altcoin Study
-    assert {"basket", "season"} <= {k for k, _ in topics.REGISTRY["altcoins"].tabs} and topics.helpers()["memecoins"] == "altcoins"
+    assert "memes" in {k for k, _ in topics.REGISTRY["altcoins"].tabs} and {"basket", "season"} <= set(topics.endpoints("altcoins")) and topics.helpers()["memecoins"] == "altcoins"
 
 
 def test_before_the_fill_the_page_says_loading(mocked):

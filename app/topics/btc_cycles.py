@@ -1,12 +1,17 @@
-"""BTC Cycles & Sector Rotation (/btc-cycles): the research doc as structured data, plus a live layer that checks its signals daily.
+"""BTC Cycles (/btc-cycles): the research doc as structured data, plus a live layer that checks its signals daily. The Bitcoin half of
+the doc is shown here; the altcoin half (sectors, candidates, the coin pages) is shown on Altcoin Study (/altcoins, altcoins.py), which
+reads the endpoints below.
 
-cycles      BTC price since 2010 (Coin Metrics community API), each cycle overlaid from its halving, drawdown from the running high,
-            and the doc's cycle-anatomy table and bottom line
-sectors     the doc's per-cycle sector tables (coins, low -> peak, multiple, burst window, metric) and the cross-cycle comparison
-metrics     the doc's "common metrics of cycle winners" table with live versions of the measurable ones: DeFi TVL, stablecoin supply,
-            Hyperliquid TVL and revenue, perp-DEX volume (all DefiLlama)
-candidates  the doc's ranked 2026-27 candidates with an evidence series per candidate where one exists (live or hand-entered)
+cycles      BTC price since 2010 (Coin Metrics community API), the published buy / sell zone models, each cycle overlaid from its halving,
+            drawdown from the running high, and the doc's cycle-anatomy table and bottom line
+etf, mstr   US spot ETF flows and Strategy (btc_flows.py)
 signals     the doc's six signals, each with a computed or hand-entered status
+sectors     (served to /altcoins) the doc's per-cycle sector tables (coins, low -> peak, multiple, burst window, metric), the cross-cycle
+            comparison; rotation: the four cycles' bursts and each 2026-27 sector's status today
+metrics     (served to /altcoins) the doc's "common metrics of cycle winners" table with live versions of the measurable ones: DeFi TVL,
+            stablecoin supply, Hyperliquid TVL and revenue, DEX volume (all DefiLlama)
+candidates  (served to /altcoins) the doc's ranked 2026-27 candidates with an evidence series per candidate where one exists; coins and
+            coin-<ticker>: every candidate's prices, fundamentals and projection from the background fill
 
 The research text lives in data/btc-cycles/research.json (every table on the page is rendered from it; edit it to update the research).
 Hand-entered evidence (figures with no free API: RWA value, prediction-market volume, x402, launches per day, perp-DEX share, Google
@@ -1048,21 +1053,7 @@ def READINGS() -> list[dict]:
             add("mstr", "exit:" + c["rule"], "Exit checklist: " + c["rule"], c["state"], -1 if c["state"] in ("exit", "caution") else 0)
     except Exception:
         pass
-    try:
-        cs = [c for c in ENDPOINTS["coins"]().get("coins", []) if "kpi" in c]
-        if cs:
-            up = sum(1 for c in cs if (c["kpi"].get("rsi_vs_btc") or 0) > 50)
-            add("candidates", "rsi_breadth", "Candidates with RSI vs BTC above 50", f"{up}/{len(cs)}", 1 if up > len(cs) / 2 else -1 if up < len(cs) / 4 else 0)
-            ranked = sorted((c for c in cs if c["kpi"].get("vs_btc_90d") is not None), key=lambda c: c["kpi"]["vs_btc_90d"])
-            if ranked:
-                add("candidates", "strongest", "Strongest candidate vs BTC, 90 days", ranked[-1]["ticker"], 0, f"{ranked[-1]['kpi']['vs_btc_90d']:+.0%}")
-                add("candidates", "weakest", "Weakest candidate vs BTC, 90 days", ranked[0]["ticker"], 0, f"{ranked[0]['kpi']['vs_btc_90d']:+.0%}")
-        for s in ENDPOINTS["rotation"]().get("status", []):
-            add("sectors", "sector:" + str(s["rank"]), "Sector " + str(s["rank"]) + ": " + s["sector"], s["status"],
-                {"Undervalued": 1, "Awaiting rotation": 1, "Overvalued": -1, "Priced in": -1}.get(s["status"], 0),
-                ("supply overhang: " + s["overhang"]) if s.get("overhang") in ("heavy", "some") else None)
-    except Exception:
-        pass
+    # the candidates' and sectors' readings moved to Altcoin Study (altcoins.candidate_readings) with their tabs
     return out
 
 

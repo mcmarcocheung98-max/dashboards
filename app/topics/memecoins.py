@@ -1,4 +1,4 @@
-"""Memecoins, the Memecoins and Meme season tabs of Altcoin Study (/altcoins#basket, #season; see altcoins.py): the largest memecoins as one
+"""Memecoins, the Memecoins tab of Altcoin Study (/altcoins#memes, the basket and season endpoints; see altcoins.py): the largest memecoins as one
 basket, against BTC, and whether it is meme season. (Was its own dashboard at /memecoins, which now redirects.)
 
 basket   one row per coin (data/memecoins/coins.csv): price, 24h, 7-day, 30-day and 1-year change, distance from the 1-year high, market cap,

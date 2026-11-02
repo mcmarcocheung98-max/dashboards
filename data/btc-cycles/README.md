@@ -1,6 +1,6 @@
-# BTC Cycles & Sector Rotation (`/btc-cycles`)
+# BTC Cycles (`/btc-cycles`)
 
-A dashboard built on the research doc "BTC Cycles & Sector Rotation: 2013–2026 and the 2026–27 Setup": four Bitcoin cycles, which altcoin sectors won each one, what the winners had in common, the ranked candidates for 2026–27, and the six signals the doc says to watch. The doc's tables are rendered as they stand; a live layer adds the price history and the measurable series so the thesis can be checked against the market every day.
+A dashboard built on the research doc "BTC Cycles & Sector Rotation: 2013–2026 and the 2026–27 Setup". This page is the Bitcoin half: four Bitcoin cycles on the halving clock, the published buy and sell zone models, US spot ETF flows, Strategy (MSTR) and the six signals the doc says to watch. The altcoin half (which sectors won each cycle and where the 2026-27 candidate sectors stand, every candidate coin with its thesis, price cases and fundamentals, the four coins in full) moved to the Altcoin Study (`/altcoins`, `data/altcoins/README.md`) on 2 Nov 2026; its data is still computed here (`app/topics/btc_cycles.py`, this folder) and served to both pages. The doc's tables are rendered as they stand; a live layer adds the price history and the measurable series so the thesis can be checked against the market every day.
 
 ## What it shows
 
@@ -13,18 +13,7 @@ A dashboard built on the research doc "BTC Cycles & Sector Rotation: 2013–2026
 | | Each cycle from its halving | Price ÷ price on halving day, by days before and after, one line per cycle |
 | | Drawdown | Distance below the running high |
 | | Cycle anatomy table | The doc's cycle 1–5 table |
-| Sectors | Where each candidate sector stands | The doc's eight 2026-27 sectors, 3-5 representative coins each, with a status (undervalued, awaiting rotation, neutral, priced in, overvalued) from their median 90-day move against BTC, RSI vs BTC, distance from the 1-year high and the sector's usage trend; and when the sector's ancestors burst in past cycles |
-| | (supply overhang) | The representatives' median float (share of max supply circulating) and supply added in the next 12 months; a heavy overhang (float under 20% or 20%+ coming) holds an otherwise undervalued sector at neutral |
-| | Sector rotation across the four cycles | Every sector burst of cycles 1-4 as a bar, on the halving clock (months from each halving, cycles stacked) or the calendar, with BTC peaks and today |
-| Sectors | Cycle 1 / 2 / 3 / 4 | That cycle's sector table from the doc, and its peak multiples as a log-scale bar chart |
-| | Cross-cycle comparison | The doc's 15-row table |
-| Winner metrics | Live cards | DeFi TVL, stablecoin supply, Hyperliquid TVL, Hyperliquid 30-day revenue, perp-DEX 30-day volume, perp DEXs by volume |
-| | Metrics table | The doc's "common metrics of cycle winners" |
-| Candidates 2026–27 | Projection method | The BTC scenario levels for end-2027 and end-2028 with the reasoning behind each |
-| | All candidates at a glance | Every coin in one sortable table: sector and its rotation status, price with a 90-day sparkline and its move against BTC, market cap and its share of the sector leader's (the largest token in the sector, candidate or not), RSI vs BTC, bear / base / bull for end-2027 and end-2028 with the base-case upside, and the base-case 2028 market cap against the leader's today. Filter by sector, search, click a row for the narrative and thesis, download the table as CSV |
-| | One row per candidate coin, grouped by the doc's rank | Links to CoinMarketCap, DefiLlama and CoinGecko; price, 24h and 1-year change, market cap, RSI 14, RSI of the coin ÷ BTC ratio, beta to BTC, 90-day performance vs BTC, base-case price for end-2027 and end-2028; a 90-day sparkline; and on "Show charts": price with BTC rebased (log), RSI vs BTC, market cap, and the projection band with a bear / base / bull table and implied market cap |
-| | The doc's ranked table | Folded under a button |
-| | Sector evidence | Hand-entered series for sectors without a liquid token (RWA value, prediction-market volume, x402, perp share) |
+| (Sectors, Winner metrics, Candidates) | Moved to the Altcoin Study | The sector status and rotation timeline, the live usage metrics, the doc's per-cycle sector tables, the all-candidates table and the coin cards are the Sectors and Candidates tabs of `/altcoins`; their rows are described in `data/altcoins/README.md`. The endpoints (`sectors`, `rotation`, `metrics`, `candidates`, `coins`, `coin-<ticker>`) stay in `btc_cycles.py` and the background fill still runs here |
 | ETFs | Headline figures | Net flows since launch, BTC taken in, last 30 days, last day, in/out streak, IBIT's share |
 | | Daily and rolling 30-day flows | Bars, green in and red out |
 | | Cumulative flows | In US$ against the BTC price, and in BTC |
@@ -42,11 +31,14 @@ A dashboard built on the research doc "BTC Cycles & Sector Rotation: 2013–2026
 | | Volume and dominance | BTC spot volume vs the $10bn line; dominance logged daily since deploy |
 | | The doc's text | Signals in order, timing on the halving clock, what could break the pattern |
 
-## Full coin tabs (Altcoin Study, `/altcoins`)
+## The altcoin half (Altcoin Study, `/altcoins`)
 
-HYPE, ENA, SOL and NEAR each have a full tab on Altcoin Study, linked from their row on the Candidates tab ("Full page →"), with a buy
-zone. They read this dashboard's background fill and download nothing themselves (`app/topics/_coin_page.py`, `app/topics/altcoins.py`;
-`data/altcoins/README.md`). The old `/hype`, `/ena`, `/sol` and `/near` pages redirect there.
+Sectors (status, rotation timeline, usage metrics, the doc's tables), Candidates (every coin in one table and a card each) and the four full
+coin pages (HYPE, ENA, SOL, NEAR, with buy zones, signal boards and ENA's unlock study) are tabs of the Altcoin Study. They read this
+dashboard's endpoints and background fill and download nothing of their own (`app/topics/altcoins.py` re-exports `sectors`, `rotation`,
+`metrics`, `candidates`, `coins` and `coin-<ticker>` from `btc_cycles.py`; `app/topics/_coin_page.py`; `data/altcoins/README.md`). The
+candidates' and sectors' daily readings (`rsi_breadth`, `strongest`, `weakest`, `sector:<rank>`) are reported under `/altcoins` from 2 Nov
+2026, so their "What changed since yesterday" strips restart there. The old `/hype`, `/ena`, `/sol` and `/near` pages redirect there.
 
 ## Where the numbers come from
 
@@ -140,3 +132,12 @@ Local preview: `python -m app.server`, then open `/btc-cycles`.
 - Pre-2024 sector figures are the doc's approximations and are labelled so.
 - After a deploy the background fill takes about 7 minutes (30 coins, 13 s apart, longer after a 429); until a coin is reached its row says "loading in the background". Live check 25 Oct 2026 23:21 UTC (Actions > live-check, then show-json on `/api/health` and `/api/btc-cycles/coins`): all 28 coins filled, every CoinGecko source fresh, every tab OK; the only "not available" cards were the two UK/HK treasury prices on the MSTR tab.
 - Prediction markets (rank 4) have no liquid token and no row; ASTER, LIT, XPL, SKY, SYRUP and PLUME ids are marked `verify`.
+
+## Requests for shared code
+
+- 2 Nov 2026: the btc-cycles entry in `BUILTIN` (`app/topics/__init__.py`) was edited in place to drop the Sectors, Winner metrics and
+  Candidates tabs and to retitle the dashboard "BTC Cycles" (one entry, this dashboard's own registration). Nothing else in the shared
+  files changed; the old-tab redirects (`REDIRECTS`) still point at `/altcoins#hype` etc., which the Altcoin Study's script maps to its
+  Coins tab.
+- Still open: Yahoo URLs show as failing in `/api/health` even where a fallback (CNBC) answers; a `fold` helper (a card that folds away)
+  is now copied in both `btc-cycles.js` and `altcoins.js` and would sit better in `topic.html`.

@@ -115,13 +115,21 @@ def _px(values):
 
 def test_registry_and_redirects():
     t = topics.REGISTRY["altcoins"]
-    assert t.title == "Altcoin Study" and topics.category("altcoins") == "Money & markets" and not t.private
-    assert [k for k, _ in t.tabs] == ["zones", "boards", "volume", "signals", "hype", "ena", "sol", "near", "unlocks", "basket", "season"] and set(A.ENDPOINTS) == {k for k, _ in t.tabs}
+    assert t.title == "Altcoin Study & Sector Rotation" and topics.category("altcoins") == "Money & markets" and not t.private
+    assert [k for k, _ in t.tabs] == ["sectors", "candidates", "coins", "signals", "memes"] and {k for k, _ in t.tabs} <= set(A.ENDPOINTS)
+    # the old tabs' data still serves (the page maps the old addresses), and the sector / candidate data is btc_cycles' own endpoints
+    assert {"zones", "boards", "volume", "unlocks", "basket", "season", "hype", "ena", "sol", "near", "sectors", "rotation", "metrics", "candidates", "coins", "coin-ena", "coin-link"} <= set(A.ENDPOINTS)
+    assert A.ENDPOINTS["sectors"] is C.ENDPOINTS["sectors"] and A.ENDPOINTS["coin-ena"] is C.ENDPOINTS["coin-ena"]
+    assert {t.lower() for t in A.CANDIDATES} | {"zones", "boards", "volume", "unlocks", "basket", "season"} == set(A.OLD_TABS) and set(A.OLD_TABS.values()) <= {k for k, _ in t.tabs}
     for old in ("hype", "ena", "sol", "near", "memecoins"):
         assert old not in topics.REGISTRY and topics.REDIRECTS[old][0] == "altcoins"
     assert topics.REDIRECTS["sol"] == ("altcoins", "sol") and topics.script("altcoins") == "altcoins.js"
-    js = (B.MANUAL_DIR.parent / "app/static/topics/btc-cycles.js").read_text()
-    assert all(f'{c}: "/altcoins#{c.lower()}"' in js for c in A.CANDIDATES)              # each candidate row links its tab
+    js = (B.MANUAL_DIR.parent / "app/static/topics/altcoins.js").read_text()
+    assert all(f"{k}: \"{v}\"" in js for k, v in A.OLD_TABS.items())                   # the page maps every old address to its new tab
+    assert "openCoin" in js and 'CANDS = ["HYPE", "ENA", "SOL", "NEAR"]' in js
+    btc = (B.MANUAL_DIR.parent / "app/static/topics/btc-cycles.js").read_text()
+    assert "altcoins#" not in btc and "candidatesTable" not in btc and "rotationTimeline" not in btc   # the altcoin views live here now
+    assert [k for k, _ in topics.REGISTRY["btc-cycles"].tabs] == ["cycles", "etf", "mstr", "signals"]
 
 
 def test_buy_zone_rule():
@@ -159,7 +167,9 @@ def test_coin_tab_and_zones(filled):
     assert sum(d["counts"].values()) == len(d["coins"]) and next(r for r in d["coins"] if r["ticker"] == "SOL")["top"] == z["top"]
     assert all(r["group"] == "Memecoin" and r["basis"] == "200-day average" for r in d["coins"][4:])         # no projection for memes
     r = A.READINGS()
-    assert {x["key"] for x in r} >= {"zone_sol", "zone_doge", "state"} and all(x["lean"] in (-1, 0, 1) for x in r)
+    assert {x["key"] for x in r} >= {"zone_sol", "zone_doge", "state", "rsi_breadth", "sector:1"} and all(x["lean"] in (-1, 0, 1) for x in r)
+    assert {x["tab"] for x in r} <= {k for k, _ in topics.REGISTRY["altcoins"].tabs}        # every reading sits on a real tab (old tabs remapped)
+    assert next(x for x in r if x["key"] == "zone_sol")["tab"] == "signals" and next(x for x in r if x["key"] == "state")["tab"] == "memes"
 
 
 def test_before_the_fill_says_loading(tmp_path, monkeypatch):
@@ -269,14 +279,14 @@ def test_volume_and_unlock_tabs(filled):
     assert u["events_in_history"] > 20 and u["averages"][-1]["group"] == "every day" and len(u["rules"]) == 10 and u["price"]
     assert u["date_check"] >= u["events_in_history"] * 0.4                            # the fake puts extra volume on the listed days (the 2nd and 5th share a +-4 window)
     f = A.ENDPOINTS["ena"]()
-    assert f["unlocks"]["tab"] == "#unlocks" and f["unlocks"]["coming"] and all("date" in r for r in f["unlocks"]["coming"])
+    assert f["unlocks"]["tab"] == "#coins" and f["unlocks"]["coming"] and all("date" in r for r in f["unlocks"]["coming"])
     b = f["board"]
     assert b["status"] == "ok" and b["label"] in CB.ZONES and b["action"] in ("BUY", "SELL", "HOLD") and -1 <= b["aggregate"] <= 1 and b["n"] >= CB.MIN_GAUGES
     assert {"mayer", "from_high", "rsi", "btc_mayer", "zone_pos", "unlock_30d"} <= set(b["gauges_available"]) and len(b["rows"]) == b["n"] and b["series"] and len(b["series"][0]) == 4
     assert b["record"][-1]["zone"] == "ALL DAYS" and b["explain"] and b["flips"] and b["sell"]["state"] in (0, 1, 2) and len(b["sell"]["checks"]) == 3
     B.json_safe(b)
     rb = {x["key"]: x for x in A.READINGS()}
-    assert rb["board_ena"]["tab"] == "ena" and rb["board_ena"]["value"] == b["label"] and rb["board_ena"]["lean"] in (-1, 0, 1) and rb["board_pepe"]["tab"] == "boards"
+    assert rb["board_ena"]["tab"] == "coins" and rb["board_ena"]["value"] == b["label"] and rb["board_ena"]["lean"] in (-1, 0, 1) and rb["board_pepe"]["tab"] == "signals"
     bd = A.ENDPOINTS["boards"]()
     B.json_safe(bd)
     ok = [c for c in bd["coins"] if c["status"] == "ok"]
@@ -299,7 +309,7 @@ def test_volume_and_unlock_tabs(filled):
     assert f["board"]["fitted"] is not None
     assert "unlocks" not in A.ENDPOINTS["sol"]()
     r = {x["key"]: x for x in A.READINGS()}
-    assert {"vz_ena", "vz_pepe", "ena_next_unlock"} <= set(r) and r["vz_ena"]["tab"] == "volume" and r["ena_next_unlock"]["lean"] in (-1, 0)
+    assert {"vz_ena", "vz_pepe", "ena_next_unlock"} <= set(r) and r["vz_ena"]["tab"] == "signals" and r["ena_next_unlock"]["lean"] in (-1, 0)
     m = topics.method("altcoins")
     assert [s["title"] for s in m["sections"]] == ["The buy zone rule", "The coin signal board rule", "The volume-zone rule", "The signal weighting rule and backtest method", "The unlock study method"]
 
