@@ -1612,3 +1612,13 @@ def test_btc_sector_supply_overhang_holds_undervalued_at_neutral():
     assert heavy[2]["status"] == "Neutral" and heavy[2]["overhang"] == "heavy" and heavy[2]["overhang_note"]
     assert some[2]["status"] == "Undervalued" and some[2]["overhang"] == "some" and some[2]["float"] == 0.4
     assert light[7]["overhang"] is None                                        # no supply data at all
+
+
+def test_health_maps_narrative_helper_to_altcoins():
+    """_narrative starts with an underscore, so helpers() skips it; health() must still file its sources under altcoins."""
+    B.HEALTH["https://defillama-datasets.llama.fi/emissions/pepe"] = {"module": "_narrative", "ok": None, "fail": time.time(), "error": "HTTPError: 404"}
+    try:
+        d = topics.health()["dashboards"]
+        assert "_narrative" not in d and d["altcoins"]["failing"] >= 1
+    finally:
+        B.HEALTH.pop("https://defillama-datasets.llama.fi/emissions/pepe", None)

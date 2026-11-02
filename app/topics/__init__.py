@@ -189,7 +189,7 @@ def health() -> dict:
     """Source health for /api/health, grouped by dashboard slug (helper modules map to the dashboard that uses them)."""
     from ._base import health as h
     m2s = {t.module: t.slug for t in REGISTRY.values()}
-    m2s.update({"ai_jobs": "ai", "ai_adoption": "ai", "btc_flows": "btc-cycles", **helpers()})
+    m2s.update({"ai_jobs": "ai", "ai_adoption": "ai", "btc_flows": "btc-cycles", "_narrative": "altcoins", **helpers()})   # _narrative starts with "_", so helpers() skips it
     out = h(m2s)
     for t in REGISTRY.values():
         out["dashboards"].setdefault(t.slug, {"fresh": 0, "stale": 0, "failing": 0, "alerts": 0, "sources": []})
