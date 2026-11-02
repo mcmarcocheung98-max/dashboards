@@ -70,7 +70,10 @@ so 2024 and 2025 compare on the same basis. `byd_tesla.csv` 2019-2025 checked on
 reports of BYD's HKEX filings; every value matched and none changed. Tesla's 2020 figure is the release's 499,550, not the 10-K's later
 499,647. `ev_exports.csv` 2020-2024 checked on 2026-11-02 against CAAM's figures (China Securities Journal for 2021, Caixin for 2022,
 CGTN for 2023 and 2024); 2021-2024 matched. 2020 was wrong (0.223) and is now 0.077: CAAM published no 2020 total in its 2021 release,
-so the value is implied by 0.31 million in 2021 being up 304.6%. Everything else is `verify`.
+so the value is implied by 0.31 million in 2021 being up 304.6%. `controls.csv` (all 16 rows) checked on 2026-11-02 against the Federal
+Register, BIS press releases, Nvidia's 8-K, MOFCOM and law-firm or news reports of each step; dates and directions matched. The 30 Jun 2020
+row was reworded: that step only suspended Hong Kong's better-than-China licence exceptions; Hong Kong was treated as China from
+23 Dec 2020. Everything else is `verify`.
 
 - `leaderboard.csv`: `date,series,value,model,source,note`, series `US best` / `China best`, value = Arena score of the top model of that
   country on the LMArena text leaderboard (default view) on that date. LMArena re-scales scores, so only compare the two on the same date.
