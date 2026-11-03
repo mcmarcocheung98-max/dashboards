@@ -448,3 +448,4 @@ def test_signal_watch_points(mocked, monkeypatch):
     assert run([], recs({6: 0.02, 7: 0.03, 8: 0.05}))["calibration"]["crossed"]              # worse in July, worse again in August
     assert not run([], recs({6: 0.02, 7: 0.05, 8: 0.03}))["calibration"]["crossed"]
     assert run([], recs({7: 0.02, 8: 0.05}))["calibration"]["crossed"] is False             # one rise is not two
+    assert run([], recs({5: 0.02, 7: 0.03, 8: 0.05}))["calibration"]["crossed"] is False     # June missing: not two months running

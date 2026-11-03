@@ -70,7 +70,7 @@ The four approved in `data/signals/watchlist.json`, read from cached data only (
 | `biggest_move` | the largest 24-hour change in a watchlist market's Polymarket price, in points (lean = its sign) | 10 points or more either way |
 | `venue_gap` | the largest gap between Polymarket and Kalshi among watchlist questions matched on both | above 5 points |
 | `volume` | the watchlist markets' 24-hour volume now, against the average logged day of the last 30 (each market's logged 24-hour volume; before 3 Nov, the day's change in its all-time volume) | twice the average or more, with 5+ logged days |
-| `calibration` | Brier score of the price 30 days before resolution, by month resolved (months with 10+ markets) | higher in each of the last two complete months than the month before |
+| `calibration` | Brier score of the price 30 days before resolution, by month resolved (months with 10+ markets) | higher in each of the last two complete months than the month before (three back-to-back months; a month under 10 markets breaks the run) |
 
 ## Pacing and limits
 

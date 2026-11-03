@@ -816,7 +816,9 @@ def SIGNALS() -> list[dict]:
     done = mb[mb.index < pd.Timestamp(_now()).to_period("M")].tail(3)
     if len(done):
         last = float(done.iloc[-1])
-        worse2 = len(done) == 3 and done.iloc[0] < done.iloc[1] < done.iloc[2]
+        months = list(done.index)
+        back_to_back = len(months) == 3 and months[1] == months[0] + 1 and months[2] == months[1] + 1   # a month under 10 markets breaks the run
+        worse2 = back_to_back and done.iloc[0] < done.iloc[1] < done.iloc[2]
         prev = float(done.iloc[-2]) if len(done) > 1 else None
         out.append({"key": "calibration", "tab": "accuracy", "label": "Calibration: resolved markets priced 30 days out (Brier)", "value": round(last, 3),
                     "lean": 0 if prev is None else 1 if last < prev else -1 if last > prev else 0, "watch": "Brier score worsens two months running",
