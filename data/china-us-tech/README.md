@@ -73,7 +73,12 @@ CGTN for 2023 and 2024); 2021-2024 matched. 2020 was wrong (0.223) and is now 0.
 so the value is implied by 0.31 million in 2021 being up 304.6%. `controls.csv` (all 16 rows) checked on 2026-11-02 against the Federal
 Register, BIS press releases, Nvidia's 8-K, MOFCOM and law-firm or news reports of each step; dates and directions matched. The 30 Jun 2020
 row was reworded: that step only suspended Hong Kong's better-than-China licence exceptions; Hong Kong was treated as China from
-23 Dec 2020. Everything else is `verify`.
+23 Dec 2020. `ev_share.csv` checked on 2026-11-03 (26 of 29 rows): China, US and World against the IEA's Global EV Outlook text
+(2022 press release, 2023, 2024 and 2025 editions), UK 2019-2021 against SMMT's plug-in shares and 2022-2024 against the IEA, Hong Kong
+2020-2023 against the LegCo Environmental Affairs Panel paper and LCQ3 of 22 May 2024. World 2019 and 2020 are now 2.5 and 4.1 (were 2.6
+and 4); Hong Kong 2020-2023 are now 12.4, 24.4, 52.8 and 64.6 (were 14, 25, 53 and 64; 2020 was the one real error). Where the IEA gives
+only wording ("close to 50%", "more than 10%") the row is kept and the wording is in its note. China 2019-2020 (the IEA gives only "under
+6% between 2018 and 2020") and Hong Kong 2024 (about 70% in news reports, no government table found) stay `verify`. Everything else is `verify`.
 
 - `leaderboard.csv`: `date,series,value,model,source,note`, series `US best` / `China best`, value = Arena score of the top model of that
   country on the LMArena text leaderboard (default view) on that date. LMArena re-scales scores, so only compare the two on the same date.
