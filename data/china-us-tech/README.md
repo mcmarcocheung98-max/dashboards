@@ -78,7 +78,10 @@ row was reworded: that step only suspended Hong Kong's better-than-China licence
 2020-2023 against the LegCo Environmental Affairs Panel paper and LCQ3 of 22 May 2024. World 2019 and 2020 are now 2.5 and 4.1 (were 2.6
 and 4); Hong Kong 2020-2023 are now 12.4, 24.4, 52.8 and 64.6 (were 14, 25, 53 and 64; 2020 was the one real error). Where the IEA gives
 only wording ("close to 50%", "more than 10%") the row is kept and the wording is in its note. China 2019-2020 (the IEA gives only "under
-6% between 2018 and 2020") and Hong Kong 2024 (about 70% in news reports, no government table found) stay `verify`. Everything else is `verify`.
+6% between 2018 and 2020") and Hong Kong 2024 (about 70% in news reports, no government table found) stay `verify`. `ic_trade.csv` checked on 2026-11-03 (18 of 19 rows) against customs figures as reported by the NDRC, Beijing Youth
+Daily, Yicai, Xinhua Silk Road, SCMP, DIGITIMES and TrendForce; imports 2021 is now 432.5 (was 432.6) and exports 2023 is now 136.0 (was
+136.2), the rest matched. Exports 2020 is implied by 2021's 153.8 being up 31.9%. Imports 2025 (a yuan figure converted by a secondary
+source) stays `verify`. Everything else is `verify`.
 
 - `leaderboard.csv`: `date,series,value,model,source,note`, series `US best` / `China best`, value = Arena score of the top model of that
   country on the LMArena text leaderboard (default view) on that date. LMArena re-scales scores, so only compare the two on the same date.
