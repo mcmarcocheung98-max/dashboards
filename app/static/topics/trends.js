@@ -71,6 +71,7 @@ const VIEWS = {
   async social() {
     const d = await api("social"), H = d.hn || {}, S = d.bsky || {}, G = d.github || {}, R = d.reddit || {};
     const items = [{ label: "Hacker News stories a week (all topics)", points: H.total_stories, fmt: f0, delta: { lag: "3m" } },
+      ...((d.front || {}).share || []).length ? [{ label: "AI share of HN front-page stories", points: d.front.share, fmt: v => pct(v, 0).replace("+", "") }] : [],
       { label: "Hacker News comments a week", points: H.total_comments, fmt: f0, delta: { lag: "3m" } }];
     if ((S.lines || []).length) items.push({ label: "Bluesky posts a day: " + S.lines[0].name, points: S.lines[0].points, fmt: f0 });
     if ((G.lines || []).length) items.push({ label: "GitHub stars: " + G.lines[0].name, points: G.lines[0].points, fmt: big, delta: { lag: "30d", abs: true, fmt: v => (v >= 0 ? "+" : "") + big(v) } });
@@ -80,6 +81,10 @@ const VIEWS = {
         note("Stories whose title or text matches the topic's query (topics.csv), counted per week (Monday to Sunday) with Algolia's HN search. 'All topics' adds every tracked query, so a story matching two counts twice.")),
       card("Hacker News comments a week", ...linesChart([{ name: "All topics", points: H.total_comments, color: css("--hold"), dashed: true }, ...H.comments.map((t, i) => line(t, i))], f0),
         note("Comments matching the query: what the technical crowd is arguing about."))) : card("Hacker News", empty("Hacker News counts"));
+    const F = d.front || {};
+    const front = (F.share || []).length ? card("AI share of Hacker News front-page stories, weekly", ...linesChart([{ name: "AI share", points: F.share, color: css("--s4") }], v => pct(v, 0).replace("+", ""), { small: true, hlines: [0.2] }),
+      note("Every story that reached the front page each week (Algolia's front_page tag), and how many are about AI by their title (AI, LLMs, GPT, Claude, Gemini, agents, GPUs, Nvidia and the like, as whole words). " +
+        "The dashed line is 20%, the watch point on /signals: below it the technical crowd has moved on.")) : null;
     const hnt = (H.rows || []).length ? card("Hacker News by topic, last full week", table(["Topic", "Stories", "Comments", "Stories vs 4 wks", "vs 13 wks"], H.rows.map(r => el("tr", {},
       el("td", {}, r.label), el("td", {}, f0(r.stories)), el("td", {}, f0(r.comments)), el("td", { class: cls(r.s_4) }, pc0(r.s_4)), el("td", { class: cls(r.s_13) }, pc0(r.s_13)))))) : null;
     const bs = card("Bluesky posts a day", ...((S.lines || []).length ? [...linesChart(S.lines.map((t, i) => line(t, i)), f0, { small: true }),
@@ -96,7 +101,7 @@ const VIEWS = {
       table(["Repository", "Stars", "7 days", "30 days", "Forks", "Logged since"], G.rows.map(r => el("tr", {}, el("td", {}, link(r.label, "https://github.com/" + r.repo)), el("td", {}, big(r.stars)),
         el("td", {}, r.d7 == null ? "–" : "+" + f0(r.d7)), el("td", {}, r.d30 == null ? "–" : "+" + f0(r.d30)), el("td", {}, big(r.forks)), el("td", {}, r.since))))] : [empty("GitHub stars")]),
       note("Stars from the GitHub API, logged once a day (repos.csv). New stars a week are developer attention: a tool going viral shows here before it shows in hiring."));
-    return [head, hn, hnt, el("div", { class: "grid2" }, bs, gh), rd];
+    return [head, hn, front, hnt, el("div", { class: "grid2" }, bs, gh), rd];
   },
   async rising() {
     const d = await api("rising"), Z = d.z_lines || [], R = d.rows || [];

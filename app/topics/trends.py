@@ -45,6 +45,13 @@ TOPIC = Topic(SLUG, "Search & Social Trends",
 WIKI = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/{lang}.wikipedia/all-access/user/{title}/daily/{a}/{b}"
 WIKI_TITLES = "https://{lang}.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&redirects=1&converttitles=1&titles={titles}"
 HN = "https://hn.algolia.com/api/v1/search_by_date?query={q}&tags={tag}&numericFilters=created_at_i%3E%3D{a},created_at_i%3C{b}&hitsPerPage=1"
+# every story that reached the front page in a week, titles only (about 200-300 a week, under Algolia's 1000-hit page)
+HN_FRONT = ("https://hn.algolia.com/api/v1/search_by_date?tags=front_page&numericFilters=created_at_i%3E%3D{a},created_at_i%3C{b}"
+            "&hitsPerPage=1000&attributesToRetrieve=title")
+# an AI story by its title: whole words, so "AI" does not match "aid" or "Airbnb"
+AI_TITLE = re.compile(r"\b(AI|A\.I\.|AGI|LLMs?|GPT[-\w.]*|ChatGPT|OpenAI|Anthropic|Claude|Gemini|Llama|Mistral|DeepSeek|Copilot|Cursor|"
+                      r"machine learning|deep learning|neural (?:net|network)s?|transformers?|diffusion|chatbots?|AI agents?|agentic|"
+                      r"language models?|inference|fine-?tun\w*|embeddings?|RAG|Hugging ?Face|Nvidia|CUDA|GPUs?)\b", re.I)
 # public.api.bsky.app answers 403 to Railway; the AppView host answers (checked with /layout, 2026-10-26)
 BSKY = "https://api.bsky.app/xrpc/app.bsky.feed.searchPosts?q={q}&sort=latest&since={a}&until={b}&limit=100"
 REDDIT = ("https://www.reddit.com/r/{sub}/about.json", "https://old.reddit.com/r/{sub}/about.json", "https://api.reddit.com/r/{sub}/about")
@@ -135,8 +142,11 @@ def site() -> str:
 
 
 # ------------------------------------------------------------------ the store (snapshot volume, data/trends/... is only configuration)
+STORE_DIR = None                # set by the smoke test to keep this store where its fill wrote it
+
+
 def _dir():
-    return B.SNAP_DIR / SLUG
+    return STORE_DIR or B.SNAP_DIR / SLUG
 
 
 def load(name: str, default=None):
@@ -222,6 +232,14 @@ def parse_hn(j: dict) -> int:
     if n is None:
         raise ValueError("HN: no nbHits")
     return int(n)
+
+
+def parse_hn_front(j: dict) -> list:
+    """Algolia front_page search: [stories that week, of which AI by title]."""
+    if (j or {}).get("nbHits") is None:
+        raise ValueError("HN: no nbHits")
+    titles = [h.get("title") or "" for h in j.get("hits") or []]
+    return [int(j["nbHits"]), sum(bool(AI_TITLE.search(t)) for t in titles)]
 
 
 def parse_reddit(j: dict) -> dict:
@@ -343,6 +361,21 @@ def fill_hn(items: list[dict], out: dict, done: dict) -> None:
     store = load("hn")
     weeks = _weeks(HN_WEEKS, _now())
     keep = {str(w.date()) for w in weeks}
+    front = store.setdefault("_front", {})
+    for w in weeks:                       # the front page first: one request a week, it feeds the AI-share signal
+        k = str(w.date())
+        if k in front and w < weeks[-2]:
+            continue
+        try:
+            front[k] = parse_hn_front(json.loads(download(HN_FRONT.format(a=int(w.timestamp()), b=int((w + pd.Timedelta(weeks=1)).timestamp())), "hn")))
+            out["hn"].append(True)
+        except Exception as e:
+            out["hn"].append(f"{type(e).__name__}: {str(e)[:100]}")
+            done["hn front page"] = out["hn"][-1]
+            break
+    for k in [k for k in front if k not in keep]:
+        front.pop(k)
+    save("hn", store)
     for i in [i for i in items if i.get("query")]:
         rec = store.setdefault(i["key"], {})
         if rec.get("_q") != i["query"]:
@@ -720,7 +753,16 @@ def _social_now() -> dict:
                       for k, s in rs.items()], key=lambda r: -(r["subscribers"] or 0))
     bs_rows = sorted([{"key": k, "label": lab.get(k, k), "posts": last(bs, k), "capped": bool(k in capped and capped[k].index[-1] == s.index[-1]),
                        "avg7": _r(s.iloc[-7:].mean(), 0), "date": str(s.index[-1].date())} for k, s in bs.items()], key=lambda r: -(r["posts"] or 0))
-    return {"hn": {"stories": [{"key": k, "name": lab[k], "points": _pts(st[k], 0)} for k in order[:6]], "comments": [{"key": k, "name": lab[k], "points": _pts(cm[k], 0)} for k in order[:6]],
+    fr = pd.DataFrame({pd.Timestamp(d) + pd.Timedelta(days=6): v for d, v in (hn.get("_front") or {}).items()}, index=["total", "ai"]).T.sort_index()
+    fr = fr[fr["total"] > 0] if len(fr) else fr
+    week_gain = lambda end: _r(sum(g for g in (_gain_between(s, end - pd.Timedelta(days=7), end) for s in gh.values()) if g is not None), 0) \
+        if gh and all(_gain_between(s, end - pd.Timedelta(days=7), end) is not None for s in gh.values()) else None
+    last_day = max((s.index[-1] for s in gh.values()), default=None)
+    stars = {"week": week_gain(last_day), "prev_week": week_gain(last_day - pd.Timedelta(days=7)), "to": str(last_day.date())} if last_day is not None else {}
+    return {"front": {"share": _pts(fr["ai"] / fr["total"], 4) if len(fr) else [], "total": _pts(fr["total"], 0) if len(fr) else [],
+                      "ai": _pts(fr["ai"], 0) if len(fr) else []},
+            "stars_week": stars,
+            "hn": {"stories": [{"key": k, "name": lab[k], "points": _pts(st[k], 0)} for k in order[:6]], "comments": [{"key": k, "name": lab[k], "points": _pts(cm[k], 0)} for k in order[:6]],
                    "total_stories": _pts(tot_s, 0), "total_comments": _pts(tot_c, 0), "rows": hn_rows},
             "bsky": {"lines": [{"key": r["key"], "name": r["label"], "points": _pts(bs[r["key"]], 0)} for r in bs_rows[:6]], "rows": bs_rows, "closed": closed["bsky"]},
             "github": {"lines": [{"key": r["repo"], "name": r["label"], "points": _pts(gh[r["repo"]], 0)} for r in gh_rows[:6]], "rows": gh_rows},
@@ -741,6 +783,12 @@ def _merge(cols: dict, hand: dict, fld: str) -> dict:
         if (f or "subscribers") == fld and len(s):
             cols[sub] = cols[sub].combine_first(s) if sub in cols else s
     return cols
+
+
+def _gain_between(s: pd.Series, a: pd.Timestamp, b: pd.Timestamp):
+    """Change of a daily log series from day a to day b (each the last value on or before it); None when the log is not that old."""
+    x, y = s[s.index <= a], s[s.index <= b]
+    return float(y.iloc[-1] - x.iloc[-1]) if len(x) and len(y) and x.index[-1] >= a - pd.Timedelta(days=1) and y.index[-1] >= b - pd.Timedelta(days=1) else None
 
 
 def gain(s: pd.Series, days: int):
@@ -831,6 +879,68 @@ def readings(got) -> list[dict]:
         out.append({"tab": "overview" if s["region"] == "global" else "regions", "key": f"z_{s['key']}", "label": f"{s['label']}: attention z-score",
                     "value": s["z"], "lean": _lean(s["z"]), "note": f"week to {s['week']}, {s['views']:,} views; +1 at z >= {Z_LEAN}, -1 at z <= -{Z_LEAN}"})
     return out
+
+
+def _change(points, months: int = 3):
+    """Change of the last monthly point against the one `months` earlier (points [[t, v]...], monthly or finer)."""
+    if not points:
+        return None
+    sr = to_series(points).resample("MS").last().dropna()
+    if len(sr) <= months or not sr.iloc[-1 - months]:
+        return None
+    return float(sr.iloc[-1] / sr.iloc[-1 - months] - 1)
+
+
+GAP_ATTENTION, GAP_FLAT = 0.50, 0.10          # attention up 50% in three months while the series moved less than 10% either way
+
+
+def signals(got) -> list[dict]:
+    """The owner's approved signals (data/signals/watchlist.json), from the cached tab payloads only."""
+    out = []
+    O, S, R = got("overview"), got("social"), got("reality")
+    top = (O.get("rising") or [None])[0]
+    z = top.get("z") if top else None
+    out.append({"key": "rising_topic", "tab": "overview", "label": f"Fastest-rising topic this week: {top['label']}" if top else "Fastest-rising topic this week",
+                "value": z, "unit": " z", "lean": _lean(z), "watch": "above +3", "crossed": bool(z is not None and z > 3),
+                "note": f"week to {top['week']}, {top['views']:,} Wikipedia views" if top else "not computed yet"})
+    gaps = []
+    for t in R.get("themes") or []:
+        a, p = _change(t.get("attention")), _change(t.get("reality"))
+        if a is not None and p is not None:
+            gaps.append((t, a, p, a >= GAP_ATTENTION and abs(p) < GAP_FLAT))
+    btc = next((g for g in gaps if g[0]["theme"] == "bitcoin"), None)
+    hit = [g for g in gaps if g[3]]
+    show = hit[0] if hit else btc
+    out.append({"key": "attention_gap", "tab": "reality", "label": f"Attention vs reality: {show[0]['label']} views vs {show[0]['series']}" if show else "Attention vs reality gap",
+                "value": _r(100 * show[1], 1) if show else None, "unit": "% attention, 3 months", "lean": (1 if show[1] > 0 else -1) if show else 0,
+                "watch": "attention up 50% while the price is flat", "crossed": bool(hit),
+                "note": ("; ".join(f"{t['label']}: attention {100 * a:+.0f}%, {t['series']} {100 * p:+.0f}%" for t, a, p, _ in (hit or [btc])) +
+                         "; flat = less than 10% either way over the same three months") if show else "not computed yet"})
+    fs = S.get("front", {}).get("share") or []
+    share = fs[-1][1] if fs else None
+    avg = float(np.mean([v for _, v in fs[-14:-1]])) if len(fs) > 2 else None
+    out.append({"key": "hn_ai_share", "tab": "social", "label": "Hacker News front page: share of stories about AI", "value": _r(100 * share, 1) if share is not None else None,
+                "unit": "%", "lean": 0 if share is None or avg is None or abs(share - avg) < 0.02 else 1 if share > avg else -1,
+                "watch": "below 20% of front-page stories", "crossed": bool(share is not None and share < 0.20),
+                "note": (f"week to {dayname(fs[-1][0])}, {S['front']['ai'][-1][1]} of {S['front']['total'][-1][1]} front-page stories by title; "
+                         f"+1 above its 13-week average ({100 * avg:.0f}%)" if avg is not None else "") if share is not None else "building: weekly front-page counts come with the HN download"})
+    g = S.get("stars_week") or {}
+    wk, prev = g.get("week"), g.get("prev_week")
+    out.append({"key": "github_stars", "tab": "social", "label": "GitHub stars gained in a week, main AI repos", "value": wk, "unit": " stars",
+                "lean": 0 if wk is None or prev is None else 1 if wk > prev else -1 if wk < prev else 0, "watch": "weekly growth halves",
+                "crossed": bool(wk is not None and prev and prev > 0 and wk <= prev / 2),
+                "note": f"7 days to {g['to']}; the 7 days before: {prev:,.0f}" if wk is not None and prev is not None else
+                        "building: needs two weeks of the daily star log"})
+    return out
+
+
+def dayname(t) -> str:
+    return str(pd.to_datetime(int(t), unit="s").date())
+
+
+def SIGNALS() -> list[dict]:
+    """The approved signals from the cached Overview, Social and Attention-vs-reality payloads (nothing is fetched)."""
+    return signals(_cached_payload)
 
 
 def READINGS() -> list[dict]:

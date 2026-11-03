@@ -38,6 +38,21 @@ card is the same series a chart on that tab draws.
 
 One reading per tracked topic: its attention z-score (the latest full week). **Lean +1** when z ≥ +1 (attention rising, unusually high for that topic), **−1** when z ≤ −1 (fading), 0 between. English-Wikipedia topics are filed under Overview, UK and Chinese pages under US / UK / HK. Read from the cached Overview payload only.
 
+## SIGNALS (on /signals, the front-page tile and the daily email)
+
+The four approved on 3 Nov 2026 (`data/signals/watchlist.json`), from the cached Overview, Social and Attention-vs-reality payloads only:
+
+| Key | Value | Crossed when | Lean |
+|---|---|---|---|
+| `rising_topic` | the fastest-rising topic's attention z-score this week | z above +3 | +1 at z ≥ +1, −1 at z ≤ −1 |
+| `attention_gap` | a theme's change in monthly Wikipedia views over three months (bitcoin shown unless another theme is crossed) | any theme's attention is up 50% or more while its dashboard's series moved less than 10% either way over the same three months | +1 attention rising, −1 falling |
+| `hn_ai_share` | share of the last full week's Hacker News front-page stories about AI, by title | below 20% | +1 above its 13-week average, −1 below (within 2 points: 0) |
+| `github_stars` | stars gained in the last 7 days across the repos in `repos.csv` | at most half the 7 days before | +1 more than the week before, −1 fewer |
+
+The front-page share comes from one Algolia request a week (`tags=front_page`, titles only), counted with a whole-word pattern
+(AI, LLM, GPT, ChatGPT, OpenAI, Anthropic, Claude, Gemini, agents, GPUs, Nvidia, …) so "aid" or "Airbnb" do not count. GitHub's
+weekly gain needs two weeks of the daily star log (from 26 Oct 2026), so it reads "building" until about 9 Nov.
+
 ## Sources and cadence
 
 | What | Source | Automated? | Cadence |

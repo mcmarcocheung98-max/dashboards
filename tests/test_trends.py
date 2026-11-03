@@ -84,6 +84,20 @@ def hn_json(url: str) -> dict:
     return {"hits": [{"title": "x"}], "nbHits": n * (9 if "tags=comment" in url else 1), "page": 0, "hitsPerPage": 1}
 
 
+FRONT_TITLES = ["Show HN: an AI agent for spreadsheets", "Claude 5 system card", "Airbnb's new pricing", "First aid kits, reviewed",
+                "LLMs and the halting problem", "Rust 2.0 released", "Why GPUs got expensive", "A history of the bicycle", "Nvidia earnings",
+                "How SQLite stores pages"]
+
+
+def hn_front_json(url: str) -> dict:
+    """A week of front-page stories: 200, of which the AI share falls from 50% to 15% over the last weeks."""
+    a = int(re.search(r"created_at_i%3E%3D(\d+)", url).group(1))
+    weeks_left = (int(TODAY.timestamp()) - a) // (7 * 86400)
+    n_ai = 30 if weeks_left <= 1 else 100                         # the last full week: 15%
+    hits = [{"title": "AI weekly #%d" % k} for k in range(n_ai)] + [{"title": "Rust and bicycles %d" % k} for k in range(200 - n_ai)]
+    return {"hits": hits, "nbHits": 200, "page": 0, "hitsPerPage": 1000}
+
+
 def bsky_json(url: str) -> dict:
     page = 2 if "cursor=c2" in url else 1 if "cursor=c1" in url else 0
     q = unquote(re.search(r"q=([^&]+)", url).group(1))
@@ -129,6 +143,8 @@ def fake_download(url, site_=None, headers=None, timeout=30):
         return wiki_text(url)
     if "/w/api.php" in url:
         return json.dumps(titles_json(url))
+    if "tags=front_page" in url:
+        return json.dumps(hn_front_json(url))
     if "hn.algolia.com" in url:
         return json.dumps(hn_json(url))
     if "searchPosts" in url:
@@ -178,6 +194,7 @@ def _patch(set_):
 def smoke_patch():
     """Used by scripts/smoke.py: every source of this dashboard answers from the fixtures above; the fill runs once, with no pauses."""
     _patch(lambda mod, name, v: setattr(mod, name, v))
+    M.STORE_DIR = B.SNAP_DIR / M.SLUG       # another dashboard's smoke_patch may point SNAP_DIR elsewhere after this one ran
     seed_log()
     M.fill()
 
@@ -187,6 +204,7 @@ def mocked(tmp_path, monkeypatch):
     from app import cache
     monkeypatch.setattr(B, "SNAP_DIR", tmp_path / "snaps")
     _patch(monkeypatch.setattr)
+    monkeypatch.setattr(M, "STORE_DIR", None)
     cache._cache.clear()
     B.STALE.clear()
     for u in M.HEALTH_KEYS.values():
@@ -316,7 +334,7 @@ def test_fill_again_only_downloads_what_is_new(filled, monkeypatch):
     M.fill()
     assert not [u for u in calls if "/pageviews/" in u]                       # every article downloaded less than 20 hours ago
     hn = [u for u in calls if "algolia" in u]
-    assert 0 < len(hn) <= 2 * 2 * len([i for i in M.topics_list() if i.get("query")])     # only the last two weeks again
+    assert 0 < len(hn) <= 2 * 2 * len([i for i in M.topics_list() if i.get("query")]) + 2     # only the last two weeks again (and two front-page weeks)
     store = M.load("wiki")
     rec = store["bitcoin"]
     rec["at"] = rec["tried"] = 0
@@ -465,6 +483,48 @@ def test_endpoints_without_data(mocked):
     for k, fn in M.ENDPOINTS.items():
         if k != "layout":
             B.json_safe(fn())
+
+
+def test_parse_hn_front_counts_ai_titles_by_whole_word():
+    j = {"nbHits": len(FRONT_TITLES), "hits": [{"title": t} for t in FRONT_TITLES]}
+    total, ai = M.parse_hn_front(j)
+    assert total == 10 and ai == 5                    # agent, Claude, LLMs, GPUs, Nvidia; not Airbnb or "first aid"
+    with pytest.raises(ValueError):
+        M.parse_hn_front({"message": "rate limited"})
+
+
+def test_signals_from_the_cached_payloads(filled):
+    for k in ("overview", "social", "reality"):
+        M.ENDPOINTS[k]()
+    sig = {r["key"]: r for r in M.SIGNALS()}
+    import json as _j
+    approved = {r["key"] for r in _j.loads((B.MANUAL_DIR / "signals" / "watchlist.json").read_text())["trends"]}
+    assert set(sig) == approved
+    for r in sig.values():
+        assert r["lean"] in (-1, 0, 1) and isinstance(r["crossed"], bool) and r["watch"] and r["tab"] in M.ENDPOINTS
+    assert sig["rising_topic"]["value"] > 3 and sig["rising_topic"]["crossed"]
+    assert sig["hn_ai_share"]["value"] == 15.0 and sig["hn_ai_share"]["crossed"] and sig["hn_ai_share"]["lean"] == -1
+    assert sig["github_stars"]["value"] == 25 * 7 * len(M.repos()) and not sig["github_stars"]["crossed"]
+    assert sig["attention_gap"]["value"] is not None
+    B.json_safe(M.SIGNALS())
+
+
+def test_signals_watch_points():
+    pts = lambda vals: [[int(pd.Timestamp(f"2026-{m:02d}-01").timestamp()), v] for m, v in zip(range(1, 13), vals)]
+    pay = {"overview": {"rising": [{"label": "Waymo", "z": 2.4, "week": "2026-10-25", "views": 1000}]},
+           "social": {"front": {"share": [[1, 0.3], [2, 0.3], [3, 0.25]], "ai": [[3, 50]], "total": [[3, 200]]},
+                      "stars_week": {"week": 400, "prev_week": 1000, "to": "2026-11-02"}},
+           "reality": {"themes": [{"theme": "bitcoin", "label": "Bitcoin & crypto", "series": "BTC price (USD)",
+                                   "attention": pts([100] * 9 + [120, 140, 160]), "reality": pts([50000] * 9 + [51000, 52000, 52500])}]}}
+    sig = {r["key"]: r for r in M.signals(lambda k: pay.get(k, {}))}
+    assert not sig["rising_topic"]["crossed"] and sig["rising_topic"]["lean"] == 1
+    assert sig["attention_gap"]["crossed"] and sig["attention_gap"]["value"] == 60.0          # +60% views, BTC +5%
+    assert not sig["hn_ai_share"]["crossed"] and sig["hn_ai_share"]["lean"] == -1
+    assert sig["github_stars"]["crossed"] and sig["github_stars"]["lean"] == -1              # 400 is under half of 1000
+    pay["reality"]["themes"][0]["reality"] = pts([50000] * 9 + [55000, 60000, 65000])         # the price moved too: no gap
+    assert not {r["key"]: r for r in M.signals(lambda k: pay.get(k, {}))}["attention_gap"]["crossed"]
+    empty = M.signals(lambda k: {})
+    assert len(empty) == 4 and not any(r["crossed"] for r in empty) and all(r["value"] is None for r in empty)
 
 
 # ------------------------------------------------------------------ the seed files and registration
