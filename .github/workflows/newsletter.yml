@@ -1,0 +1,57 @@
+name: newsletter
+# The daily signals email: fetch today's newsletter from the live site and send it with Gmail SMTP.
+# Secrets (repository settings > Secrets > Actions): MAIL_USERNAME (the Gmail address), MAIL_PASSWORD (a Gmail app password, not the
+# account password: Google Account > Security > 2-Step Verification > App passwords), NEWSLETTER_TO (where to send; several, comma-separated).
+# Without them the run still fetches the email and attaches it to the run, and prints the plain-text version in the log.
+on:
+  schedule:
+    - cron: "35 7 * * *"          # 07:35 UTC: 07:35 London in winter, 08:35 in summer
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Site"
+        default: "https://dashboards-production-bde6.up.railway.app"
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    env:
+      MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+      MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+      NEWSLETTER_TO: ${{ secrets.NEWSLETTER_TO }}
+    steps:
+      - name: Fetch today's newsletter
+        run: |
+          SITE="${{ inputs.url || 'https://dashboards-production-bde6.up.railway.app' }}"
+          curl -fsS --max-time 300 "$SITE/api/signals/newsletter" -o newsletter.json
+          python3 - <<'EOF'
+          import json
+          n = json.load(open("newsletter.json"))
+          open("newsletter.html", "w").write(n["html"]); open("newsletter.txt", "w").write(n["text"])
+          open("subject.txt", "w").write(n["subject"])
+          print(n["text"])
+          EOF
+          echo "subject=$(cat subject.txt)" >> "$GITHUB_OUTPUT"
+        id: fetch
+      - uses: actions/upload-artifact@v4
+        with:
+          name: newsletter-${{ github.run_id }}
+          path: newsletter.*
+          retention-days: 30
+      - name: Send with Gmail
+        if: ${{ env.MAIL_USERNAME != '' && env.MAIL_PASSWORD != '' && env.NEWSLETTER_TO != '' }}
+        uses: dawidd6/action-send-mail@v3.12.0
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: ${{ steps.fetch.outputs.subject }}
+          to: ${{ secrets.NEWSLETTER_TO }}
+          from: "Dashboards <${{ secrets.MAIL_USERNAME }}>"
+          html_body: file://newsletter.html
+          body: file://newsletter.txt
+      - name: Not sent
+        if: ${{ env.MAIL_USERNAME == '' || env.MAIL_PASSWORD == '' || env.NEWSLETTER_TO == '' }}
+        run: |
+          echo "::warning::Newsletter fetched but not sent. Set the MAIL_USERNAME, MAIL_PASSWORD and NEWSLETTER_TO secrets (see the comment at the top of this workflow)."

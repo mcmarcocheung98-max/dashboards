@@ -9,6 +9,7 @@ GET /api/<slug>/method  the calculation and caveat sections of data/<slug>/READM
 GET /api/<slug>/changes  what changed since yesterday (topics/_daily.py): flipped readings and each tab's lean day by day
 GET /api/<slug>/<n>   that dashboard's data (JSON); 404 unknown, 503 when the source is down and no snapshot exists
 GET /healthz          'ok'
+GET /newsletter       today's signals email as a page (app/signals.py); /api/signals/newsletter has subject, html and text
 POST /api/unlock      {passcode}: opens private dashboards in this browser for 30 days (app/auth.py); POST /api/lock signs out
 POST /api/ask         Ask Claude about the tab you are on (app/ask.py): {slug, tab, question, history?, date?}; limited per visitor and per day
 GET /api/ask/status   whether Ask Claude is set up and how many questions this visitor has left
@@ -193,6 +194,16 @@ def make_app() -> web.Application:
         from . import ask
         return _json(await asyncio.to_thread(ask.status, client_ip(request)))
 
+    async def newsletter(request):
+        from . import signals
+        try:
+            n = await asyncio.to_thread(signals.newsletter)
+        except Exception as e:
+            log.warning("newsletter failed (%s: %s)", type(e).__name__, e)
+            return web.Response(text="The newsletter is not available right now.", status=503, headers=HEADERS)
+        return web.Response(text=f"<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>{html.escape(n['subject'])}</title></head><body style=\"margin:0;background:#f6f6f4\">{n['html']}</body></html>",
+                            content_type="text/html", headers=HEADERS)
+
     async def healthz(request):
         return web.Response(text="ok")
 
@@ -203,6 +214,7 @@ def make_app() -> web.Application:
     app.router.add_get("/api/health", api_health)
     app.router.add_get("/api/probe", api_probe)
     app.router.add_get("/api/archive.zip", api_archive)
+    app.router.add_get("/newsletter", newsletter)
     app.router.add_get("/api/ask/status", api_ask_status)
     app.router.add_post("/api/ask", api_ask)
     app.router.add_post("/api/unlock", api_unlock)

@@ -72,6 +72,16 @@
    "status": "open",
    "detail": "The server does the OneDrive copy itself now; the workflow no longer reads this secret.",
    "link": "https://github.com/mcmarcocheung98-max/dashboards/settings/secrets/actions"
+  },
+  {
+   "id": "gmail-newsletter-secrets",
+   "title": "Add the Gmail secrets so the daily signals email sends",
+   "area": "Signals",
+   "priority": "medium",
+   "since": "2026-11-03",
+   "status": "open",
+   "detail": "In the dashboards repo: Settings > Secrets and variables > Actions. Add MAIL_USERNAME (the Gmail address), MAIL_PASSWORD (a Gmail app password from Google Account > Security > 2-Step Verification > App passwords, not the account password) and NEWSLETTER_TO (where to send). Until then the newsletter workflow builds the email each morning and attaches it to the run without sending it.",
+   "link": "https://github.com/mcmarcocheung98-max/dashboards/settings/secrets/actions"
   }
  ],
  "pending": [
@@ -146,6 +156,15 @@
    "status": "waiting",
    "since": "2026-11-03",
    "detail": "api.hkma.gov.hk answers 405 with an Alibaba Cloud WAF block page for the server's IP, for every header variant, so it is an IP block, not an API change. HIBOR is served from its snapshot and housing › global keeps the UK and US rates and names HIBOR as missing. If it still fails at 3 days, the housing session will put the options to the owner: a hand-entered monthly HIBOR CSV, or another source."
+  },
+  {
+   "id": "p-signals-wiring",
+   "title": "Each dashboard wires its approved SIGNALS()",
+   "area": "Signals",
+   "since": "2026-11-03",
+   "status": "in_progress",
+   "owner": "dashboard sessions",
+   "detail": "62 approved signals across 15 dashboards show as 'not wired yet' on /signals until each dashboard adds SIGNALS() (see data/signals/README.md). BTC Cycles and the Altcoin Study are left out for now."
   }
  ],
  "roadmap": [
@@ -284,6 +303,14 @@
    "status": "done",
    "area": "Site",
    "done": "2026-10-30"
+  },
+  {
+   "id": "r-crypto-signals",
+   "title": "Signals for BTC Cycles and the Altcoin Study",
+   "horizon": "later",
+   "status": "planned",
+   "area": "Signals",
+   "detail": "Left out on 3 Nov by the owner's choice. Propose 3-5 signals and watch points for each when the BTC Cycles restructure has landed."
   }
  ],
  "log": [

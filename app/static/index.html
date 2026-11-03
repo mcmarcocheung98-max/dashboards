@@ -92,13 +92,22 @@ const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag)
   for (const k of kids.flat()) if (k != null && k !== false) e.append(k instanceof Node ? k : document.createTextNode(String(k))); return e; };
 const healthLine = (slug, H) => { const h = H && H.dashboards && H.dashboards[slug]; if (!h || !(h.fresh + h.stale + h.failing)) return null;
   return el("div", { class: "muted", style: "margin-top:8px;font-size:12px" }, "Sources: " + h.fresh + " fresh" + (h.stale ? " · " + h.stale + " showing last copy" : "") + (h.failing ? " · " + h.failing + " failing" : "")); };
+// each tile's top signal (/api/signals/front): a crossed watch point first, else the dashboard's first wired signal, else its first reading
+const AR = { "1": ["▲", "--up"], "-1": ["▼", "--down"], "0": ["•", "--muted"] };
+const fmtV = (v, u) => v == null ? "–" : typeof v === "boolean" ? (v ? "yes" : "no") : typeof v === "number" ? v.toLocaleString("en-GB", { maximumFractionDigits: Math.abs(v) >= 100 || Number.isInteger(v) ? 0 : 2 }) + (u || "") : String(v) + (u || "");
+const signalLine = (slug, F) => { const s = F && F.dashboards && F.dashboards[slug]; if (!s) return null; const [a, c] = AR[String(s.lean || 0)] || AR["0"];
+  return el("div", { style: "margin-top:8px;font-size:13px;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap" }, el("span", {}, el("span", { style: `color:var(${c});font-weight:700` }, a + " "), s.label + ": ", el("b", { style: `color:var(${c})` }, fmtV(s.value, s.unit))),
+    s.crossed ? el("span", { class: "pill bad", style: "font-size:11px" }, "watch point crossed") : s.kind === "reading" ? el("span", { class: "muted", style: "font-size:11.5px" }, "reading") : null); };
+// tiles render as soon as the index is in; the signal lines fill in when /api/signals/front answers (it can take a while on a cold cache)
+const front = fetch("/api/signals/front").then(r => r.json()).catch(() => null);
 Promise.all([fetch("/api/index").then(r => r.json()), fetch("/api/health").then(r => r.json()).catch(() => null)]).then(([d, H]) => {
   const tile = t => el("a", { class: "tile", href: "/" + t.slug },
-    el("div", { class: "card" }, el("h2", {}, t.title), el("div", { class: "muted" }, t.blurb), healthLine(t.slug, H)));
+    el("div", { class: "card" }, el("h2", {}, t.title), el("div", { class: "muted" }, t.blurb), el("div", { class: "sig", "data-slug": t.slug }), healthLine(t.slug, H)));
   const cats = d.categories || [{ name: "", blurb: "", dashboards: d.dashboards }];
   document.getElementById("view").replaceChildren(el("div", {}, ...cats.map(c => el("section", { class: "cat" },
     el("div", {}, el("h2", { class: "cname" }, c.name), el("div", { class: "muted" }, c.blurb), el("div", { class: "muted", style: "margin-top:4px" }, c.dashboards.length + (c.dashboards.length === 1 ? " dashboard" : " dashboards"))),
     el("div", { class: "tiles" }, ...c.dashboards.map(tile))))));
+  front.then(F => document.querySelectorAll(".sig").forEach(n => { const l = signalLine(n.dataset.slug, F); if (l) n.replaceWith(l); }));
 }).catch(e => document.getElementById("view").replaceChildren(el("div", { class: "card err" }, "Could not load: " + e.message)));
 </script>
 </body>

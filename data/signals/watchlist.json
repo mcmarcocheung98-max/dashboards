@@ -1,0 +1,99 @@
+{
+ "approved": "2026-11-03",
+ "note": "The owner's approved signals and watch points per dashboard. Each dashboard module implements SIGNALS() returning one row per key below; until it does, the row shows as not wired yet.",
+ "housing": [
+  {"key": "price_yoy", "signal": "London price change on a year", "watch": "turns negative, or passes +5%"},
+  {"key": "fixed_2y", "signal": "2-year fixed mortgage rate (BoE)", "watch": "below 4.0% (buyers return) or above 5.5%"},
+  {"key": "price_to_pay", "signal": "Price-to-London-pay ratio", "watch": "below 12x for the first time since 2016"},
+  {"key": "boroughs_up", "signal": "Boroughs with prices up on a year", "watch": "fewer than 11 of 33, or more than 28"},
+  {"key": "rent_real", "signal": "London rent change on a year vs CPIH", "watch": "rents rising slower than CPIH (real rents falling)"}
+ ],
+ "ai": [
+  {"key": "ai_vs_prof", "signal": "AI-sector postings / law & finance postings (US)", "watch": "above 1.5x its 2023 level"},
+  {"key": "prof_headcount", "signal": "Law and finance headcount, change on a year (US, UK, HK)", "watch": "any of the three negative two quarters running"},
+  {"key": "firms_using", "signal": "Firms using AI (Census BTOS)", "watch": "crosses 15% nationally"},
+  {"key": "share_rising", "signal": "AI share of postings: UK vs US direction", "watch": "UK share rising while US share falls"},
+  {"key": "pay_gap", "signal": "Pay gap: computer systems design minus legal services", "watch": "widens past 3 points"}
+ ],
+ "robotaxi": [
+  {"key": "waymo_rides", "signal": "Waymo paid rides a week", "watch": "500k a week; 1m a week"},
+  {"key": "crash_rate", "signal": "Crash reports per million driverless miles", "watch": "3-month rate above the prior year's"},
+  {"key": "cities", "signal": "Cities with paid driverless service (US + China)", "watch": "a new country, or any city suspended"},
+  {"key": "ev_share", "signal": "EV share of new car sales (UK, US, HK, China)", "watch": "UK above 30%, US above 15%"},
+  {"key": "tesla_unsupervised", "signal": "Tesla unsupervised miles or first paid unsupervised ride", "watch": "either happens"}
+ ],
+ "compute-chips": [
+  {"key": "capex_ttm", "signal": "Hyperscaler capex, trailing 4 quarters", "watch": "first quarter of year-on-year decline"},
+  {"key": "dc_power_share", "signal": "Data-centre share of US electricity", "watch": "above 6%"},
+  {"key": "nvda_growth", "signal": "Nvidia revenue growth on a year", "watch": "below 20%"},
+  {"key": "leading_edge_ex_tw", "signal": "Leading-edge capacity outside Taiwan", "watch": "above 20% of leading-edge wafer starts"},
+  {"key": "frontier_compute", "signal": "Frontier training compute (Epoch)", "watch": "no new record for 12 months"}
+ ],
+ "china-us-tech": [
+  {"key": "models_12m", "signal": "Notable AI models by country, trailing 12 months", "watch": "China's count exceeds the US's"},
+  {"key": "ev_exports", "signal": "China EV exports a month", "watch": "new high, or down 20% on a year"},
+  {"key": "chip_imports", "signal": "China chip imports, change on a year", "watch": "down more than 15%"},
+  {"key": "basket_gap", "signal": "Chinese tech basket vs US tech basket, 90 days", "watch": "20-point gap either way"},
+  {"key": "controls", "signal": "Export-control timeline", "watch": "any new rule or exemption"}
+ ],
+ "demographics": [
+  {"key": "tfr", "signal": "Total fertility rate (US, UK, HK, China)", "watch": "any below 1.0; HK below 0.7"},
+  {"key": "workers_per_65", "signal": "Workers per person aged 65+, 2045 projection", "watch": "revised below 2.0 for the UK or the US"},
+  {"key": "net_migration", "signal": "Net migration (UK, US)", "watch": "UK below 200k a year; US turns negative"},
+  {"key": "pension_gdp", "signal": "Pension spend, % of GDP, projected", "watch": "above 8% for the UK"}
+ ],
+ "debt-rates": [
+  {"key": "interest_receipts", "signal": "US net interest, % of federal receipts", "watch": "above 20%"},
+  {"key": "interest_vs_defence", "signal": "Net interest minus defence spending, 12 months", "watch": "gap widens past $200bn"},
+  {"key": "uk_interest_receipts", "signal": "UK debt interest, % of receipts", "watch": "above 10%"},
+  {"key": "real_10y", "signal": "10-year real yield (US)", "watch": "above 2.5% or below 1%"},
+  {"key": "fed_no_change", "signal": "Next Fed decision: no change (Kalshi)", "watch": "below 50% a week before the meeting"}
+ ],
+ "climate": [
+  {"key": "anomaly_12m", "signal": "Global temperature anomaly, 12-month mean", "watch": "above 1.5C for 12 consecutive months"},
+  {"key": "co2_growth", "signal": "CO2 growth, 12 months (Mauna Loa)", "watch": "above 3 ppm a year"},
+  {"key": "hot_days", "signal": "Hot days in HK (33C+) and London (30C+), year to date", "watch": "above the previous record"},
+  {"key": "disasters_ytd", "signal": "US billion-dollar disasters, year to date", "watch": "above 25 by September"},
+  {"key": "sea_ice", "signal": "Sea-ice extent", "watch": "a new record low for the month"}
+ ],
+ "longevity": [
+  {"key": "life_exp", "signal": "Life expectancy (US, UK, HK)", "watch": "US falls again; HK above 86"},
+  {"key": "glp1_growth", "signal": "GLP-1 prescriptions (NHS England), change on a year", "watch": "below 20% (saturation) or above 100%"},
+  {"key": "fda_ytd", "signal": "FDA novel approvals, year to date", "watch": "below 40 by December"},
+  {"key": "overdose_rate", "signal": "Drug-overdose death rate (US)", "watch": "below 25 per 100k"},
+  {"key": "xbi_vs_spx", "signal": "Biotech index (XBI) vs the S&P, 12 months", "watch": "30-point gap either way"}
+ ],
+ "space": [
+  {"key": "launches_12m", "signal": "Orbital launches, trailing 12 months", "watch": "above 300; China above 100"},
+  {"key": "cost_per_kg", "signal": "Cost per kg to orbit", "watch": "a published figure below $1,000"},
+  {"key": "starlink_subs", "signal": "Starlink subscribers", "watch": "10m"},
+  {"key": "active_sats", "signal": "Active satellites", "watch": "15,000"},
+  {"key": "uk_launch", "signal": "UK orbital launch from home soil", "watch": "first success"}
+ ],
+ "pokemon-cards": [
+  {"key": "heat", "signal": "Heat score (composite, -2 to +2)", "watch": "above +1.5 (overheated) or below -1 (cold)"},
+  {"key": "sealed_msrp", "signal": "Sealed booster box price / MSRP", "watch": "above 2.5x, or falling under 1.5x"},
+  {"key": "momentum_90d", "signal": "Basket momentum, 90 days", "watch": "turns negative after a +20% run"},
+  {"key": "psa10_premium", "signal": "PSA 10 premium over raw", "watch": "below 3x for the bellwethers"},
+  {"key": "search_trend", "signal": "Search interest, 3-month trend", "watch": "falls 30% from the peak"}
+ ],
+ "prediction-markets": [
+  {"key": "biggest_move", "signal": "Biggest 24-hour move on the watchlist", "watch": "any market moves 10 points in a day"},
+  {"key": "venue_gap", "signal": "Cross-venue gap (Polymarket vs Kalshi)", "watch": "above 5 points on the same event"},
+  {"key": "volume", "signal": "Daily volume on the watchlist", "watch": "doubles its 30-day average"},
+  {"key": "calibration", "signal": "Calibration: resolved markets priced 30 days out", "watch": "Brier score worsens two months running"}
+ ],
+ "trends": [
+  {"key": "rising_topic", "signal": "Fastest-rising topic this week (attention z-score)", "watch": "above +3"},
+  {"key": "attention_gap", "signal": "Attention vs reality gap (e.g. bitcoin search vs BTC)", "watch": "attention up 50% while the price is flat"},
+  {"key": "hn_ai_share", "signal": "Hacker News AI story share", "watch": "below 20% of front-page stories"},
+  {"key": "github_stars", "signal": "GitHub stars, main AI repos, weekly", "watch": "weekly growth halves"}
+ ],
+ "nba-odds": [
+  {"key": "value_bets", "signal": "Value bets today", "watch": "more than 5"},
+  {"key": "best_ev", "signal": "Best EV today", "watch": "above +8%"},
+  {"key": "clv_30d", "signal": "Average closing-line value, 30 days", "watch": "turns negative"},
+  {"key": "roi_30d", "signal": "ROI, 30 days", "watch": "below -5%"},
+  {"key": "credits", "signal": "API credits left this month", "watch": "below 15% with more than a week to go"}
+ ]
+}

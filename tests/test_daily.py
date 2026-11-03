@@ -65,7 +65,7 @@ def test_dashboard_without_readings_and_endpoint(daily, monkeypatch):
 def test_index_groups_dashboards_by_category():
     idx = topics.index()
     names = [c["name"] for c in idx["categories"]]
-    assert names[:3] == ["Money & markets", "AI & technology", "People & planet"]
+    assert names[:4] == ["Signals", "Money & markets", "AI & technology", "People & planet"]
     assert sorted(d["slug"] for d in idx["dashboards"]) == sorted(topics.public())      # every dashboard exactly once
     assert topics.category("housing") == "Money & markets" and topics.category("zz-unknown") == "More"
     assert topics.meta("ai")["category"] == "AI & technology"
