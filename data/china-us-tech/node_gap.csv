@@ -1,9 +1,9 @@
 date,series,value,source,note
-2015-07-01,TSMC,14,https://www.tsmc.com/english/dedicatedFoundry/technology/logic,16nm FinFET volume production (paired with SMIC 14nm); from memory; verify
-2018-04-01,TSMC,7,https://www.tsmc.com/english/dedicatedFoundry/technology/logic,7nm volume production; from memory; verify
-2020-04-01,TSMC,5,https://www.tsmc.com/english/dedicatedFoundry/technology/logic,5nm volume production; from memory; verify
-2022-12-29,TSMC,3,https://www.tsmc.com/english/dedicatedFoundry/technology/logic,3nm volume production; from memory; verify
-2025-10-01,TSMC,2,https://www.tsmc.com/english/dedicatedFoundry/technology/logic,2nm volume production (Q4 2025); from memory; verify
-2019-11-15,SMIC,14,https://www.smics.com/en/site/news,14nm FinFET volume production; from memory; verify
-2022-07-21,SMIC,7,https://www.techinsights.com/,N+2 found in a shipping chip; from memory; verify
-2025-12-10,SMIC,5,https://www.techinsights.com/,N+3 (5nm-class) found in Kirin 9030; from memory; verify
+2015-07-01,TSMC,14,https://forums.anandtech.com/threads/tsmc-begins-16nm-finfet-volume-production.2439715,"16nm FinFET volume production (paired with SMIC 14nm); TSMC's Q2 2015 earnings call (16 Jul 2015) said 16FF+ volume production began in Q2 2015; dated July as when it was announced; checked 2026-11-03"
+2018-04-01,TSMC,7,https://www.computing.co.uk/news/3030991/tsmc-starts-high-volume-production-of-7nm-chips,"7nm volume production; co-CEO C.C. Wei on the Q1 2018 call (19 Apr 2018): 'Our 7nm is already in volume production'; checked 2026-11-03"
+2020-04-01,TSMC,5,https://allmind.ai/earnings/event/bt_TSM_2020_Q2,"5nm volume production in Q2 2020 (C.C. Wei on the Q2 2020 call, 16 Jul 2020: 'N5 is already in volume production with good yield'); checked 2026-11-03"
+2022-12-29,TSMC,3,https://pr.tsmc.com/english/news/2986,"3nm volume production; TSMC press release of 29 Dec 2022 (volume production and capacity expansion ceremony, Fab 18); checked 2026-11-03"
+2025-10-01,TSMC,2,https://focustaiwan.tw/sci-tech/202512300026,"2nm volume production in Q4 2025 (TSMC website update reported by Focus Taiwan, 30 Dec 2025); no day given; checked 2026-11-03"
+2019-11-15,SMIC,14,https://us.design-reuse.com/news/47541/smic-q4-2019-financial-results.html,"14nm FinFET volume production; SMIC's Q4 2019 results: '14nm entered mass production, contributing 1% of wafer revenue for the quarter'; dated mid-Q4 2019; checked 2026-11-03"
+2022-07-21,SMIC,7,https://www.techinsights.com/blog/disruptive-technology-7nm-smic-minerva-bitcoin-miner,"7nm-class (N+2) found by TechInsights in the MinerVa bitcoin miner chip, reported 21 Jul 2022; checked 2026-11-03"
+2025-12-11,SMIC,5,https://www.techinsights.com/blog/smic-n3-confirmed-kirin-9030-analysis-reveals-how-close-smic-5nm,"N+3 confirmed in the Kirin 9030 (TechInsights, 11 Dec 2025); TechInsights calls it a scaled evolution of 7nm-class, 'significantly less scaled than leading commercial 5nm nodes', so 5 is a generous pairing; checked 2026-11-03"

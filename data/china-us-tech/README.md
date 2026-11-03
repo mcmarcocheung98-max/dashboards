@@ -81,7 +81,7 @@ only wording ("close to 50%", "more than 10%") the row is kept and the wording i
 6% between 2018 and 2020") and Hong Kong 2024 (about 70% in news reports, no government table found) stay `verify`. `ic_trade.csv` checked on 2026-11-03 (18 of 19 rows) against customs figures as reported by the NDRC, Beijing Youth
 Daily, Yicai, Xinhua Silk Road, SCMP, DIGITIMES and TrendForce; imports 2021 is now 432.5 (was 432.6) and exports 2023 is now 136.0 (was
 136.2), the rest matched. Exports 2020 is implied by 2021's 153.8 being up 31.9%. Imports 2025 (a yuan figure converted by a secondary
-source) stays `verify`. Everything else is `verify`.
+source) stays `verify`. `node_gap.csv` (all 8 rows) checked on 2026-11-03: TSMC against its 3nm press release, earnings-call remarks (16FF+ Q2 2015, N7 April 2018, N5 Q2 2020) and its Q4 2025 2nm update; SMIC 14nm against its Q4 2019 results; the 7nm and N+3 finds against TechInsights. Values unchanged; the N+3 row moved to 11 Dec 2025 (TechInsights' post date, was 10 Dec), and its note says TechInsights finds N+3 well short of commercial 5nm, so pairing it with TSMC 5nm flatters SMIC. Everything else is `verify`.
 
 - `leaderboard.csv`: `date,series,value,model,source,note`, series `US best` / `China best`, value = Arena score of the top model of that
   country on the LMArena text leaderboard (default view) on that date. LMArena re-scales scores, so only compare the two on the same date.
