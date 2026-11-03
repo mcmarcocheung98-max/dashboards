@@ -1,30 +1,30 @@
 date,series,value,source,note
-2019-01-01,China,5,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2020-01-01,China,6,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2021-01-01,China,16,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2022-01-01,China,29,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2023-01-01,China,38,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2024-01-01,China,48,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2019-01-01,US,2,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2020-01-01,US,2,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2021-01-01,US,5,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2022-01-01,US,8,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2023-01-01,US,10,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2024-01-01,US,10,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2019-01-01,UK,3,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2020-01-01,UK,11,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2021-01-01,UK,19,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2022-01-01,UK,23,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2023-01-01,UK,24,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2024-01-01,UK,28,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2019-01-01,World,2.6,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2020-01-01,World,4,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2021-01-01,World,9,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2022-01-01,World,14,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2023-01-01,World,18,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2024-01-01,World,22,https://www.iea.org/reports/global-ev-outlook-2025,fallback when Our World in Data (IEA) is not reachable; from memory; verify
-2020-01-01,Hong Kong,14,https://www.epd.gov.hk/epd/english/environmentinhk/air/prob_solutions/promotion_ev.html,EV share of new private car first registrations; from memory; verify
-2021-01-01,Hong Kong,25,https://www.epd.gov.hk/epd/english/environmentinhk/air/prob_solutions/promotion_ev.html,EV share of new private car first registrations; from memory; verify
-2022-01-01,Hong Kong,53,https://www.epd.gov.hk/epd/english/environmentinhk/air/prob_solutions/promotion_ev.html,EV share of new private car first registrations; from memory; verify
-2023-01-01,Hong Kong,64,https://www.epd.gov.hk/epd/english/environmentinhk/air/prob_solutions/promotion_ev.html,EV share of new private car first registrations; from memory; verify
-2024-01-01,Hong Kong,70,https://www.epd.gov.hk/epd/english/environmentinhk/air/prob_solutions/promotion_ev.html,EV share of new private car first registrations; from memory; verify
+2019-01-01,China,5,https://www.iea.org/reports/global-ev-outlook-2025,"from memory; IEA GEVO 2023 gives only 'under 6% between 2018 and 2020' for China, no single-year figure found; verify"
+2020-01-01,China,6,https://www.iea.org/reports/global-ev-outlook-2025,"from memory; IEA GEVO 2023 gives only 'under 6% between 2018 and 2020' for China, no single-year figure found; verify"
+2021-01-01,China,16,https://www.iea.org/reports/global-ev-outlook-2023/trends-in-electric-light-duty-vehicles,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2023: 16% in 2021
+2022-01-01,China,29,https://www.iea.org/reports/global-ev-outlook-2023/trends-in-electric-light-duty-vehicles,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2023: 29% in 2022
+2023-01-01,China,38,https://iea.blob.core.windows.net/assets/a9e3544b-0b12-4e15-b407-65f5c8ce1b5f/GlobalEVOutlook2024.pdf,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2024: 'more than one in three' in 2023; 38 is within that
+2024-01-01,China,48,https://www.iea.org/reports/global-ev-outlook-2025/trends-in-electric-car-markets-2,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2025: 'close to 50%' for 2024
+2019-01-01,US,2,https://www.iea.org/reports/global-ev-outlook-2023/trends-in-electric-light-duty-vehicles,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2023: around 2% in 2018-2020
+2020-01-01,US,2,https://www.iea.org/reports/global-ev-outlook-2023/trends-in-electric-light-duty-vehicles,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2023: around 2% in 2018-2020
+2021-01-01,US,5,https://www.iea.org/reports/global-ev-outlook-2023/trends-in-electric-light-duty-vehicles,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2023: just above 5% in 2021
+2022-01-01,US,8,https://www.iea.org/reports/global-ev-outlook-2023/trends-in-electric-light-duty-vehicles,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2023: nearly 8% in 2022
+2023-01-01,US,10,https://iea.blob.core.windows.net/assets/a9e3544b-0b12-4e15-b407-65f5c8ce1b5f/GlobalEVOutlook2024.pdf,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2024: one in ten in 2023
+2024-01-01,US,10,https://www.iea.org/reports/global-ev-outlook-2025/trends-in-electric-car-markets-2,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2025: 'more than 10%' in 2024
+2019-01-01,UK,3,https://www.zapmap.com/news/uk-ev-market-share-tops-10-for-2020,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: SMMT plug-in share 3.2% (BEV + PHEV)
+2020-01-01,UK,11,https://www.zapmap.com/news/uk-ev-market-share-tops-10-for-2020,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: SMMT plug-in share 10.7% (BEV 6.6% + PHEV 4.1%)
+2021-01-01,UK,19,https://insideevs.com/news/559035/uk-plugin-car-sales-2021/,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: SMMT plug-in share 18.5% (BEV 11.6% + PHEV 7.0%)
+2022-01-01,UK,23,https://www.iea.org/reports/global-ev-outlook-2023/trends-in-electric-light-duty-vehicles,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2023: 23% in 2022
+2023-01-01,UK,24,https://www.iea.org/reports/global-ev-outlook-2025/trends-in-electric-car-markets-2,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2025: 24% in 2023
+2024-01-01,UK,28,https://www.iea.org/reports/global-ev-outlook-2025/trends-in-electric-car-markets-2,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2025: 'nearly 30%' in 2024
+2019-01-01,World,2.5,https://www.engineeringnews.co.za/article/electric-car-sales-hit-66-million-in-2021-tripling-their-market-share-from-2019-iea-2022-03-11,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA (Mar 2022): 2.5% in 2019; was 2.6
+2020-01-01,World,4.1,https://www.engineeringnews.co.za/article/electric-car-sales-hit-66-million-in-2021-tripling-their-market-share-from-2019-iea-2022-03-11,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA (Mar 2022): 4.1% in 2020; was 4
+2021-01-01,World,9,https://www.iea.org/reports/global-ev-outlook-2023/trends-in-electric-light-duty-vehicles,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2023: 9% in 2021
+2022-01-01,World,14,https://www.iea.org/reports/global-ev-outlook-2023/trends-in-electric-light-duty-vehicles,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2023: 14% in 2022
+2023-01-01,World,18,https://iea.blob.core.windows.net/assets/a9e3544b-0b12-4e15-b407-65f5c8ce1b5f/GlobalEVOutlook2024.pdf,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2024: 18% in 2023
+2024-01-01,World,22,https://www.iea.org/reports/global-ev-outlook-2025/trends-in-electric-car-markets-2,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2025: 'more than 20%' in 2024
+2020-01-01,Hong Kong,12.4,https://www.legco.gov.hk/yr2023/english/panels/ea/papers/ea20230421cb1-333-3-e.pdf,EV share of new private car first registrations; checked 2026-11-03 against LegCo EA Panel paper CB(1)333/2023(03) table; was 14
+2021-01-01,Hong Kong,24.4,https://www.legco.gov.hk/yr2023/english/panels/ea/papers/ea20230421cb1-333-3-e.pdf,EV share of new private car first registrations; checked 2026-11-03 against LegCo EA Panel paper CB(1)333/2023(03) table; was 25
+2022-01-01,Hong Kong,52.8,https://www.legco.gov.hk/yr2023/english/panels/ea/papers/ea20230421cb1-333-3-e.pdf,EV share of new private car first registrations; checked 2026-11-03 against LegCo EA Panel paper CB(1)333/2023(03) table; was 53
+2023-01-01,Hong Kong,64.6,https://www.info.gov.hk/gia/general/202405/22/P2024052200366.htm,EV share of new private car first registrations; checked 2026-11-03 against LCQ3 22 May 2024 (64.6 per cent); was 64
+2024-01-01,Hong Kong,70,https://www.epd.gov.hk/epd/english/environmentinhk/air/prob_solutions/promotion_ev.html,EV share of new private car first registrations; from memory; news reports quote about 70% (Chief Executive) but no government table found yet; verify
