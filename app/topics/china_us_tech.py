@@ -41,6 +41,7 @@ OWID_SHARE, OWID_SALES = "electric-car-sales-share", "electric-car-sales"
 AI_CONCEPT = "C154945302"           # OpenAlex concept: Artificial intelligence
 OPENALEX = ("https://api.openalex.org/works?filter=concepts.id:" + AI_CONCEPT + ",institutions.country_code:{cc},publication_year:2005-{y}{extra}"
             "&group_by=publication_year")
+NEW_DAYS = 30                       # an export-control row counts as a new rule for this many days after its date
 CITED = 100                         # "highly cited": more than this many citations
 NASDAQ_ETF = "https://api.nasdaq.com/api/quote/{sym}/historical?assetclass=etf&fromdate={a}&todate={b}&limit=9999"
 NASDAQ_HEADERS = {"Accept": "application/json, text/plain, */*", "Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"}
@@ -137,7 +138,9 @@ def _models_now() -> dict:
             m = {c: f[(f["country"] == c) & (f["date"] <= t)]["flop"].max() for c in ("US", "China")}
             return _r(np.log10(m["US"] / m["China"]), 2) if all(pd.notna(v) and v > 0 for v in m.values()) else None
         now = f["date"].max() if len(f) else pd.Timestamp.now()
-        return {"years": years, "counts": cnt, "china_share": share, "open": open_cnt, "frontier": frontier, "top": top,
+        recent = x[x["date"] > pd.Timestamp.now() - pd.Timedelta(days=365)]
+        t12 = {c: int((recent["country"] == c).sum()) for c in ("US", "China", "UK", "Hong Kong")}
+        return {"years": years, "counts": cnt, "china_share": share, "trailing_12m": t12, "open": open_cnt, "frontier": frontier, "top": top,
                 "gap_oom": gap_at(now), "gap_oom_year_ago": gap_at(now - pd.Timedelta(days=365)), "last_full": last_full,
                 "latest": str(x["date"].max().date()), "n": int(x["model"].nunique())}
 
@@ -346,7 +349,15 @@ def _markets_now() -> dict:
     years = {k: _year_returns(v) for k, v in b.items()}
     if isinstance(hs, pd.Series) and len(hs):
         years["Hang Seng TECH"] = {int(t.year): _r(v / 100, 4) for t, v in hs.items()}
-    out = payload({"baskets": lambda: {k: _pts(v, 2) for k, v in b.items()} or None, "ratio": ratio, "rel_1y": rel_1y},
+    def gap_90d():
+        """China basket's 90-day return minus the US basket's, in percentage points."""
+        r = {}
+        for k in ("China tech ADRs", "US tech basket"):
+            s = b[k]
+            ago = s[s.index <= s.index[-1] - pd.Timedelta(days=90)]
+            r[k] = 100 * (s.iloc[-1] / ago.iloc[-1] - 1) if len(ago) else None
+        return None if None in r.values() else {"gap": _r(r["China tech ADRs"] - r["US tech basket"], 1), "china": _r(r["China tech ADRs"], 1), "us": _r(r["US tech basket"], 1)}
+    out = payload({"baskets": lambda: {k: _pts(v, 2) for k, v in b.items()} or None, "ratio": ratio, "rel_1y": rel_1y, "gap_90d": gap_90d},
                   sources=[B.NASDAQ.format(sym=s, a=START, b=today) for s in US_TECH + CN_TECH] + [NASDAQ_ETF.format(sym=CN_ETF, a=START, b=today)])
     out["years"] = years
     out["last"] = {k: {"v": _r(v.iloc[-1], 1), "y1": _r(v.iloc[-1] / v[v.index <= v.index[-1] - pd.Timedelta(days=365)].iloc[-1] - 1, 4)
@@ -469,6 +480,59 @@ def _overview_now() -> dict:
 def READINGS() -> list[dict]:
     """Each layer as it reads now, from the cached tab payloads only. lean +1 = China gaining relative to the US, -1 = the US gaining."""
     return [{"tab": r["tab"], "key": r["key"], "label": r["label"], "value": r["value"], "lean": r["lean"], "note": r["rule"]} for r in layers(_cached_payload)]
+
+
+def _year_back(s: pd.Series):
+    """(latest value, value about a year before it, whether the series is monthly): works for yearly rows and for monthly ones."""
+    s = s.dropna().sort_index()
+    if len(s) < 2:
+        return (s.iloc[-1] if len(s) else None), None, False
+    monthly = (s.index[-1] - s.index[-2]).days < 60
+    ago = s[s.index <= s.index[-1] - pd.Timedelta(days=350 if monthly else 300)]
+    return s.iloc[-1], (ago.iloc[-1] if len(ago) else None), monthly
+
+
+def SIGNALS() -> list[dict]:
+    """The owner's approved signals (data/signals/watchlist.json), from cached payloads and hand-entered rows only.
+    lean +1 = China gaining relative to the US, -1 = the US gaining."""
+    out = []
+
+    def add(key, tab, label, value, unit, lean, watch, crossed, note=None):
+        out.append({"key": key, "tab": tab, "label": label, "value": value, "unit": unit, "lean": lean, "watch": watch, "crossed": bool(crossed),
+                    **({"note": note} if note else {})})
+    t12 = (_cached_payload("models").get("epoch") or {}).get("trailing_12m")
+    if t12:
+        us, cn = t12.get("US", 0), t12.get("China", 0)
+        add("models_12m", "models", "Notable AI models, last 12 months: China minus US", cn - us, "", 1 if cn > us else -1 if us > cn else 0,
+            "China's count exceeds the US's", cn > us, f"US {us}, China {cn} (Epoch AI, by developer country)")
+    ex = manual(SLUG, "ev_exports")
+    if isinstance(ex, pd.Series) and len(ex):
+        now, ago, monthly = _year_back(ex)
+        chg = None if ago is None else now / ago - 1
+        high = now >= ex.max() and len(ex) > 1
+        add("ev_exports", "ev", "China NEV exports" + (" a month" if monthly else ", latest year") + " (million)", _r(now, 3), "m",
+            0 if chg is None else 1 if chg > 0 else -1, "new high, or down 20% on a year", high or (chg is not None and chg <= -0.2),
+            ("a record" if high else "below the record") + (f"; {chg:+.0%} on a year" if chg is not None else "") + ("" if monthly else "; yearly rows until monthly CAAM figures are entered"))
+    trade = _hand("ic_trade")
+    monthly_imp = manual(SLUG, "ic_imports_monthly")
+    imp = monthly_imp if isinstance(monthly_imp, pd.Series) and len(monthly_imp) >= 13 else trade.get("Imports")
+    if imp is not None and len(imp) >= 2:
+        now, ago, monthly = _year_back(imp)
+        if ago:
+            chg = 100 * (now / ago - 1)
+            add("chip_imports", "chips", "China IC imports, change on a year", _r(chg, 1), "%", 1 if chg < -5 else -1 if chg > 5 else 0,
+                "down more than 15%", chg < -15, f"US${now:,.0f}bn {'that month' if monthly else 'in ' + str(imp.dropna().index[-1].year)} (GACC)")
+    g = _cached_payload("markets").get("gap_90d")
+    if g:
+        add("basket_gap", "markets", "China tech ADRs minus US tech basket, 90-day return", g["gap"], " pts", 1 if g["gap"] > 5 else -1 if g["gap"] < -5 else 0,
+            "20-point gap either way", abs(g["gap"]) >= 20, f"China {g['china']:+.1f}%, US {g['us']:+.1f}%")
+    rows = sorted(manual_rows(SLUG, "controls"), key=lambda r: r["date"])
+    if rows:
+        r = rows[-1]
+        age = (pd.Timestamp.now().normalize() - pd.Timestamp(r["date"])).days
+        add("controls", "chips", "Latest export-control step", f"{r['date']}: {r['actor']}", "", max(-1, min(1, int(r.get("direction") or 0))),
+            "any new rule or exemption", 0 <= age <= NEW_DAYS, f"{r['event']} ({age} days ago; counts as new for {NEW_DAYS} days after its date)")
+    return out
 
 
 def _layout_now() -> dict:

@@ -226,6 +226,40 @@ def test_hand_entered_rows_cite_a_source_and_memory_rows_say_verify():
                 assert "verify" in r["note"], (f.name, r)
 
 
+def test_signals_cover_the_watchlist_from_cached_payloads(mocked):
+    keys = [w["key"] for w in json.loads((B.MANUAL_DIR / "signals" / "watchlist.json").read_text())["china-us-tech"]]
+    assert {r["key"] for r in M.SIGNALS()} == {"ev_exports", "chip_imports", "controls"}    # hand-entered rows only: nothing downloaded
+    M.ENDPOINTS["models"]()
+    M.ENDPOINTS["markets"]()
+    rows = M.SIGNALS()
+    assert [r["key"] for r in rows] == keys
+    assert all(isinstance(r["crossed"], bool) and r["lean"] in (-1, 0, 1) and r["watch"] for r in rows)
+    sig = {r["key"]: r for r in rows}
+    assert sig["basket_gap"]["value"] < 0 and sig["models_12m"]["note"].startswith("US ")
+    B.json_safe(rows)
+
+
+def test_year_back_reads_yearly_and_monthly_rows():
+    yearly = pd.Series([1.0, 2.0, 3.0], index=pd.to_datetime(["2023-01-01", "2024-01-01", "2025-01-01"]))
+    assert M._year_back(yearly) == (3.0, 2.0, False)
+    monthly = pd.Series(range(1, 15), index=pd.date_range("2025-01-01", periods=14, freq="MS"), dtype=float)
+    assert M._year_back(monthly) == (14.0, 2.0, True)
+
+
+def test_signal_watch_points(monkeypatch):
+    from app import cache
+    cache._cache.clear()
+    today = pd.Timestamp.now().normalize()
+    real_rows, real_manual = M.manual_rows, M.manual
+    monkeypatch.setattr(M, "manual_rows", lambda slug, name: [{"date": str((today - pd.Timedelta(days=3)).date()), "actor": "US", "event": "new rule",
+                                                               "direction": "-1", "source": "https://x"}] if name == "controls" else real_rows(slug, name))
+    falling = pd.Series([2.0, 1.5], index=pd.to_datetime(["2024-01-01", "2025-01-01"]))
+    monkeypatch.setattr(M, "manual", lambda slug, name: falling if name == "ev_exports" else real_manual(slug, name))
+    sig = {r["key"]: r for r in M.SIGNALS()}
+    assert sig["controls"]["crossed"] and sig["controls"]["lean"] == -1
+    assert sig["ev_exports"]["crossed"] and sig["ev_exports"]["lean"] == -1          # down 25% on a year
+
+
 @pytest.mark.network
 def test_live_sources():
     from app import cache
