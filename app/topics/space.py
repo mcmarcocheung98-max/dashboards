@@ -594,6 +594,42 @@ def READINGS() -> list[dict]:
     return readings(_cached_payload)
 
 
+def signals(got) -> list[dict]:
+    """The owner's approved signals (data/signals/watchlist.json, 3 Nov 2026), each with this dashboard's own test of its watch point.
+    A row is left out while its tab has nothing cached, so the board shows it as not wired rather than a wrong figure."""
+    out = []
+
+    def add(key, tab, label, value, unit, lean, watch, crossed, note=None):
+        if value is not None:
+            out.append({"key": key, "tab": tab, "label": label, "value": value, "unit": unit, "lean": lean, "watch": watch, "crossed": bool(crossed),
+                        **({"note": note} if note else {})})
+    L = ((got("launches").get("launches") or {}).get("kpi")) or {}
+    r12, cn = L.get("r12"), L.get("china_12")
+    add("launches_12m", "launches", "Orbital launches, trailing 12 months", r12, "", _band(L.get("r12_yoy"), -0.05, 0.05), "above 300; China above 100",
+        (r12 or 0) > 300 or (cn or 0) > 100, f"China {cn} (12 months before: {L.get('china_prev')}); world 12 months before: {L.get('r12_prev')}")
+    C = got("cost").get("kpi") or {}
+    best = C.get("best")
+    add("cost_per_kg", "cost", f"Cheapest flown cost per kg to LEO ({C.get('best_vehicle')})", best, " USD/kg", 1 if best is not None and best < 1000 else 0,
+        "a published figure below $1,000", best is not None and best < 1000, "flown rockets only; stated targets (Starship) do not count")
+    SK = got("satellites").get("subs_kpi") or {}
+    add("starlink_subs", "satellites", f"Starlink subscribers ({SK.get('date')})", SK.get("m"), "m", _band(SK.get("yoy"), 0.20, 0.50), "10m",
+        (SK.get("m") or 0) >= 10, "from SpaceX announcements, hand-entered")
+    S = (got("satellites").get("active") or {}).get("kpi") or {}
+    add("active_sats", "satellites", "Active satellites (CelesTrak)", S.get("active"), "", _band(S.get("added_yoy"), -0.05, 0.05), "15,000",
+        (S.get("active") or 0) >= 15000, f"Starlink {S.get('starlink')}")
+    U = got("ukhk").get("uk_kpi") or {}
+    if U:
+        ok = U.get("uk_soil_ok") or 0
+        add("uk_launch", "ukhk", "Successful orbital launches from UK soil", ok, "", 1 if ok else 0, "first success", ok >= 1,
+            f"{U.get('from_uk_soil')} attempt(s) from UK soil; last UK attempt {U.get('last')}")
+    return out
+
+
+def SIGNALS() -> list[dict]:
+    """The approved signals as they read now, from the cached tab payloads only (nothing is fetched)."""
+    return signals(_cached_payload)
+
+
 def _answer_now() -> dict:
     """Not a tab: the checklist on its own, built from the tab payloads (each cached; a tab that fails counts as unknown)."""
     def got(name):

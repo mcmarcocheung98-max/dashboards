@@ -67,6 +67,18 @@ Add a row to `milestones.csv` with `kind=launch`, `place=UK` and `site=SaxaVord`
 | ukhk | `uk_last_attempt` | days since the last UK orbital attempt | an attempt in the last year | never |
 | ukhk | `china_commercial` | China's non-CASC launches, last full year | up more than 10% | down more than 5% |
 
+## SIGNALS: the approved watch points
+
+`SIGNALS()` in `app/topics/space.py` returns the five signals the owner approved on 3 Nov 2026 (`data/signals/watchlist.json`), read from the cached tab data only. A row is left out while its tab has nothing cached.
+
+| Key | Value | Crossed when |
+|---|---|---|
+| `launches_12m` | orbital launch attempts in the last 12 months (GCAT); the note gives China's | world above 300, or China above 100 |
+| `cost_per_kg` | cheapest flown cost per kg to LEO (`cost.csv`, flown rows only) | below $1,000 |
+| `starlink_subs` | Starlink subscribers, millions (`starlink.csv`) | 10m or more |
+| `active_sats` | active satellites (CelesTrak) | 15,000 or more |
+| `uk_launch` | successful orbital launches from UK soil (`milestones.csv`, kind `launch` at a UK site) | the first success |
+
 ## Notes on the data
 
 - **Country is the provider's**, from GCAT's organisation state code: Rocket Lab's New Zealand launches count for the US, Arianespace's Kourou launches for Europe. Europe is France, Germany, Italy and the ESA/EU codes.

@@ -257,3 +257,20 @@ def test_polite_uses_a_recent_snapshot(mocked, monkeypatch):
     cache._cache.clear()
     M.active()
     assert calls == [M.CELESTRAK]                                 # an old one: download again
+
+
+def test_signals(mocked):
+    assert M.SIGNALS() == []                                      # nothing cached yet: nothing reported, nothing fetched
+    for name in ("launches", "cost", "satellites", "industry", "ukhk"):
+        M.ENDPOINTS[name]()
+    import json
+    from pathlib import Path
+    want = {r["key"] for r in json.loads((Path(__file__).parents[1] / "data/signals/watchlist.json").read_text())["space"]}
+    rs = {r["key"]: r for r in M.SIGNALS()}
+    assert set(rs) == want
+    assert all(r["lean"] in (-1, 0, 1) and isinstance(r["crossed"], bool) and r["watch"] for r in rs.values())
+    assert rs["active_sats"]["crossed"] is False and rs["active_sats"]["value"] == 12430           # fixtures: below 15,000
+    assert rs["cost_per_kg"]["value"] == 1500 and rs["cost_per_kg"]["crossed"] is False
+    assert rs["starlink_subs"]["crossed"] is False and rs["uk_launch"]["value"] == 0 and rs["uk_launch"]["crossed"] is False
+    assert rs["launches_12m"]["crossed"] is (rs["launches_12m"]["value"] > 300)
+    B.json_safe(list(rs.values()))
