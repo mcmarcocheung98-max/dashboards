@@ -1132,6 +1132,49 @@ def READINGS() -> list[dict]:
     return out
 
 
+def SIGNALS() -> list[dict]:
+    """The owner's approved signals (data/signals/watchlist.json, 3 Nov 2026), read from cached payloads only; `crossed` is this
+    dashboard's test of each watch point. lean as in READINGS: +1 = less fiscal stress, -1 = more."""
+    from ..cache import _cache
+    got = lambda name: (_cache.get(f"topic:{SLUG}:{name}") or (0, {}))[1] or {}
+    last = lambda p: p[-1][1] if p else None
+    rows = []
+
+    def row(key, tab, label, value, unit, watch, crossed, lean, note=None):
+        rows.append({"key": key, "tab": tab, "label": label, "value": None if value is None else round(value, 2), "unit": unit,
+                     "watch": watch, "crossed": bool(crossed) if value is not None else False, "lean": lean if value is not None else 0,
+                     **({"note": note} if note else {})})
+    it = got("interest")
+    us = it.get("us") or {}
+    share = last(us.get("share"))
+    row("interest_receipts", "interest", "US net interest, % of federal receipts", share, "%", "above 20%",
+        share is not None and share > 20, -1 if share is not None and share > 20 else 0)
+    r = us.get("rolling") or {}
+    i, dfn = last(r.get("interest")), last(r.get("defence"))
+    gap = i - dfn if None not in (i, dfn) else None
+    row("interest_vs_defence", "interest", "Net interest minus defence spending, 12 months ($bn)", gap, "bn", "gap widens past $200bn",
+        gap is not None and gap > 200, -1 if gap is not None and gap > 0 else 1 if gap is not None else 0)
+    uk = last(it.get("uk_share"))
+    row("uk_interest_receipts", "interest", "UK debt interest, % of receipts", uk, "%", "above 10%",
+        uk is not None and uk > 10, -1 if uk is not None and uk > 10 else 0)
+    real = last((got("yields").get("real") or {}).get("US 10-year TIPS"))
+    row("real_10y", "yields", "10-year real yield (US)", real, "%", "above 2.5% or below 1%",
+        real is not None and (real > 2.5 or real < 1), -1 if real is not None and real > 2.5 else 1 if real is not None and real < 1 else 0)
+    od = got("odds")
+    ks, now = od.get("kalshi") or [], od.get("fed_now")
+    hold, note = None, None
+    if ks and now is not None:
+        hold = sum(x["p"] for x in ks[0]["levels"] if abs(x["upper"] - now) < 0.01) * 100
+        close = pd.Timestamp(ks[0]["close"]) if ks[0].get("close") else None
+        days = (close - pd.Timestamp.now().normalize()).days if close is not None else None
+        note = f"{ks[0]['title']}, closes {ks[0]['close']}" + (f" (in {days} days)" if days is not None else "")
+    else:
+        days = None
+    row("fed_no_change", "odds", "Next Fed decision: no change (Kalshi), %", hold, "%", "below 50% a week before the meeting",
+        hold is not None and hold < 50 and days is not None and 0 <= days <= 7, 0, note)
+    return rows
+
+
 def _cached_ep(name, fn, ttl=6 * 3600):
     from ..cache import _cached
     return lambda: _cached(f"topic:{SLUG}:{name}", ttl, fn)

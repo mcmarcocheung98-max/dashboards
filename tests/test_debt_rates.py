@@ -460,6 +460,25 @@ def test_readings_come_from_the_cached_payloads(fixtures):
     B.json_safe(rows)
 
 
+def test_signals_cover_the_approved_watchlist(fixtures):
+    import json as _json
+    want = [r["key"] for r in _json.loads((B.MANUAL_DIR / "signals" / "watchlist.json").read_text())["debt-rates"]]
+    assert [r["key"] for r in D.SIGNALS()] == want and all(r["value"] is None and not r["crossed"] for r in D.SIGNALS())   # nothing cached yet
+    for name in ("interest", "yields", "odds"):
+        D.ENDPOINTS[name]()
+    rows = {r["key"]: r for r in D.SIGNALS()}
+    assert set(rows) == set(want) and all(r["value"] is not None for r in rows.values()), rows
+    assert all(r["lean"] in (-1, 0, 1) and r["watch"] and isinstance(r["crossed"], bool) for r in rows.values())
+    # the fixture's next Kalshi meeting closes in two days, inside the week: crossed exactly when 'no change' is under 50%
+    f = rows["fed_no_change"]
+    assert 0 <= f["value"] <= 100 and f["crossed"] == (f["value"] < 50) and "in 2 days" in f["note"]
+    real = rows["real_10y"]
+    assert real["crossed"] == (real["value"] > 2.5 or real["value"] < 1)
+    g = rows["interest_vs_defence"]["value"]
+    assert rows["interest_vs_defence"]["crossed"] == (g > 200)
+    B.json_safe(list(rows.values()))
+
+
 def test_a_dead_source_blanks_one_chart(fixtures, monkeypatch):
     def no_penny(url, ttl=0, **k):
         if "debt_to_penny" in url:
