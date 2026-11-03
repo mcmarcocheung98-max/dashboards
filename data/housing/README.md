@@ -70,6 +70,19 @@ For housing, **+1 means better for buyers, -1 worse for buyers**, 0 in between:
 
 They are read from the tab data the server already holds; a tab not yet computed is left out of that day's save.
 
+## Signals (on /signals, the front-page tile and the daily email)
+
+`SIGNALS()` in `housing.py` returns the owner's approved watch points (`data/signals/watchlist.json`, 3 Nov 2026), read from the cached
+tab data only; lean as above (+1 better for buyers and renters):
+
+| Key | Signal | Crossed when |
+|---|---|---|
+| `price_yoy` | London price change on a year (UK HPI) | below 0% or above +5% |
+| `fixed_2y` | BoE quoted 2-year fixed rate, 75% LTV | below 4.0% or above 5.5% |
+| `price_to_pay` | London price ÷ London median full-time pay | below 12× with no earlier spell below 12× since January 2016 (the note says since when it has been below) |
+| `boroughs_up` | Boroughs with prices up on a year | fewer than 11 of 33, or more than 28 |
+| `rent_real` | London rent change on a year minus CPIH's (ONS L522) | below zero: rents rising slower than prices in general |
+
 ## Keeping it up to date
 
 Nothing to do: all four sources are fetched automatically, at most once a day, and the page data is recomputed every six hours. If a card says "Source not reachable right now: showing the last copy from <date>", the source was down or refused the request and the last snapshot (`the snapshot folder (`SNAPSHOT_DIR`, `/app/snapshots` on Railway)` on the Railway volume) is being shown; it clears itself when the source is back. If a card says "not available right now", the source has never been reached from the server: run the check below from a UK or EU machine to tell a changed download format from a site that blocks US servers.

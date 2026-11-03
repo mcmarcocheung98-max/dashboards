@@ -475,6 +475,12 @@ def _prices_now() -> dict:
     _part(out, "premium", premium)
     real = out.get("london_real") or []
     rv = [v for _, v in real if v is not None]
+    try:
+        c = cpih()
+        prev = c[c.index <= c.index[-1] - pd.DateOffset(years=1)]
+        out["cpih_yoy"] = {"value": _r((c.iloc[-1] / prev.iloc[-1] - 1) * 100, 2), "month": str(c.index[-1].date())} if len(prev) else None
+    except Exception:
+        out["cpih_yoy"] = None
     out["real_now"] = {"from_peak": _r(rv[-1] / max(rv) - 1, 4), "peak_month": str(pd.Timestamp(max(real, key=lambda p: p[1])[0], unit="s").date())} if rv else {}
     out["now"] = {"avg": _r(a.iloc[-1], 0) if len(a) else None, "yoy": _r(lon["pc_ann"].dropna().iloc[-1], 2) if lon["pc_ann"].notna().any() else None,
                   "peak": _r(a.max(), 0) if len(a) else None, "peak_month": str(a.idxmax().date()) if len(a) else None,
@@ -839,6 +845,47 @@ def READINGS() -> list[dict]:
             d = round((lon - us) * 100, 2)
             rows.append({"tab": "global", "key": "london_vs_us_yoy", "label": "London minus US yearly price change", "value": d,
                          "lean": _lean(d, -2, 2), "note": f"{d:+.1f} points"})
+    return rows
+
+
+def SIGNALS() -> list[dict]:
+    """The owner's approved watch points (data/signals/watchlist.json, 3 Nov 2026), from the cached tab payloads only; a tab not computed
+    yet leaves its key out ("not wired yet" on the board). Lean as in READINGS: +1 better for buyers (and renters), -1 worse."""
+    from ..cache import _cache
+
+    def cached(tab):
+        hit = _cache.get(f"topic:housing:{tab}")
+        return hit[1] if hit and isinstance(hit[1], dict) else None
+    rows = []
+    p, a, b = cached("prices"), cached("afford"), cached("boroughs")
+    if p and (y := (p.get("now") or {}).get("yoy")) is not None:
+        rows.append({"key": "price_yoy", "tab": "prices", "label": "London price change on a year", "value": y, "unit": "%", "lean": _lean(y, 0, 3),
+                     "watch": "turns negative, or passes +5%", "crossed": y < 0 or y > 5})
+    if a and (fx := [q for q in a.get("fixed_2y") or [] if q[1] is not None]):
+        v = fx[-1][1]
+        rows.append({"key": "fixed_2y", "tab": "afford", "label": "2-year fixed mortgage rate (BoE, 75% LTV)", "value": v, "unit": "%",
+                     "lean": 1 if v < 4.0 else -1 if v > 5.5 else 0, "watch": "below 4.0% (buyers return) or above 5.5%", "crossed": v < 4.0 or v > 5.5,
+                     "note": "as of " + pd.Timestamp(fx[-1][0], unit="s").strftime("%b %Y")})
+    if a and (pe := [q for q in a.get("price_to_london_pay") or [] if q[1] is not None]):
+        v = pe[-1][1]
+        since = int(pd.Timestamp("2016-01-01").timestamp())
+        run = len(pe)                                                   # start of the current run below 12x
+        while run > 0 and pe[run - 1][1] < 12:
+            run -= 1
+        before = [q for q in pe[:run] if q[0] >= since and q[1] < 12]  # an earlier spell below 12x since 2016?
+        note = ("below 12× since " + pd.Timestamp(pe[run][0], unit="s").strftime("%b %Y") + (", and once before since 2016" if before else ", the first time since 2016")
+                if v < 12 else "lowest since 2016: " + f"{min(q[1] for q in pe if q[0] >= since):.1f}×")
+        rows.append({"key": "price_to_pay", "tab": "afford", "label": "Price to London pay", "value": v, "unit": "×", "lean": 1 if v < 12 else 0,
+                     "watch": "below 12x for the first time since 2016", "crossed": v < 12 and not before, "note": note})
+    if b and (ys := [r["yoy"] for r in b.get("rows") or [] if r.get("yoy") is not None]):
+        up = sum(y > 0 for y in ys)
+        rows.append({"key": "boroughs_up", "tab": "boroughs", "label": "Boroughs with prices up on a year", "value": f"{up} of {len(ys)}",
+                     "lean": _lean(up / len(ys), 1 / 3, 2 / 3), "watch": "fewer than 11 of 33, or more than 28", "crossed": up < 11 or up > 28})
+    if p and (r := (p.get("rent_now") or {}).get("yoy")) is not None and (c := p.get("cpih_yoy")):
+        gap = round(r - c["value"], 2)
+        rows.append({"key": "rent_real", "tab": "prices", "label": "London rent change on a year minus CPIH", "value": gap, "unit": " pts",
+                     "lean": 1 if gap < 0 else -1, "watch": "rents rising slower than CPIH (real rents falling)", "crossed": gap < 0,
+                     "note": f"rents {r:+.1f}%, CPIH {c['value']:+.1f}% ({c['month'][:7]})"})
     return rows
 
 

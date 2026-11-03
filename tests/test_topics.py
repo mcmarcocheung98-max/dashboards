@@ -1035,6 +1035,21 @@ def test_housing_calc_payload(snapdir, monkeypatch):
     assert c["rows"][0]["rent_1bed"] == 1300 + 140 * 5 and len(H.borough_profile()) == 33
 
 
+def test_housing_signals(snapdir, monkeypatch):
+    H = housing_mocks(monkeypatch)
+    import json
+    assert H.SIGNALS() == []                                     # nothing cached yet: nothing read, nothing downloaded
+    for tab in ("prices", "afford", "boroughs"):
+        H.ENDPOINTS[tab]()
+    s = {r["key"]: r for r in H.SIGNALS()}
+    want = {w["key"] for w in json.loads((B.MANUAL_DIR / "signals" / "watchlist.json").read_text())["housing"]}
+    assert set(s) == want, set(s) ^ want
+    assert all(isinstance(r["crossed"], bool) and r["lean"] in (-1, 0, 1) and r["watch"] for r in s.values())
+    assert s["fixed_2y"]["crossed"] == (s["fixed_2y"]["value"] < 4 or s["fixed_2y"]["value"] > 5.5)
+    assert s["rent_real"]["value"] == round(5.0 - H._prices_now()["cpih_yoy"]["value"], 2)
+    assert s["boroughs_up"]["value"].endswith("of 33") and s["price_to_pay"]["unit"] == "×"
+
+
 def test_housing_rents_from_pipr(snapdir, monkeypatch):
     H = housing_mocks(monkeypatch)
     assert H.pipr_url(PIPR_PAGE).endswith("/21october2026/priceindexofprivaterentsukmonthlypricestatistics.xlsx")
