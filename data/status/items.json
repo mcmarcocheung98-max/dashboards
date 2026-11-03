@@ -163,7 +163,7 @@
    "area": "Signals",
    "since": "2026-11-03",
    "status": "in_progress",
-   "owner": "dashboard sessions",
+   "owner": "sessions",
    "detail": "62 approved signals across 15 dashboards show as 'not wired yet' on /signals until each dashboard adds SIGNALS() (see data/signals/README.md). BTC Cycles and the Altcoin Study are left out for now."
   }
  ],

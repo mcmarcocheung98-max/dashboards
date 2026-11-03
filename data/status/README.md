@@ -23,3 +23,14 @@ run was ok, −1 otherwise).
 
 Items are written by people and sessions, not computed; the page only sorts and counts them. Close an action by setting `status` to
 `done` and `done` to the date rather than deleting it, so the Done list keeps the history.
+
+## Also on each daily check: signals and the newsletter (added 3 Nov 2026)
+
+The morning check reads this file, so these steps live here as well as in its prompt.
+
+- Read `/api/signals/board` (show-json workflow). Report every watch point crossed (dashboard, signal, value, watch point) and how
+  many approved signals are wired (`totals.wired` of `totals.signals`). From 6 Nov, remind the session of any dashboard whose signals
+  are still "not wired yet", in one line, pointing to `data/signals/README.md`. Mark `p-signals-wiring` done once all are wired.
+- Check that morning's `newsletter` workflow run (07:35 UTC). If it failed, read the log and fix it when small. If "Send with Gmail"
+  was skipped, the secrets are still missing: keep `gmail-newsletter-secrets` open. Close it on the first run whose send step ran.
+- In the report: the watch points crossed, signals wired (N of M), and whether the newsletter went out.
