@@ -23,6 +23,9 @@ TTL = 6 * 3600
 FUNDING_WINDOW_DAYS = 15          # Hyperliquid returns at most 500 hourly records per call: 15 days = 360
 FUNDING_DAYS = 730
 
+FUNDING_PACE = 0.08          # seconds between uncached funding windows (Hyperliquid rate-limits a cold burst); tests set it to 0
+FUNDING_RETRY_WAIT = 1.0     # seconds before the one retry of a failed window
+
 # per coin: the sector basket (Hyperliquid markets), the stablecoin or chain whose supply is its product, the chain whose DEX volume is its activity,
 # whether it is a memecoin, and extras. Baskets are hand-picked proxies for the narrative each coin trades on.
 COINS = {
@@ -56,13 +59,14 @@ def funding_daily(coin: str, days: int = FUNDING_DAYS) -> pd.Series:
                 break
             except Exception:
                 if attempt == 0:
-                    time.sleep(1.0)
+                    time.sleep(FUNDING_RETRY_WAIT)
         if not cached:
-            time.sleep(0.08)
+            time.sleep(FUNDING_PACE)
         t = b
     if not rows:
         return pd.Series(dtype=float)
-    s = pd.Series({pd.to_datetime(t, unit="ms"): v for t, v in rows}).sort_index()
+    ts, vals = zip(*rows)
+    s = pd.Series(vals, index=pd.to_datetime(list(ts), unit="ms"), dtype=float).sort_index()      # one conversion, not one per hourly row
     return s[~s.index.duplicated()].resample("1D").mean().dropna()
 
 

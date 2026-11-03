@@ -97,6 +97,9 @@ def filled(tmp_path, monkeypatch):
     monkeypatch.setattr(C, "FUND_DIR", tmp_path / "snaps" / "btc_fundamentals")
     monkeypatch.setattr(M, "SHARE_LOG", tmp_path / "share.csv")
     monkeypatch.setattr(C, "PACE", 0)
+    from app.topics import _narrative as NR
+    monkeypatch.setattr(NR, "FUNDING_PACE", 0)                     # the funding pacing slept ~48 s per test on the fake candles
+    monkeypatch.setattr(NR, "FUNDING_RETRY_WAIT", 0)
     B.STALE.clear()
     from app import cache
     cache._cache.clear()
