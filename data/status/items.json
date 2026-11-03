@@ -141,11 +141,11 @@
   },
   {
    "id": "hkma-405",
-   "title": "Housing: HKMA interbank-rate API answers 405 Not Allowed since 1 Nov",
+   "title": "Housing: HKMA's firewall blocks the Railway server (405) since 1 Nov",
    "owner": "session:housing",
    "status": "waiting",
    "since": "2026-11-03",
-   "detail": "api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/er-ir/hk-interbank-ir-endperiod has answered 405 since 1 Nov 16:52 UTC; the HIBOR series is served from its snapshot and housing › global shows one \"not available\". Alerts at 3 days. The housing session was told on 3 Nov."
+   "detail": "api.hkma.gov.hk answers 405 with an Alibaba Cloud WAF block page for the server's IP, for every header variant, so it is an IP block, not an API change. HIBOR is served from its snapshot and housing › global keeps the UK and US rates and names HIBOR as missing. If it still fails at 3 days, the housing session will put the options to the owner: a hand-entered monthly HIBOR CSV, or another source."
   }
  ],
  "roadmap": [
