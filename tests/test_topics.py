@@ -923,6 +923,49 @@ def test_london_heatmap_from_bres(snapdir, monkeypatch):
         J.parse_bres('"DATE_NAME","GEOGRAPHY_NAME","GEOGRAPHY_CODE","INDUSTRY","OBS_VALUE"\n"2024","Camden","E09000007",1,5\n')
 
 
+def test_ai_signals_match_the_watchlist_and_test_their_watch_points(snapdir, monkeypatch):
+    pytest.importorskip("openpyxl")
+    from pathlib import Path
+    from app.topics import ai, ai_adoption as A, ai_jobs as J
+    assert ai.SIGNALS() == []                                              # nothing cached: nothing read, nothing fetched
+    monkeypatch.setattr(J, "fetch", jobs_fetch)
+    def fake(url, ttl, **k):
+        if url == A.BTOS_XLSX:
+            return btos_national_xlsx().decode("latin-1")
+        if url == A.RAMP_PAGE:
+            return ramp_page()
+        if url == A.BICS_PAGE:
+            return BICS_PAGE_HTML
+        return bics_wave_xlsx().decode("latin-1")
+    monkeypatch.setattr(A, "fetch", fake)
+    for name in ai.ENDPOINTS:
+        ai.ENDPOINTS[name]()
+    rows = {r["key"]: r for r in ai.SIGNALS()}
+    approved = [w["key"] for w in json.loads(Path("data/signals/watchlist.json").read_text())["ai"]]
+    assert set(rows) | {"ai_vs_prof"} == set(approved)                    # the fixture postings stop before 2023: no baseline there
+    import time as _t
+    from app import cache
+    wk = lambda y, w: int(pd.Timestamp(year=y, month=1, day=1).timestamp()) + w * 7 * 86400
+    ratio = [[wk(2023, w), 1.0] for w in range(52)] + [[wk(2026, w), 1.2 + w * 0.01] for w in range(40)]
+    cache._cache["topic:ai-jobs:ratio"] = (_t.time(), {"US": {"ai_over_professions": ratio}})
+    rows = {r["key"]: r for r in ai.SIGNALS()}
+    assert set(rows) == set(approved) and rows["ai_vs_prof"]["value"] == 1.59 and rows["ai_vs_prof"]["crossed"] and rows["ai_vs_prof"]["lean"] == 1
+    for r in rows.values():
+        assert isinstance(r["crossed"], bool) and r["lean"] in (-1, 0, 1) and r["watch"] and r["value"] is not None
+    assert rows["firms_using"]["value"] == 24.6 and rows["firms_using"]["crossed"]           # fixture: 24.6% > 15%
+    assert rows["pay_gap"]["value"] == 0 and not rows["pay_gap"]["crossed"]                  # fixture pay grows alike in every industry
+    assert rows["share_rising"]["crossed"] is False and "UK rising" in rows["share_rising"]["value"]   # fixture: both shares rise
+    assert rows["prof_headcount"]["value"].startswith("US +") and "HK +" in rows["prof_headcount"]["value"] and not rows["prof_headcount"]["crossed"]
+    B.json_safe(list(rows.values()))
+
+
+def test_quarter_yoy_needs_two_negative_quarters():
+    from app.topics.ai import _quarter_yoy
+    t = lambda y, m: int(pd.Timestamp(year=y, month=m, day=1).timestamp())
+    pts = [[t(y, m), v] for (y, m), v in zip([(y, m) for y in (2023, 2024) for m in (3, 6, 9, 12)], [100, 100, 100, 100, 101, 99, 98, 100])]
+    assert _quarter_yoy(pts, 4) == [-2.0, 0.0] and _quarter_yoy([], 4) == []
+
+
 def test_ramp_ai_index_parser():
     from app.topics.ai_adoption import parse_ramp
     s = parse_ramp(ramp_page())
