@@ -478,8 +478,11 @@ def settle(state: dict, now: float) -> None:
 _lock = threading.RLock()
 
 
+DIR: Path | None = None            # set to keep this dashboard's files elsewhere (smoke runs) without moving the shared SNAP_DIR
+
+
 def _dir() -> Path:
-    return B.SNAP_DIR / SLUG
+    return DIR or B.SNAP_DIR / SLUG
 
 
 def _read(name: str, default):
@@ -1321,6 +1324,43 @@ def READINGS() -> list[dict]:
             {"tab": "today", "key": "best_ev", "label": "Best EV today", "value": _r(best, 4), "lean": 1 if best is not None and best >= min_ev() else 0},
             {"tab": "live", "key": "live_flags", "label": "Live flags now", "value": live_n, "lean": 1 if live_n else 0},
             {"tab": "results", "key": "clv30", "label": "Average CLV, 30 days", "value": _r(c, 4), "lean": sgn(c), "note": "above 0: the flagged prices beat the sharp close"}]
+
+
+def roi_since(flags: list[dict], since: float) -> tuple[float | None, int]:
+    """ROI (1 unit a flag) of the flags raised since `since` that have settled, and how many."""
+    done = [f for f in flags if f["appeared"] >= since and f.get("profit") is not None]
+    return (sum(f["profit"] for f in done) / len(done) if done else None), len(done)
+
+
+def SIGNALS() -> list[dict]:
+    """The owner's approved watch points (data/signals/watchlist.json), from the snapshot files only; lean +1 = better for the bettor."""
+    lt, st = _latest(), load_state()
+    now = time.time()
+    rows = lt.get("rows") or []
+    value = [r for r in rows if r["value"] and not r["live"]]
+    best = max((r["ev"] for r in value), default=None)
+    flags = st.get("flags", [])
+    c30 = track(flags)["clv30"]
+    clv = c30[-1][1] if c30 and c30[-1][0] >= now - 31 * 86400 else None
+    roi, n_roi = roi_since(flags, now - 30 * 86400)
+    q = st.get("quota", {})
+    _, end = period_bounds(now)
+    days_left = (end - now) / 86400
+    left = None if q.get("remaining") is None else max(0.0, min(q["remaining"], budget() - (q.get("used") or 0)))
+    share = None if left is None else left / budget()
+    sgn = lambda v: 0 if v is None else 1 if v > 0 else -1 if v < 0 else 0
+    return [{"key": "value_bets", "tab": "today", "label": "Value bets today", "value": len(value) if lt else None, "lean": 1 if value else 0,
+             "watch": "more than 5", "crossed": len(value) > 5, **({} if lt else {"note": "no odds pulled yet"})},
+            {"key": "best_ev", "tab": "today", "label": "Best EV today", "value": None if best is None else _r(best * 100, 1), "unit": "%", "lean": 1 if best is not None else 0,
+             "watch": "above +8%", "crossed": best is not None and best > 0.08},
+            {"key": "clv_30d", "tab": "results", "label": "Average closing-line value, 30 days", "value": None if clv is None else _r(clv * 100, 2), "unit": "%", "lean": sgn(clv),
+             "watch": "turns negative", "crossed": clv is not None and clv < 0, **({} if clv is not None else {"note": "no closed flags in the last 30 days"})},
+            {"key": "roi_30d", "tab": "results", "label": "ROI, 30 days", "value": None if roi is None else _r(roi * 100, 1), "unit": "%", "lean": sgn(roi),
+             "watch": "below -5%", "crossed": roi is not None and roi < -0.05, "note": f"{n_roi} settled flags, 1 unit each"},
+            {"key": "credits", "tab": "today", "label": "API credits left this month", "value": None if share is None else _r(share * 100, 1), "unit": "%",
+             "lean": 0 if share is None else 1 if share >= 0.15 else -1, "watch": "below 15% with more than a week to go",
+             "crossed": share is not None and share < 0.15 and days_left > 7,
+             "note": (f"{int(left)} of {int(budget())} left, {days_left:.0f} days to the reset" if left is not None else "no pull yet")}]
 
 
 def _ep(name, fn, ttl=15):

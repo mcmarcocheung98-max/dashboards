@@ -158,7 +158,7 @@ def smoke_patch() -> None:
     """Used by scripts/smoke.py: a fake Odds API and NBA feeds, and a few pulls so every tab has data (flags, history, a settled result)."""
     import tempfile
     from pathlib import Path
-    B.SNAP_DIR = Path(tempfile.mkdtemp())
+    M.DIR = Path(tempfile.mkdtemp())          # this dashboard's files only: the shared B.SNAP_DIR stays where the other dashboards put it
     os.environ["ODDS_API_KEY"] = "test-key"
     M.fetch_json = fake_fetch_json
     clock = {"t": NOW - 6 * H, "k": 0}
@@ -489,6 +489,40 @@ def test_crowd_sources_down_do_not_break_the_pull(mocked, monkeypatch):
     r = M.poll_once("live", NOW)
     assert "error" not in r and r["games"] == 2
     assert "polymarket" not in M._latest()["books_seen"]
+
+
+def test_signals_follow_the_watchlist(mocked, monkeypatch):
+    import json as _j
+    want = [r["key"] for r in _j.loads((B.MANUAL_DIR / "signals" / "watchlist.json").read_text())["nba-odds"]]
+    sig = M.SIGNALS()                                             # nothing pulled yet: every key, nothing crossed
+    assert [r["key"] for r in sig] == want and not any(r["crossed"] for r in sig)
+    B.json_safe(sig)
+    M.poll_once("pre-game", NOW)
+    by = {r["key"]: r for r in M.SIGNALS()}
+    assert by["value_bets"]["value"] >= 1 and not by["value_bets"]["crossed"]
+    assert by["best_ev"]["value"] > 0 and by["best_ev"]["crossed"] == (by["best_ev"]["value"] > 8)
+    st = M.load_state()
+    day = 86400
+    st["flags"] = [{"appeared": NOW - 2 * day, "profit": -1.0, "result": "loss", "clv": -0.02, "live": False, "ev": 0.03, "status": "gone"},
+                   {"appeared": NOW - 3 * day, "profit": 0.9, "result": "win", "clv": -0.01, "live": False, "ev": 0.03, "status": "gone"},
+                   {"appeared": NOW - 60 * day, "profit": 5.0, "result": "win", "clv": 0.2, "live": False, "ev": 0.03, "status": "gone"}]
+    st["quota"] = {"used": 17000, "remaining": 3000}
+    M.save_state(st)
+    by = {r["key"]: r for r in M.SIGNALS()}
+    assert by["clv_30d"]["crossed"] and by["clv_30d"]["value"] < 0
+    assert by["roi_30d"]["value"] == pytest.approx(-5.0) and not by["roi_30d"]["crossed"]      # (-1 + 0.9) / 2: the 60-day-old win is out
+    _, end = M.period_bounds(time.time())
+    assert by["credits"]["value"] == pytest.approx(2000 / 19000 * 100, abs=0.1) and by["credits"]["crossed"] == ((end - time.time()) / day > 7)
+
+
+def test_smoke_patch_leaves_the_shared_snapshot_dir_alone(monkeypatch):
+    before = B.SNAP_DIR
+    monkeypatch.setattr(M, "DIR", None)
+    monkeypatch.setattr(M, "fetch_json", M.fetch_json)
+    monkeypatch.setattr(M.requests, "get", M.requests.get)
+    monkeypatch.setenv("ODDS_API_KEY", "x")
+    smoke_patch()
+    assert B.SNAP_DIR == before and M.DIR != before and (M.DIR / "state.json").exists()
 
 
 def test_scoreboard_falls_back_to_espn(monkeypatch):

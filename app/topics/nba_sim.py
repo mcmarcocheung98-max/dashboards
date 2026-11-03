@@ -407,7 +407,8 @@ def example_trace(ex: dict, cfg: dict) -> dict:
 
 # ------------------------------------------------------------------ the file on the volume, the background job, the live model
 def _file():
-    return B.SNAP_DIR / "nba-odds" / "sim.json"
+    from . import nba_odds
+    return nba_odds._dir() / "sim.json"
 
 
 def load() -> dict:
