@@ -437,7 +437,7 @@ def log_today(today: str | None = None) -> dict:
             if r.get(venue):
                 out.append([today, r["key"], venue, r[venue]["yes"]])
         if r.get("poly"):
-            out += [[today, r["key"], s, r["poly"].get(s)] for s in ("vol", "liq") if r["poly"].get(s) is not None]
+            out += [[today, r["key"], s, r["poly"].get(s)] for s in ("vol", "vol24", "liq") if r["poly"].get(s) is not None]
     try:
         for c in category_totals(poly_pool()[0]):
             out += [[today, f"cat:{c['key']}", s, c[s]] for s in ("vol24", "volume", "liq")]
@@ -742,6 +742,88 @@ def READINGS() -> list[dict]:
         lean = 1 if d1 >= 0.005 else -1 if d1 <= -0.005 else 0
         out.append({"tab": "markets", "key": f"p_{i['key']}", "label": f"{i['label']} (Polymarket, %)", "value": round(p["yes"] * 100, 1), "lean": lean,
                     **({"note": f"biggest mover: {d1 * 100:+.1f} pts in 24 hours"} if i["key"] in big else {})})
+    return out
+
+
+def watchlist_daily_volume(log: dict | None = None) -> pd.Series:
+    """Money traded on the watchlist's Polymarket markets each logged day: the sum of each market's logged 24-hour volume, or, for days
+    logged before that was kept (26 Oct to 3 Nov 2026), the day's change in its all-time volume."""
+    log = read_log() if log is None else log
+    keys = {k for (k, ser) in log if not k.startswith("cat:") and ser in ("vol", "vol24")}
+    days = {}
+    for k in keys:
+        v24, v = log.get((k, "vol24")), log.get((k, "vol"))
+        diff = v.diff().clip(lower=0).dropna() if v is not None and len(v) > 1 else pd.Series(dtype=float)
+        for t, x in (diff if v24 is None else pd.concat([diff[~diff.index.isin(v24.index)], v24])).items():
+            days[t] = days.get(t, 0.0) + float(x)
+    return pd.Series(days, dtype=float).sort_index()
+
+
+def monthly_brier(recs: list[dict], key: str = "p30", min_n: int = 10) -> pd.Series:
+    """Brier score of `key` (the price 30 days before resolution) by the calendar month the markets resolved in (UTC), months with
+    min_n or more markets."""
+    xs = [(pd.Timestamp(r["closed"], unit="s").to_period("M"), (r[key] - r["outcome"]) ** 2) for r in recs if r.get(key) is not None]
+    if not xs:
+        return pd.Series(dtype=float)
+    d = pd.DataFrame(xs, columns=["m", "sq"]).groupby("m")["sq"].agg(["mean", "size"])
+    return d.loc[d["size"] >= min_n, "mean"]
+
+
+def SIGNALS() -> list[dict]:
+    """The owner's approved signals (data/signals/watchlist.json, 3 Nov 2026), from cached data only: the watchlist rows as last
+    resolved (memory), the daily log and resolved.json (the volume). Each row's `crossed` is this module's own test of its watch point."""
+    from ..cache import _cache
+    rows = ((_cache.get(f"{SLUG}:rows") or (0, ([], {})))[1] or ([], {}))[0]
+    out = []
+
+    # biggest_move: the largest 24-hour change in a watchlist market's Polymarket price
+    moves = [(abs(r["poly"]["d1"]), r) for r in rows if r.get("poly") and r["poly"].get("d1") is not None]
+    if moves:
+        _, r = max(moves, key=lambda x: x[0])
+        d1 = round(r["poly"]["d1"] * 100, 1)
+        out.append({"key": "biggest_move", "tab": "markets", "label": "Biggest 24-hour move on the watchlist", "value": round(d1, 1), "unit": " pts",
+                    "lean": 1 if d1 > 0 else -1 if d1 < 0 else 0, "watch": "any market moves 10 points in a day", "crossed": bool(abs(d1) >= 10),
+                    "note": f"{r['label']}: {r['poly']['yes'] * 100:.0f}% on Polymarket"})
+    else:
+        out.append({"key": "biggest_move", "tab": "markets", "label": "Biggest 24-hour move on the watchlist", "value": None, "lean": 0,
+                    "watch": "any market moves 10 points in a day", "crossed": False, "note": "waiting for the first fetch of the watchlist"})
+
+    # venue_gap: Polymarket against Kalshi on the rows that matched both (the same question, checked by the watchlist keywords)
+    gaps = [(round(abs(r["poly"]["yes"] - r["kalshi"]["yes"]) * 100, 1), r) for r in rows if r.get("poly") and r.get("kalshi")]
+    if gaps:
+        g, r = max(gaps, key=lambda x: x[0])
+        out.append({"key": "venue_gap", "tab": "venues", "label": "Cross-venue gap (Polymarket vs Kalshi)", "value": round(g, 1), "unit": " pts", "lean": 0,
+                    "watch": "above 5 points on the same event", "crossed": bool(g > 5),
+                    "note": f"{r['label']}: Polymarket {r['poly']['yes'] * 100:.1f}%, Kalshi {r['kalshi']['yes'] * 100:.1f}% ({len(gaps)} questions on both)"})
+    else:
+        out.append({"key": "venue_gap", "tab": "venues", "label": "Cross-venue gap (Polymarket vs Kalshi)", "value": None, "lean": 0,
+                    "watch": "above 5 points on the same event", "crossed": False, "note": "no watchlist question matched on both venues yet"})
+
+    # volume: today's 24-hour volume on the watchlist against the average logged day of the last 30
+    today = sum(r["poly"].get("vol24") or 0 for r in rows if r.get("poly"))
+    daily = watchlist_daily_volume()
+    base = daily[daily.index >= daily.index.max() - pd.Timedelta(days=29)] if len(daily) else daily
+    ok = bool(rows) and len(base) >= 5 and base.mean() > 0
+    ratio = today / base.mean() if ok else None
+    out.append({"key": "volume", "tab": "markets", "label": "Daily volume on the watchlist", "value": round(today) if rows else None, "unit": " $",
+                "lean": 0 if ratio is None else 1 if ratio >= 1.2 else -1 if ratio <= 0.8 else 0, "watch": "doubles its 30-day average",
+                "crossed": bool(ratio is not None and ratio >= 2),
+                "note": f"{ratio:.1f}x the average logged day (${base.mean() / 1e6:.1f}m, {len(base)} days)" if ok
+                else f"the 30-day average builds from the daily log ({len(base)} of 5 days needed)"})
+
+    # calibration: Brier score of the price 30 days out, by month of resolution; worse = higher
+    mb = monthly_brier(read_resolved())
+    done = mb[mb.index < pd.Timestamp(_now()).to_period("M")].tail(3)
+    if len(done):
+        last = float(done.iloc[-1])
+        worse2 = len(done) == 3 and done.iloc[0] < done.iloc[1] < done.iloc[2]
+        prev = float(done.iloc[-2]) if len(done) > 1 else None
+        out.append({"key": "calibration", "tab": "accuracy", "label": "Calibration: resolved markets priced 30 days out (Brier)", "value": round(last, 3),
+                    "lean": 0 if prev is None else 1 if last < prev else -1 if last > prev else 0, "watch": "Brier score worsens two months running",
+                    "crossed": bool(worse2), "note": ", ".join(f"{m.strftime('%b %Y')} {v:.3f}" for m, v in done.items()) + " (lower is better)"})
+    else:
+        out.append({"key": "calibration", "tab": "accuracy", "label": "Calibration: resolved markets priced 30 days out (Brier)", "value": None, "lean": 0,
+                    "watch": "Brier score worsens two months running", "crossed": False, "note": "the resolved-market sample is still being built"})
     return out
 
 

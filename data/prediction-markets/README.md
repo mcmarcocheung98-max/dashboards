@@ -60,6 +60,18 @@ One reading per watchlist market: its Polymarket probability (%), **lean +1 when
 point or more), 0 otherwise. The three biggest moves say "biggest mover: ±x pts in 24 hours" in the note. Read from the cached Markets payload
 only.
 
+## Signals (`SIGNALS()`, approved 3 Nov 2026)
+
+The four approved in `data/signals/watchlist.json`, read from cached data only (the watchlist rows in memory, the daily log, `resolved.json`);
+`crossed` is this module's own test:
+
+| Key | Value | Crossed when |
+|---|---|---|
+| `biggest_move` | the largest 24-hour change in a watchlist market's Polymarket price, in points (lean = its sign) | 10 points or more either way |
+| `venue_gap` | the largest gap between Polymarket and Kalshi among watchlist questions matched on both | above 5 points |
+| `volume` | the watchlist markets' 24-hour volume now, against the average logged day of the last 30 (each market's logged 24-hour volume; before 3 Nov, the day's change in its all-time volume) | twice the average or more, with 5+ logged days |
+| `calibration` | Brier score of the price 30 days before resolution, by month resolved (months with 10+ markets) | higher in each of the last two complete months than the month before |
+
 ## Pacing and limits
 
 Downloads to the same host wait `PACE` (0.5 s) after the previous one and are cached an hour (a snapshot on the volume is served if a source

@@ -196,6 +196,11 @@ def seed_log(days: int = 75) -> None:
 
 def smoke_patch() -> None:
     """Used by scripts/smoke.py: every source of this dashboard answers from the fixtures above, with a log and a calibration sample."""
+    import tempfile
+    from pathlib import Path
+    own = Path(tempfile.mkdtemp())          # this dashboard's files stay put if another smoke_patch() moves the shared SNAP_DIR
+    M._log_file = lambda: own / "daily.csv"
+    M._acc_file = lambda: own / "resolved.json"
     M.fetch_json = fake_fetch_json
     M.PACE = 0
     seed_log()
@@ -400,3 +405,46 @@ def test_live_sources_answer():
     assert M.kalshi_series("KXFEDDECISION")
     assert M.parse_predictit(M.get_json(M.PREDICTIT))
     assert isinstance(M.manifold_search("fed"), list)
+
+
+# ------------------------------------------------------------------ signals (data/signals/watchlist.json)
+def test_signals_wire_every_approved_key_from_cached_data(mocked):
+    approved = [r["key"] for r in json.loads((B.MANUAL_DIR / "signals" / "watchlist.json").read_text())[M.SLUG]]
+    cold = M.SIGNALS()                                                          # nothing cached: rows say so, nothing downloads
+    assert [s["key"] for s in cold] == approved and not any(s["crossed"] for s in cold)
+    seed_log()
+    M.fill_accuracy()
+    M.rows_now()
+    sig = {s["key"]: s for s in M.SIGNALS()}
+    assert set(sig) == set(approved)
+    for s in sig.values():
+        assert {"key", "label", "tab", "value", "lean", "watch", "crossed"} <= set(s) and s["tab"] in M.ENDPOINTS
+        B.json_safe(s)
+    assert sig["biggest_move"]["value"] == 11.0 and sig["biggest_move"]["crossed"]          # the Dodgers, +11 points
+    assert sig["venue_gap"]["value"] == 3.0 and not sig["venue_gap"]["crossed"]               # December cut 55% vs 52%, House 78% vs 75%
+    assert sig["volume"]["value"] > 0 and "average" in sig["volume"]["note"]
+    assert sig["calibration"]["value"] is None and "being built" in sig["calibration"]["note"]  # the fixture resolves 7-8 markets a month, under 10
+
+
+def test_signal_watch_points(mocked, monkeypatch):
+    from app import cache
+    row = lambda d1, p, k: {"key": "x", "label": "X", "poly": {"yes": p, "d1": d1, "vol24": 3e6}, "kalshi": {"yes": k} if k is not None else None}
+    def run(rows, recs=(), daily=None):
+        cache._cache[f"{M.SLUG}:rows"] = (1e18, (rows, {}))
+        monkeypatch.setattr(M, "read_resolved", lambda: list(recs))
+        monkeypatch.setattr(M, "watchlist_daily_volume", lambda log=None: daily if daily is not None else pd.Series(dtype=float))
+        return {s["key"]: s for s in M.SIGNALS()}
+    s = run([row(0.099, 0.5, 0.55)])
+    assert not s["biggest_move"]["crossed"] and not s["venue_gap"]["crossed"]               # 9.9 points; a 5.0-point gap is not above 5
+    s = run([row(-0.10, 0.5, 0.56)])
+    assert s["biggest_move"]["crossed"] and s["biggest_move"]["lean"] == -1 and s["venue_gap"]["crossed"]
+    days = pd.Series([1e6] * 10, index=pd.date_range("2026-10-01", periods=10))
+    s = run([row(0, .5, None)], daily=days)                                                   # $3m today against $1m a day: 3x
+    assert s["volume"]["crossed"] and s["volume"]["note"].startswith("3.0x")
+    assert run([row(0, .5, None)], daily=days * 2)["volume"]["crossed"] is False              # 1.5x
+    assert run([row(0, .5, None)], daily=days.iloc[:4])["volume"]["crossed"] is False        # under five days: no verdict
+    t = lambda y, m: int(pd.Timestamp(year=y, month=m, day=15).timestamp())
+    recs = lambda brier_by_month: [{"closed": t(2026, m), "outcome": 0, "p30": b ** 0.5} for m, b in brier_by_month.items() for _ in range(10)]
+    assert run([], recs({6: 0.02, 7: 0.03, 8: 0.05}))["calibration"]["crossed"]              # worse in July, worse again in August
+    assert not run([], recs({6: 0.02, 7: 0.05, 8: 0.03}))["calibration"]["crossed"]
+    assert run([], recs({7: 0.02, 8: 0.05}))["calibration"]["crossed"] is False             # one rise is not two
