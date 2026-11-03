@@ -1,19 +1,19 @@
 date,series,value,source,note
-2015-01-01,Imports,230.7,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
-2016-01-01,Imports,227.1,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
-2017-01-01,Imports,260.1,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
-2018-01-01,Imports,312.1,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
-2019-01-01,Imports,305.6,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
-2020-01-01,Imports,350.0,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
-2021-01-01,Imports,432.6,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
-2022-01-01,Imports,415.6,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
-2023-01-01,Imports,349.4,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
-2024-01-01,Imports,385.0,http://english.customs.gov.cn/statics/report/monthly.html,integrated circuits (HS 8542) USD bn; from memory of GACC releases; verify
-2025-01-01,Imports,425.0,https://axis-intelligence.com/?p=41378,CN¥3035.5bn at 7.1429 per USD (secondary source); verify against GACC
-2018-01-01,Exports,84.6,http://english.customs.gov.cn/statics/report/monthly.html,USD bn; from memory of GACC releases; verify
-2019-01-01,Exports,101.6,http://english.customs.gov.cn/statics/report/monthly.html,USD bn; from memory of GACC releases; verify
-2020-01-01,Exports,116.6,http://english.customs.gov.cn/statics/report/monthly.html,USD bn; from memory of GACC releases; verify
-2021-01-01,Exports,153.8,http://english.customs.gov.cn/statics/report/monthly.html,USD bn; from memory of GACC releases; verify
-2022-01-01,Exports,153.9,http://english.customs.gov.cn/statics/report/monthly.html,USD bn; from memory of GACC releases; verify
-2023-01-01,Exports,136.2,http://english.customs.gov.cn/statics/report/monthly.html,USD bn; from memory of GACC releases; verify
-2024-01-01,Exports,159.5,http://english.customs.gov.cn/statics/report/monthly.html,USD bn; from memory of GACC releases; verify
+2015-01-01,Imports,230.7,https://www.ndrc.gov.cn/xwdt/gdzt/xyqqd/201708/t20170802_1197812.html,integrated circuits (HS 8542) USD bn; checked 2026-11-03: NDRC citing customs: 2307亿美元 (Shanghai Daily quotes about 229)
+2016-01-01,Imports,227.1,https://www.gasworld.com/the-electronics-gases-business-in-china/2014132.article,integrated circuits (HS 8542) USD bn; checked 2026-11-03: gasworld citing China Customs: 'more than $227bn'; 227.1 is within that
+2017-01-01,Imports,260.1,https://news.sina.cn/gn/2018-04-23/detail-ifznefkh9514977.d.html?vt=4,integrated circuits (HS 8542) USD bn; checked 2026-11-03: Beijing Youth Daily citing GACC: 2601亿美元 up 14.6%
+2018-01-01,Imports,312.1,https://www.yicaiglobal.com/news/china-trade-deficit-in-chips-topped-usd200-billion-for-first-time-last-year,integrated circuits (HS 8542) USD bn; checked 2026-11-03: Yicai: USD312.1bn up 19.8% (GACC key-commodity index: $312bn)
+2019-01-01,Imports,305.6,https://en.imsilkroad.com/p/312346.html,integrated circuits (HS 8542) USD bn; checked 2026-11-03: Xinhua Silk Road citing GACC: 305.55bn down 2.1%
+2020-01-01,Imports,350.0,https://www.scmp.com/tech/policy/article/3118327/china-boosts-semiconductor-production-2020-imports-keep-apace,integrated circuits (HS 8542) USD bn; checked 2026-11-03: SCMP citing customs: US$350bn up 14.6%
+2021-01-01,Imports,432.5,https://apps.digitimes.com/news/a20220720VL201.html,integrated circuits (HS 8542) USD bn; checked 2026-11-03: DIGITIMES from China customs: 432.5bn (was 432.6)
+2022-01-01,Imports,415.6,https://www.scmp.com/tech/tech-trends/article/3206772/chinas-chip-imports-plunge-2022-amid-zero-covid-supply-chain-disruption-and-us-trade-restrictions,integrated circuits (HS 8542) USD bn; checked 2026-11-03: SCMP citing customs: US$415.6bn down 3.9%
+2023-01-01,Imports,349.4,https://www.trendforce.com/news/2024/01/16/news-chinas-ics-imports-decrease-in-2023-chinese-manufacturers-focus-on-mature-processes/,integrated circuits (HS 8542) USD bn; checked 2026-11-03: TrendForce citing customs: $349.4bn down 15.4%
+2024-01-01,Imports,385.0,https://www.scmp.com/tech/tech-trends/article/3294570/chinas-2024-chip-imports-surged-104-us385-billion-amid-tighter-us-tech-sanctions,integrated circuits (HS 8542) USD bn; checked 2026-11-03: SCMP citing GACC: US$385bn up 10.4%
+2025-01-01,Imports,425.0,https://axis-intelligence.com/?p=41378,CN¥3035.5bn at 7.1429 per USD (secondary source citing the NBS 2025 communiqué; no GACC USD figure found 2026-11-03); verify against GACC
+2018-01-01,Exports,84.6,https://www.yicaiglobal.com/news/china-trade-deficit-in-chips-topped-usd200-billion-for-first-time-last-year,USD bn; checked 2026-11-03: Yicai: USD84.6bn
+2019-01-01,Exports,101.6,https://en.imsilkroad.com/p/312346.html,USD bn; checked 2026-11-03: Xinhua Silk Road citing GACC: 101.58bn up 20%
+2020-01-01,Exports,116.6,https://apps.digitimes.com/news/a20220720VL201.html,USD bn; checked 2026-11-03: implied by DIGITIMES 2021 153.8bn up 31.9% (no direct 2020 USD figure found)
+2021-01-01,Exports,153.8,https://apps.digitimes.com/news/a20220720VL201.html,USD bn; checked 2026-11-03: DIGITIMES from China customs: 153.8bn
+2022-01-01,Exports,153.9,https://www.scmp.com/tech/tech-trends/article/3206772/chinas-chip-imports-plunge-2022-amid-zero-covid-supply-chain-disruption-and-us-trade-restrictions,USD bn; checked 2026-11-03: SCMP citing customs: US$153.9bn up 0.3%
+2023-01-01,Exports,136.0,https://www.trendforce.com/news/2025/01/24/news-u-s-blockade-fails-chinas-chip-exports-surge-for-14-consecutive-months-hitting-usd-160-billion-in-2024/,USD bn; checked 2026-11-03: TrendForce citing customs: 135.973bn (was 136.2)
+2024-01-01,Exports,159.5,https://www.trendforce.com/news/2025/01/24/news-u-s-blockade-fails-chinas-chip-exports-surge-for-14-consecutive-months-hitting-usd-160-billion-in-2024/,USD bn; checked 2026-11-03: TrendForce citing customs: 159.499bn (¥1135.16bn) up 17.4%
