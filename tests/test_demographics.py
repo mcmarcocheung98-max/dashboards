@@ -198,3 +198,19 @@ def test_readings(demo):
     assert by["wa2045:China"]["lean"] == -1
     assert "net:Hong Kong natural change (C&SD)" not in by
     cache._cache.clear()
+
+
+def test_signals(demo):
+    from app import cache
+    assert D.SIGNALS() == []                                     # nothing cached: nothing downloaded
+    for fn in D.ENDPOINTS.values():
+        fn()
+    s = {r["key"]: r for r in D.SIGNALS()}
+    assert set(s) == {"tfr", "workers_per_65", "net_migration", "pension_gdp"}
+    assert all(isinstance(r["crossed"], bool) and r["lean"] in (-1, 0, 1) and r["watch"] for r in s.values())
+    assert "HK 0.84" in s["tfr"]["value"] and "China: UN estimate" in s["tfr"]["note"]          # official 0.841 > 0.7; China from the UN
+    assert s["tfr"]["crossed"] is True and s["tfr"]["note"].endswith("Below 1.0: Hong Kong")       # 0.841: "any below 1.0" is already crossed
+    assert s["net_migration"]["crossed"] is False and s["net_migration"]["value"].startswith("UK 204k")     # 204k is above the 200k line
+    assert s["pension_gdp"]["value"] == 7.7 and s["pension_gdp"]["crossed"] is False
+    assert s["workers_per_65"]["crossed"] is (min(float(x.split()[-1]) for x in s["workers_per_65"]["value"].split(" · ")) < 2.0)
+    cache._cache.clear()

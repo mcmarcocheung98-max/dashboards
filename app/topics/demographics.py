@@ -394,3 +394,70 @@ def READINGS() -> list[dict]:
         if hit and isinstance(hit[1], dict):
             rows += readings_for(t, hit[1])
     return rows
+
+
+# ------------------------------------------------------------------ signals (the owner's watch points: data/signals/watchlist.json)
+def _tab(t: str) -> dict:
+    from ..cache import _cache
+    hit = _cache.get(f"topic:{SLUG}:{t}")
+    return hit[1] if hit and isinstance(hit[1], dict) else {}
+
+
+def _last(pts):
+    return pts[-1] if pts else None
+
+
+def SIGNALS() -> list[dict]:
+    """One row per approved key, read only from the cached tab payloads; a key whose tab is not computed yet is left out."""
+    out = []
+    b = _tab("births")
+    if b:
+        tfr, src = {}, {}
+        for k in PLACES.values():
+            p = _last((b.get("national_tfr") or {}).get(k))
+            if p and pd.Timestamp(p[0], unit="s").year >= CUT:          # an official rate from the last few years
+                tfr[k], src[k] = p[1], f"official {pd.Timestamp(p[0], unit='s').year}"
+            else:                                                       # China publishes no annual rate: the UN's latest estimate
+                p = _last(((b.get("tfr") or {}).get(k) or {}).get("est"))
+                if p:
+                    tfr[k], src[k] = p[1], f"UN estimate {pd.Timestamp(p[0], unit='s').year}"
+        if tfr:
+            low = [k for k, v in tfr.items() if v < 1.0]
+            hk = tfr.get("Hong Kong") is not None and tfr["Hong Kong"] < 0.7
+            crossed = bool(low) or hk
+            out.append({"key": "tfr", "tab": "births", "label": "Total fertility rate, children per woman",
+                        "value": " · ".join(f"{'HK' if k == 'Hong Kong' else k} {v:.2f}" for k, v in tfr.items()),
+                        "lean": -1 if crossed else 0, "watch": "any below 1.0; HK below 0.7", "crossed": crossed,
+                        "note": "; ".join(f"{k}: {s}" for k, s in src.items()) + (f". Below 1.0: {', '.join(low)}" if low else "")})
+    p = _tab("pensions")
+    rows = {r["place"]: r for r in (p.get("answer") or {}).get("rows") or []}
+    w = {k: rows[k].get("workers_per_65_2045") for k in ("UK", "US") if k in rows and rows[k].get("workers_per_65_2045") is not None}
+    if w:
+        crossed = any(v < 2.0 for v in w.values())
+        out.append({"key": "workers_per_65", "tab": "pensions", "label": "People aged 15–64 per person 65+ in 2045 (UN projection)",
+                    "value": " · ".join(f"{k} {v:.2f}" for k, v in w.items()), "lean": -1 if crossed else 0,
+                    "watch": "revised below 2.0 for the UK or the US", "crossed": crossed,
+                    "note": "UN WPP medium projection; " + ", ".join(f"{k} {rows[k]['workers_per_65_2025']:.2f} in 2025" for k in w if rows[k].get("workers_per_65_2025"))})
+    m = (_tab("migration").get("national") or {})
+    uk = next((v for k, v in m.items() if k.startswith("UK net migration")), None)
+    us = next((v for k, v in m.items() if k.startswith("US net international migration")), None)
+    if uk or us:
+        u, s = _last(uk), _last(us)
+        crossed = bool((u and u[1] < 200_000) or (s and s[1] < 0))
+        out.append({"key": "net_migration", "tab": "migration", "label": "Net migration, latest 12 months",
+                    "value": " · ".join(x for x in (f"UK {u[1] / 1000:,.0f}k" if u else "", f"US {s[1] / 1e6:,.2f}m" if s else "") if x),
+                    "lean": -1 if crossed else _step(uk or us), "watch": "UK below 200k a year; US turns negative", "crossed": crossed,
+                    "note": "; ".join(x for x in (f"UK: ONS LTIM, 12 months to {pd.Timestamp(u[0], unit='s').date()}" if u else "",
+                                                  f"US: Census, year to {pd.Timestamp(s[0], unit='s').date()}" if s else "") if x)})
+    ser = p.get("series") or {}
+    ukp = next((v for k, v in ser.items() if k.startswith("UK ")), None)
+    if ukp:
+        now = time.time()
+        future = [x for x in ukp if x[0] > now] or ukp
+        top = max(future, key=lambda x: x[1])
+        crossed = top[1] > 8
+        out.append({"key": "pension_gdp", "tab": "pensions", "label": "UK state pension, % of GDP, highest OBR projection",
+                    "value": top[1], "unit": "%", "lean": -1 if crossed else _band(top[1], 5, 7, higher_is_good=False),
+                    "watch": "above 8% for the UK", "crossed": crossed,
+                    "note": f"OBR projection for {pd.Timestamp(top[0], unit='s').year}; now {ukp[0][1]}% ({pd.Timestamp(ukp[0][0], unit='s').year})"})
+    return out
