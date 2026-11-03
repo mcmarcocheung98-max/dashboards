@@ -890,7 +890,11 @@ def _cached_payload(tab: str) -> dict:
 
 
 def _month_record_low(pts: list) -> dict | None:
-    """Monthly mean extent points [[t, v], ...] -> the latest month against the lowest earlier value for the same calendar month."""
+    """Monthly mean extent points [[t, v], ...] -> the latest complete month against the lowest earlier value for the same calendar
+    month. The running month is skipped: a few days' mean is not comparable with whole months (early November reads low while the
+    Arctic is still freezing)."""
+    now = pd.Timestamp.now()
+    pts = [p for p in pts if (pd.Timestamp(p[0], unit="s").year, pd.Timestamp(p[0], unit="s").month) < (now.year, now.month)]
     if not pts:
         return None
     t, v = pts[-1]
@@ -899,8 +903,7 @@ def _month_record_low(pts: list) -> dict | None:
     if not earlier or v is None:
         return None
     y, low = min(earlier, key=lambda x: x[1])
-    return {"month": d.strftime("%b %Y"), "v": v, "low": low, "low_year": y, "record": v < low,
-            "to_date": d.year == pd.Timestamp.now().year and d.month == pd.Timestamp.now().month}
+    return {"month": d.strftime("%b %Y"), "v": v, "low": low, "low_year": y, "record": v < low}
 
 
 def SIGNALS() -> list[dict]:
@@ -929,16 +932,16 @@ def SIGNALS() -> list[dict]:
                      "note": f"to {k.get('month')}; 10-year average {k.get('growth10')} ppm a year"})
     h = _cached_payload("heat")
     if h:
-        fresh = (pd.Timestamp.now() - pd.Timedelta(days=20)).strftime("%Y-%m-%d")
+        this_year = str(pd.Timestamp.now().year)        # HKO publishes about a month behind; any data from this year is a year-to-date count
         parts, hit, notes = [], False, []
         for city in ("Hong Kong", "London"):
             d = h.get(city) or {}
             pts = d.get("hot") or []
-            if not pts or (d.get("upto") or "") < fresh:
-                notes.append(f"{city}: no current daily data" + (f" (ends {d.get('upto')})" if d.get("upto") else ""))
+            if not pts or (d.get("upto") or "")[:4] != this_year:
+                notes.append(f"{city}: no daily data this year" + (f" (ends {d.get('upto')})" if d.get("upto") else ""))
                 continue
             now, prev = pts[-1][1], max((p[1] for p in pts[:-1]), default=None)
-            parts.append(f"{'HK' if city == 'Hong Kong' else city} {now:.0f}")
+            parts.append(f"{'HK' if city == 'Hong Kong' else city} {now:.0f} to {d['upto'][5:]}")
             if prev is not None:
                 notes.append(f"{city}: record {prev:.0f}")
                 hit = hit or now > prev
@@ -962,6 +965,6 @@ def SIGNALS() -> list[dict]:
             rows.append({"key": "sea_ice", "tab": "sea", "label": "Sea-ice extent, monthly mean (million km²)",
                          "value": ", ".join(f"{k} {v['v']:.2f}" for k, v in found.items()), "lean": -1 if rec else 0,
                          "watch": "a new record low for the month", "crossed": bool(rec),
-                         "note": "; ".join(f"{k} {v['month']}{' to date' if v['to_date'] else ''}: lowest before {v['low']:.2f} ({v['low_year']})"
+                         "note": "; ".join(f"{k} {v['month']}: lowest before {v['low']:.2f} ({v['low_year']})"
                                            for k, v in found.items())})
     return rows

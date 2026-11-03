@@ -386,6 +386,11 @@ def test_signal_watch_points(fixtures):
     sept = [[ts(f"{y}-09-01"), 5.0 - 0.1 * (y - 2010)] for y in range(2010, 2021)]
     assert C._month_record_low(sept)["record"] and C._month_record_low(sept)["low_year"] == 2019
     assert not C._month_record_low(sept[:-1] + [[ts("2020-09-01"), 9.0]])["record"]
+    m0 = pd.Timestamp.now().normalize().replace(day=1)          # the running month is never the one tested
+    prev = m0 - pd.DateOffset(months=1)
+    run = [[ts(prev - pd.DateOffset(years=k)), 6.0] for k in range(5, 0, -1)] + [[ts(prev), 7.0], [ts(m0), 1.0]]
+    r = C._month_record_low(run)
+    assert r["month"] == (m0 - pd.DateOffset(months=1)).strftime("%b %Y") and not r["record"]
 
 
 def test_hot_days_signal_skips_a_stale_station(fixtures, monkeypatch):
@@ -397,4 +402,4 @@ def test_hot_days_signal_skips_a_stale_station(fixtures, monkeypatch):
         "Hong Kong": {"hot": yrs([10, 40, 41], now.year - 2), "upto": now.strftime("%Y-%m-%d")},
         "London": {"hot": yrs([3, 99], now.year - 2), "upto": "2025-08-24"}})
     r = {x["key"]: x for x in C.SIGNALS()}["hot_days"]
-    assert r["crossed"] and r["value"] == "HK 41" and "London: no current daily data" in r["note"]
+    assert r["crossed"] and r["value"] == f"HK 41 to {now.strftime('%m-%d')}" and "London: no daily data this year" in r["note"]
