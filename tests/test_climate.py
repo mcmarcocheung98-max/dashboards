@@ -354,3 +354,47 @@ def test_a_station_that_stopped_gives_no_reading_for_today(fixtures, monkeypatch
     h = C._heat_now()
     keys = {r["key"] for r in h["readings"]}
     assert h["London"]["upto"] == "2025-08-24" and "hot_London" not in keys and "rec_London" not in keys and "hot_New York" in keys
+
+
+def test_signals_cover_the_approved_list(fixtures):
+    import json
+    from app.config import DATA_DIR
+    assert C.SIGNALS() == []                                    # nothing cached yet: nothing downloaded here
+    for name in ("temperature", "co2", "sea", "heat", "costs"):
+        C.ENDPOINTS[name]()
+    rows = C.SIGNALS()
+    want = [w["key"] for w in json.loads((DATA_DIR / "signals" / "watchlist.json").read_text())["climate"]]
+    assert [r["key"] for r in rows] == want
+    for r in rows:
+        assert {"tab", "label", "value", "lean", "watch", "crossed"} <= set(r) and r["lean"] in (-1, 0, 1) and isinstance(r["crossed"], bool)
+    by = {r["key"]: r for r in rows}
+    assert by["disasters_ytd"]["crossed"] is False and "no year-to-date" in by["disasters_ytd"]["note"]
+    B.json_safe(rows)
+
+
+def test_signal_watch_points(fixtures):
+    import time
+    from app.cache import _cache
+    ts = lambda s: int(pd.Timestamp(s).timestamp())
+    months = pd.date_range("2024-01-01", periods=14, freq="MS")
+    temp = {"main": "X", "monthly": {"X": [[ts(m), 1.4 if i < 2 else 1.6] for i, m in enumerate(months)]}, "kpis": {"X": {"r12": 1.6, "month": "2025-02"}}}
+    _cache[f"topic:{C.SLUG}:temperature"] = (time.time(), temp)
+    r = {x["key"]: x for x in C.SIGNALS()}["anomaly_12m"]
+    assert r["crossed"] and r["note"].startswith("12 consecutive months")
+    temp["monthly"]["X"][-1][1] = 1.5                           # the latest month at 1.5 breaks the run
+    assert not {x["key"]: x for x in C.SIGNALS()}["anomaly_12m"]["crossed"]
+    sept = [[ts(f"{y}-09-01"), 5.0 - 0.1 * (y - 2010)] for y in range(2010, 2021)]
+    assert C._month_record_low(sept)["record"] and C._month_record_low(sept)["low_year"] == 2019
+    assert not C._month_record_low(sept[:-1] + [[ts("2020-09-01"), 9.0]])["record"]
+
+
+def test_hot_days_signal_skips_a_stale_station(fixtures, monkeypatch):
+    import time
+    from app.cache import _cache
+    now = pd.Timestamp.now()
+    yrs = lambda vals, y0: [[int(pd.Timestamp(f"{y0 + i}-01-01").timestamp()), v] for i, v in enumerate(vals)]
+    _cache[f"topic:{C.SLUG}:heat"] = (time.time(), {
+        "Hong Kong": {"hot": yrs([10, 40, 41], now.year - 2), "upto": now.strftime("%Y-%m-%d")},
+        "London": {"hot": yrs([3, 99], now.year - 2), "upto": "2025-08-24"}})
+    r = {x["key"]: x for x in C.SIGNALS()}["hot_days"]
+    assert r["crossed"] and r["value"] == "HK 41" and "London: no current daily data" in r["note"]

@@ -881,3 +881,87 @@ def READINGS() -> list[dict]:
         if hit and isinstance(hit[1], dict):
             rows += [r for r in hit[1].get("readings") or [] if r.get("value") is not None]
     return rows
+
+
+def _cached_payload(tab: str) -> dict:
+    from ..cache import _cache
+    hit = _cache.get(f"topic:{SLUG}:{tab}")
+    return hit[1] if hit and isinstance(hit[1], dict) else {}
+
+
+def _month_record_low(pts: list) -> dict | None:
+    """Monthly mean extent points [[t, v], ...] -> the latest month against the lowest earlier value for the same calendar month."""
+    if not pts:
+        return None
+    t, v = pts[-1]
+    d = pd.Timestamp(t, unit="s")
+    earlier = [(pd.Timestamp(a, unit="s").year, b) for a, b in pts[:-1] if pd.Timestamp(a, unit="s").month == d.month and b is not None]
+    if not earlier or v is None:
+        return None
+    y, low = min(earlier, key=lambda x: x[1])
+    return {"month": d.strftime("%b %Y"), "v": v, "low": low, "low_year": y, "record": v < low,
+            "to_date": d.year == pd.Timestamp.now().year and d.month == pd.Timestamp.now().month}
+
+
+def SIGNALS() -> list[dict]:
+    """The owner's approved climate signals (data/signals/watchlist.json), each with its own test of the watch point, from the payloads
+    the endpoints already cached; a tab not computed yet gives no row (the board shows it as not wired yet)."""
+    rows = []
+    t = _cached_payload("temperature")
+    if t:
+        main = t.get("main")
+        mon = [p[1] for p in ((t.get("monthly") or {}).get(main) or []) if p[1] is not None]
+        r12 = ((t.get("kpis") or {}).get(main) or {}).get("r12")
+        run = 0
+        for v in reversed(mon):
+            if v <= 1.5:
+                break
+            run += 1
+        rows.append({"key": "anomaly_12m", "tab": "temperature", "label": f"Global temperature anomaly, 12-month mean ({main})", "value": r12,
+                     "unit": " °C", "lean": lean(None if r12 is None else 1.5 - r12), "watch": "above 1.5C for 12 consecutive months",
+                     "crossed": run >= 12, "note": f"{run} consecutive month{'s' if run != 1 else ''} above 1.5 °C to {(t.get('kpis') or {}).get(main, {}).get('month')}"})
+    c = _cached_payload("co2")
+    k = c.get("kpis") or {}
+    if k.get("growth12") is not None:
+        g = k["growth12"]
+        rows.append({"key": "co2_growth", "tab": "co2", "label": "CO2 growth, 12 months (Mauna Loa)", "value": g, "unit": " ppm",
+                     "lean": lean(None if k.get("growth10") is None else k["growth10"] - g, 0.15), "watch": "above 3 ppm a year", "crossed": g > 3,
+                     "note": f"to {k.get('month')}; 10-year average {k.get('growth10')} ppm a year"})
+    h = _cached_payload("heat")
+    if h:
+        fresh = (pd.Timestamp.now() - pd.Timedelta(days=20)).strftime("%Y-%m-%d")
+        parts, hit, notes = [], False, []
+        for city in ("Hong Kong", "London"):
+            d = h.get(city) or {}
+            pts = d.get("hot") or []
+            if not pts or (d.get("upto") or "") < fresh:
+                notes.append(f"{city}: no current daily data" + (f" (ends {d.get('upto')})" if d.get("upto") else ""))
+                continue
+            now, prev = pts[-1][1], max((p[1] for p in pts[:-1]), default=None)
+            parts.append(f"{'HK' if city == 'Hong Kong' else city} {now:.0f}")
+            if prev is not None:
+                notes.append(f"{city}: record {prev:.0f}")
+                hit = hit or now > prev
+        if parts or notes:
+            rows.append({"key": "hot_days", "tab": "heat", "label": "Hot days in HK (33C+) and London (30C+), year to date",
+                         "value": ", ".join(parts) or None, "lean": -1 if hit else 0, "watch": "above the previous record", "crossed": hit,
+                         "note": "; ".join(notes)})
+    s = _cached_payload("costs")
+    b = (s.get("kpis") or {}).get("billions")
+    if b:
+        rows.append({"key": "disasters_ytd", "tab": "costs", "label": f"US billion-dollar disasters ({b['year']}, full year)", "value": b["n"],
+                     "lean": lean(b["avg10"] - b["n"], 2) if b.get("avg10") is not None else 0, "watch": "above 25 by September", "crossed": False,
+                     "note": f"NOAA stopped the count after {b['year']}, so there is no year-to-date figure to test; {b['year']} ended at {b['n']}"})
+    sea = _cached_payload("sea")
+    ice = sea.get("ice") or {}
+    if ice:
+        found = {lab: _month_record_low((ice.get(h) or {}).get("daily") or []) for h, lab in (("north", "Arctic"), ("south", "Antarctic"))}
+        found = {k: v for k, v in found.items() if v}
+        if found:
+            rec = [k for k, v in found.items() if v["record"]]
+            rows.append({"key": "sea_ice", "tab": "sea", "label": "Sea-ice extent, monthly mean (million km²)",
+                         "value": ", ".join(f"{k} {v['v']:.2f}" for k, v in found.items()), "lean": -1 if rec else 0,
+                         "watch": "a new record low for the month", "crossed": bool(rec),
+                         "note": "; ".join(f"{k} {v['month']}{' to date' if v['to_date'] else ''}: lowest before {v['low']:.2f} ({v['low_year']})"
+                                           for k, v in found.items())})
+    return rows
