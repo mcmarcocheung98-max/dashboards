@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-02",
+ "updated": "2026-11-03",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -138,6 +138,14 @@
    "status": "in_progress",
    "since": "2026-10-31",
    "detail": "xlrd was added to requirements on 31 Oct, so the .xls workbooks can be read on the server; the Housing session now checks the price index parse on live data and adds the rental index."
+  },
+  {
+   "id": "hkma-405",
+   "title": "Housing: HKMA interbank-rate API answers 405 Not Allowed since 1 Nov",
+   "owner": "session:housing",
+   "status": "waiting",
+   "since": "2026-11-03",
+   "detail": "api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/er-ir/hk-interbank-ir-endperiod has answered 405 since 1 Nov 16:52 UTC; the HIBOR series is served from its snapshot and housing › global shows one \"not available\". Alerts at 3 days. The housing session was told on 3 Nov."
   }
  ],
  "roadmap": [
@@ -313,6 +321,16 @@
    ],
    "handed": [
     "parent"
+   ]
+  },
+  {
+   "date": "2026-11-03",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "320 offline tests pass, CI green on main, every public tab loads in light and dark mode with no JS errors (NBA odds skipped: no PRIVATE_PASSCODE secret). Altcoin Study's DefiLlama alerts are gone after 6fc0b58. Below thresholds: HKMA 405 on housing (second day, housing session told), Ember's yearly CSV answering 14 bytes for compute-chips since 2 Nov, Bluesky and Reddit 403 on trends › social, Yahoo 429 on BTC Cycles with fallbacks. NBA odds still has three failing private sources.",
+   "fixed": [],
+   "handed": [
+    "housing"
    ]
   }
  ]
