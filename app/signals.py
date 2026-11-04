@@ -110,7 +110,8 @@ ARROW = {1: ("▲", "#1f9d63"), -1: ("▼", "#d6453d"), 0: ("•", "#8a8984")}
 
 
 def newsletter() -> dict:
-    """Today's email: watch points crossed, one signal per dashboard, what flipped since yesterday, and the owner's open actions."""
+    """Today's email: watch points crossed, one signal per dashboard, what flipped since yesterday, the dev agent's latest note and
+    proposals, and the owner's open actions."""
     b, fl = board(), flips()
     day = datetime.now(timezone.utc).strftime("%A %-d %B %Y")
     crossed = [r for d in b["dashboards"] for r in d["signals"] if r.get("crossed")]
@@ -118,8 +119,11 @@ def newsletter() -> dict:
     try:
         from .topics import status as st
         actions = [a for a in st.items()["actions"] if a.get("status") == "open"]
+        nt = st.notes()
+        dev = nt["notes"][0] if nt["notes"] and nt["last_note_days"] is not None and nt["last_note_days"] <= 2 else None
+        props = nt["proposals"]
     except Exception:
-        actions = []
+        actions, dev, props = [], None, []
     subject = f"Dashboards: {len(crossed)} watch point{'s' if len(crossed) != 1 else ''} crossed, {len(fl['flipped'])} flipped · {day}"
     e = html.escape
     row = lambda cells: "<tr>" + "".join(f'<td style="padding:6px 8px;border-bottom:1px solid #e6e5e1;font-size:14px;vertical-align:top">{c}</td>' for c in cells) + "</tr>"
@@ -147,6 +151,17 @@ def newsletter() -> dict:
         for f in fl["flipped"][:20]:
             parts.append(row([f'<a href="{f["url"]}#{e(str(f.get("tab", "")))}" style="color:#2a78d6;text-decoration:none">{e(f["title"])}</a>', f'{arrow(f.get("lean", 0))} {e(f.get("label", ""))}: {e(fmt(f.get("was")))} → <b>{e(fmt(f.get("value")))}</b>', ""]))
         parts.append("</table>")
+    if dev or props:
+        parts.append('<h2 style="font-size:16px;margin:18px 0 6px">From the dev agent</h2>')
+        if dev:
+            parts.append(f'<p style="font-size:14px;margin:0 0 6px"><b>{e(dev["title"])}</b> <span style="color:#8a8984">({e(dev["date"])})</span><br>{e(dev.get("summary", ""))}</p>')
+            if dev.get("changes"):
+                parts.append('<ul style="padding-left:18px;font-size:14px;margin:0">' + "".join(f'<li style="margin:3px 0"><b>{e(c.get("dashboard") or c.get("slug") or "Site")}</b>: {e(c.get("what", ""))}</li>' for c in dev["changes"][:8]) + "</ul>")
+            if dev.get("next"):
+                parts.append(f'<p style="font-size:13.5px;margin:6px 0"><b>Next:</b> {e(" · ".join(dev["next"]))}</p>')
+        if props:
+            parts.append(f'<p style="font-size:13.5px;margin:6px 0;color:#b15c00"><b>Waiting for your OK ({len(props)}):</b> ' + e(" · ".join(r["title"] for r in props[:5])) + "</p>")
+        parts.append(f'<p style="font-size:13px"><a href="{SITE}/status#notes" style="color:#2a78d6">All dev notes →</a></p>')
     if actions:
         parts.append(f'<h2 style="font-size:16px;margin:18px 0 6px">Only you can do ({len(actions)})</h2><ul style="padding-left:18px;font-size:14px;margin:0">' + "".join(f'<li style="margin:3px 0">{e(a["title"])} <span style="color:#8a8984">({e(a.get("priority", ""))}, open since {e(a.get("since", ""))})</span></li>' for a in actions[:6]) + f'</ul><p style="font-size:13px"><a href="{SITE}/status" style="color:#2a78d6">All actions and the roadmap →</a></p>')
     parts.append(f'<p style="font-size:12px;color:#8a8984;margin-top:20px;border-top:1px solid #e6e5e1;padding-top:10px">Sent by the dashboards site from its own data, {e(b["updated"])}. <a href="{SITE}/signals" style="color:#8a8984">Signals page</a> · <a href="{SITE}" style="color:#8a8984">All dashboards</a>. Not investment advice.</p></div>')
@@ -156,6 +171,11 @@ def newsletter() -> dict:
     text += ["ONE SIGNAL PER DASHBOARD"] + [f"- {d['title']}: {tp['label']} = {fmt(tp.get('value'), tp.get('unit'))}" if tp else f"- {d['title']}: no signal yet" for d, tp in tops] + [""]
     if fl["flipped"]:
         text += ["FLIPPED SINCE YESTERDAY"] + [f"- {f['title']}: {f.get('label')} {fmt(f.get('was'))} -> {fmt(f.get('value'))}" for f in fl["flipped"][:20]] + [""]
+    if dev:
+        text += ["FROM THE DEV AGENT", f"{dev['title']} ({dev['date']})", dev.get("summary", "")] + [f"- {c.get('dashboard') or c.get('slug') or 'Site'}: {c.get('what', '')}" for c in dev.get("changes", [])[:8]]
+        text += ([f"Next: {' · '.join(dev['next'])}"] if dev.get("next") else []) + [""]
+    if props:
+        text += [f"WAITING FOR YOUR OK ({len(props)})"] + [f"- {r['title']}" for r in props[:5]] + [f"{SITE}/status#notes", ""]
     if actions:
         text += [f"ONLY YOU CAN DO ({len(actions)})"] + [f"- {a['title']}" for a in actions[:6]] + [f"{SITE}/status", ""]
     text.append(f"{SITE}/signals")

@@ -1,4 +1,4 @@
-"""The Actions & Roadmap dashboard (app/topics/status.py): the committed items.json, its shape, and the readings."""
+"""The Dev Agent & Roadmap dashboard (app/topics/status.py): the committed items.json, its shape, and the readings."""
 import json
 from datetime import date
 
@@ -12,7 +12,7 @@ def smoke_patch():
 
 def test_topic_is_registered():
     t = topics.REGISTRY["status"]
-    assert [k for k, _ in t.tabs] == ["actions", "pending", "roadmap", "log"] and set(t.slow) <= set(M.ENDPOINTS)
+    assert [k for k, _ in t.tabs] == ["notes", "actions", "pending", "roadmap", "log"] and set(t.slow) <= set(M.ENDPOINTS)
     assert topics.category("status") == "About this site"
 
 
@@ -23,7 +23,7 @@ def test_items_shape_and_ages():
         assert a["priority"] in ("high", "medium", "low") and a["status"] in ("open", "done") and a["title"] and a["detail"]
         assert a["age_days"] is not None and a["age_days"] >= 0
     assert all(p["owner"] and p["status"] in ("in_progress", "waiting", "blocked", "done") for p in d["pending"])
-    assert all(r["horizon"] in ("now", "next", "later", "done") and r["status"] in ("planned", "in_progress", "done") for r in d["roadmap"])
+    assert all(r["horizon"] in ("now", "next", "later", "done") and r["status"] in ("proposed", "planned", "in_progress", "done") for r in d["roadmap"])
     assert all(l["result"] in ("ok", "problems", "did_not_run") and l["date"] for l in d["log"])
     ids = [x["id"] for k in ("actions", "pending", "roadmap") for x in d[k]]
     assert len(ids) == len(set(ids)), "ids must be unique"
@@ -39,3 +39,25 @@ def test_readings(monkeypatch, tmp_path):
     r = {x["key"]: x for x in M.READINGS()}
     assert r["open_actions"]["value"] == 1 and r["open_actions"]["lean"] == -1 and r["last_check"]["lean"] == 1 and r["roadmap_done"]["value"] == 1
     assert M.items()["actions"][0]["age_days"] == (date.today() - date(2026, 10, 1)).days
+
+
+def test_notes_and_proposals():
+    n = M.notes()
+    assert n["notes"] and n["notes"] == sorted(n["notes"], key=lambda x: x["date"], reverse=True)
+    for x in n["notes"]:
+        assert x["date"] and x["title"] and isinstance(x.get("changes", []), list)
+        assert all(c.get("what") for c in x.get("changes", []))
+    assert all(p["status"] == "proposed" and p.get("detail") and p.get("why") for p in n["proposals"])
+    assert "awaiting_ok" in {r["key"] for r in M.READINGS()}
+    assert (M.FILE.parent / "AGENT.md").exists()
+
+
+def test_newsletter_carries_the_latest_note(monkeypatch):
+    from app import signals as S
+    from app.cache import _cache
+    _cache.clear()
+    latest = M.notes()["notes"][0]
+    monkeypatch.setattr(M, "notes", lambda: {"notes": [latest], "last_note_days": 0, "proposals": [{"title": "A proposal"}]})
+    out = S.newsletter()
+    assert "From the dev agent" in out["html"] and latest["title"] in out["text"] and "WAITING FOR YOUR OK (1)" in out["text"]
+    _cache.clear()

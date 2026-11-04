@@ -178,11 +178,11 @@
  "roadmap": [
   {
    "id": "r-routine-maintains",
-   "title": "The daily check keeps this page current",
+   "title": "The dev agent keeps this page current",
    "horizon": "now",
    "status": "in_progress",
    "area": "Routine",
-   "detail": "Each morning's run updates data/status/items.json: closes actions it sees resolved in /api/health, adds new owner actions, records handoffs as pending items, and appends to the check log."
+   "detail": "Each morning's run closes resolved actions, records handoffs, writes a dev note and appends to the check log."
   },
   {
    "id": "r-first-archive",
@@ -319,6 +319,37 @@
    "status": "planned",
    "area": "Signals",
    "detail": "Left out on 3 Nov by the owner's choice. Propose 3-5 signals and watch points for each when the BTC Cycles restructure has landed."
+  },
+  {
+   "id": "r-watch-recalibrate",
+   "title": "Move two watch points that are already crossed",
+   "horizon": "next",
+   "status": "proposed",
+   "area": "Signals",
+   "by": "agent",
+   "size": "small",
+   "detail": "Firms using AI (Census BTOS): 15% becomes 30%. Total fertility: drop the 'any below 1.0' line and keep Hong Kong below 0.7. An edit to data/signals/watchlist.json and the two dashboards' tests.",
+   "why": "Both are past their lines today (24.6% and 0.84), so they would lead every morning email and hide new crossings."
+  },
+  {
+   "id": "r-private-signals",
+   "title": "Show NBA odds signals in a passcode-only section of the Signals board and the email",
+   "horizon": "next",
+   "status": "proposed",
+   "area": "Signals",
+   "by": "agent",
+   "size": "medium",
+   "detail": "Unlocked viewers see an NBA odds card on /signals; the email (sent only to you) gets an NBA line. Public viewers see nothing new.",
+   "why": "NBA odds wired its five signals, but private dashboards are left out of the board and the email today."
+  },
+  {
+   "id": "r-agent-review",
+   "title": "Review one dashboard a day for improvements",
+   "horizon": "now",
+   "status": "in_progress",
+   "area": "Site",
+   "by": "agent",
+   "detail": "Each morning the agent opens the dashboard it reviewed least recently, looks for stale or failing sources, empty or 'not available' cards, unclear copy and broken mobile layout, fixes the small things and proposes the rest."
   }
  ],
  "log": [
@@ -376,6 +407,131 @@
    "fixed": [],
    "handed": [
     "trends"
+   ]
+  }
+ ],
+ "notes": [
+  {
+   "date": "2026-11-03",
+   "title": "Signals board, the morning email, and a top signal on every tile",
+   "summary": "Built the Signals dashboard from the 62 signals and watch points you approved, a daily email that carries them, and a one-line signal on each front-page tile. Each dashboard session was handed its list to wire.",
+   "changes": [
+    {
+     "dashboard": "Signals",
+     "slug": "signals",
+     "what": "New dashboard: board, watch points, flips since yesterday, email preview",
+     "commit": "b74fe98",
+     "by": "agent"
+    },
+    {
+     "dashboard": "Front page",
+     "what": "Each tile shows its dashboard's top signal; a crossed watch point first",
+     "commit": "b74fe98",
+     "by": "agent"
+    },
+    {
+     "dashboard": "Newsletter",
+     "what": "Daily email workflow through Gmail; built and attached to the run until the Gmail secrets are set",
+     "commit": "b74fe98",
+     "by": "agent"
+    },
+    {
+     "dashboard": "Prediction Markets",
+     "slug": "prediction-markets",
+     "what": "Four signals wired: biggest move, cross-venue gap, volume, calibration",
+     "commit": "c606ae3",
+     "by": "session:prediction-markets"
+    },
+    {
+     "dashboard": "Search & Social Trends",
+     "slug": "trends",
+     "what": "Four signals wired; Hacker News AI share is new data, fetched weekly",
+     "commit": "b1a3077",
+     "by": "session:trends"
+    },
+    {
+     "dashboard": "Demographics",
+     "slug": "demographics",
+     "what": "Four signals wired; Hong Kong's fertility (0.84) crosses the 'below 1.0' line",
+     "commit": "16f057c",
+     "by": "session:demographics"
+    },
+    {
+     "dashboard": "Global Debt & Rates",
+     "slug": "debt-rates",
+     "what": "Five signals wired, including the Kalshi Fed no-change odds a week before each meeting",
+     "commit": "2d119f1",
+     "by": "session:debt-rates"
+    },
+    {
+     "dashboard": "Housing",
+     "slug": "housing",
+     "what": "Five signals wired; the price-to-pay ratio only crosses on its first spell under 12x since 2016",
+     "commit": "07f688e",
+     "by": "session:housing"
+    },
+    {
+     "dashboard": "Space Economy",
+     "slug": "space",
+     "what": "Five signals wired",
+     "commit": "b26abe5",
+     "by": "session:space"
+    }
+   ],
+   "next": [
+    "Six dashboards still to wire their signals",
+    "First morning email once the Gmail secrets are in"
+   ],
+   "asks": [
+    "Add the Gmail secrets"
+   ]
+  },
+  {
+   "date": "2026-11-04",
+   "title": "The email goes out on time; AI and NBA odds wire their signals",
+   "summary": "GitHub starts this repo's scheduled jobs hours late (the 07:17 health check has run between 13:38 and 17:03), so the morning check now starts the email itself and the late scheduled run stops when it finds today's. Two watch points are already past their lines and would lead every email; they wait on your OK below.",
+   "changes": [
+    {
+     "dashboard": "Newsletter",
+     "what": "Started by the 07:39 morning check; the late scheduled run skips itself (verified on today's 15:41 run)",
+     "commit": "3a51eeb",
+     "by": "agent"
+    },
+    {
+     "dashboard": "AI: Jobs & Adoption",
+     "slug": "ai",
+     "what": "Five signals wired; firms using AI (24.6%) is past its 15% line",
+     "commit": "f89fbbd",
+     "by": "session:ai"
+    },
+    {
+     "dashboard": "NBA Odds",
+     "slug": "nba-odds",
+     "what": "Five signals wired; its smoke set-up no longer empties other dashboards' snapshots",
+     "commit": "694e066",
+     "by": "session:nba-odds"
+    },
+    {
+     "dashboard": "Altcoin Study",
+     "slug": "altcoins",
+     "what": "Tests run in 86 s instead of 5 minutes (a request pause is now zero in tests)",
+     "commit": "142e727",
+     "by": "session:btc-cycles"
+    },
+    {
+     "dashboard": "Dev Agent & Roadmap",
+     "slug": "status",
+     "what": "This page becomes the dev agent's home: notes, proposals waiting for your OK, and a section in the morning email",
+     "by": "agent"
+    }
+   ],
+   "next": [
+    "Wire the last six dashboards' signals: Autonomous Cars, AI Compute, China vs US Tech, Climate, Longevity, Pokémon Cards",
+    "Start the daily review of one dashboard at a time"
+   ],
+   "asks": [
+    "Add the Gmail secrets",
+    "Approve or skip the two proposals"
    ]
   }
  ]
