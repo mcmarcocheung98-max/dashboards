@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-03",
+ "updated": "2026-11-04",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -155,7 +155,7 @@
    "owner": "session:housing",
    "status": "waiting",
    "since": "2026-11-03",
-   "detail": "api.hkma.gov.hk answers 405 with an Alibaba Cloud WAF block page for the server's IP, for every header variant, so it is an IP block, not an API change. HIBOR is served from its snapshot and housing › global keeps the UK and US rates and names HIBOR as missing. If it still fails at 3 days, the housing session will put the options to the owner: a hand-entered monthly HIBOR CSV, or another source."
+   "detail": "api.hkma.gov.hk answers 405 with an Alibaba Cloud WAF block page for the server's IP, for every header variant, so it is an IP block, not an API change. HIBOR is served from its snapshot and housing › global keeps the UK and US rates and names HIBOR as missing. If it still fails at 3 days, the housing session will put the options to the owner: a hand-entered monthly HIBOR CSV, or another source. On 4 Nov the error changed to 502 Bad Gateway (since 3 Nov 18:31)."
   },
   {
    "id": "p-signals-wiring",
@@ -165,6 +165,14 @@
    "status": "in_progress",
    "owner": "sessions",
    "detail": "62 approved signals across 15 dashboards show as 'not wired yet' on /signals until each dashboard adds SIGNALS() (see data/signals/README.md). BTC Cycles and the Altcoin Study are left out for now."
+  },
+  {
+   "id": "trends-hn-zero",
+   "title": "Trends: the Hacker News AI share signal reads 0% and shows as crossed",
+   "owner": "session:trends",
+   "status": "waiting",
+   "since": "2026-11-04",
+   "detail": "On /api/signals/board, hn_ai_share (trends › social) reads exactly 0.0 with no note, so it counts as crossed against \"below 20%\" and reaches the newsletter. Most likely a failed read scored as zero. The trends session was asked on 4 Nov to leave the row out when there is no data."
   }
  ],
  "roadmap": [
@@ -358,6 +366,16 @@
    "fixed": [],
    "handed": [
     "housing"
+   ]
+  },
+  {
+   "date": "2026-11-04",
+   "run": "scheduled",
+   "result": "problems",
+   "summary": "340 offline tests pass, CI green, every public tab loads in light and dark mode with no JS errors (NBA odds skipped: no PRIVATE_PASSCODE). Signals: 36 of 62 wired, 13 watch points crossed, one of them false (Hacker News AI share at 0%, handed to trends). The 07:35 newsletter run did not start. Below thresholds: HKMA now 502, NHSBSA 500 on longevity, TCGdex 503 on pokemon-cards, Ember 14 bytes on compute-chips.",
+   "fixed": [],
+   "handed": [
+    "trends"
    ]
   }
  ]
