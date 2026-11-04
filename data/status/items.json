@@ -121,17 +121,19 @@
    "id": "nba-post-route",
    "title": "POST route for private dashboards (NBA placed-bets tracker)",
    "owner": "parent",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-10-28",
-   "detail": "The NBA session asked for POST /api/<slug>/<name> behind the passcode gate, routed to module.ACTIONS, so bets you place are stored on the server instead of in the browser. Also a META footer so the 18+ / BeGambleAware line comes from the module."
+   "detail": "The NBA session asked for POST /api/<slug>/<name> behind the passcode gate, routed to module.ACTIONS, so bets you place are stored on the server instead of in the browser. Also a META footer so the 18+ / BeGambleAware line comes from the module. Done in 0826c98: POST /api/<slug>/<name> for private dashboards once unlocked, JSON up to 16 KB, and a module FOOTER line. NBA session told to set its FOOTER.",
+   "done": "2026-11-04"
   },
   {
    "id": "shared-requests",
    "title": "Small shared-code requests from the dashboard READMEs",
    "owner": "parent",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-10-30",
-   "detail": "An assetclass argument on nasdaq_daily (China vs US); a reduce hook on fetch for large files (Compute & chips); a stable key on fetch for dated URLs (Trends); more PROBE_URLS (Space, Demographics, Compute & chips); the Chromium path in smoke.py from an environment variable (Demographics); dashboard table rows in the READMEs (Compute & chips)."
+   "detail": "An assetclass argument on nasdaq_daily (China vs US); a reduce hook on fetch for large files (Compute & chips); a stable key on fetch for dated URLs (Trends); more PROBE_URLS (Space, Demographics, Compute & chips); the Chromium path in smoke.py from an environment variable (Demographics); dashboard table rows in the READMEs (Compute & chips). Done in 0826c98: assetclass on nasdaq_daily, reduce= on fetch, five more PROBE_URLS (SEC left out: needs its User-Agent), the Chromium path from PLAYWRIGHT_CHROMIUM_EXECUTABLE. The stable key on fetch was already there. The README table rows stay with Compute & chips.",
+   "done": "2026-11-04"
   },
   {
    "id": "live-parsers",
@@ -164,7 +166,7 @@
    "since": "2026-11-03",
    "status": "in_progress",
    "owner": "sessions",
-   "detail": "62 approved signals across 15 dashboards show as 'not wired yet' on /signals until each dashboard adds SIGNALS() (see data/signals/README.md). BTC Cycles and the Altcoin Study are left out for now."
+   "detail": "36 of 62 wired on the live board (4 Nov, 22:01 UTC). Done: Housing, AI, Debt & rates, Demographics, Trends, Prediction markets, Climate; Space 4 of 5. Still 0: Autonomous cars, Compute & chips, China vs US tech, Longevity, Pokémon cards. NBA odds is wired but private, so it is not on the board. BTC Cycles and the Altcoin Study are left out for now."
   },
   {
    "id": "trends-hn-zero",
@@ -173,6 +175,14 @@
    "status": "in_progress",
    "since": "2026-11-04",
    "detail": "On /api/signals/board, hn_ai_share (trends › social) reads exactly 0.0 with no note, so it counts as crossed against \"below 20%\" and reaches the newsletter. Most likely a failed read scored as zero. The trends session was asked on 4 Nov to leave the row out when there is no data. Fixed in e8a0757 the same day: a week now counts stories with 100+ points as the front page, and a week is scored only with 20+ titles covering 90% of the hits, so a thin read is never crossed. The daily check marks it done once the live board shows it."
+  },
+  {
+   "id": "housing-rent-follow",
+   "title": "Housing: the private-rent card should follow the timeline",
+   "owner": "session:housing",
+   "status": "waiting",
+   "since": "2026-11-04",
+   "detail": "Found in the dev agent's first review. After a day is picked on the timeline the top card follows it, but the 'Average monthly private rent' card keeps showing the latest month (Sep 2026) and its year-on-year change."
   }
  ],
  "roadmap": [
@@ -322,14 +332,14 @@
   },
   {
    "id": "r-watch-recalibrate",
-   "title": "Move two watch points that are already crossed",
+   "title": "Move three watch points that describe a state, not an event",
    "horizon": "next",
    "status": "proposed",
    "area": "Signals",
    "by": "agent",
    "size": "small",
-   "detail": "Firms using AI (Census BTOS): 15% becomes 30%. Total fertility: drop the 'any below 1.0' line and keep Hong Kong below 0.7. An edit to data/signals/watchlist.json and the two dashboards' tests.",
-   "why": "Both are past their lines today (24.6% and 0.84), so they would lead every morning email and hide new crossings."
+   "detail": "Firms using AI (Census BTOS): 15% becomes 30%. Total fertility: drop the 'any below 1.0' line and keep Hong Kong below 0.7. London price-to-pay ratio: 'below 12x for the first time since 2016' (true since Apr 2024) becomes 'below 11x, or back above 12x'. An edit to data/signals/watchlist.json and the three dashboards' SIGNALS().",
+   "why": "All three have been past their lines for months (24.6%, Hong Kong 0.84, 11.16x since Apr 2024), so they lead every morning email and hide new crossings. Housing's other three crossings (prices down 2.2% on a year, 9 of 33 boroughs up, real rents falling) are live news and stay."
   },
   {
    "id": "r-private-signals",
@@ -407,6 +417,21 @@
    "fixed": [],
    "handed": [
     "trends"
+   ]
+  },
+  {
+   "date": "2026-11-04",
+   "run": "manual",
+   "result": "ok",
+   "summary": "First dev agent run, started by the owner. 347 offline tests pass, CI green. Signals board: 36 of 62 wired, 11 crossed, the Hacker News false 0% is fixed. Built the private POST route and four shared requests; reviewed Housing. The live browser check of every tab was still running at commit time; its result follows in the next note.",
+   "fixed": [
+    "0826c98"
+   ],
+   "handed": [
+    "nba-odds",
+    "compute-chips",
+    "china-us-tech",
+    "housing"
    ]
   }
  ],
@@ -532,6 +557,56 @@
    "asks": [
     "Add the Gmail secrets",
     "Approve or skip the two proposals"
+   ]
+  },
+  {
+   "date": "2026-11-04",
+   "title": "First dev agent run: private dashboards can save, four shared requests done, Housing reviewed",
+   "summary": "Built two week-old requests from the dashboard sessions: private dashboards can now save their own data on the server (NBA odds' bet log), and four small shared-code additions. Reviewed Housing: the page holds up; one card ignores the timeline, and its price-to-pay watch point joins the watch-point proposal.",
+   "changes": [
+    {
+     "dashboard": "NBA Odds",
+     "slug": "nba-odds",
+     "what": "Placed bets save on the server, behind the passcode, instead of in one browser",
+     "commit": "0826c98",
+     "by": "agent"
+    },
+    {
+     "dashboard": "Site",
+     "what": "Shared code: assetclass for ETFs on the Nasdaq fetcher, a reduce hook for large files, five more sources in /api/probe, the smoke check finds a newer Chromium",
+     "commit": "0826c98",
+     "by": "agent"
+    },
+    {
+     "dashboard": "Search & Social Trends",
+     "slug": "trends",
+     "what": "Hacker News AI share no longer reads 0% on a thin week; it counts 100+ point stories",
+     "commit": "e8a0757",
+     "by": "session:trends"
+    },
+    {
+     "dashboard": "China vs US Tech",
+     "slug": "china-us-tech",
+     "what": "Leaderboard, listings and milestones rows checked against dated sources",
+     "commit": "5c4eb74",
+     "by": "session:china-us-tech"
+    },
+    {
+     "dashboard": "Climate Signals",
+     "slug": "climate",
+     "what": "All five signals wired (3 Nov; not in that day's note)",
+     "by": "session:climate",
+     "commit": "037cb35"
+    }
+   ],
+   "review": "housing",
+   "next": [
+    "Five dashboards still to wire signals: Autonomous cars, Compute & chips, China vs US tech, Longevity, Pokémon cards",
+    "Review the next dashboard tomorrow"
+   ],
+   "asks": [
+    "Approve or skip the watch-point proposal (now three watch points) and the NBA signals proposal",
+    "Add the Gmail secrets"
    ]
   }
  ]
