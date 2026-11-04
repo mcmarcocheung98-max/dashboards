@@ -43,7 +43,6 @@ OPENALEX = ("https://api.openalex.org/works?filter=concepts.id:" + AI_CONCEPT + 
             "&group_by=publication_year")
 NEW_DAYS = 30                       # an export-control row counts as a new rule for this many days after its date
 CITED = 100                         # "highly cited": more than this many citations
-NASDAQ_ETF = "https://api.nasdaq.com/api/quote/{sym}/historical?assetclass=etf&fromdate={a}&todate={b}&limit=9999"
 NASDAQ_HEADERS = {"Accept": "application/json, text/plain, */*", "Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"}
 US_TECH = ("AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META")
 CN_TECH = ("BABA", "PDD", "JD", "BIDU", "NTES")
@@ -292,13 +291,7 @@ def nasdaq(sym: str) -> pd.Series:
 
 
 def nasdaq_etf(sym: str) -> pd.Series:
-    url = NASDAQ_ETF.format(sym=sym, a=START, b=pd.Timestamp.now().strftime("%Y-%m-%d"))
-    j = fetch_json(url, DAY, headers=NASDAQ_HEADERS)
-    rows = (((j or {}).get("data") or {}).get("tradesTable") or {}).get("rows") or []
-    s = pd.Series({pd.to_datetime(r["date"], format="%m/%d/%Y"): float(str(r["close"]).replace("$", "").replace(",", "")) for r in rows if r.get("close")})
-    if len(s) < 20:
-        raise ValueError(f"Nasdaq: {len(s)} rows for {sym}")
-    return s.sort_index()
+    return B.nasdaq_daily(sym, START, lambda *a, **k: fetch_json(*a, **k), assetclass="etf")
 
 
 def basket(px: dict[str, pd.Series]) -> pd.Series:
@@ -358,7 +351,7 @@ def _markets_now() -> dict:
             r[k] = 100 * (s.iloc[-1] / ago.iloc[-1] - 1) if len(ago) else None
         return None if None in r.values() else {"gap": _r(r["China tech ADRs"] - r["US tech basket"], 1), "china": _r(r["China tech ADRs"], 1), "us": _r(r["US tech basket"], 1)}
     out = payload({"baskets": lambda: {k: _pts(v, 2) for k, v in b.items()} or None, "ratio": ratio, "rel_1y": rel_1y, "gap_90d": gap_90d},
-                  sources=[B.NASDAQ.format(sym=s, a=START, b=today) for s in US_TECH + CN_TECH] + [NASDAQ_ETF.format(sym=CN_ETF, a=START, b=today)])
+                  sources=[B.NASDAQ.format(sym=s, a=START, b=today) for s in US_TECH + CN_TECH] + [B.NASDAQ_ANY.format(sym=CN_ETF, cls="etf", a=START, b=today)])
     out["years"] = years
     out["last"] = {k: {"v": _r(v.iloc[-1], 1), "y1": _r(v.iloc[-1] / v[v.index <= v.index[-1] - pd.Timedelta(days=365)].iloc[-1] - 1, 4)
                        if (v.index <= v.index[-1] - pd.Timedelta(days=365)).any() else None} for k, v in b.items()}
@@ -544,7 +537,7 @@ def _layout_now() -> dict:
     urls = {"epoch": EPOCH, "owid share": OWID.format(name=OWID_SHARE), "owid sales": OWID.format(name=OWID_SALES),
             "openalex CN": OPENALEX.format(cc="CN", y=y, extra=""), "openalex US cited": OPENALEX.format(cc="US", y=y, extra=f",cited_by_count:>{CITED}"),
             "nasdaq BABA": B.NASDAQ.format(sym="BABA", a="2026-09-01", b=pd.Timestamp.now().strftime("%Y-%m-%d")),
-            "nasdaq KWEB etf": NASDAQ_ETF.format(sym="KWEB", a="2026-09-01", b=pd.Timestamp.now().strftime("%Y-%m-%d"))}
+            "nasdaq KWEB etf": B.NASDAQ_ANY.format(sym="KWEB", cls="etf", a="2026-09-01", b=pd.Timestamp.now().strftime("%Y-%m-%d"))}
 
     def one(item):
         k, u = item

@@ -49,7 +49,7 @@ downturn (2023), so read it next to the node gap and the controls timeline.
 | Chips trade | SMIC vs TSMC node gap | `node_gap.csv` (pairs rows by node; TSMC 16nm is entered as 14) | **hand-entered** | when a new node is confirmed (TechInsights teardowns) |
 | Chips trade | Export-control timeline | `controls.csv` (`direction`: -1 tightens China's access, +1 eases it, 0 China's own counter-measures) | **hand-entered** | as rules are published |
 | Chips trade | SMIC and Huawei milestones | `milestones.csv` | **hand-entered** | as events happen |
-| Markets | US tech basket (AAPL, MSFT, NVDA, GOOGL, AMZN, META) vs US-listed Chinese tech (BABA, PDD, JD, BIDU, NTES) and KWEB; ratio; calendar-year returns | Nasdaq quote API (stocks via the shared `nasdaq_daily`; KWEB with `assetclass=etf`) | yes | daily |
+| Markets | US tech basket (AAPL, MSFT, NVDA, GOOGL, AMZN, META) vs US-listed Chinese tech (BABA, PDD, JD, BIDU, NTES) and KWEB; ratio; calendar-year returns | Nasdaq quote API (the shared `nasdaq_daily`; KWEB with `assetclass="etf"`) | yes | daily |
 | Markets | Hang Seng TECH yearly return | `hstech.csv`: iShares Hang Seng TECH ETF calendar-year return (HKD), a stand-in for the index | **hand-entered** | each January |
 | Markets | Where tech lists: London, Hong Kong, New York | `listings.csv` | **hand-entered** | as events happen |
 
@@ -103,5 +103,4 @@ source) stays `verify`. `node_gap.csv` (all 8 rows) checked on 2026-11-03: TSMC 
 
 ## Requests for shared code
 
-- `_base.nasdaq_daily` hard-codes `assetclass=stocks`; an `assetclass` argument would let ETFs (KWEB here) use it instead of the copy in `china_us_tech.nasdaq_etf`. A request, not needed for the page to work.
 - A free, cloud-reachable source for the Hang Seng TECH index level (Hang Seng Indexes' site has no documented CSV) would replace `hstech.csv`. If one is found, adding it to `PROBE_URLS` would let `/api/probe` watch it.
