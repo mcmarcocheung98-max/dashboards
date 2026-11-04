@@ -586,3 +586,32 @@ def test_live_odds_api_bookmaker_keys():
     print("bookmaker keys seen:", sorted(keys), "quota:", st["quota"])
     if raw:
         assert M.LAD in keys and M.PINNACLE in keys
+
+
+def test_bets_post_route_end_to_end(mocked, monkeypatch):
+    """POST /api/nba-odds/bets through the real server: refused before unlocking, saved after, a bad bet is a 400, delete removes it."""
+    import asyncio
+    from aiohttp.test_utils import TestClient, TestServer
+    from app import auth as A
+    from app.server import make_app
+    monkeypatch.setenv("PRIVATE_PASSCODE", "test pass")
+    monkeypatch.delenv("AUTH_SECRET", raising=False)
+    A._fails.clear()
+
+    async def go():
+        async with TestClient(TestServer(make_app())) as c:
+            bet = {"game": "LAL @ DEN", "market": "h2h", "name": DEN, "price": 1.5, "stake": 10}
+            out = {"locked": (await c.post("/api/nba-odds/bets", json=bet)).status}
+            await c.post("/api/unlock", json={"passcode": "test pass"})
+            r = await c.post("/api/nba-odds/bets", json=bet)
+            out["ok"] = (r.status, await r.json())
+            out["bad"] = (await c.post("/api/nba-odds/bets", json={**bet, "price": 1.0})).status
+            out["listed"] = (await (await c.get("/api/nba-odds/results")).json())["placed"]
+            out["del"] = (await c.post("/api/nba-odds/bets", json={"delete": out["ok"][1]["bet"]["id"]})).status
+            out["after"] = (await (await c.get("/api/nba-odds/bets")).json())["placed"]
+            out["footer"] = (await (await c.get("/api/nba-odds/meta")).json())["footer"]
+            return out
+    r = asyncio.run(go())
+    assert r["locked"] == 401 and r["ok"][0] == 200 and r["ok"][1]["bet"]["stake"] == 10 and r["bad"] == 400
+    assert [b["name"] for b in r["listed"]] == [DEN]                  # the results cache is cleared on a write
+    assert r["del"] == 200 and r["after"] == [] and "BeGambleAware" in r["footer"]

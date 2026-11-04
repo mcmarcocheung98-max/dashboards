@@ -1,6 +1,6 @@
 // NBA Odds: Ladbrokes Value. Tabs and cards; data from /api/nba-odds/<today|live|moves|results|teams|bets>; helpers from topic.html.
 // Everything here reads the server's latest snapshot: the page never calls The Odds API. The bankroll for the quarter-Kelly stakes is kept
-// only in this browser (localStorage).
+// only in this browser (localStorage); placed bets are kept on the server (POST /api/nba-odds/bets).
 (() => {
 const BOOK = { ladbrokes_uk: ["Ladbrokes", "--s1"], pinnacle: ["Pinnacle", "--s2"], betfair_ex_uk: ["Betfair Exchange", "--s3"], polymarket: ["Polymarket", "--s4"], kalshi: ["Kalshi", "--s5"] };
 const CROWD = { polymarket: "Polymarket", kalshi: "Kalshi" };
@@ -298,7 +298,10 @@ const VIEWS = {
 
 const nicknameOf = n => { const parts = String(n || "").split(" "); return parts[parts.length - 1] === "Blazers" ? "Trail Blazers" : parts[parts.length - 1]; };
 
-// ---- bets the user placed: POSTed to the server (stored on the volume) when it accepts them, else kept in this browser
+// ---- bets the user placed: POSTed to the server (POST /api/nba-odds/bets, stored on the volume). Bets an earlier version of this page kept
+// only in this browser are listed until "Move to the server" sends them there.
+const postBet = body => fetch("/api/" + SLUG + "/bets", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
+  .then(async r => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || r.statusText); return j; });
 function placedCard(d) {
   const local = store.get("placed", []);
   const all = (d.placed || []).map(b => ({ ...b, where: "server" })).concat(local.map(b => ({ ...b, where: "this browser" })));
@@ -314,31 +317,30 @@ function placedCard(d) {
   const save = async () => {
     const bet = { game: f.game.value, market: mk.value, name: f.name.value, point: f.point.value, price: f.price.value, stake: f.stake.value, note: f.note.value, result: res.value };
     if (!bet.name || !(Number(bet.price) > 1) || !(Number(bet.stake) >= 0)) { msg.textContent = "A bet needs a selection, odds above 1 and a stake."; return; }
-    try {
-      const r = await fetch("/api/" + SLUG + "/bets", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(bet) });
-      if (r.status === 404 || r.status === 405) throw Object.assign(new Error("no server endpoint"), { local: true });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) { msg.textContent = j.error || r.statusText; return; }
-      msg.textContent = "Saved on the server.";
-    } catch (e) {
-      if (!e.local) { msg.textContent = "Could not save: " + e.message; return; }
-      const p = Number(bet.price), st = Number(bet.stake);
-      local.push({ ...bet, point: bet.point === "" ? null : Number(bet.point), price: p, stake: st, t: Math.floor(Date.now() / 1000), id: "l" + Date.now(),
-        profit: bet.result === "win" ? st * (p - 1) : bet.result === "loss" ? -st : bet.result === "push" ? 0 : null });
-      store.set("placed", local);
-      msg.textContent = "Saved in this browser (the server does not take bets yet).";
-    }
+    try { await postBet(bet); } catch (e) { msg.textContent = "Could not save: " + e.message; return; }
     render();
   };
   const remove = async b => {
     if (b.where === "this browser") store.set("placed", local.filter(x => x.id !== b.id));
-    else await fetch("/api/" + SLUG + "/bets", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ delete: b.id }) }).catch(() => {});
+    else try { await postBet({ delete: b.id }); } catch (e) { msg.textContent = "Could not remove: " + e.message; return; }
+    render();
+  };
+  const move = async () => {                             // one at a time: each moved bet leaves the browser list only once the server has it
+    let left = local.slice(), failed = null;
+    for (const b of local) {
+      const { id, t, profit, ...bet } = b;
+      try { await postBet(bet); left = left.filter(x => x !== b); store.set("placed", left); } catch (e) { failed = e.message; break; }
+    }
+    if (failed) { msg.textContent = "Moved " + (local.length - left.length) + " of " + local.length + "; stopped: " + failed; return; }
     render();
   };
   const lp = local.filter(b => b.profit != null), lst = lp.reduce((a, b) => a + b.stake, 0), lpr = lp.reduce((a, b) => a + b.profit, 0);
   const staked = (s.staked || 0) + lst, prof = (s.profit || 0) + lpr;
   return card("Bets I placed",
     el("div", { class: "kpis" }, kpi("Bets", num(all.length)), kpi("Staked (settled)", "£" + num(staked, 2)), kpi("Profit", "£" + num(prof, 2), cls(prof)), kpi("ROI", staked ? evp(prof / staked) : "–", cls(prof))),
+    local.length ? el("div", { class: "warn", style: "margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap" },
+      local.length + (local.length === 1 ? " bet is" : " bets are") + " kept only in this browser, from before the server took bets.",
+      el("button", { class: "pill", style: "cursor:pointer;border:0;font:inherit", onclick: move }, "Move to the server")) : null,
     el("div", { style: "display:flex;flex-wrap:wrap;gap:6px;margin-top:10px" }, inp("game", "Game", "text", 180), mk, inp("name", "Selection (e.g. Boston Celtics)", "text", 200), inp("point", "Line", "number", 80),
       inp("price", "Odds", "number", 80), inp("stake", "Stake £", "number", 90), res, inp("note", "Note", "text", 160), el("button", { class: "pill", style: "cursor:pointer;border:0;font:inherit", onclick: save }, "Add")),
     msg,
@@ -346,7 +348,7 @@ function placedCard(d) {
       ...all.sort((a, b) => (b.t || 0) - (a.t || 0)).map(b => el("tr", {}, el("td", {}, ukDay(b.t)), wrap(b.game || ""), el("td", {}, (b.name || "") + (b.point != null ? " " + b.point : "") + " (" + (MKT[b.market] || "other") + ")"),
         el("td", {}, odds(b.price)), el("td", {}, "£" + num(b.stake, 2)), el("td", {}, b.result || "pending"), el("td", { class: cls(b.profit) }, b.profit == null ? "–" : "£" + num(b.profit, 2)),
         el("td", { class: "muted" }, b.where), el("td", {}, el("button", { class: "pill", style: "cursor:pointer;border:0;font:inherit", onclick: () => remove(b) }, "×")))))) : null,
-    note("A log for your own record: nothing is placed anywhere. Bets saved on the server settle themselves when their game is matched; set the result by hand otherwise."));
+    note("A log for your own record, kept on this server: nothing is placed anywhere. Bets settle themselves when their game is matched; set the result by hand otherwise."));
 }
 
 window.TOPIC = { VIEWS };

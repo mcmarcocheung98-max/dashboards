@@ -97,6 +97,7 @@ SOURCES = [{"name": "The Odds API v4 (Ladbrokes, Pinnacle, Betfair Exchange and 
            {"name": "NBA.com live scoreboard and season schedule (cdn.nba.com)", "url": "https://www.nba.com/schedule", "cadence": "every minute live; schedule every 6 hours"},
            {"name": "ESPN public scoreboard and injuries (fallback and injuries)", "url": "https://www.espn.com/nba/injuries", "cadence": "hourly"},
            {"name": "Hand-entered injuries where no feed answers (data/nba-odds/injuries.csv)", "url": "", "cadence": "as entered"}]
+FOOTER = "Analysis only, not tips. Placed bets are a log kept on this server; nothing is placed anywhere. 18+. BeGambleAware.org."
 NOTES = ("Fair = the bookmaker margin removed from Pinnacle's and the Betfair Exchange's prices (after commission); EV = Ladbrokes price x fair "
          "probability - 1. A value bet needs EV of at least MIN_EV and a sharp line under 10 minutes old (2 live). Maths, not tips. "
          "For analysis only. Bookmaker limits apply. 18+. BeGambleAware.org.")
@@ -1305,7 +1306,7 @@ def _uncache() -> None:
         _cache.pop(f"nba-odds:{k}", None)
 
 
-ACTIONS = {"bets": record_bet}        # POST handlers, for the shared server once it routes POSTs to private dashboards (see data/nba-odds/README.md)
+ACTIONS = {"bets": record_bet}        # POST /api/nba-odds/bets (app/server.py: behind the passcode, JSON of at most 16 KB, ValueError -> 400)
 
 
 def READINGS() -> list[dict]:

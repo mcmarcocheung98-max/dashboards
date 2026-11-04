@@ -144,13 +144,7 @@ Value bets today, best EV today, live flags on, and the 30-day average CLV. Lean
 
 ## Requests for shared code
 
-1. **Private pages** (in progress by the parent session): `Topic(..., private=True)` and the `PRIVATE_PASSCODE` cookie gate on the page, its
-   JS and `/api/nba-odds/*`. Until `Topic` has a `private` field, this module sets `TOPIC = None`: the dashboard is neither listed nor
-   served and its poller does not start, so nothing is ever public.
-2. **POST for private dashboards**: route `POST /api/<slug>/<name>` (JSON body, behind the same gate, private dashboards only) to
-   `module.ACTIONS[name](body)`; `ValueError` → 400. This module defines `ACTIONS = {"bets": record_bet}` for the placed-bets tracker on
-   the Results tab (`{"delete": id}` removes one). Until it exists the page saves placed bets in the browser and says so.
-3. **Footer**: the shell's footer says "Nothing here is investment advice". This dashboard adds its own fixed footer
-   ("For analysis only. Bookmaker limits apply. 18+. BeGambleAware.org."); a `footer` field on `META` would let the shell show it instead.
-4. **Network access** for checks from a dev session: `api.the-odds-api.com`, `cdn.nba.com` and `site.api.espn.com` (fixtures stand in
+1. **Private pages**: `Topic(..., private=True)` and the `PRIVATE_PASSCODE` cookie gate on the page, its
+   JS and `/api/nba-odds/*`. Done. (Should `Topic` ever lose its `private` field, this module sets `TOPIC = None` and stays unserved.)
+2. **Network access** for checks from a dev session: `api.the-odds-api.com`, `cdn.nba.com` and `site.api.espn.com` (fixtures stand in
    until then).
