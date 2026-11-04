@@ -170,9 +170,9 @@
    "id": "trends-hn-zero",
    "title": "Trends: the Hacker News AI share signal reads 0% and shows as crossed",
    "owner": "session:trends",
-   "status": "waiting",
+   "status": "in_progress",
    "since": "2026-11-04",
-   "detail": "On /api/signals/board, hn_ai_share (trends › social) reads exactly 0.0 with no note, so it counts as crossed against \"below 20%\" and reaches the newsletter. Most likely a failed read scored as zero. The trends session was asked on 4 Nov to leave the row out when there is no data."
+   "detail": "On /api/signals/board, hn_ai_share (trends › social) reads exactly 0.0 with no note, so it counts as crossed against \"below 20%\" and reaches the newsletter. Most likely a failed read scored as zero. The trends session was asked on 4 Nov to leave the row out when there is no data. Fixed in e8a0757 the same day: a week now counts stories with 100+ points as the front page, and a week is scored only with 20+ titles covering 90% of the hits, so a thin read is never crossed. The daily check marks it done once the live board shows it."
   }
  ],
  "roadmap": [
