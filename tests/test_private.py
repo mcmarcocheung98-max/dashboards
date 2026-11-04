@@ -96,3 +96,39 @@ def test_not_set_up(priv, monkeypatch):
             return r.status, await r.json(), u.status
     s, j, u = asyncio.run(go())
     assert s == 401 and j["set_up"] is False and u == 503
+
+
+def test_post_actions_only_on_private_dashboards_behind_the_passcode(priv):
+    """POST /api/<slug>/<name> routes to module.ACTIONS for a private dashboard once unlocked; everything else is refused."""
+    from aiohttp.test_utils import TestClient, TestServer
+    from app.server import make_app
+    saved = []
+
+    def save(body):
+        if body.get("stake", 0) < 0:
+            raise ValueError("a bet needs a stake")
+        saved.append(body)
+        return {"ok": True, "n": len(saved)}
+    priv.ACTIONS = {"bets": save}
+    priv.FOOTER = "18+. BeGambleAware.org."
+
+    async def go():
+        async with TestClient(TestServer(make_app())) as c:
+            out = {"locked": (await c.post("/api/zz-private/bets", json={"stake": 1})).status}
+            await c.post("/api/unlock", json={"passcode": "open sesame"})
+            ok = await c.post("/api/zz-private/bets", json={"stake": 5, "name": "Lakers"})
+            out["ok"] = (ok.status, await ok.json())
+            out["bad"] = (await c.post("/api/zz-private/bets", json={"stake": -1})).status
+            out["not_object"] = (await c.post("/api/zz-private/bets", json=[1, 2])).status
+            out["form"] = (await c.post("/api/zz-private/bets", data="stake=5", headers={"Content-Type": "application/x-www-form-urlencoded"})).status
+            out["big"] = (await c.post("/api/zz-private/bets", json={"note": "x" * 20000})).status
+            out["unknown"] = (await c.post("/api/zz-private/nope", json={})).status
+            out["public"] = (await c.post("/api/housing/prices", json={})).status
+            out["footer"] = (await (await c.get("/api/zz-private/meta")).json())["footer"]
+            out["house_footer"] = (await (await c.get("/api/housing/meta")).json())["footer"]
+            return out
+    r = asyncio.run(go())
+    assert r["locked"] == 401 and r["ok"] == (200, {"ok": True, "n": 1}) and saved == [{"stake": 5, "name": "Lakers"}]
+    assert r["bad"] == 400 and r["not_object"] == 400 and r["form"] == 415 and r["big"] == 413
+    assert r["unknown"] == 404 and r["public"] == 404 and len(saved) == 1
+    assert r["footer"] == "18+. BeGambleAware.org." and r["house_footer"] == ""

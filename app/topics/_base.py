@@ -122,13 +122,16 @@ def _retry_after(e: Exception) -> float | None:
 
 
 def fetch(url: str, ttl: float = DAY, *, curl: bool = False, headers: dict | None = None, timeout: int = 60, min_bytes: int = 50, binary: bool = False,
-          post: dict | None = None, key: str | None = None, mirrors: tuple[str, ...] = ()) -> str:
+          post: dict | None = None, key: str | None = None, mirrors: tuple[str, ...] = (), reduce=None) -> str:
     """The text at `url`, cached in memory for `ttl` seconds and kept on disk; the disk copy is served (and STALE[key] set) when the
     download fails. Raises only when there is neither.
 
     key      a stable address for the cache, the snapshot and /api/health when the URL itself changes on every call (an end date of
              now): without it every call has a new snapshot file, so a failure never finds the last good copy.
     mirrors  other URLs for the same data (Yahoo's query2 host), tried in turn when the first fails.
+    reduce   a function text -> text applied to each fresh download before it is cached and snapshotted, for large files of which a
+             page needs a small part (Ember's yearly CSV): memory and disk hold only the reduced text, and min_bytes applies to it,
+             so a download that reduces to (almost) nothing falls back to the snapshot. Not applied to binary bodies.
     A host that answers 429 is left alone until its Retry-After (else COOL_S) has passed: the snapshot is served meanwhile instead
     of asking again and lengthening the block."""
     base = key or url
@@ -146,8 +149,10 @@ def fetch(url: str, ttl: float = DAY, *, curl: bool = False, headers: dict | Non
                 continue
             try:
                 text = _download(u, timeout, curl, headers, binary, post)
+                if reduce is not None and not binary:
+                    text = reduce(text)                   # min_bytes then applies to what is kept
                 if len(text) < min_bytes:
-                    raise ValueError(f"short response ({len(text)} bytes)")
+                    raise ValueError(f"short response ({len(text)} bytes)" + (" after reduce" if reduce is not None and not binary else ""))
             except Exception as e:
                 err = e
                 wait = _retry_after(e)
@@ -350,12 +355,15 @@ def yahoo_daily(sym: str, start: str = "2020-01-01", fetcher=None) -> pd.Series:
 
 
 NASDAQ = "https://api.nasdaq.com/api/quote/{sym}/historical?assetclass=stocks&fromdate={a}&todate={b}&limit=9999"
+NASDAQ_ANY = "https://api.nasdaq.com/api/quote/{sym}/historical?assetclass={cls}&fromdate={a}&todate={b}&limit=9999"
 
 
-def nasdaq_daily(sym: str, start: str = "2020-01-01", fetcher=None) -> pd.Series:
-    """Daily closes of a US-listed stock from Nasdaq's public quote API (needs browser-like headers)."""
+def nasdaq_daily(sym: str, start: str = "2020-01-01", fetcher=None, assetclass: str = "stocks") -> pd.Series:
+    """Daily closes of a US-listed stock (assetclass "stocks") or ETF ("etf") from Nasdaq's public quote API (needs browser-like headers)."""
+    if assetclass not in ("stocks", "etf", "index"):
+        raise ValueError(f"unknown assetclass {assetclass!r}")
     fetcher = fetcher or fetch_json
-    url = NASDAQ.format(sym=sym, a=pd.Timestamp(start).strftime("%Y-%m-%d"), b=pd.Timestamp.now().strftime("%Y-%m-%d"))
+    url = NASDAQ_ANY.format(sym=sym, cls=assetclass, a=pd.Timestamp(start).strftime("%Y-%m-%d"), b=pd.Timestamp.now().strftime("%Y-%m-%d"))
     j = fetcher(url, DAY, headers={"Accept": "application/json, text/plain, */*", "Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"})
     rows = (((j or {}).get("data") or {}).get("tradesTable") or {}).get("rows") or []
     s = pd.Series({pd.to_datetime(r["date"], format="%m/%d/%Y"): float(str(r["close"]).replace("$", "").replace(",", "")) for r in rows if r.get("close")})

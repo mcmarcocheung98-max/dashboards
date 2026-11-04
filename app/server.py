@@ -11,6 +11,7 @@ GET /api/<slug>/<n>   that dashboard's data (JSON); 404 unknown, 503 when the so
 GET /healthz          'ok'
 GET /newsletter       today's signals email as a page (app/signals.py); /api/signals/newsletter has subject, html and text
 POST /api/unlock      {passcode}: opens private dashboards in this browser for 30 days (app/auth.py); POST /api/lock signs out
+POST /api/<slug>/<name>  a private dashboard's write action (module.ACTIONS), behind the passcode; JSON, at most 16 KB
 POST /api/ask         Ask Claude about the tab you are on (app/ask.py): {slug, tab, question, history?, date?}; limited per visitor and per day
 GET /api/ask/status   whether Ask Claude is set up and how many questions this visitor has left
 GET /api/archive.zip  every dashboard's data, daily snapshots and hand-entered files in one zip (app/archive.py), built at most every 6 hours
@@ -129,6 +130,36 @@ def make_app() -> web.Application:
             return _json({"error": f"{name} is not available right now"}, 503)
         return _json(data)
 
+    async def api_post(request):
+        """POST /api/<slug>/<name>: a private dashboard's own write action (module.ACTIONS[name](body) -> dict), behind the passcode.
+        Public dashboards stay read-only. JSON bodies only, at most 16 KB; SameSite=Strict on the unlock cookie and the JSON content
+        type keep other sites from posting on the owner's behalf."""
+        slug, name = request.match_info["slug"], request.match_info["name"]
+        t = topics.REGISTRY.get(slug)
+        actions = getattr(topics.module(slug), "ACTIONS", {}) if t else {}
+        if not t or not t.private or name not in actions:
+            return _json({"error": "unknown action"}, 404)
+        if not auth.allowed(slug, _auth_cookie(request)):
+            return _json({"error": "Unlock this dashboard first.", "private": True, "set_up": auth.configured()}, 401)
+        if request.content_type != "application/json":
+            return _json({"error": "send JSON"}, 415)
+        if (request.content_length or 0) > 16384:
+            return _json({"error": "too large"}, 413)
+        try:
+            raw = await request.read()
+            if len(raw) > 16384:
+                return _json({"error": "too large"}, 413)
+            body = json.loads(raw or b"{}")
+            if not isinstance(body, dict):
+                raise ValueError("send a JSON object")
+            data = await asyncio.to_thread(actions[name], body)
+        except (ValueError, json.JSONDecodeError) as e:
+            return _json({"error": str(e) or "bad request"}, 400)
+        except Exception as e:
+            log.warning("POST /api/%s/%s failed (%s: %s)", slug, name, type(e).__name__, e)
+            return _json({"error": f"{name} could not be saved right now"}, 503)
+        return _json(data)
+
     async def api_archive(request):
         from .cache import _cached
         from .archive import build
@@ -220,6 +251,7 @@ def make_app() -> web.Application:
     app.router.add_post("/api/unlock", api_unlock)
     app.router.add_post("/api/lock", api_lock)
     app.router.add_get("/api/{slug}/{name}", api)
+    app.router.add_post("/api/{slug}/{name}", api_post)
     app.router.add_get("/{slug}", page)
     return app
 

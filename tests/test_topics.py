@@ -1684,3 +1684,26 @@ def test_health_maps_narrative_helper_to_altcoins():
         assert "_narrative" not in d and d["altcoins"]["failing"] >= 1
     finally:
         B.HEALTH.pop("https://defillama-datasets.llama.fi/emissions/pepe", None)
+
+
+def test_fetch_reduce_and_nasdaq_assetclass(snapdir, monkeypatch):
+    """reduce= keeps only what the page needs in memory and on disk; a reduce that leaves nothing falls back to the snapshot.
+    nasdaq_daily takes assetclass for ETFs (shared requests from Compute & chips and China vs US tech)."""
+    big = "year,country,value\n" + "".join(f"{y},{c},{y}\n" for y in range(2000, 2025) for c in ("USA", "FRA", "CHN"))
+    mode = {"v": big}
+    monkeypatch.setattr(B, "_download", lambda url, *a, **k: mode["v"])
+    keep_us = lambda t: "\n".join(l for l in t.splitlines() if l.startswith("year") or ",USA," in l)
+    url = "https://example.test/ember.csv"
+    t = B.fetch(url, ttl=0, reduce=keep_us)
+    assert t.count("\n") == 25 and "FRA" not in t and "FRA" not in B._snap(url).read_text()
+    mode["v"] = "year,country,value\n" + "2025,FRA,1\n" * 20                  # nothing for the US in this download
+    assert B.fetch(url, ttl=0, reduce=keep_us) == t and url in B.STALE      # the reduced snapshot is served
+
+    seen = []
+    rows = {"data": {"tradesTable": {"rows": [{"date": f"10/{d:02d}/2026", "close": f"${80 + d / 10:.2f}"} for d in range(1, 26)]}}}
+    s = B.nasdaq_daily("KWEB", "2026-10-01", fetcher=lambda u, *a, **k: seen.append(u) or rows, assetclass="etf")
+    assert "assetclass=etf" in seen[0] and len(s) == 25 and s.iloc[-1] == 82.5
+    B.nasdaq_daily("BABA", "2026-10-01", fetcher=lambda u, *a, **k: seen.append(u) or rows)
+    assert "assetclass=stocks" in seen[1]
+    with pytest.raises(ValueError):
+        B.nasdaq_daily("X", assetclass="crypto")

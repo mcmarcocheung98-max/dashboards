@@ -752,7 +752,7 @@ async function methodView() {
 function footer() {
   const f = document.getElementById("foot");
   f.replaceChildren(el("div", {}, META.notes || ""), el("div", { style: "margin-top:6px" }, "Sources: ", ...META.sources.flatMap((s, i) => [i ? " · " : "", link(s.name, s.url), s.cadence ? " (" + s.cadence + ")" : ""])),
-    el("div", { style: "margin-top:6px" }, "Read-only. Nothing here is investment advice.",
+    el("div", { style: "margin-top:6px" }, META.footer || "Read-only. Nothing here is investment advice.",
       META.private ? el("span", {}, " · Private dashboard · ", el("a", { href: "#", onclick: e => { e.preventDefault(); fetch("/api/lock", { method: "POST" }).then(() => location.reload()); } }, "Lock")) : null));
 }
 async function boot() {

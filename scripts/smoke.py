@@ -179,6 +179,15 @@ def follow_check(pg) -> dict | None:
     return {"ok": ok, "hover": hovered[:24], "kept": kept[:24]}
 
 
+def chromium_path() -> str | None:
+    """PLAYWRIGHT_CHROMIUM_EXECUTABLE if set, else the newest pre-installed /opt/pw-browsers/chromium-*, else None (Playwright's own)."""
+    import os
+    if os.environ.get("PLAYWRIGHT_CHROMIUM_EXECUTABLE"):
+        return os.environ["PLAYWRIGHT_CHROMIUM_EXECUTABLE"]
+    found = sorted(Path("/opt/pw-browsers").glob("chromium-*/chrome-linux/chrome"), key=lambda q: int(q.parts[3].split("-")[1]) if q.parts[3].split("-")[1].isdigit() else 0)
+    return str(found[-1]) if found else None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--live"); ap.add_argument("--out", default=str(ROOT / "smoke-shots")); ap.add_argument("--only"); ap.add_argument("--lwc")
@@ -201,8 +210,7 @@ def main() -> int:
         slugs = [s for s in slugs if s not in private]
     bad = []
     with sync_playwright() as p:
-        exe = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
-        b = p.chromium.launch(executable_path=exe) if Path(exe).exists() else p.chromium.launch()
+        b = p.chromium.launch(executable_path=exe) if (exe := chromium_path()) else p.chromium.launch()
         for theme, width in (("light", 1100), ("dark", 390)):
             pg = b.new_page(viewport={"width": width, "height": 900}, color_scheme=theme)
             if a.lwc:

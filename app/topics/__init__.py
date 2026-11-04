@@ -101,7 +101,7 @@ def endpoints(slug: str) -> dict:
 def meta(slug: str) -> dict:
     t, m = REGISTRY[slug], module(slug)
     return {"slug": t.slug, "title": t.title, "blurb": t.blurb, "category": category(slug), "private": t.private, "tabs": [list(x) for x in t.tabs], "sources": list(getattr(m, "SOURCES", [])),
-            "notes": getattr(m, "NOTES", ""), "method": bool(method(slug)["sections"])}
+            "notes": getattr(m, "NOTES", ""), "method": bool(method(slug)["sections"]), "footer": getattr(m, "FOOTER", "")}
 
 
 # README sections shown on the page's Method tab (/<slug>#about): how the numbers are worked out and their caveats, not upkeep
@@ -230,6 +230,11 @@ PROBE_URLS = {   # fixed list: what each dashboard downloads, to see from the se
     "nasdaq": "https://api.nasdaq.com/api/quote/TSLA/historical?assetclass=stocks&fromdate=2026-09-01&limit=50",
     "fhfa master csv": "https://www.fhfa.gov/hpi/download/monthly/hpi_master.csv",
     "fhfa master csv (old path)": "https://www.fhfa.gov/DataTools/Downloads/Documents/HPI/HPI_master.csv",
+    "ember yearly": "https://storage.googleapis.com/emb-prod-bkt-publicdata/public-downloads/yearly_full_release_long_format.csv",
+    "epoch notable": "https://epoch.ai/data/notable_ai_models.csv",
+    "world bank api": "https://api.worldbank.org/v2/country/USA/indicator/SP.POP.TOTL?format=json",
+    "gcat launches": "https://planet4589.org/space/gcat/tsv/launch/launch.tsv",
+    "celestrak satcat": "https://celestrak.org/pub/satcat.csv",
 }
 
 
