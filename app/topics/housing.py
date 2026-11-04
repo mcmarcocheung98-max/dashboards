@@ -470,6 +470,7 @@ def _prices_now() -> dict:
         """London average price / UK average price: how many UK homes one London home buys."""
         uk = hpi("uk")["avg"].dropna()
         return _pts((a / uk.reindex(a.index)).dropna(), 2)
+    _part(out, "rent_yoy", lambda: _pts(rents()["London average rent"]["yoy"].dropna(), 2))     # ONS's own annual change, for the rents card
     _part(out, "rent_vs_price", rent_vs_price)
     _part(out, "gross_yield", gross_yield)
     _part(out, "premium", premium)

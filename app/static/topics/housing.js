@@ -340,8 +340,11 @@ const VIEWS = {
       note("Percentage change in the average price against the same month a year earlier."));
     const rk = Object.entries(d.rents || {}).filter(([, p]) => p.length), r = d.rent_now || {};
     const rents = rk.length ? card("Average monthly private rent (ONS Price Index of Private Rents)",
-      r.rent ? el("div", { class: "kpis" }, kpi("London rent a month (" + month(new Date(r.month).getTime() / 1000) + ")", gbp(r.rent)), kpi("Change on a year ago", pc(r.yoy), cls(r.yoy)),
-        kpi("Gross yield: a year's rent ÷ average price", r.rent_to_price == null ? "–" : (r.rent_to_price * 100).toFixed(1) + "%")) : null,
+      r.rent ? datedHead([
+        { label: t => "London rent a month (" + monthOf(LR, t) + ")", value: t => [gbp(valueAt(LR, timeAt(LR, t)))] },
+        { label: () => "Change on a year ago", value: t => { const RY = d.rent_yoy || []; const x = RY.length ? valueAt(RY, timeAt(RY, t)) : null; return x != null ? [pc(x), cls(x)] : (y => [pct(y), cls(y)])(chgAt(LR, t, 1)); } },
+        { label: () => "Gross yield: a year's rent ÷ average price", value: t => { const v = valueAt(GY, timeAt(GY, t)); return [v == null ? "–" : v.toFixed(1) + "%"]; } }],
+        { latest: "Latest: " + monthOf(LR, null) }) : null,
       ...linesChart(rk.map(([k, pts]) => ({ name: k, points: pts })), v => gbp(v), { small: true }),
       note("Average rent agreed on new and existing private tenancies, all property types (ONS PIPR, from January 2015). Rents against prices: a rising rent while prices are flat lifts the rental yield and usually comes before buyers return."))
       : card("Rents", el("div", { class: "muted" }, "Not available right now (" + (d.rents_error || "no data") + ")."));

@@ -1105,6 +1105,7 @@ def test_housing_rents_from_pipr(snapdir, monkeypatch):
     assert set(p["rent_vs_price"]) == {"Rent", "House price"} and p["rent_vs_price"]["Rent"][0][1] == 100.0
     assert p["gross_yield"] and 0 < p["gross_yield"][-1][1] < 20 and p["premium"] and p["premium"][-1][1] > 0
     assert "from_peak" in p["real_now"] and not [k for k in p if k.endswith("_error")]
+    assert p["rent_yoy"][-1][1] == 5.0
 
 
 def test_robotaxi_tesla_rate_and_rules(snapdir, monkeypatch):
