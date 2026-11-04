@@ -45,9 +45,11 @@ TOPIC = Topic(SLUG, "Search & Social Trends",
 WIKI = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/{lang}.wikipedia/all-access/user/{title}/daily/{a}/{b}"
 WIKI_TITLES = "https://{lang}.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&redirects=1&converttitles=1&titles={titles}"
 HN = "https://hn.algolia.com/api/v1/search_by_date?query={q}&tags={tag}&numericFilters=created_at_i%3E%3D{a},created_at_i%3C{b}&hitsPerPage=1"
-# every story that reached the front page in a week, titles only (about 200-300 a week, under Algolia's 1000-hit page)
-HN_FRONT = ("https://hn.algolia.com/api/v1/search_by_date?tags=front_page&numericFilters=created_at_i%3E%3D{a},created_at_i%3C{b}"
-            "&hitsPerPage=1000&attributesToRetrieve=title")
+# a week's front page, by proxy: every story with 100+ points that week (Algolia's front_page tag only marks what is on the
+# front page right now, so past weeks come back empty). About 150-300 a week, under the 1000-hit page.
+HN_FRONT = ("https://hn.algolia.com/api/v1/search_by_date?tags=story&numericFilters=created_at_i%3E%3D{a},created_at_i%3C{b},points%3E%3D100"
+            "&hitsPerPage=1000")
+FRONT_MIN = 20                  # fewer titles than this in a week (or under 90% of the hits): not scored
 # an AI story by its title: whole words, so "AI" does not match "aid" or "Airbnb"
 AI_TITLE = re.compile(r"\b(AI|A\.I\.|AGI|LLMs?|GPT[-\w.]*|ChatGPT|OpenAI|Anthropic|Claude|Gemini|Llama|Mistral|DeepSeek|Copilot|Cursor|"
                       r"machine learning|deep learning|neural (?:net|network)s?|transformers?|diffusion|chatbots?|AI agents?|agentic|"
@@ -235,11 +237,14 @@ def parse_hn(j: dict) -> int:
 
 
 def parse_hn_front(j: dict) -> list:
-    """Algolia front_page search: [stories that week, of which AI by title]."""
+    """A week of 100+ point stories: [stories, of which AI by title, titles read]. The AI count is None when the titles read do not
+    cover the week (under FRONT_MIN, or under 90% of the hits), so a short or broken answer is never scored as 0%."""
     if (j or {}).get("nbHits") is None:
         raise ValueError("HN: no nbHits")
-    titles = [h.get("title") or "" for h in j.get("hits") or []]
-    return [int(j["nbHits"]), sum(bool(AI_TITLE.search(t)) for t in titles)]
+    titles = [h["title"] for h in j.get("hits") or [] if h.get("title")]
+    n = int(j["nbHits"])
+    ok = len(titles) >= FRONT_MIN and len(titles) >= 0.9 * n
+    return [n, sum(bool(AI_TITLE.search(t)) for t in titles) if ok else None, len(titles)]
 
 
 def parse_reddit(j: dict) -> dict:
@@ -364,7 +369,7 @@ def fill_hn(items: list[dict], out: dict, done: dict) -> None:
     front = store.setdefault("_front", {})
     for w in weeks:                       # the front page first: one request a week, it feeds the AI-share signal
         k = str(w.date())
-        if k in front and w < weeks[-2]:
+        if k in front and len(front[k]) == 3 and w < weeks[-2]:       # two-number rows came from the front_page tag: ask again
             continue
         try:
             front[k] = parse_hn_front(json.loads(download(HN_FRONT.format(a=int(w.timestamp()), b=int((w + pd.Timedelta(weeks=1)).timestamp())), "hn")))
@@ -753,8 +758,8 @@ def _social_now() -> dict:
                       for k, s in rs.items()], key=lambda r: -(r["subscribers"] or 0))
     bs_rows = sorted([{"key": k, "label": lab.get(k, k), "posts": last(bs, k), "capped": bool(k in capped and capped[k].index[-1] == s.index[-1]),
                        "avg7": _r(s.iloc[-7:].mean(), 0), "date": str(s.index[-1].date())} for k, s in bs.items()], key=lambda r: -(r["posts"] or 0))
-    fr = pd.DataFrame({pd.Timestamp(d) + pd.Timedelta(days=6): v for d, v in (hn.get("_front") or {}).items()}, index=["total", "ai"]).T.sort_index()
-    fr = fr[fr["total"] > 0] if len(fr) else fr
+    fr = pd.DataFrame({pd.Timestamp(d) + pd.Timedelta(days=6): v[:2] for d, v in (hn.get("_front") or {}).items()
+                       if len(v) == 3 and v[1] is not None}, index=["total", "ai"]).T.sort_index()
     week_gain = lambda end: _r(sum(g for g in (_gain_between(s, end - pd.Timedelta(days=7), end) for s in gh.values()) if g is not None), 0) \
         if gh and all(_gain_between(s, end - pd.Timedelta(days=7), end) is not None for s in gh.values()) else None
     last_day = max((s.index[-1] for s in gh.values()), default=None)
@@ -919,11 +924,11 @@ def signals(got) -> list[dict]:
     fs = S.get("front", {}).get("share") or []
     share = fs[-1][1] if fs else None
     avg = float(np.mean([v for _, v in fs[-14:-1]])) if len(fs) > 2 else None
-    out.append({"key": "hn_ai_share", "tab": "social", "label": "Hacker News front page: share of stories about AI", "value": _r(100 * share, 1) if share is not None else None,
+    out.append({"key": "hn_ai_share", "tab": "social", "label": "Hacker News front page (100+ points): share of stories about AI", "value": _r(100 * share, 1) if share is not None else None,
                 "unit": "%", "lean": 0 if share is None or avg is None or abs(share - avg) < 0.02 else 1 if share > avg else -1,
                 "watch": "below 20% of front-page stories", "crossed": bool(share is not None and share < 0.20),
-                "note": (f"week to {dayname(fs[-1][0])}, {S['front']['ai'][-1][1]} of {S['front']['total'][-1][1]} front-page stories by title; "
-                         f"+1 above its 13-week average ({100 * avg:.0f}%)" if avg is not None else "") if share is not None else "building: weekly front-page counts come with the HN download"})
+                "note": (f"week to {dayname(fs[-1][0])}, {S['front']['ai'][-1][1]} of {S['front']['total'][-1][1]} stories with 100+ points, by title; "
+                         f"+1 above its 13-week average ({100 * avg:.0f}%)" if avg is not None else "no average yet") if share is not None else "building: weekly front-page counts come with the HN download"})
     g = S.get("stars_week") or {}
     wk, prev = g.get("week"), g.get("prev_week")
     out.append({"key": "github_stars", "tab": "social", "label": "GitHub stars gained in a week, main AI repos", "value": wk, "unit": " stars",
@@ -961,6 +966,7 @@ def _layout_now() -> dict:
             "wikimedia zh": wiki_url("zh", "比特币", now - pd.Timedelta(days=10), now - pd.Timedelta(days=1)),
             "wiki titles en": WIKI_TITLES.format(lang="en", titles=quote("AI agent|Solana (blockchain platform)|Zoox (company)|Housing crisis in the United Kingdom", safe="")),
             "wiki titles zh": WIKI_TITLES.format(lang="zh", titles=quote("比特币|深度求索|宝可梦|宝可梦集换式卡牌游戏|特斯拉公司|英伟达|恒生指数", safe="")),
+            "hn front page (100+ points)": HN_FRONT.format(a=int(wk.timestamp()), b=int((wk + pd.Timedelta(weeks=1)).timestamp())),
             "hn algolia": HN.format(q="bitcoin", tag="story", a=int(wk.timestamp()), b=int((wk + pd.Timedelta(weeks=1)).timestamp())),
             "bluesky": BSKY.format(q="bitcoin", a=(now - pd.Timedelta(days=1)).strftime("%Y-%m-%dT00:00:00Z"), b=now.strftime("%Y-%m-%dT00:00:00Z")),
             "bluesky public host": "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=bitcoin&limit=1",

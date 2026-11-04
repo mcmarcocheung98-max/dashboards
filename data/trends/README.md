@@ -46,11 +46,14 @@ The four approved on 3 Nov 2026 (`data/signals/watchlist.json`), from the cached
 |---|---|---|---|
 | `rising_topic` | the fastest-rising topic's attention z-score this week | z above +3 | +1 at z ≥ +1, −1 at z ≤ −1 |
 | `attention_gap` | a theme's change in monthly Wikipedia views over three months (bitcoin shown unless another theme is crossed) | any theme's attention is up 50% or more while its dashboard's series moved less than 10% either way over the same three months | +1 attention rising, −1 falling |
-| `hn_ai_share` | share of the last full week's Hacker News front-page stories about AI, by title | below 20% | +1 above its 13-week average, −1 below (within 2 points: 0) |
+| `hn_ai_share` | share of the last full week's Hacker News stories with 100+ points (the front page, by proxy) that are about AI, by title | below 20% | +1 above its 13-week average, −1 below (within 2 points: 0) |
 | `github_stars` | stars gained in the last 7 days across the repos in `repos.csv` | at most half the 7 days before | +1 more than the week before, −1 fewer |
 
-The front-page share comes from one Algolia request a week (`tags=front_page`, titles only), counted with a whole-word pattern
-(AI, LLM, GPT, ChatGPT, OpenAI, Anthropic, Claude, Gemini, agents, GPUs, Nvidia, …) so "aid" or "Airbnb" do not count. GitHub's
+The front-page share comes from one Algolia request a week for every story with 100 or more points (Algolia's `front_page` tag
+only marks the stories on the front page right now, so past weeks came back nearly empty and the first live reading was a false 0%).
+Titles are counted with a whole-word pattern (AI, LLM, GPT, ChatGPT, OpenAI, Anthropic, Claude, Gemini, agents, GPUs, Nvidia, ...)
+so "aid" or "Airbnb" do not count. A week is scored only when at least 20 titles came back and they cover 90% of the hits; otherwise
+the signal shows no value and is never crossed. GitHub's
 weekly gain needs two weeks of the daily star log (from 26 Oct 2026), so it reads "building" until about 9 Nov.
 
 ## Sources and cadence

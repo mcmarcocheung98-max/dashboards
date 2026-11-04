@@ -143,7 +143,7 @@ def fake_download(url, site_=None, headers=None, timeout=30):
         return wiki_text(url)
     if "/w/api.php" in url:
         return json.dumps(titles_json(url))
-    if "tags=front_page" in url:
+    if "points%3E%3D100" in url:
         return json.dumps(hn_front_json(url))
     if "hn.algolia.com" in url:
         return json.dumps(hn_json(url))
@@ -486,11 +486,39 @@ def test_endpoints_without_data(mocked):
 
 
 def test_parse_hn_front_counts_ai_titles_by_whole_word():
-    j = {"nbHits": len(FRONT_TITLES), "hits": [{"title": t} for t in FRONT_TITLES]}
-    total, ai = M.parse_hn_front(j)
-    assert total == 10 and ai == 5                    # agent, Claude, LLMs, GPUs, Nvidia; not Airbnb or "first aid"
+    j = {"nbHits": 3 * len(FRONT_TITLES), "hits": [{"title": t} for t in FRONT_TITLES * 3]}
+    assert M.parse_hn_front(j) == [30, 15, 30]          # agent, Claude, LLMs, GPUs, Nvidia; not Airbnb or "first aid"
     with pytest.raises(ValueError):
         M.parse_hn_front({"message": "rate limited"})
+
+
+def test_parse_hn_front_never_scores_a_short_answer_as_zero():
+    assert M.parse_hn_front({"nbHits": 200, "hits": []}) == [200, None, 0]                          # count without titles
+    assert M.parse_hn_front({"nbHits": 200, "hits": [{"objectID": str(k)} for k in range(200)]})[1] is None   # titles missing
+    assert M.parse_hn_front({"nbHits": 5, "hits": [{"title": "Rust"}] * 5})[1] is None              # too few to score
+    assert M.parse_hn_front({"nbHits": 300, "hits": [{"title": "Rust"}] * 100})[1] is None          # a third of the week
+
+
+def test_hn_share_left_uncrossed_without_usable_weeks(filled):
+    store = M.load("hn")
+    store["_front"] = {k: [200, None, 0] for k in store["_front"]}
+    M.save("hn", store)
+    d = M._social_now()
+    assert d["front"]["share"] == []
+    row = next(r for r in M.signals(lambda k: d if k == "social" else {}) if r["key"] == "hn_ai_share")
+    assert row["value"] is None and row["crossed"] is False and row["note"]
+
+
+def test_old_front_page_rows_are_asked_again(filled, monkeypatch):
+    store = M.load("hn")
+    store["_front"] = {k: [12, 0] for k in store["_front"]}            # from the front_page tag: two numbers
+    M.save("hn", store)
+    assert M._social_now()["front"]["share"] == []
+    calls = []
+    monkeypatch.setattr(M, "download", lambda url, *a, **k: calls.append(url) or fake_download(url, *a, **k))
+    M.fill()
+    assert len([u for u in calls if "points%3E%3D100" in u]) == M.HN_WEEKS
+    assert all(len(v) == 3 for v in M.load("hn")["_front"].values())
 
 
 def test_signals_from_the_cached_payloads(filled):
