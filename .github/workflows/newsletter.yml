@@ -11,6 +11,9 @@ on:
       url:
         description: "Site"
         default: "https://dashboards-production-bde6.up.railway.app"
+permissions:
+  actions: read
+  contents: read
 jobs:
   send:
     runs-on: ubuntu-latest
@@ -19,7 +22,21 @@ jobs:
       MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
       NEWSLETTER_TO: ${{ secrets.NEWSLETTER_TO }}
     steps:
+      # GitHub starts this repo's scheduled runs hours late, so the 07:39 daily check starts this workflow by hand (workflow_dispatch).
+      # The late scheduled run then finds today's successful run and stops, so the email goes out once.
+      - name: Already sent today?
+        id: dedupe
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n=0
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            n=$(gh run list -R "${{ github.repository }}" --workflow newsletter.yml --status success --created "$(date -u +%F)" --json databaseId --jq 'length')
+          fi
+          echo "done=$([ "$n" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          [ "$n" -gt 0 ] && echo "::notice::Today's newsletter already ran; this scheduled run stops here." || true
       - name: Fetch today's newsletter
+        if: steps.dedupe.outputs.done != 'true'
         run: |
           SITE="${{ inputs.url || 'https://dashboards-production-bde6.up.railway.app' }}"
           curl -fsS --max-time 300 "$SITE/api/signals/newsletter" -o newsletter.json
@@ -33,12 +50,13 @@ jobs:
           echo "subject=$(cat subject.txt)" >> "$GITHUB_OUTPUT"
         id: fetch
       - uses: actions/upload-artifact@v4
+        if: steps.dedupe.outputs.done != 'true'
         with:
           name: newsletter-${{ github.run_id }}
           path: newsletter.*
           retention-days: 30
       - name: Send with Gmail
-        if: ${{ env.MAIL_USERNAME != '' && env.MAIL_PASSWORD != '' && env.NEWSLETTER_TO != '' }}
+        if: ${{ steps.dedupe.outputs.done != 'true' && env.MAIL_USERNAME != '' && env.MAIL_PASSWORD != '' && env.NEWSLETTER_TO != '' }}
         uses: dawidd6/action-send-mail@v3.12.0
         with:
           server_address: smtp.gmail.com
@@ -52,6 +70,6 @@ jobs:
           html_body: file://newsletter.html
           body: file://newsletter.txt
       - name: Not sent
-        if: ${{ env.MAIL_USERNAME == '' || env.MAIL_PASSWORD == '' || env.NEWSLETTER_TO == '' }}
+        if: ${{ steps.dedupe.outputs.done != 'true' && (env.MAIL_USERNAME == '' || env.MAIL_PASSWORD == '' || env.NEWSLETTER_TO == '') }}
         run: |
           echo "::warning::Newsletter fetched but not sent. Set the MAIL_USERNAME, MAIL_PASSWORD and NEWSLETTER_TO secrets (see the comment at the top of this workflow)."

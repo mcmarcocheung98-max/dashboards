@@ -31,6 +31,8 @@ The morning check reads this file, so these steps live here as well as in its pr
 - Read `/api/signals/board` (show-json workflow). Report every watch point crossed (dashboard, signal, value, watch point) and how
   many approved signals are wired (`totals.wired` of `totals.signals`). From 6 Nov, remind the session of any dashboard whose signals
   are still "not wired yet", in one line, pointing to `data/signals/README.md`. Mark `p-signals-wiring` done once all are wired.
-- Check that morning's `newsletter` workflow run (07:35 UTC). If it failed, read the log and fix it when small. If "Send with Gmail"
+- First thing, start the `newsletter` workflow on main by hand (workflow_dispatch, no inputs). GitHub starts this repo's scheduled
+  runs hours late, so the check is what sends the email on time; the late scheduled run sees today's run and stops.
+- Check that run. If it failed, read the log and fix it when small. If "Send with Gmail"
   was skipped, the secrets are still missing: keep `gmail-newsletter-secrets` open. Close it on the first run whose send step ran.
 - In the report: the watch points crossed, signals wired (N of M), and whether the newsletter went out.

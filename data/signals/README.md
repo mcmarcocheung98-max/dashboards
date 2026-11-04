@@ -39,7 +39,8 @@ def SIGNALS():
 
 ## The newsletter
 
-`.github/workflows/newsletter.yml` runs at 07:35 UTC: it fetches `/api/signals/newsletter`, attaches the HTML and text to the run, and
+`.github/workflows/newsletter.yml` is started each morning by the 07:39 London daily check, because GitHub starts this repo's
+scheduled runs hours late; its own 07:35 UTC schedule is the fallback and stops if today's run already happened. Each run it fetches `/api/signals/newsletter`, attaches the HTML and text to the run, and
 sends it through Gmail SMTP when the repository secrets `MAIL_USERNAME`, `MAIL_PASSWORD` (a Gmail app password) and `NEWSLETTER_TO`
 are set. Sections: watch points crossed, one signal per dashboard, what flipped since yesterday, and the owner's open action items.
 
