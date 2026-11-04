@@ -20,7 +20,9 @@ Live site: https://dashboards-production-bde6.up.railway.app. This container can
 
 - `python -m pytest -m "not network" -q`; the status of the latest commit on `main`.
 - Run `live-check` (every tab of every dashboard in a browser, plus `/api/health`); wait with `send_later` or a background
-  command, never a foreground sleep. Read the PROBLEMS list, could-not-load and unavailable counts, JS errors.
+  command, never a foreground sleep. Don't push to `main` while it runs: Railway restarts on every push, and the tabs it
+  opens during the restart read as could-not-load. If that happens anyway, re-fetch the failed endpoints with `show-json` before
+  calling them broken. Read the PROBLEMS list, could-not-load and unavailable counts, JS errors.
 - `show-json` on `/api/health` (failing or stale sources, archive, Ask Claude spend) and on `/api/signals/board` (watch points
   crossed, signals wired N of M; a crossed value that is clearly wrong, such as 0.0 from an empty fetch, is a bug, not a signal).
 - The newsletter run from step 1: succeeded? Was "Send with Gmail" skipped (secrets missing: keep `gmail-newsletter-secrets` open)?

@@ -180,9 +180,10 @@
    "id": "housing-rent-follow",
    "title": "Housing: the private-rent card should follow the timeline",
    "owner": "session:housing",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-04",
-   "detail": "Found in the dev agent's first review. After a day is picked on the timeline the top card follows it, but the 'Average monthly private rent' card keeps showing the latest month (Sep 2026) and its year-on-year change."
+   "detail": "Found in the dev agent's first review. After a day is picked on the timeline the top card follows it, but the 'Average monthly private rent' card keeps showing the latest month (Sep 2026) and its year-on-year change. Fixed by the Housing session in db380e5, within the hour.",
+   "done": "2026-11-04"
   }
  ],
  "roadmap": [
@@ -423,7 +424,7 @@
    "date": "2026-11-04",
    "run": "manual",
    "result": "ok",
-   "summary": "First dev agent run, started by the owner. 347 offline tests pass, CI green. Signals board: 36 of 62 wired, 11 crossed, the Hacker News false 0% is fixed. Built the private POST route and four shared requests; reviewed Housing. The live browser check of every tab was still running at commit time; its result follows in the next note.",
+   "summary": "First dev agent run, started by the owner. 347 offline tests pass, CI green. Signals board: 36 of 62 wired, 11 crossed, the Hacker News false 0% is fixed. Built the private POST route and four shared requests; reviewed Housing. Live check: every tab loads; five dark-mode tabs (AI skills and about, this page's roadmap, log and about) failed only while Railway restarted for the agent's own pushes, and load now. Failing sources are the known ones (Bluesky and Reddit closed to the server, Yahoo and Hyperliquid 429, HKMA, Ember).",
    "fixed": [
     "0826c98"
    ],
@@ -597,6 +598,13 @@
      "what": "All five signals wired (3 Nov; not in that day's note)",
      "by": "session:climate",
      "commit": "037cb35"
+    },
+    {
+     "dashboard": "Housing",
+     "slug": "housing",
+     "what": "The private-rent card follows the picked day (the review's finding, fixed the same evening)",
+     "commit": "db380e5",
+     "by": "session:housing"
     }
    ],
    "review": "housing",
