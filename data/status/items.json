@@ -139,9 +139,10 @@
    "id": "live-parsers",
    "title": "Confirm two workbook layouts against the live files",
    "owner": "sessions",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-10-25",
-   "detail": "The ONS JOBS03 workbook (UK headcount) and the Census BTOS Sector workbook (firm adoption by sector) were automated from documentation; the AI session still has to confirm their layout on the live site. Reminded the AI session on 5 Nov."
+   "detail": "The ONS JOBS03 workbook (UK headcount) and the Census BTOS Sector workbook (firm adoption by sector) were automated from documentation; the AI session still has to confirm their layout on the live site. Reminded the AI session on 5 Nov. Confirmed by the AI session on 5 Nov from the live site: JOBS03 (jobs03sep2026.xls, latest quarter Jun 2026) and BTOS Sector (all 19 sectors, 24 readings to 4 Oct 2026) parse with no errors and match the documented layouts.",
+   "done": "2026-11-05"
   },
   {
    "id": "hk-rents",
@@ -658,6 +659,12 @@
      "what": "Rides updated after the review: Waymo's 500k a week reconfirmed on Alphabet's April call, Baidu's Q2 2026 added from its earnings call",
      "commit": "6d6f4d1",
      "by": "session:robotaxi"
+    },
+    {
+     "dashboard": "AI: Jobs & Adoption",
+     "slug": "ai",
+     "what": "Both automated workbooks (ONS JOBS03, Census BTOS Sector) confirmed against the live files; the 12-day item is closed",
+     "by": "session:ai"
     }
    ],
    "review": "robotaxi",
