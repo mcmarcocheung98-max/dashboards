@@ -57,9 +57,15 @@ const VIEWS = {
     const out = [];
     if (E) {
       const i = E.years.indexOf(E.last_full), us = i >= 0 ? E.counts.US[i] : null, cn = i >= 0 ? E.counts.China[i] : null;
-      out.push(card(null, el("div", { class: "kpis" }, kpi("US notable models, " + E.last_full, num(us)), kpi("China, " + E.last_full, num(cn)),
-        kpi("China's share of the two", us + cn ? share(cn / (us + cn)) : "–"), kpi("Compute gap, US over China", E.gap_oom == null ? "–" : num(E.gap_oom, 1) + " orders"),
-        kpi("Best US minus best Chinese, Arena", A.gap && A.gap.length ? num(last(A.gap)[1]) + " pts" : "–")), asOf(d), stale(d)));
+      const fr = E.frontier || {}, gap = t => { const a = valueAt(fr.US, t), b = valueAt(fr.China, t); return a && b ? Math.log10(a / b) : null; };
+      // the frontier and leaderboard figures follow the timeline; the yearly counts below have no date to follow
+      out.push(card(null, datedHead([
+        { label: () => "Largest US training run to date", value: t => [flop(valueAt(fr.US, t)), ""] },
+        { label: () => "Largest Chinese run", value: t => [flop(valueAt(fr.China, t)), ""] },
+        { label: () => "Compute gap, US over China", value: t => { const g = gap(t); return [g == null ? "–" : num(g, 1) + " orders", ""]; } },
+        { label: () => "Best US minus best Chinese, Arena", value: t => { const v = valueAt(A.gap, t); return [v == null ? "–" : num(v) + " pts", ""]; } }]),
+        el("div", { class: "kpis", style: "margin-top:10px" }, kpi("US notable models, " + E.last_full, num(us)), kpi("China, " + E.last_full, num(cn)),
+          kpi("China's share of the two", us + cn ? share(cn / (us + cn)) : "–")), asOf(d), stale(d)));
       out.push(card("Notable AI models per year, by country of the developer (Epoch AI)",
         ...svgBars(E.years.map(String), Object.entries(E.counts).map(([k, v], i) => ({ name: k, values: v, color: colOf(k, i) })), { yFmt: v => Math.round(v) }),
         ask("Models Epoch AI counts as notable (state of the art, highly cited or widely used), by the country of each developing organisation; a model from a US and a Chinese lab counts for both. The current year is partial (the share chart stops at the last full year).",
@@ -69,7 +75,6 @@ const VIEWS = {
           ask("China's count divided by the US and China together, per year.", "does the share pass 50%?", "does it hold when the US counts more frontier-scale runs?", "is the count of models still the right measure, or only the best one?")),
         card("Open-weight notable models per year", ...svgBars(E.years.map(String), ["US", "China"].map((k, i) => ({ name: k, values: E.open[k], color: colOf(k, i) })), { yFmt: v => Math.round(v), h: 220 }),
           ask("Notable models whose weights anyone can download (Epoch's accessibility field).", "do Chinese labs (Qwen, DeepSeek, Kimi) keep leading open weights?", "do open weights set the world standard, as Linux and Android did?", "does openness or control win the platform?"))));
-      const fr = E.frontier || {};
       out.push(Object.keys(fr).length ? card("Largest training run to date, by country (log scale)", ...linesChart(series(fr), flop, { log: true }),
         ask("Each step is a new largest training run by a developer in that country (single-country models only). The gap is the vertical distance: one order of magnitude is ten times the compute.",
           "does the US-China gap stay at one to two orders of magnitude under chip controls?", "does China close it with domestic accelerators (Chips trade tab)?", "does compute stop deciding who leads, as efficiency gains (DeepSeek) suggest?"))
@@ -168,8 +173,11 @@ const VIEWS = {
 
   async markets() {
     const d = await api("markets"), L = d.last || {}, Y = d.years || {};
-    const head = card(null, el("div", { class: "kpis" }, ...Object.entries(L).map(([k, v]) => kpi(k + " · 1 year " + pct(v.y1, 0), num(v.v, 0))),
-      kpi("China ADRs vs US basket, 1 year", pct(d.rel_1y, 0), cls(d.rel_1y))), errs(d, "Some prices are"), asOf(d), stale(d));
+    const ch1y = { lag: "1y", fmt: v => pct(v / 100, 0) };
+    const head = card(null, d.baskets ? followHead([
+      ...Object.entries(d.baskets).map(([k, pts]) => ({ label: k, points: pts, fmt: v => num(v, 0), delta: ch1y })),
+      ...(d.ratio ? [{ label: "China ADRs ÷ US basket", points: d.ratio, fmt: v => num(v, 0), cls: v => cls(v - 100), delta: ch1y }] : [])])
+      : el("div", { class: "kpis" }, ...Object.entries(L).map(([k, v]) => kpi(k + " · 1 year " + pct(v.y1, 0), num(v.v, 0)))), errs(d, "Some prices are"), asOf(d), stale(d));
     const m = d.members || {};
     const px = d.baskets ? card("US tech vs US-listed Chinese tech, rebased to 100 (Nasdaq quote API)", ...linesChart(series(d.baskets).map(s => ({ ...s, color: css(s.name === "US tech basket" ? "--s1" : s.name === "KWEB" ? "--s5" : "--s2") })), v => num(v, 0), { log: true }),
       ask("Equal-weighted buy and hold from the start of 2019: US basket " + (m["US tech basket"] || []).join(", ") + "; China basket " + (m["China tech ADRs"] || []).join(", ") +
