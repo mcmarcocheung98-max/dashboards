@@ -82,6 +82,15 @@
    "status": "open",
    "detail": "In the dashboards repo: Settings > Secrets and variables > Actions. Add MAIL_USERNAME (the Gmail address), MAIL_PASSWORD (a Gmail app password from Google Account > Security > 2-Step Verification > App passwords, not the account password) and NEWSLETTER_TO (where to send). Until then the newsletter workflow builds the email each morning and attaches it to the run without sending it.",
    "link": "https://github.com/mcmarcocheung98-max/dashboards/settings/secrets/actions"
+  },
+  {
+   "id": "sessions-go-ahead",
+   "title": "Say 'go' to four dashboard sessions waiting on you",
+   "area": "Dev agent",
+   "priority": "medium",
+   "since": "2026-11-05",
+   "status": "open",
+   "detail": "China vs US tech (signals built and tested, on a branch), Pokémon cards (signals and follow-the-timeline), Compute & chips (signals, follow heads, reduce= tidy-up) and Autonomous cars (signals) won't act on work the dev agent relays until you confirm. Reply 'go all' to the dev agent (it passes it on; China vs US tech accepts that), or say go in each session's own thread. Until then 26 of 62 signals stay unwired."
   }
  ],
  "pending": [
@@ -107,7 +116,7 @@
    "owner": "sessions",
    "status": "in_progress",
    "since": "2026-10-26",
-   "detail": "Live check 5 Nov: every tab follows on Housing (London, Types, Rates), AI, Debt & rates, Demographics, Climate, Trends, Prediction markets, Space and BTC Cycles; Autonomous cars on Safety, Tesla and Energy (Rides and Footprint asked). None yet on Compute & chips, Longevity and Pokémon cards (reminded 5 Nov), or China vs US tech (its work waits on the owner's go). NBA odds is private and skipped by the live check."
+   "detail": "Live check 5 Nov: every tab follows on Housing (London, Types, Rates), AI, Debt & rates, Demographics, Climate, Trends, Prediction markets, Space and BTC Cycles; Autonomous cars on every tab (Rides and Footprint follow too; the check skips their charts of under 10 points). None yet on Compute & chips, Longevity and Pokémon cards (reminded 5 Nov), or China vs US tech (its work waits on the owner's go). NBA odds is private and skipped by the live check."
   },
   {
    "id": "graphify-sessions",
@@ -674,7 +683,7 @@
     "Tomorrow's review: the next dashboard in turn"
    ],
    "asks": [
-    "Say 'go' for China vs US Tech's signals: built and tested, held until you confirm",
+    "Say 'go' to the four sessions waiting on you: China vs US tech, Pokémon cards, Compute & chips, Autonomous cars (signals and follow heads)",
     "Approve or skip r-watch-recalibrate and r-private-signals",
     "Add the Gmail secrets: this morning's email was built but not sent"
    ]
