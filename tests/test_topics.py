@@ -1398,7 +1398,7 @@ def test_robotaxi_readings(snapdir, monkeypatch):
     keys = {r["key"]: r for r in rows}
     assert {"waymo_weekly", "cities", "rules_90d", "waymo_per_million", "tsla_vs_200d", "deliveries_yoy", "fundamentals_signal"} <= set(keys)
     assert {r["tab"] for r in rows} == {"rides", "footprint", "safety", "tesla"} and all(r["lean"] in (-1, 0, 1) for r in rows)
-    assert keys["waymo_weekly"]["lean"] == 1 and keys["deliveries_yoy"]["lean"] == -1      # 500K after 250K; Q3 2026 below Q3 2025
+    assert keys["waymo_weekly"]["lean"] == 0 and keys["deliveries_yoy"]["lean"] == -1      # 500K repeated in Apr 2026: flat; Q3 2026 below Q3 2025
     assert keys["waymo_per_million"]["note"].endswith("(lower is better)")
     assert R.readings(lambda n: {}) == [] and R.READINGS() is not None
 
