@@ -195,6 +195,14 @@
    "since": "2026-11-04",
    "detail": "Found in the dev agent's first review. After a day is picked on the timeline the top card follows it, but the 'Average monthly private rent' card keeps showing the latest month (Sep 2026) and its year-on-year change. Fixed by the Housing session in db380e5, within the hour.",
    "done": "2026-11-04"
+  },
+  {
+   "id": "ai-stocks-build",
+   "title": "Build the AI Stocks dashboard",
+   "owner": "session:ai-stocks",
+   "status": "in_progress",
+   "since": "2026-11-05",
+   "detail": "Session session_01Hguru33HhMq9DoqY2C26R6 started from the dev agent's brief; it reports back to the parent when pushed."
   }
  ],
  "roadmap": [
@@ -372,6 +380,16 @@
    "area": "Site",
    "by": "agent",
    "detail": "Each morning the agent opens the dashboard it reviewed least recently, looks for stale or failing sources, empty or 'not available' cards, unclear copy and broken mobile layout, fixes the small things and proposes the rest."
+  },
+  {
+   "id": "r-ai-stocks",
+   "title": "AI Stocks: the setup after the dip",
+   "horizon": "now",
+   "status": "in_progress",
+   "area": "Dashboards",
+   "by": "session:ai-stocks",
+   "approved": "2026-11-05",
+   "detail": "Asked by the owner on 5 Nov. Thirteen AI stocks against QQQ, SPY and SMH: drawdown from the high, trend and breadth, RSI, past dips and what followed, VIX and relative strength, and revenue growth. Five signals proposed with it: basket drawdown, breadth above the 50-day, basket RSI, VIX, AI vs QQQ."
   }
  ],
  "log": [
