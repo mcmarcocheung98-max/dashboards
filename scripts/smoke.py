@@ -179,6 +179,9 @@ def follow_check(pg) -> dict | None:
     return {"ok": ok, "hover": hovered[:24], "kept": kept[:24]}
 
 
+RETRY_S = 20      # wait before reloading a tab that showed "Could not load"
+
+
 def chromium_path() -> str | None:
     """PLAYWRIGHT_CHROMIUM_EXECUTABLE if set, else the newest pre-installed /opt/pw-browsers/chromium-*, else None (Playwright's own)."""
     import os
@@ -232,12 +235,20 @@ def main() -> int:
                     time.sleep(1.2)
                     key = pg.evaluate("location.hash.slice(1)")
                     text = pg.locator("#view").inner_text()
+                    retried = False
+                    if "Could not load" in text:            # once more after a pause: a deploy restarting the server fails every request for a minute
+                        time.sleep(RETRY_S)
+                        pg.goto(f"{base}/{slug}#{key}"); pg.reload(); pg.wait_for_selector("nav button", timeout=30000)   # same URL + hash: reload for real
+                        pg.wait_for_function("document.getElementById('stamp').textContent.startsWith('Updated')", timeout=180000)
+                        time.sleep(1.2)
+                        text, retried = pg.locator("#view").inner_text(), True
                     sync = pg.evaluate(SYNC_CHECK) if theme == "light" else {"n": "-", "ok": None}
                     follow = follow_check(pg) if theme == "light" else None
                     askp = ask_check(pg, ask_first, drag=(i == 0 and theme == "light"))
                     ask_first = ask_first or askp
                     line = (f"{theme:5} {slug:12} {key:11} cards={pg.locator('#view .card').count():3} charts={pg.locator('#view .chart').count():3} "
-                            f"unavailable={text.count('not available'):2} could-not-load={'Could not load' in text} sync={sync}" + (f" follow={follow}" if follow else "") + ("" if askp["ok"] else f" ask={askp}"))
+                            f"unavailable={text.count('not available'):2} could-not-load={'Could not load' in text} sync={sync}" + (f" follow={follow}" if follow else "") + ("" if askp["ok"] else f" ask={askp}")
+                            + (" (loaded on retry)" if retried and "Could not load" not in text else " (failed twice)" if retried else ""))
                     print(line, flush=True)
                     if "Could not load" in text or sync.get("ok") is False or (follow and follow.get("ok") is False) or not askp["ok"]:
                         bad.append(line)
