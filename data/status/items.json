@@ -89,8 +89,9 @@
    "area": "Dev agent",
    "priority": "medium",
    "since": "2026-11-05",
-   "status": "open",
-   "detail": "China vs US tech (signals built and tested, on a branch), Pokémon cards (signals and follow-the-timeline), Compute & chips (signals, follow heads, reduce= tidy-up) and Autonomous cars (signals) won't act on work the dev agent relays until you confirm. Reply 'go all' to the dev agent (it passes it on; China vs US tech accepts that), or say go in each session's own thread. Until then 26 of 62 signals stay unwired."
+   "status": "done",
+   "detail": "China vs US tech (signals built and tested, on a branch), Pokémon cards (signals and follow-the-timeline), Compute & chips (signals, follow heads, reduce= tidy-up) and Autonomous cars (signals) won't act on work the dev agent relays until you confirm. Reply 'go all' to the dev agent (it passes it on; China vs US tech accepts that), or say go in each session's own thread. Until then 26 of 62 signals stay unwired. The owner said 'go all' on 5 Nov; the dev agent passed it to all four sessions.",
+   "done": "2026-11-05"
   }
  ],
  "pending": [
