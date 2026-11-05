@@ -116,3 +116,42 @@ def test_ember_ev_shares_for_the_four_markets(mocked):
     assert len(p["ev_ember"]["r12"]["China"]) == 57 and p["as_of"] == "2026-09-01"
     with pytest.raises(ValueError):
         E.parse_ember_ev("Area,Date,Value\nX,2026-01-01,1\n")
+
+
+LIVE_RATE = [{"operator": "Waymo", "date": d, "miles": m, "reports": n} for d, m, n in (       # the live safety tab, 25 Oct 2026
+    ("2024-06-30", 22e6, 382), ("2025-01-31", 56.7e6, 778), ("2025-03-31", 71e6, 917), ("2025-06-30", 96e6, 1169), ("2025-09-30", 127e6, 1332),
+    ("2025-12-31", 170.7e6, 1611), ("2026-03-31", 220.6e6, 1899), ("2026-06-30", 271.3e6, 2221))]
+
+
+def test_crash_quarter_against_the_year_before():
+    c = R.crash_quarter(LIVE_RATE)
+    assert c["now"] == pytest.approx(322 / 50.7, abs=0.01) and c["year"] == pytest.approx(982 / 149.6, abs=0.01) and c["year_from"] == "2025-03-31"
+    worse = LIVE_RATE + [{"operator": "Waymo", "date": "2026-09-30", "miles": 300e6, "reports": 2221 + 400}]
+    assert R.crash_quarter(worse)["now"] > R.crash_quarter(worse)["year"]
+    assert R.crash_quarter(LIVE_RATE[:2]) is None
+
+
+def test_signals_cover_the_approved_keys():
+    import json
+    from pathlib import Path
+    pay = {"rides": {"weekly": {"Waymo": [[1774483200, 500000.0], [1777420800, 500000.0]]}},
+           "safety": {"reports": {"rate": LIVE_RATE}},
+           "footprint": {"rows": [{"date": "2020-10-08", "operator": "Waymo", "city": "Phoenix", "country": "US", "note": ""},
+                                  {"date": "2022-08-08", "operator": "Baidu Apollo Go", "city": "Wuhan", "country": "CN", "note": ""}]},
+           "energy": {"ev_ember": {"latest": {"UK": {"r12": 40.16, "r12_year_ago": 33.53}, "US": {"r12": 7.1, "r12_year_ago": 10.41},
+                                              "China": {"r12": 58.26, "r12_year_ago": 51.95}, "Hong Kong": {"r12": 90.03, "r12_year_ago": 81.57}}}},
+           "tesla": {"milestones": [{"date": "2026-01-28", "area": "Robotaxi", "event": "Tesla reports it began removing the safety monitor from some Austin customer rides"},
+                                    {"date": "2026-04-22", "area": "Robotaxi", "event": "unsupervised Robotaxi rides launched in Dallas and Houston"}]}}
+    s = {x["key"]: x for x in R.signals(lambda n: pay[n])}
+    approved = {r["key"] for r in json.loads(Path("data/signals/watchlist.json").read_text())["robotaxi"]}
+    assert set(s) == approved
+    assert s["waymo_rides"]["crossed"] and s["waymo_rides"]["lean"] == 0 and "1m not yet" in s["waymo_rides"]["note"]
+    assert not s["crash_rate"]["crossed"] and s["crash_rate"]["lean"] == 1
+    assert not s["cities"]["crossed"] and s["cities"]["value"] == 2
+    assert s["ev_share"]["crossed"] and "UK above 30%" in s["ev_share"]["note"] and "US not above 15%" in s["ev_share"]["note"]
+    assert s["tesla_unsupervised"]["crossed"] and s["tesla_unsupervised"]["value"] == "2026-01-28"
+    pay["footprint"]["rows"].append({"date": str(pd.Timestamp.now().date()), "operator": "Waymo", "city": "London", "country": "UK", "note": ""})
+    pay["footprint"]["rows"].append({"date": "2023-08-10", "operator": "Cruise", "city": "San Francisco", "country": "US", "note": "suspended Oct 2023"})
+    c = {x["key"]: x for x in R.signals(lambda n: pay[n])}["cities"]
+    assert c["crossed"] and c["lean"] == -1 and "UK" in c["note"] and "Cruise" in c["note"]
+    assert R.signals(lambda n: {}) == [] and isinstance(R.SIGNALS(), list)

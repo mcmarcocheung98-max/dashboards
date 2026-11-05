@@ -80,6 +80,18 @@ Code in `app/topics/robotaxi_energy.py` (a helper module of this dashboard; `END
 - **To update:** SMMT publishes on about the 5th of each month, CPCA in the second week, and Cox each quarter. Add the latest to `ev_latest.csv`, and in January add the full year to `ev_share.csv`. Hong Kong's 2026 figures are on the Ember chart (which compiles the Transport Department's registrations); the press figures since the tax concession ended on 31 Mar 2026 conflict, so the yearly hand-entered series stops at 2025.
 - **Energy readings:** `ev_uk_bev`, `ev_china_nev`, `ws_china` and `ws_us` are +1 when the latest year's share is above the year before, and −1 when below.
 
+## Signals (SIGNALS)
+
+`SIGNALS()` in `robotaxi.py` wires the owner's approved signals (`data/signals/watchlist.json`, 3 Nov 2026) for `/signals`, the front-page tile and the daily email, from the cached tab payloads only:
+
+| Key | Value | Crossed when |
+|---|---|---|
+| `waymo_rides` | Waymo's latest announced paid rides a week (`rides.csv`) | 500k or more; the note says whether 1m is reached |
+| `crash_rate` | Waymo crash reports per million miles between its last two published mile cut-offs (`crash_quarter`) | that rate is above the rate over the year before the period |
+| `cities` | cities with public driverless service in the US and China (`cities.csv`) | a country's first city opened in the last 90 days, or any row whose note says "suspended" (add that note when a service is suspended) |
+| `ev_share` | Ember's rolling 12-month EV share for each market | UK above 30% or US above 15% |
+| `tesla_unsupervised` | date of the first Robotaxi milestone mentioning unsupervised rides or removing the safety monitor (`tesla_milestones.csv`) | such a milestone exists |
+
 ## What changed since yesterday (READINGS)
 
 `READINGS()` gives the shared "what changed" card these headline readings, from the cached tab payloads only. +1 means adoption is speeding up, safety is improving or TSLA is leaning up; −1 the opposite; 0 flat or unknown.

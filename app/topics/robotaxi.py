@@ -456,6 +456,85 @@ def readings(got) -> list[dict]:
     return out + E.readings(energy or {})
 
 
+def _safe(got, name: str) -> dict:
+    try:
+        return got(name) or {}
+    except Exception:                                       # a tab that never loaded: its signals read as unknown
+        return {}
+
+
+def crash_quarter(rate: list[dict]) -> dict | None:
+    """Waymo crash reports per million miles in the latest period between two published mile cut-offs, against the rate over the
+    year before that period (from the cut-off about a year earlier to the period's start). None until there are enough cut-offs."""
+    if len(rate) < 3:
+        return None
+    a, b = rate[-2], rate[-1]
+    end = pd.Timestamp(a["date"])
+    older = [x for x in rate[:-1] if pd.Timestamp(x["date"]) <= end - pd.DateOffset(months=11)]
+    if not older or b["miles"] <= a["miles"]:
+        return None
+    o = older[-1]
+    now = (b["reports"] - a["reports"]) / ((b["miles"] - a["miles"]) / 1e6)
+    year = (a["reports"] - o["reports"]) / ((a["miles"] - o["miles"]) / 1e6) if a["miles"] > o["miles"] else None
+    return {"now": _r(now, 2), "year": _r(year, 2) if year is not None else None, "from": a["date"], "to": b["date"], "year_from": o["date"]}
+
+
+def signals(got) -> list[dict]:
+    """The owner's approved signals for this dashboard (data/signals/watchlist.json), from the cached tab payloads only."""
+    out = []
+    pts = ((_safe(got, "rides").get("weekly") or {}).get("Waymo")) or []
+    if pts:
+        v = pts[-1][1]
+        out.append({"key": "waymo_rides", "tab": "rides", "label": "Waymo paid rides a week", "value": v, "lean": _cmp(v, pts[-2][1] if len(pts) > 1 else None),
+                    "watch": "500k a week; 1m a week", "crossed": v >= 500000,
+                    "note": f"as announced {pd.Timestamp(pts[-1][0], unit='s').date()}; " + ("1m reached" if v >= 1e6 else "500k reached, 1m not yet" if v >= 5e5 else "below 500k")})
+    rate = [x for x in (((_safe(got, "safety").get("reports") or {}).get("rate")) or []) if x.get("operator") == "Waymo"]
+    c = crash_quarter(rate)
+    if c:
+        up = c["year"] is not None and c["now"] > c["year"]
+        out.append({"key": "crash_rate", "tab": "safety", "label": "Waymo crash reports per million driverless miles, latest period", "value": c["now"],
+                    "lean": -1 if up else 1, "watch": "3-month rate above the prior year's", "crossed": bool(up),
+                    "note": f"{c['from']} to {c['to']}: {c['now']} per million miles; the year before ({c['year_from']} to {c['from']}): {c['year']}"})
+    rows = _safe(got, "footprint").get("rows") or []
+    if rows:
+        rows = sorted(rows, key=lambda r: r["date"])
+        first = {}
+        for r in rows:
+            first.setdefault(r["country"], r["date"])
+        cut = str((pd.Timestamp.now() - pd.Timedelta(days=90)).date())
+        new_country = [k for k, d in first.items() if d >= cut]
+        suspended = [r for r in rows if "suspend" in (r.get("note") or "").lower()]
+        us_cn = [r for r in rows if r["country"] in ("US", "CN")]
+        out.append({"key": "cities", "tab": "footprint", "label": "Cities with paid driverless service (US + China)", "value": len(us_cn),
+                    "lean": -1 if suspended else 1 if new_country else 0, "watch": "a new country, or any city suspended",
+                    "crossed": bool(new_country or suspended),
+                    "note": f"{len(rows)} cities in {len(first)} countries ({', '.join(sorted(first))})" + (f"; new in the last 90 days: {', '.join(new_country)}" if new_country else "")
+                            + (f"; suspended: {', '.join(r['operator'] + ' ' + r['city'] for r in suspended)}" if suspended else "")})
+    ev = ((_safe(got, "energy").get("ev_ember") or {}).get("latest")) or {}
+    if ev:
+        uk, us = (ev.get("UK") or {}).get("r12"), (ev.get("US") or {}).get("r12")
+        crossed = (uk is not None and uk > 30) or (us is not None and us > 15)
+        parts = [f"{m} {x['r12']:.1f}%" for m, x in sorted(ev.items()) if x.get("r12") is not None]
+        moves = [x["r12"] - x["r12_year_ago"] for x in ev.values() if x.get("r12") is not None and x.get("r12_year_ago") is not None]
+        out.append({"key": "ev_share", "tab": "energy", "label": "EV share of new cars, 12 months (UK, US, HK, China)", "value": ", ".join(parts),
+                    "lean": _cmp(sum(moves), 0) if moves else 0, "watch": "UK above 30%, US above 15%", "crossed": bool(crossed),
+                    "note": "battery-electric + plug-in hybrid share of registrations, rolling 12 months (Ember); " + ("UK above 30%" if uk and uk > 30 else "UK not above 30%")
+                            + "; " + ("US above 15%" if us and us > 15 else "US not above 15%")})
+    ms = _safe(got, "tesla").get("milestones") or []
+    if ms or _safe(got, "tesla"):
+        hit = sorted((m for m in ms if m.get("area") == "Robotaxi" and ("unsupervised" in m["event"].lower() or "removing the safety monitor" in m["event"].lower())),
+                     key=lambda m: m["date"])
+        out.append({"key": "tesla_unsupervised", "tab": "tesla", "label": "Tesla unsupervised miles or first paid unsupervised ride",
+                    "value": hit[0]["date"] if hit else "not yet", "lean": 1 if hit else 0, "watch": "either happens", "crossed": bool(hit),
+                    "note": (f"first: {hit[0]['event']} ({hit[0]['date']}); latest: {hit[-1]['event']} ({hit[-1]['date']})") if hit else "no unsupervised milestone in tesla_milestones.csv"})
+    return out
+
+
+def SIGNALS() -> list[dict]:
+    """The approved signals as they read now, from the cached tab payloads only (nothing is fetched)."""
+    return signals(_cached_payload)
+
+
 def READINGS() -> list[dict]:
     """Each tab's indicators as they read now, from the cached tab payloads only (nothing is fetched)."""
     return readings(_cached_payload)
