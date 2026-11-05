@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-04",
+ "updated": "2026-11-05",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -107,7 +107,7 @@
    "owner": "sessions",
    "status": "in_progress",
    "since": "2026-10-26",
-   "detail": "Done: Housing, BTC Cycles, AI, Debt & rates, Demographics. Built and waiting for your push confirmation: Space. Still working: Autonomous cars, Compute & chips, Climate, China vs US tech, Longevity, Pokémon cards, Prediction markets, Trends, NBA odds."
+   "detail": "Live check 5 Nov: every tab follows on Housing (London, Types, Rates), AI, Debt & rates, Demographics, Climate, Trends, Prediction markets, Space and BTC Cycles; Autonomous cars on Safety, Tesla and Energy (Rides and Footprint asked). None yet on Compute & chips, Longevity and Pokémon cards (reminded 5 Nov), or China vs US tech (its work waits on the owner's go). NBA odds is private and skipped by the live check."
   },
   {
    "id": "graphify-sessions",
@@ -141,7 +141,7 @@
    "owner": "sessions",
    "status": "waiting",
    "since": "2026-10-25",
-   "detail": "The ONS JOBS03 workbook (UK headcount) and the Census BTOS Sector workbook (firm adoption by sector) were automated from documentation; the AI session still has to confirm their layout on the live site."
+   "detail": "The ONS JOBS03 workbook (UK headcount) and the Census BTOS Sector workbook (firm adoption by sector) were automated from documentation; the AI session still has to confirm their layout on the live site. Reminded the AI session on 5 Nov."
   },
   {
    "id": "hk-rents",
@@ -434,6 +434,22 @@
     "china-us-tech",
     "housing"
    ]
+  },
+  {
+   "date": "2026-11-05",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "CI green; signals 36 of 62 wired, 11 crossed (unchanged). Live check: every public tab loads; Compute & chips Supply failed once during the agent's own push at 07:46 and loads on re-fetch. Sources: only the known ones (Bluesky and Reddit closed, Yahoo 429, HKMA 405, Ember). Email built, not sent (no Gmail secrets).",
+   "fixed": [
+    "05239f3"
+   ],
+   "handed": [
+    "robotaxi",
+    "compute-chips",
+    "longevity",
+    "pokemon-cards",
+    "ai"
+   ]
   }
  ],
  "notes": [
@@ -615,6 +631,45 @@
    "asks": [
     "Approve or skip the watch-point proposal (now three watch points) and the NBA signals proposal",
     "Add the Gmail secrets"
+   ]
+  },
+  {
+   "date": "2026-11-05",
+   "title": "Fewer false alarms from the live check; Autonomous Cars reviewed",
+   "summary": "The browser check now reloads a tab that fails once before calling it broken, so a deploy mid-check no longer reads as an outage. It caught one such blip this morning (Compute & chips Supply, during the agent's own push) and passed it on the re-fetch. Reviewed Autonomous Cars: its ride figures were months old; its session refreshed them within the hour, and its signals are next.",
+   "changes": [
+    {
+     "dashboard": "Site",
+     "what": "Live check: a tab showing 'Could not load' is reloaded once after 20 s, and the line says 'loaded on retry' or 'failed twice'",
+     "commit": "05239f3",
+     "by": "agent"
+    },
+    {
+     "dashboard": "China vs US Tech",
+     "slug": "china-us-tech",
+     "what": "PCT patent rows checked against WIPO's yearly reviews",
+     "commit": "f25b880",
+     "by": "session:china-us-tech"
+    },
+    {
+     "dashboard": "Autonomous Cars & Energy Transition",
+     "slug": "robotaxi",
+     "tab": "rides",
+     "what": "Rides updated after the review: Waymo's 500k a week reconfirmed on Alphabet's April call, Baidu's Q2 2026 added from its earnings call",
+     "commit": "6d6f4d1",
+     "by": "session:robotaxi"
+    }
+   ],
+   "review": "robotaxi",
+   "next": [
+    "Autonomous Cars: newer Waymo and Baidu ride figures, its five signals, and follow-the-timeline on Rides and Footprint (handed over)",
+    "Signals still unwired on Compute & chips, Longevity, Pokémon cards and Autonomous cars (reminded); China vs US tech's are built",
+    "Tomorrow's review: the next dashboard in turn"
+   ],
+   "asks": [
+    "Say 'go' for China vs US Tech's signals: built and tested, held until you confirm",
+    "Approve or skip r-watch-recalibrate and r-private-signals",
+    "Add the Gmail secrets: this morning's email was built but not sent"
    ]
   }
  ]
