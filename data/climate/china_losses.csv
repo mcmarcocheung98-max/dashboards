@@ -1,17 +1,18 @@
 date,value,source,note
 # Ministry of Emergency Management (MEM), national natural-disaster situation for the year, direct economic losses, CN¥ bn (亿元 / 10), published each January.
-2010-12-31,533.99,https://www.mem.gov.cn/xw/yjglbgzdt/,verify: from memory of the MEM year-end release
-2011-12-31,309.64,https://www.mem.gov.cn/xw/yjglbgzdt/,verify: from memory of the MEM year-end release
-2012-12-31,418.55,https://www.mem.gov.cn/xw/yjglbgzdt/,verify: from memory of the MEM year-end release
-2013-12-31,580.84,https://www.mem.gov.cn/xw/yjglbgzdt/,verify: from memory of the MEM year-end release
-2014-12-31,337.38,https://www.mem.gov.cn/xw/yjglbgzdt/,verify: from memory of the MEM year-end release
-2015-12-31,270.41,https://www.mem.gov.cn/xw/yjglbgzdt/,verify: from memory of the MEM year-end release
-2016-12-31,503.29,https://www.mem.gov.cn/xw/yjglbgzdt/,verify: from memory of the MEM year-end release
-2017-12-31,301.87,https://www.mem.gov.cn/xw/yjglbgzdt/,verify: from memory of the MEM year-end release
-2018-12-31,264.46,https://www.mem.gov.cn/xw/yjglbgzdt/,verify: from memory of the MEM year-end release
-2019-12-31,327.09,https://www.mem.gov.cn/xw/yjglbgzdt/,verify: from memory of the MEM year-end release
-2020-12-31,370.15,https://www.mem.gov.cn/xw/yjglbgzdt/,verify: from memory of the MEM year-end release
-2021-12-31,334.02,https://www.mem.gov.cn/xw/yjglbgzdt/,verify: from memory of the MEM year-end release
-2022-12-31,238.65,https://www.mem.gov.cn/xw/yjglbgzdt/,verify: from memory of the MEM year-end release
-2023-12-31,345.45,https://www.mem.gov.cn/xw/yjglbgzdt/,verify: from memory of the MEM year-end release
-2024-12-31,401.11,https://www.mem.gov.cn/xw/yjglbgzdt/,verify: from memory of the MEM year-end release
+2010-12-31,533.99,https://www.stats.gov.cn/sj/ndsj/2011/html/L1242C.HTM,checked 2026-11-05: China Statistical Yearbook 2011 table (5339.9亿元); the year-end MCA release was only seen rounded (534bn)
+2011-12-31,309.64,https://en.apa.az/social/-163483,checked 2026-11-05: 309.64bn in a press reprint of the MCA / National Disaster Reduction Commission year-end report; no government page could be opened
+2012-12-31,418.55,https://www.stats.gov.cn/hd/lyzx/zxgk/202406/t20240619_1955080.html,checked 2026-11-05: NBS quotes the MCA's 4185.5亿元; also the ReliefWeb reprint of the year-end statement
+2013-12-31,580.84,https://www.cma.gov.cn/2011xwzx/2011xqxxw/2011xqxyw/201401/t20140106_235560.html,checked 2026-11-05: 5808.4亿元 in the CMA reprint of the year-end release and the NBS table
+2014-12-31,337.38,https://www.stats.gov.cn/zt_18555/ztsj/hjtjzl/2014/202303/t20230303_1924052.html,checked 2026-11-05: 3373.8亿元 in the NBS table
+2015-12-31,270.41,https://www.ndrcc.org.cn/zqtj/7877.jhtml,"checked 2026-11-05: 2704.1亿元, National Disaster Reduction Center (from the MCA); the July 2016 revision kept the loss figure"
+2016-12-31,503.29,https://www.ndrcc.org.cn/zqtj/7214.jhtml,"checked 2026-11-05: 5032.9亿元, National Disaster Reduction Center"
+2017-12-31,301.87,https://www.ndrcc.org.cn/zqtj/1148.jhtml,"checked 2026-11-05: 3018.7亿元, National Disaster Reduction Center"
+2018-12-31,264.46,https://www.mem.gov.cn/xw/zhsgxx/201901/t20190108_242580.shtml,"checked 2026-11-05: 2644.6亿元, MEM year-end release"
+2019-12-31,327.09,https://www.mem.gov.cn/xw/bndt/202001/t20200116_343570.shtml,"checked 2026-11-05: 3270.9亿元, MEM year-end release"
+2020-12-31,370.15,https://www.mem.gov.cn/xw/yjglbgzdt/202101/t20210108_376745.shtml,"checked 2026-11-05: 3701.5亿元, MEM year-end release"
+2021-12-31,334.02,https://www.mem.gov.cn/xw/yjglbgzdt/202201/t20220123_407204.shtml,"checked 2026-11-05: 3340.2亿元, MEM year-end release"
+2022-12-31,238.65,https://www.mem.gov.cn/xw/yjglbgzdt/202301/t20230113_440478.shtml,"checked 2026-11-05: 2386.5亿元, MEM year-end release"
+2023-12-31,345.45,https://www.mem.gov.cn/xw/yjglbgzdt/202401/t20240120_475697.shtml,"checked 2026-11-05: 3454.5亿元, MEM year-end release"
+2024-12-31,401.11,https://www.mem.gov.cn/xw/yjglbgzdt/202501/t20250117_516032.shtml,"checked 2026-11-05: 4011.1亿元, MEM year-end release"
+2025-12-31,241.62,https://www.mem.gov.cn/xw/yjglbgzdt/202601/t20260116_592135.shtml,"checked 2026-11-05: 2416.17亿元, MEM year-end release of 16 Jan 2026 (rounded to 241.62bn)"

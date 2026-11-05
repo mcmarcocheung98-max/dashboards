@@ -31,7 +31,7 @@ Each chart's card says what it shows and what 5-, 10- and 20-year question it an
 
 ## Hand-entered files
 
-Every row carries a `source` URL. Rows whose `note` says **verify** were written from memory and must be checked against the cited page; replace the value and drop `verify` once checked. **All rows in `insured_losses.csv`, `billion_dollar.csv` and `china_losses.csv` are currently `verify`.**
+Every row carries a `source` URL. Rows whose `note` says **verify** were written from memory and must be checked against the cited page; replace the value and drop `verify` once checked. **All rows in `insured_losses.csv` and `billion_dollar.csv` are currently `verify`; `china_losses.csv` was checked on 5 Nov 2026 (2010–2025).**
 
 - `insured_losses.csv`: `date,series,value,source,note`, series `nat cat` and `total`, USD bn, nominal as first reported in each year's sigma. Add a row each spring when Swiss Re publishes. Swiss Re also restates history in today's prices; if you switch to those, change every row and say so here.
 - `billion_dollar.csv`: `date,series,value,...`, series `count`, events a year, CPI-adjusted (January 2025 release). My recollection of the early-year counts sums to an average of about 8.6 a year where NOAA's release said 9.0, so they are under by some events: check against the archived NCEI time-series page. Only used when the NCEI archive file does not answer.
