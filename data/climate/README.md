@@ -31,12 +31,12 @@ Each chart's card says what it shows and what 5-, 10- and 20-year question it an
 
 ## Hand-entered files
 
-Every row carries a `source` URL. Rows whose `note` says **verify** were written from memory and must be checked against the cited page; replace the value and drop `verify` once checked. **All rows are currently `verify`.**
+Every row carries a `source` URL. Rows whose `note` says **verify** were written from memory and must be checked against the cited page; replace the value and drop `verify` once checked. **All rows in `insured_losses.csv`, `billion_dollar.csv` and `china_losses.csv` are currently `verify`.**
 
 - `insured_losses.csv`: `date,series,value,source,note`, series `nat cat` and `total`, USD bn, nominal as first reported in each year's sigma. Add a row each spring when Swiss Re publishes. Swiss Re also restates history in today's prices; if you switch to those, change every row and say so here.
 - `billion_dollar.csv`: `date,series,value,...`, series `count`, events a year, CPI-adjusted (January 2025 release). My recollection of the early-year counts sums to an average of about 8.6 a year where NOAA's release said 9.0, so they are under by some events: check against the archived NCEI time-series page. Only used when the NCEI archive file does not answer.
 - `china_losses.csv`: `date,value,source,note`, direct economic losses from natural disasters, CN¥ bn, from MEM's year-end national disaster situation release (published in 亿元: divide by 10).
-- `events.csv`: `date,place,event,source,note`. Quote the event text when it contains a comma.
+- `events.csv`: `date,place,event,source,note`. Quote the event text when it contains a comma. Checked on 2026-11-05 (12 of 13 rows) against NCEI, NWS New York, HKO, gov.cn, the Met Office, Copernicus, China Daily (quoting the CMA), weather.com and Insurance Journal (quoting Swiss Re). Katrina is now framed as the costliest US hurricane ($201.3bn, 2024 dollars), Sandy's Battery level is 14.0 ft, Heathrow's 40.2 °C was dropped, and the 2022 China row now uses the CMA's 16.4 days above 35 °C (most since 1961) in place of "longest and most intense". 2017 as the costliest year stays `verify` (NCEI's yearly page could not be opened). AFP reports a new Hong Kong Observatory record of 36.9 °C on 9 Aug 2026; add it as a row once HKO's own page confirms it.
 
 ## Readings (what changed since yesterday)
 
