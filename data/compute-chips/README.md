@@ -9,7 +9,7 @@ Code: `app/topics/compute_chips.py` (data), `app/static/topics/compute-chips.js`
 | Tab | Card | Source | Automated? | Cadence |
 |---|---|---|---|---|
 | Overview | One headline number from each tab | the other tabs | yes | – |
-| Power | Data-centre electricity, TWh a year, with outlooks | IEA *Energy and AI* (Apr 2025), LBNL *2024 US Data Center Energy Usage Report*, NESO FES | hand-entered: `dc_power.csv`, `dc_power_outlook.csv` | when a new report is published (IEA yearly, LBNL every few years, NESO FES each July) |
+| Power | Data-centre electricity, TWh a year, with outlooks | IEA *Energy and AI* (Apr 2025), LBNL *2024 US Data Center Energy Usage Report*, DESNZ *Data centre electricity consumption in Great Britain, 2020–2024* (Energy Trends, Jun 2026), NESO FES | hand-entered: `dc_power.csv`, `dc_power_outlook.csv` | when a new report is published (IEA yearly, LBNL every few years, NESO FES each July) |
 | Power | Data centres' share of total demand | the TWh above ÷ Ember yearly demand for the same year | the share is computed; demand automated from Ember, with `demand.csv` as the fallback | Ember updates yearly (spring) |
 | Power | Total electricity demand | Ember yearly full release, long format (`storage.googleapis.com/emb-prod-bkt-publicdata/public-downloads/yearly_full_release_long_format.csv`) | yes. The ~40 MB file is streamed and only the `Demand`/`TWh` rows for USA, GBR, CHN, HKG and World are kept, cached and snapshotted | daily check |
 | Power | Largest AI supercomputer by power, and power by country | Epoch AI GPU clusters (`epoch.ai/data/gpu_clusters.csv`) | yes | daily check |
@@ -42,7 +42,7 @@ All use the repository's CSV format (`date,series,value,source,note`, or the col
 | `fabs.csv` | fab milestones | date, site, country, event, source, note |
 | `export_controls.csv` | export-control steps | date, market, event, source, note |
 
-**Every row marked `verify` was entered from memory** when the dashboard was built (the build machine could not reach the sources). Check each against its cited page and remove `verify` from the note, or correct the value. Most uncertain: the UK data-centre figure (7 TWh), the SIA/BCG shares other than Taiwan's 69% → 47% and the US's 0% → 28%, and the exact dates of some fab milestones.
+**Every row marked `verify` was entered from memory** when the dashboard was built (the build machine could not reach the sources). Check each against its cited page and remove `verify` from the note, or correct the value. The Power rows were checked on 6 Nov 2026: US 2014 and 2023 confirmed (2014 corrected to 58 TWh), UK replaced by DESNZ's Great Britain estimate (4.5 TWh in 2024, 4.1 in 2023; it counts only colocation, managed and hyperscale sites, so it is lower than the old 7 TWh), US 2018 and the three IEA rows still `verify` because the LBNL PDF and iea.org could not be opened. Most uncertain elsewhere: the SIA/BCG shares other than Taiwan's 69% → 47% and the US's 0% → 28%, and the exact dates of some fab milestones.
 
 ## Gaps
 
