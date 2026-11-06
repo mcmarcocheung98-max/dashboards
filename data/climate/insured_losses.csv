@@ -1,42 +1,43 @@
 date,series,value,source,note
 # Swiss Re Institute sigma, global insured losses, USD bn, nominal as first reported in the sigma 'Natural catastrophes' issue for that year.
-# 'nat cat' = natural catastrophes; 'total' = natural plus man-made. Swiss Re later restates in today's prices, which raises older years.
-2005-12-31,nat cat,78,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2006
-2005-12-31,total,83,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2006
-2006-12-31,nat cat,12,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2007
-2006-12-31,total,16,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2007
-2007-12-31,nat cat,23,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2008
-2007-12-31,total,28,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2008
-2008-12-31,nat cat,45,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2009
-2008-12-31,total,53,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2009
-2009-12-31,nat cat,22,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2010
-2009-12-31,total,26,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2010
-2010-12-31,nat cat,37,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2011
-2010-12-31,total,43,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2011
-2011-12-31,nat cat,110,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2012
-2011-12-31,total,116,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2012
-2012-12-31,nat cat,71,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2013
-2012-12-31,total,77,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2013
-2013-12-31,nat cat,37,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2014
-2013-12-31,total,45,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2014
-2014-12-31,nat cat,28,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2015
-2014-12-31,total,35,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2015
-2015-12-31,nat cat,28,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2016
-2015-12-31,total,37,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2016
-2016-12-31,nat cat,46,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2017
-2016-12-31,total,54,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2017
-2017-12-31,nat cat,138,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2018
-2017-12-31,total,144,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2018
-2018-12-31,nat cat,76,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2019
-2018-12-31,total,85,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2019
-2019-12-31,nat cat,52,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2020
-2019-12-31,total,60,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2020
-2020-12-31,nat cat,81,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2021
-2020-12-31,total,89,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2021
-2021-12-31,nat cat,111,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2022
-2021-12-31,total,119,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2022
-2022-12-31,nat cat,125,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2023
-2022-12-31,total,132,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2023
-2023-12-31,nat cat,108,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2024
-2023-12-31,total,114,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2024
-2024-12-31,nat cat,137,https://www.swissre.com/institute/research/sigma-research.html,verify: from memory of sigma 2025
+# 'nat cat' = natural catastrophes; 'total' = natural plus man-made. Swiss Re later restates in today's prices, which raises older years. Checked 2026-11-06 against each year's sigma release (Swiss Re or trade press quoting it).
+2005-12-31,nat cat,78,https://www.insurancejournal.com/news/international/2006/02/28/65975.htm,sigma 2/2006 (Feb 2006): 78 natural + 5 man-made; checked 2026-11-06
+2005-12-31,total,83,https://www.insurancejournal.com/news/international/2006/02/28/65975.htm,sigma 2/2006 (Feb 2006): 78 natural + 5 man-made; checked 2026-11-06
+2006-12-31,nat cat,11.8,https://insurancejournal.com/news/international/2007/03/09/77545.htm,sigma 2/2007 (Mar 2007): 11.8 natural; 15.9 total; checked 2026-11-06
+2006-12-31,total,15.9,https://insurancejournal.com/news/international/2007/03/09/77545.htm,sigma 2/2007 (Mar 2007): 11.8 natural; 15.9 total; checked 2026-11-06
+2007-12-31,nat cat,23,https://insurance-canada.ca/2008/03/11/new-swiss-re-sigma-study-catastrophe-losses-in-2007-were-highest-in-europe/,sigma 1/2008 (11 Mar 2008): natural 'in excess of USD 23bn'; total 28; checked 2026-11-06
+2007-12-31,total,28,https://insurance-canada.ca/2008/03/11/new-swiss-re-sigma-study-catastrophe-losses-in-2007-were-highest-in-europe/,sigma 1/2008 (11 Mar 2008): natural 'in excess of USD 23bn'; total 28; checked 2026-11-06
+2008-12-31,nat cat,44.7,https://www.insurancejournal.com/news/international/2009/03/18/98806.htm,sigma 2/2009 (Mar 2009): natural 44.7 + man-made 7.8 = 52.5; checked 2026-11-06
+2008-12-31,total,52.5,https://www.insurancejournal.com/news/international/2009/03/18/98806.htm,sigma 2/2009 (Mar 2009): natural 44.7 + man-made 7.8 = 52.5; checked 2026-11-06
+2009-12-31,nat cat,22,https://insurance-canada.ca/2010/03/15/swiss-res-new-sigma-study-reveals-natural-catastrophes-man-made-disasters-2009-cost-insurers-usd-26-billion-society-usd-62-billion-overall/,sigma 1/2010 (15 Mar 2010): 22 natural + 4 man-made; checked 2026-11-06
+2009-12-31,total,26,https://insurance-canada.ca/2010/03/15/swiss-res-new-sigma-study-reveals-natural-catastrophes-man-made-disasters-2009-cost-insurers-usd-26-billion-society-usd-62-billion-overall/,sigma 1/2010 (15 Mar 2010): 22 natural + 4 man-made; checked 2026-11-06
+2010-12-31,nat cat,40,https://insurance-canada.ca/2011/03/29/swiss-res-sigma-study-losses-jump-2010-natural-catastrophes-man-made-disasters/,sigma 1/2011 (29 Mar 2011): natural 'roughly USD 40 billion' (was 37 from memory); total 43; checked 2026-11-06
+2010-12-31,total,43,https://insurance-canada.ca/2011/03/29/swiss-res-sigma-study-losses-jump-2010-natural-catastrophes-man-made-disasters/,sigma 1/2011 (29 Mar 2011): natural 'roughly USD 40 billion' (was 37 from memory); total 43; checked 2026-11-06
+2011-12-31,nat cat,110,https://www.artemis.bm/news/swiss-res-latest-sigma-study-puts-2011-insured-losses-at-116-billion/,sigma 2/2012 (28 Mar 2012): 110 natural + 6 man-made; checked 2026-11-06
+2011-12-31,total,116,https://www.artemis.bm/news/swiss-res-latest-sigma-study-puts-2011-insured-losses-at-116-billion/,sigma 2/2012 (28 Mar 2012): 110 natural + 6 man-made; checked 2026-11-06
+2012-12-31,nat cat,71,https://www.insurancejournal.com/news/international/2013/03/27/286217.htm,"sigma 2/2013 (27 Mar 2013): total 77 confirmed; the 71 natural split is from a blog quoting sigma (desdemonadespair.net/?p=5022), sigma PDF not opened; checked 2026-11-06"
+2012-12-31,total,77,https://www.insurancejournal.com/news/international/2013/03/27/286217.htm,"sigma 2/2013 (27 Mar 2013): total 77 confirmed; the 71 natural split is from a blog quoting sigma (desdemonadespair.net/?p=5022), sigma PDF not opened; checked 2026-11-06"
+2013-12-31,nat cat,37,https://www.insurancejournal.com/news/international/2014/03/26/324433.htm,sigma 1/2014 (26 Mar 2014): 37 natural + 8 man-made; checked 2026-11-06
+2013-12-31,total,45,https://www.insurancejournal.com/news/international/2014/03/26/324433.htm,sigma 1/2014 (26 Mar 2014): 37 natural + 8 man-made; checked 2026-11-06
+2014-12-31,nat cat,28,https://www.insurancejournal.com/news/international/2015/03/25/362032.htm,sigma 2/2015 (25 Mar 2015): 28 natural of 35; checked 2026-11-06
+2014-12-31,total,35,https://www.insurancejournal.com/news/international/2015/03/25/362032.htm,sigma 2/2015 (25 Mar 2015): 28 natural of 35; checked 2026-11-06
+2015-12-31,nat cat,28,https://www.claimsjournal.com/news/international/2016/04/07/269939.htm,sigma 1/2016 (30 Mar 2016): 28 natural of 37; checked 2026-11-06
+2015-12-31,total,37,https://www.claimsjournal.com/news/international/2016/04/07/269939.htm,sigma 1/2016 (30 Mar 2016): 28 natural of 37; checked 2026-11-06
+2016-12-31,nat cat,46,https://www.claimsjournal.com/news/international/2017/03/28/277647.htm,sigma 2/2017 (28 Mar 2017): 46 natural + 8 man-made; checked 2026-11-06
+2016-12-31,total,54,https://www.claimsjournal.com/news/international/2017/03/28/277647.htm,sigma 2/2017 (28 Mar 2017): 46 natural + 8 man-made; checked 2026-11-06
+2017-12-31,nat cat,138,https://www.swissre.com/dam/jcr:1b3e94c3-ac4e-4585-aa6f-4d482d8f46cc/sigma1_2018_en.pdf,sigma 1/2018: natural 'close to USD 138 billion'; total 144; checked 2026-11-06
+2017-12-31,total,144,https://www.swissre.com/dam/jcr:1b3e94c3-ac4e-4585-aa6f-4d482d8f46cc/sigma1_2018_en.pdf,sigma 1/2018: natural 'close to USD 138 billion'; total 144; checked 2026-11-06
+2018-12-31,nat cat,76,https://www.swissre.com/media/press-release/nr-20190410-sigma-2-2019.html,sigma 2/2019 (10 Apr 2019); checked 2026-11-06
+2018-12-31,total,85,https://www.swissre.com/media/press-release/nr-20190410-sigma-2-2019.html,sigma 2/2019 (10 Apr 2019); checked 2026-11-06
+2019-12-31,nat cat,52,https://www.reinsurancene.ws/absence-of-large-us-hurricanes-drive-down-2019-losses-swiss-res-sigma/,sigma 2/2020 (8 Apr 2020): 52 natural of 60; checked 2026-11-06
+2019-12-31,total,60,https://www.reinsurancene.ws/absence-of-large-us-hurricanes-drive-down-2019-losses-swiss-res-sigma/,sigma 2/2020 (8 Apr 2020): 52 natural of 60; checked 2026-11-06
+2020-12-31,nat cat,81,https://www.reinsurancene.ws/secondary-perils-behind-89bn-cat-loss-in-2020-swiss-re/,sigma 1/2021 (30 Mar 2021): 81 natural + 8 man-made; checked 2026-11-06
+2020-12-31,total,89,https://www.reinsurancene.ws/secondary-perils-behind-89bn-cat-loss-in-2020-swiss-re/,sigma 1/2021 (30 Mar 2021): 81 natural + 8 man-made; checked 2026-11-06
+2021-12-31,nat cat,111,https://amp.insurancejournal.com/news/national/2022/03/30/660344.htm,sigma 1/2022 (30 Mar 2022): 111 natural + 8 man-made (the Dec 2021 preliminary said 112 total); checked 2026-11-06
+2021-12-31,total,119,https://amp.insurancejournal.com/news/national/2022/03/30/660344.htm,sigma 1/2022 (30 Mar 2022): 111 natural + 8 man-made (the Dec 2021 preliminary said 112 total); checked 2026-11-06
+2022-12-31,nat cat,125,https://mailing-ircockpit.eqs.com/crm-mailing/a21e80ec-571e-1015-b4d5-273805d60f5f/94dac9b8-e92e-4075-89b3-80dfe292f44b/338dae4f-e6c0-4a2e-95f3-31c7d9aa6faa/SwissRe_PR_sigma1+2023_PR_EN.pdf,sigma 1/2023 press release (22 Mar 2023): 125 natural + 7 man-made; checked 2026-11-06
+2022-12-31,total,132,https://mailing-ircockpit.eqs.com/crm-mailing/a21e80ec-571e-1015-b4d5-273805d60f5f/94dac9b8-e92e-4075-89b3-80dfe292f44b/338dae4f-e6c0-4a2e-95f3-31c7d9aa6faa/SwissRe_PR_sigma1+2023_PR_EN.pdf,sigma 1/2023 press release (22 Mar 2023): 125 natural + 7 man-made; checked 2026-11-06
+2023-12-31,nat cat,108,https://www.reinsurancene.ws/2023-global-insured-losses-exceed-100bn-for-fourth-consecutive-year-swiss-re/,sigma 1/2024 (26 Mar 2024): 108 natural + 9 man-made = 117 (was 114 from memory); checked 2026-11-06
+2023-12-31,total,117,https://www.reinsurancene.ws/2023-global-insured-losses-exceed-100bn-for-fourth-consecutive-year-swiss-re/,sigma 1/2024 (26 Mar 2024): 108 natural + 9 man-made = 117 (was 114 from memory); checked 2026-11-06
+2024-12-31,nat cat,137,https://www.swissre.com/press-release/Hurricanes-and-earthquakes-could-lead-to-global-insured-losses-of-USD-300-billion-in-a-peak-year-finds-Swiss-Re-Institute/02ebff3e-7b57-41c7-b26b-32e4c1553fce,sigma 1/2025 (29 Apr 2025): 137 natural + 9 man-made = 146 (total added); checked 2026-11-06
+2024-12-31,total,146,https://www.swissre.com/press-release/Hurricanes-and-earthquakes-could-lead-to-global-insured-losses-of-USD-300-billion-in-a-peak-year-finds-Swiss-Re-Institute/02ebff3e-7b57-41c7-b26b-32e4c1553fce,sigma 1/2025 (29 Apr 2025): 137 natural + 9 man-made = 146 (total added); checked 2026-11-06
