@@ -68,12 +68,35 @@ Yahoo is not used: it answers Railway with 429.
   `SalesRevenueNet`; Q4 is the 10-K year minus the first three quarters), mapped to calendar quarters like compute_chips (Nvidia's
   quarter to late October is Q3). The basket figure sums the revenue of the companies that reported both that quarter and the same
   quarter a year before, against that same set a year earlier, so a late filer does not show as a fall.
+- **AI Setup Score (0-100), the headline of Setup.** Five parts, each the day's percentile rank against its own daily history since
+  2 January 2020 (higher = more euphoric): the basket's drawdown from its high (0 at a high ranks highest), the share of the 13 above
+  their 50-day average, the basket's RSI 14, VIX inverted (a low VIX ranks high), and the basket's 63-day return minus QQQ's. The
+  score is the mean of the parts a day has (at least three; VIX is carried over a market holiday for up to 5 days), then a 5-day
+  moving mean. **0 is fear or washout, 100 is euphoria.** Bands: 0-10 washout (dark green, "past bottoms"), 10-20 fear (light
+  green), 20-50 soft (grey), 50-80 neutral, 80-90 warm (orange), 90-100 stretched (red, "drawdown risk"). The sentence under the
+  gauge is the band-statistics row for today's band.
+  - **Whipsaw:** Setup counts how often the band changed in the last 90 calendar days, and the same count for a score built from
+    VIX alone (its percentile, smoothed the same way). A VIX-only score jumps between bands within days; averaging five parts and
+    smoothing over five days keeps ours steadier. On live data (4 Nov 2026) it was 5 changes against 9 for VIX alone.
+  - **Episodes:** an episode starts on the first day in the band (below 10, or 90 and above), at least 30 calendar days after the
+    last day in that band. Washout rows show the best gain: the highest close in the next 126 and 252 trading days (6 and 12
+    months) against the close that day. Stretched rows show the worst fall: the lowest close in the next 90 calendar days (0 when it
+    never closed lower). A horizon that has not passed yet shows its value "so far". `data/ai-stocks/events.csv` (date,name,note)
+    names an episode starting within 30 days of a date in it; the file is optional, and adding a line names an episode.
+  - **Band statistics:** for every day in each band since 2020, the forward 1-, 3- and 6-month basket returns (21, 63, 126 trading
+    days), counted only where the horizon has passed: the median, and the hit rate (share of days the basket was higher). Days
+    next to each other overlap heavily, so the **episodes** column (30-day rule, per band) is the real number of independent samples.
+  - **Hindsight:** the ranks use the whole history since 2020, including days after the one being scored. The backtest describes
+    how the bands lined up with what followed; it is not a rule anyone could have traded at the time, and not a forecast.
 - **The "where we are" line** on Setup is built from the same figures: depth (within 5% = near the high; 5-10% a pullback; 10-20% a
   correction; deeper a bear market), then washout (breadth under 20% or RSI under 30), or still breaking down (a new 20-day low below the
   50-day average), or stopped making new lows, or back above the 50-day; then VIX; then, when the basket is 15% or more below its
   high, the median and range of past 3-month returns after the 15% point.
 
 ## Caveats and gaps
+
+- **The AI Setup Score is small-sample history.** Since 2020 there are a handful of washout and stretched episodes; the band
+  statistics count thousands of overlapping days but only a few independent episodes. Not a forecast, not investment advice.
 
 - **Small sample.** Since 2020 the basket has had only a few drawdowns of 15% or more (2020, 2022, 2024, 2025 on recent data). A
   median of four numbers is not a statistic to lean on; the range matters as much. History, not a forecast.
@@ -90,14 +113,14 @@ Yahoo is not used: it answers Railway with 429.
 
 ## Signals (`data/signals/watchlist.json`, approved 6 Nov 2026)
 
-Five watch points, approved by the owner on 6 Nov 2026, including the two "back to" rules below (a repaired dip counts only after a dip of 10% or more in the last 3 months; breadth back above 60% only after being below 40%). The planned `setup_score` replaces `rsi_basket` when the score is built, approved with them. `SIGNALS()` reads
+Five watch points, approved by the owner on 6 Nov 2026, including the two "back to" rules below (a repaired dip counts only after a dip of 10% or more in the last 3 months; breadth back above 60% only after being below 40%). `setup_score` replaced `rsi_basket` when the score was built (approved with them), keeping five. `SIGNALS()` reads
 only the cached tab payloads, and each row's `crossed` comes from its own rule:
 
 | Key | Value | Crossed when (the rule) | Lean |
 |---|---|---|---|
 | `basket_drawdown` | basket drawdown from its high (%) | below -20% (a bear market), or back within -5% **after** a dip of 10% or more in the last 3 months (dip repaired; a basket that never left its high is not "repaired") | +1 within 5% of the high, -1 more than 10% below |
 | `breadth_50d` | share of the basket above its 50-day average (%) | below 20% (washout), or above 60% **after** being below 40% in the last 3 months (recovery broadening) | +1 above 60%, -1 below 40% |
-| `rsi_basket` | basket RSI 14 | below 30 (oversold) or above 70 | +1 above 60, -1 below 40 |
+| `setup_score` | AI Setup Score, 0-100 | below 10 (washout) or 90 and above (stretched) | +1 above 80, -1 below 20 |
 | `vix` | VIX | above 30 (fear), or below 20 while it was above 25 at some point in the last month | +1 below 20, -1 above 25 |
 | `ai_vs_qqq` | AI basket minus QQQ, 3-month return (points) | a gap of 10 points or more either way | +1 when AI leads by more than 3 points, -1 when it lags by more |
 
@@ -111,6 +134,7 @@ describes the numbers, not a trade.
 | Setup | `above200` | more than 60% of the 13 stocks above their 200-day average | fewer than 40% |
 | Drawdown | `basket_drawdown` | within 5% of the high | more than 10% below |
 | Trend & breadth | `breadth_50d` | above 60% | below 40% |
+| Setup | `setup_score` | AI Setup Score above 80 | below 20 |
 | Trend & breadth | `rsi_basket` | above 60 | below 40 |
 | Trend & breadth | `cross` | 50-day above the 200-day | 50-day below |
 | After past dips | `past_dips` | (context only, lean 0) | |

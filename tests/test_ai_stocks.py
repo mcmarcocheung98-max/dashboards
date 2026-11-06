@@ -166,6 +166,62 @@ def test_parse_vix_both_layouts():
         M.parse_vix("a,b\n1,2")
 
 
+def test_score_parts_rank_each_component_against_its_own_history():
+    d = pd.bdate_range("2020-01-01", periods=300)
+    idx = pd.Series(np.linspace(100, 200, 300), index=d)                    # rising all the way: a new high every day
+    b50 = pd.Series(np.linspace(0, 1, 300), index=d)
+    r = pd.Series(np.linspace(20, 80, 300), index=d)
+    vix = pd.Series(np.linspace(40, 10, 300), index=d)                      # falling VIX reads as euphoria (inverted)
+    qqq = pd.Series(np.linspace(100, 150, 300), index=d)
+    parts = M.score_parts(idx, b50, r, vix, qqq)
+    assert list(parts.columns) == ["dd", "b50", "rsi", "vix", "rel"]
+    assert parts["b50"].iloc[-1] > 99 and parts["b50"].iloc[0] < 1 and parts["vix"].iloc[-1] > 99
+    sc = M.setup_score(parts)
+    assert sc.index[0] == d[M.SMOOTH - 1] and 0 <= sc.min() and sc.max() <= 100      # four parts from day one; rel joins after 63 days
+    assert M.setup_score(parts[["dd", "b50"]]).empty                                     # fewer than three parts: no score
+    assert sc.iloc[-1] > 65 and sc.iloc[-1] > sc.iloc[70]                                 # dd ties at 0 (a high every day) rank 50
+
+
+def test_bands_whipsaw_and_episodes():
+    assert [M.band_of(v) for v in (0, 9.99, 10, 19.9, 20, 50, 80, 89.9, 90, 100)] == \
+        ["washout", "washout", "fear", "fear", "soft", "neutral", "warm", "warm", "stretched", "stretched"]
+    d = pd.bdate_range("2024-01-01", periods=200)
+    sc = pd.Series(50.0, index=d)
+    sc.iloc[10:13] = 5                                                      # washout
+    sc.iloc[25] = 8                                                         # back within 30 days: the same episode
+    sc.iloc[80:82] = 7                                                      # a new one
+    sc.iloc[150] = 95
+    starts = M.band_runs(sc, lambda v: v < 10)
+    assert starts == [d[10], d[80]]
+    assert M.band_changes(sc, 90) == 2                                      # 50 -> 95 -> 50 in the last 90 days
+    idx = pd.Series(np.linspace(100, 300, 200), index=d)
+    idx.iloc[151:160] = 120                                                 # a fall after the stretched day
+    E = M.score_episodes(sc, idx)
+    assert [e["date"] for e in E["green"]] == [str(d[80].date()), str(d[10].date())]
+    g = E["green"][-1]
+    assert g["best6m"] == pytest.approx(idx.iloc[11:137].max() / idx.iloc[10] - 1, abs=1e-4) and not g["partial6m"] and g["partial12m"]
+    r = E["red"][0]
+    assert r["worst90d"] == pytest.approx(120 / idx.iloc[150] - 1, abs=1e-4) and r["partial"] is True          # 90 days not passed yet
+
+
+def test_band_stats_and_sentence():
+    d = pd.bdate_range("2021-01-01", periods=400)
+    sc = pd.Series(np.where(np.arange(400) < 200, 5.0, 60.0), index=d)
+    idx = pd.Series(np.linspace(100, 200, 400), index=d)
+    st = {r["band"]: r for r in M.band_stats(sc, idx)}
+    assert st["washout"]["days"] == 200 and st["washout"]["episodes"] == 1 and st["washout"]["3m"]["hit"] == 1.0
+    assert st["neutral"]["6m"]["n"] == 200 - 126 and st["stretched"]["days"] == 0 and st["stretched"]["1m"]["median"] is None
+    s = M.band_sentence(list(st.values()), "washout")
+    assert "200 trading days" in s and "not a forecast" in s and "buy" not in s.lower()
+    assert "No day" in M.band_sentence(list(st.values()), "stretched")
+
+
+def test_events_name_episodes(mocked):
+    ev = M._events()
+    assert any(n.startswith("Covid") for _, n in ev) and M._event_name(pd.Timestamp("2020-03-20"), ev).startswith("Covid")
+    assert M._event_name(pd.Timestamp("2021-07-01"), ev) is None
+
+
 # ------------------------------------------------------------------ endpoints on fixtures
 def test_setup(mocked):
     p = M.ENDPOINTS["setup"]()
@@ -178,6 +234,11 @@ def test_setup(mocked):
     assert [c["sym"] for c in p["pick_cards"]] == list(M.PICKS) and "Owner's picks" in p["lines"]
     assert p["picks_now"]["since"]["SNDK"] == "2025-03-03" and p["picks_now"]["since"]["NBIS"] == "2024-11-01"
     assert p["picks_dd"][-1][1] <= 0 and p["picks_now"]["n"] == 10
+    S = p["score_now"]
+    assert 0 <= S["v"] <= 100 and S["band"] == M.band_of(S["v"]) and set(S["parts"]) == set(M.SCORE_PARTS) and "not a forecast" in S["sentence"]
+    assert p["score"][-1][1] == S["v"] and len(p["band_stats"]) == 6 and sum(r["days"] for r in p["band_stats"]) == len(p["score"])
+    assert isinstance(S["changes90"], int) and S["vix_only_changes90"] is not None
+    assert {"green", "red"} == set(p["score_episodes"]) and p["score_episodes"]["green"]          # the fixture's 2020 crash is a washout
     B.json_safe(p)
 
 
@@ -265,22 +326,24 @@ def test_readings_and_signals(mocked):
     assert all(isinstance(x["crossed"], bool) and x["lean"] in (-1, 0, 1) for x in sig.values())
     dd = sig["basket_drawdown"]["value"]
     assert not sig["basket_drawdown"]["crossed"] or dd < -20 or dd >= -5
-    assert sig["rsi_basket"]["crossed"] == (sig["rsi_basket"]["value"] < 30 or sig["rsi_basket"]["value"] > 70)
+    assert sig["setup_score"]["crossed"] == (sig["setup_score"]["value"] < 10 or sig["setup_score"]["value"] >= 90) and "rsi_basket" not in sig
     assert sig["ai_vs_qqq"]["crossed"] == (abs(sig["ai_vs_qqq"]["value"]) >= 10)
 
 
 def test_signal_tests_at_the_edges(monkeypatch):
     day = 86400
     pts = lambda vals: [[1_700_000_000 + i * day, v] for i, v in enumerate(vals)]
-    pay = {"setup": {"dd": pts([-0.12] * 30 + [-0.04]), "breadth50": pts([0.3] * 30 + [0.65]), "vix": pts([28] * 20 + [19])},
+    pay = {"setup": {"dd": pts([-0.12] * 30 + [-0.04]), "breadth50": pts([0.3] * 30 + [0.65]), "vix": pts([28] * 20 + [19]), "score": pts([30, 9.9])},
            "trend": {"now": {"rsi": 72}}, "fear": {"relative": {"AI basket vs QQQ": {"3m": {"a": 0.02, "b": 0.13, "gap": -11.0}}}}}
     monkeypatch.setattr(M, "_cached_payload", lambda n: pay.get(n, {}))
     sig = {x["key"]: x for x in M.SIGNALS()}
-    assert all(sig[k]["crossed"] for k in ("basket_drawdown", "breadth_50d", "rsi_basket", "vix", "ai_vs_qqq"))
-    pay["setup"] = {"dd": pts([-0.03] * 31), "breadth50": pts([0.7] * 31), "vix": pts([21] * 21)}       # at a high all along: nothing to repair
+    assert all(sig[k]["crossed"] for k in ("basket_drawdown", "breadth_50d", "setup_score", "vix", "ai_vs_qqq"))
+    pay["setup"]["score"] = pts([95, 90.0])
+    assert {x["key"]: x for x in M.SIGNALS()}["setup_score"]["crossed"]                                 # 90 counts as stretched
+    pay["setup"] = {"dd": pts([-0.03] * 31), "breadth50": pts([0.7] * 31), "vix": pts([21] * 21), "score": pts([10.0, 89.9])}  # at a high all along
     pay["trend"] = {"now": {"rsi": 55}}
     sig = {x["key"]: x for x in M.SIGNALS()}
-    assert not any(sig[k]["crossed"] for k in ("basket_drawdown", "breadth_50d", "rsi_basket", "vix"))
+    assert not any(sig[k]["crossed"] for k in ("basket_drawdown", "breadth_50d", "setup_score", "vix"))
 
 
 def test_every_endpoint_through_the_server(mocked):

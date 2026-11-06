@@ -1,0 +1,7 @@
+date,name,source,note
+# Optional names for AI Setup Score episodes: an episode starting within 30 days of a date here takes its name. Add a line (with a source) to name one.
+2020-03-16,Covid crash,https://en.wikipedia.org/wiki/2020_stock_market_crash,the S&P 500's low came on 23 Mar 2020
+2022-03-16,Fed's first rate hike of 2022 (after Russia invaded Ukraine on 24 Feb),https://www.federalreserve.gov/newsevents/pressreleases/monetary20220316a.htm,
+2022-05-09,May 2022 rate-hike sell-off,https://en.wikipedia.org/wiki/2022_stock_market_decline,
+2022-09-13,Hot August CPI report,https://www.bls.gov/news.release/archives/cpi_09132022.htm,
+2025-04-02,US tariff shock ('Liberation Day'),https://en.wikipedia.org/wiki/2025_stock_market_crash,

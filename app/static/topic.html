@@ -162,12 +162,14 @@ const fit = c => { let n = 0; const go = () => { if (c.timeScale().width() > 0 |
 // ---------- one date axis for the whole tab: every time chart joins SYNC; dragging or zooming one moves all, the range bar sets all.
 // A chart with `extend` (a projection running past today) follows the range's start and keeps its own end.
 const PRESETS = [["3m", "3M", 91], ["6m", "6M", 182], ["1y", "1Y", 365], ["2y", "2Y", 730], ["5y", "5Y", 1826], ["all", "All", 0]];
+// a dashboard can set its own buttons: window.TOPIC.presets = [[key, label, days], ...] (days 0 = all)
+const presets = () => (window.TOPIC && window.TOPIC.presets) || PRESETS;
 let SYNC = [], SYNCING = false, RANGE = (() => { try { return JSON.parse(sessionStorage.getItem("range:" + location.pathname) || '"all"'); } catch (e) { return "all"; } })();
 const saveRange = () => { try { sessionStorage.setItem("range:" + location.pathname, JSON.stringify(RANGE)); } catch (e) {} };
 const lastTime = () => Math.max(0, ...SYNC.map(e => e.lastPast || 0)) || Math.floor(Date.now() / 1000);
 function rangeNow() {
   if (RANGE && typeof RANGE === "object") return RANGE;
-  const p = PRESETS.find(x => x[0] === RANGE);
+  const p = presets().find(x => x[0] === RANGE);
   if (!p || !p[2]) return null;
   const to = lastTime();
   return { from: to - p[2] * 86400, to: to + 86400 };
@@ -230,7 +232,7 @@ function rangeBar() {
   const r = rangeNow(), d = t => new Date(t * 1000).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
   const key = typeof RANGE === "string" ? RANGE : null;
   bar.replaceChildren(el("span", { class: "lab" }, "Dates, all charts:"),
-    el("div", { class: "seg" }, ...PRESETS.map(([k, l]) => el("button", { class: k === key ? "on" : "", onclick: () => { RANGE = k; saveRange(); applyAll(); } }, l))),
+    el("div", { class: "seg" }, ...presets().map(([k, l]) => el("button", { class: k === key ? "on" : "", onclick: () => { RANGE = k; saveRange(); applyAll(); } }, l))),
     el("span", { class: "lab" }, r ? d(r.from) + " – " + d(Math.min(r.to, lastTime())) : "full history"));
 }
 const dedupe = pts => { const m = new Map(); pts.forEach(([t, v]) => m.set(Math.round(t), v)); return [...m].sort((a, b) => a[0] - b[0]).map(([time, value]) => ({ time, value })); };

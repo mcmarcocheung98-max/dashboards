@@ -257,6 +257,137 @@ def where_line(dd: float | None, b50: float | None, r: float | None, vix: float 
     return " ".join(parts)
 
 
+# ------------------------------------------------------------------ AI Setup Score
+# 0 = fear or washout, 100 = euphoria. Bands: (low, high, key, label); the colours live in ai-stocks.js
+BANDS = ((0, 10, "washout", "Washout: past bottoms"), (10, 20, "fear", "Fear"), (20, 50, "soft", "Soft"), (50, 80, "neutral", "Neutral"),
+         (80, 90, "warm", "Warm"), (90, 100.01, "stretched", "Stretched: drawdown risk"))
+SCORE_PARTS = {"dd": "Basket drawdown", "b50": "Share above the 50-day", "rsi": "Basket RSI 14", "vix": "VIX (inverted)", "rel": "AI minus QQQ, 3 months"}
+SMOOTH = 5                          # days in the moving mean of the score
+EPISODE_GAP = 30                    # calendar days without a day in the band before a new episode starts
+FWD = {"1m": 21, "3m": 63, "6m": 126}
+
+
+def pct_rank(s: pd.Series) -> pd.Series:
+    """Percentile rank 0-100 of each day against every day of the series since INDEX_START (ties share the average rank)."""
+    s = s[s.index >= INDEX_START].dropna()
+    return 100 * (s.rank(method="average") - 0.5) / len(s) if len(s) else s
+
+
+def score_parts(idx: pd.Series, b50: pd.Series, r: pd.Series, vix: pd.Series | None, qqq: pd.Series | None) -> pd.DataFrame:
+    """The five components on the basket's dates, each as its percentile rank (higher = more euphoric): drawdown (0 at a high ranks
+    highest), breadth, RSI, VIX inverted, and the basket's 63-day return minus QQQ's."""
+    days = idx[idx.index >= INDEX_START].index
+    raw = {"dd": drawdown(idx), "b50": b50, "rsi": r}
+    if vix is not None and len(vix):
+        raw["vix"] = -vix.reindex(vix.index.union(days)).ffill(limit=5).reindex(days)
+    if qqq is not None and len(qqq):
+        q = qqq.reindex(qqq.index.union(idx.index)).ffill(limit=5).reindex(idx.index)
+        raw["rel"] = idx.pct_change(63, fill_method=None) - q.pct_change(63, fill_method=None)
+    return pd.DataFrame({k: pct_rank(v.reindex(days)) for k, v in raw.items()}, index=days)
+
+
+def setup_score(parts: pd.DataFrame) -> pd.Series:
+    """The mean of the components a day has (at least three), smoothed with a SMOOTH-day moving mean."""
+    raw = parts.mean(axis=1, skipna=True).where(parts.notna().sum(axis=1) >= 3)
+    return raw.rolling(SMOOTH, min_periods=SMOOTH).mean().dropna()
+
+
+def band_of(v) -> str | None:
+    if v is None or pd.isna(v):
+        return None
+    return next(k for lo, hi, k, _ in BANDS if lo <= v < hi) if v < 100.01 else BANDS[-1][2]
+
+
+def band_changes(score: pd.Series, days: int = 90) -> int:
+    """How many times the band changed in the last `days` calendar days: the whipsaw count."""
+    if not len(score):
+        return 0
+    b = score.map(band_of)
+    b = b[b.index >= score.index[-1] - pd.Timedelta(days=days - 1)]
+    return int((b != b.shift(1)).iloc[1:].sum())
+
+
+def band_runs(score: pd.Series, inside) -> list[pd.Timestamp]:
+    """First day of each episode: a day in the band (inside(v) true) more than EPISODE_GAP calendar days after the last day in it."""
+    starts, last = [], None
+    for t, v in score.items():
+        if inside(v):
+            if last is None or (t - last).days > EPISODE_GAP:
+                starts.append(t)
+            last = t
+    return starts
+
+
+def _events() -> list[tuple[pd.Timestamp, str]]:
+    return [(pd.Timestamp(r["date"]), r.get("name", "")) for r in B.manual_rows(SLUG, "events") if r.get("name")]
+
+
+def _event_name(t: pd.Timestamp, events) -> str | None:
+    near = [(abs((d - t).days), n) for d, n in events if abs((d - t).days) <= EPISODE_GAP]
+    return min(near)[1] if near else None
+
+
+def score_episodes(score: pd.Series, idx: pd.Series) -> dict:
+    """Washout (<10) episodes with the best gain over the next 6 and 12 months, and stretched (>90) episodes with the worst fall over
+    the next 90 calendar days. A horizon not yet complete gives its value so far, marked partial."""
+    ev = _events()
+    i_of = {t: i for i, t in enumerate(idx.index)}
+
+    def best(t, n):
+        i = i_of.get(t)
+        if i is None:
+            return None, True
+        fut = idx.iloc[i + 1:i + 1 + n]
+        return (_r(fut.max() / idx.iloc[i] - 1, 4) if len(fut) else None), len(fut) < n
+
+    def worst(t, cal):
+        fut = idx[(idx.index > t) & (idx.index <= t + pd.Timedelta(days=cal))]
+        done = idx.index[-1] >= t + pd.Timedelta(days=cal)
+        return (_r(min(0.0, fut.min() / idx.loc[t] - 1), 4) if len(fut) else None), not done
+    green = []
+    for t in band_runs(score, lambda v: v < 10):
+        g6, p6 = best(t, 126)
+        g12, p12 = best(t, 252)
+        green.append({"date": str(t.date()), "score": _r(score.loc[t], 1), "level": _r(idx.loc[t], 2), "best6m": g6, "partial6m": p6,
+                      "best12m": g12, "partial12m": p12, "name": _event_name(t, ev)})
+    red = []
+    for t in band_runs(score, lambda v: v >= 90):
+        w, p = worst(t, 90)
+        red.append({"date": str(t.date()), "score": _r(score.loc[t], 1), "level": _r(idx.loc[t], 2), "worst90d": w, "partial": p,
+                    "name": _event_name(t, ev)})
+    return {"green": green[::-1], "red": red[::-1]}
+
+
+def band_stats(score: pd.Series, idx: pd.Series) -> list[dict]:
+    """For every day in each band since 2020: forward 1-, 3- and 6-month basket returns (21, 63, 126 trading days), median and hit rate
+    (share of days higher), over the days whose horizon is complete; with the days and the independent episodes in the band."""
+    lvl = idx.reindex(score.index)
+    pos = pd.Series(range(len(idx)), index=idx.index).reindex(score.index)
+    bands = score.map(band_of)
+    out = []
+    for lo, hi, k, label in BANDS:
+        days = bands[bands == k].index
+        row = {"band": k, "label": label, "lo": lo, "hi": min(hi, 100), "days": int(len(days)),
+               "episodes": len(band_runs(score, lambda v, lo=lo, hi=hi: lo <= v < hi))}
+        for h, n in FWD.items():
+            fw = [idx.iloc[int(pos[t]) + n] / lvl[t] - 1 for t in days if int(pos[t]) + n < len(idx)]
+            row[h] = {"n": len(fw), "median": _r(float(np.median(fw)), 4) if fw else None, "hit": _r(float(np.mean([x > 0 for x in fw])), 3) if fw else None}
+        out.append(row)
+    return out
+
+
+def band_sentence(stats: list[dict], band: str | None) -> str:
+    row = next((r for r in stats if r["band"] == band), None)
+    if not row or not row["days"]:
+        return "No day since 2020 sat in this band, so there is no history to compare."
+    m = row["3m"]
+    head = f"Since 2020 the score spent {row['days']} trading days in this band, in {row['episodes']} separate episode{'s' if row['episodes'] != 1 else ''}"
+    if m["median"] is None:
+        return head + "; none has a full 3 months behind it yet. Small sample, not a forecast."
+    return (head + f"; 3 months later the basket's median return was {m['median'] * 100:+.0f}%, and it was higher on {m['hit'] * 100:.0f}% "
+            f"of those days ({m['n']} days with 3 months known). Small-sample history, not a forecast.")
+
+
 # ------------------------------------------------------------------ VIX
 def parse_vix(text: str) -> pd.Series:
     """FRED (observation_date,VIXCLS with '.' for holidays) or Cboe (DATE,OPEN,HIGH,LOW,CLOSE, dates MM/DD/YYYY) -> daily closes."""
@@ -332,9 +463,32 @@ def _setup_now() -> dict:
                   "above200": sum(1 for c in cards if (c["vs200"] or 0) > 0), "n": len(cards)}
     out["where"] = where_line(out["now"]["dd"], out["now"]["breadth50"], out["now"]["rsi"], out["now"]["vix"], idx, M["m50"], study)
     out["vix_source"] = vsrc
+    out |= _score_block(M, V)
     out["errors"] = M["errors"]
     out["as_of"] = B.latest_date(idx)
     return out
+
+
+def _score_block(M: dict, V: pd.Series | None) -> dict:
+    """The AI Setup Score and its backtest for the Setup tab; {} pieces with score_error when it cannot be built."""
+    try:
+        idx = M["idx"]
+        parts = score_parts(idx, M["b50"], M["rsi"], V, M["px"].get("QQQ"))
+        sc = setup_score(parts)
+        if not len(sc):
+            raise LookupError("no score")
+        vix_only = pct_rank(-V).rolling(SMOOTH, min_periods=SMOOTH).mean().dropna() if V is not None else None
+        now = parts.iloc[-1]
+        stats = band_stats(sc, idx)
+        band = band_of(sc.iloc[-1])
+        return {"score": _pts(sc, 1), "score_now": {"v": _r(sc.iloc[-1], 1), "date": str(sc.index[-1].date()), "band": band,
+                                                     "parts": {k: _r(now.get(k), 0) for k in SCORE_PARTS if k in parts}, "names": SCORE_PARTS,
+                                                     "changes90": band_changes(sc), "vix_only_changes90": band_changes(vix_only) if vix_only is not None else None,
+                                                     "sentence": band_sentence(stats, band)},
+                "bands": [{"lo": lo, "hi": min(hi, 100), "key": k, "label": lab} for lo, hi, k, lab in BANDS],
+                "score_episodes": score_episodes(sc, idx), "band_stats": stats}
+    except Exception as e:
+        return {"score": None, "score_error": type(e).__name__}
 
 
 def _drawdown_now() -> dict:
@@ -571,6 +725,10 @@ def READINGS() -> list[dict]:
     if n.get("n"):
         add("setup", "above200", "Stocks above their 200-day average (of 13)", n.get("above200"), _band(n["above200"] / n["n"], 0.4, 0.6),
             "+1 when more than 60% are above, -1 when fewer than 40%")
+    sn = s.get("score_now") or {}
+    if sn.get("v") is not None:
+        add("setup", "setup_score", "AI Setup Score (0 = washout, 100 = euphoria)", sn["v"], _band(sn["v"], 20, 80),
+            "+1 above 80 (broad strength), -1 below 20 (fear); below 10 or above 90 is the signal")
     dd = (d.get("current") or {}).get("dd")
     if dd is not None:
         add("drawdown", "basket_drawdown", "AI basket below its high (%)", _r(100 * dd, 1), 1 if dd > -0.05 else -1 if dd < -0.10 else 0,
@@ -626,12 +784,12 @@ def SIGNALS() -> list[dict]:
         add("breadth_50d", "trend", "Share of the basket above its 50-day average", _r(100 * now, 0), "%", _band(now, 0.4, 0.6),
             "below 20% (washout) or back above 60% (recovery broadening)", now < 0.20 or back,
             "washout" if now < 0.20 else "recovery broadening" if back else f"low in the last 3 months {low3m * 100:.0f}%; 'back above 60%' counts after a dip below 40%")
-    r = (t.get("now") or {}).get("rsi")
-    if r is None and s.get("rsi"):
-        r = s["rsi"][-1][1]
-    if r is not None:
-        add("rsi_basket", "trend", "Basket RSI 14", r, "", _band(r, 40, 60), "below 30 (oversold) or above 70", r < 30 or r > 70,
-            "oversold" if r < 30 else "overbought" if r > 70 else None)
+    sc = s.get("score") or []
+    if sc:
+        v = sc[-1][1]
+        add("setup_score", "setup", "AI Setup Score", v, "", _band(v, 20, 80), "below 10 (washout) or above 90 (stretched)", v < 10 or v >= 90,
+            "washout: the band that has come near past bottoms" if v < 10 else "stretched: the band that has come before drawdowns" if v >= 90
+            else f"band: {band_of(v)}")
     vn = f.get("vix_now") or {}
     v = vn.get("v")
     if v is None and s.get("vix"):

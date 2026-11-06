@@ -13,6 +13,88 @@ const SMALL = "Not investment advice: where the numbers stand, not what to do.";
 // the current dip as its own line on a drawdown chart, so it stands out from the history
 const currentDip = pts => { if (!pts || !pts.length) return []; let i = pts.length - 1; while (i > 0 && pts[i][1] < 0) i--; return pts.slice(i); };
 
+// ---------- AI Setup Score: 0 = fear or washout, 100 = euphoria; six bands
+const BAND_COL = { washout: "#15803d", fear: "#4ade80", soft: "#9ca3af", neutral: "#6b7fa8", warm: "#f59e0b", stretched: "#dc2626" };
+const BAND_LAB = { washout: "Washout: past bottoms", fear: "Fear", soft: "Soft", neutral: "Neutral", warm: "Warm", stretched: "Stretched: drawdown risk" };
+const BAND_EDGES = [[0, 10, "washout"], [10, 20, "fear"], [20, 50, "soft"], [50, 80, "neutral"], [80, 90, "warm"], [90, 100, "stretched"]];
+const bandOf = v => v == null ? null : (BAND_EDGES.find(([lo, hi]) => v >= lo && v < hi) || BAND_EDGES[5])[2];
+const bandCls = b => b === "washout" || b === "fear" ? "up" : b === "stretched" || b === "warm" ? "down" : "";
+
+function gauge(v) {
+  return svgBox(150, (host, w, h) => {
+    const s = svgEl("svg", { width: w, height: h, viewBox: "0 0 " + w + " " + h }, host);
+    const cx = w / 2, cy = h - 18, r = Math.min(w / 2 - 20, h - 42), th = 18;
+    const pt = (val, rr) => { const a = Math.PI * (1 - val / 100); return [cx + rr * Math.cos(a), cy - rr * Math.sin(a)]; };
+    BAND_EDGES.forEach(([lo, hi, k]) => {
+      const [x1, y1] = pt(lo, r), [x2, y2] = pt(hi, r), [x3, y3] = pt(hi, r - th), [x4, y4] = pt(lo, r - th);
+      svgEl("path", { d: `M${x1},${y1} A${r},${r} 0 0 1 ${x2},${y2} L${x3},${y3} A${r - th},${r - th} 0 0 0 ${x4},${y4} Z`, fill: BAND_COL[k], opacity: bandOf(v) === k ? 1 : 0.45 }, s);
+    });
+    [0, 10, 20, 50, 80, 90, 100].forEach(x => { const [tx, ty] = pt(x, r + 9); svgEl("text", { x: tx, y: ty + 3, "text-anchor": "middle", "font-size": 10, fill: css("--muted") }, s).textContent = x; });
+    if (v != null) {
+      const [nx, ny] = pt(v, r - th - 6);
+      svgEl("line", { x1: cx, y1: cy, x2: nx, y2: ny, stroke: css("--ink"), "stroke-width": 3, "stroke-linecap": "round" }, s);
+      svgEl("circle", { cx, cy, r: 5, fill: css("--ink") }, s);
+    }
+  });
+}
+
+// the basket coloured by the score's band that day, and the score below it, both on the tab's date axis, today marked on both
+function bandLineChart(points, score, opts) {
+  const host = el("div", { class: "chart" + (opts.small ? " small" : "") });
+  const bandAt = new Map(score.map(p => [p[0], bandOf(p[1])]));
+  setTimeout(() => {
+    const c = newChart(host, { rightPriceScale: { borderVisible: false, mode: opts.log ? 1 : 0 } });
+    const line = c.addLineSeries({ priceLineVisible: false, lastValueVisible: false, lineWidth: 2, color: css("--muted"), priceFormat: { type: "custom", formatter: opts.fmt, minMove: 0.01 } });
+    const data = dedupe(points.filter(p => p[1] != null)).map(d => ({ ...d, color: BAND_COL[bandAt.get(d.time)] || css("--muted") }));
+    line.setData(data);
+    (opts.hlines || []).forEach(h => line.createPriceLine({ price: h, color: css("--muted"), lineWidth: 1, lineStyle: 2, axisLabelVisible: true }));
+    if (data.length) line.setMarkers([{ time: data[data.length - 1].time, position: "aboveBar", shape: "arrowDown", color: css("--ink"), text: "Today" }]);
+    syncAdd(c, line, data);
+  });
+  return host;
+}
+const bandLegend = () => el("div", { class: "legend" }, ...BAND_EDGES.map(([lo, hi, k]) => swatch(BAND_COL[k], lo + "–" + hi + " " + BAND_LAB[k])));
+
+function scoreCards(d) {
+  const S = d.score_now || {}, b = S.band, P = S.parts || {}, names = S.names || {};
+  if (!d.score) return [unavailable("AI Setup Score", d, "score")];
+  const G = card("AI Setup Score: " + num(S.v, 0) + " of 100, " + (BAND_LAB[b] || "–"),
+    el("div", { style: "display:flex;flex-wrap:wrap;gap:16px;align-items:center" },
+      el("div", { style: "flex:1 1 240px;max-width:360px" }, gauge(S.v)),
+      el("div", { style: "flex:2 1 280px" },
+        el("div", { style: "font-size:30px;font-weight:700;color:" + (BAND_COL[b] || "inherit") }, num(S.v, 0), el("span", { class: "muted", style: "font-size:14px;font-weight:500" }, " / 100 · " + (BAND_LAB[b] || ""))),
+        el("p", { style: "margin:6px 0;line-height:1.5" }, S.sentence || ""),
+        el("div", { class: "kpis" }, ...Object.keys(names).filter(k => P[k] != null).map(k => kpi(names[k], num(P[k], 0), P[k] < 20 ? "up" : P[k] > 80 ? "down" : ""))),
+        note("Each part is today's percentile rank against its own history since 2020 (0 = most fearful day, 100 = most euphoric). The score is their average, smoothed over 5 days."))),
+    el("div", { class: "kpis", style: "margin-top:8px" },
+      kpi("Band changes, last 90 days", num(S.changes90), S.changes90 > 8 ? "down" : ""),
+      ...(S.vix_only_changes90 != null ? [kpi("The same count for a VIX-only score", num(S.vix_only_changes90))] : []),
+      kpi("Score date", dateOf(S.date))),
+    note("0–10 washout (the band that has come near past bottoms), 10–20 fear, 20–50 soft, 50–80 neutral, 80–90 warm, 90–100 stretched (the band that has come before drawdowns). Small-sample history, not a forecast. " + SMALL));
+  const csv = csvButton(csvName("setup score backtest"), () => seriesCsv([{ name: "AI basket", points: (d.lines || {})["AI basket"] || [] }, { name: "AI Setup Score", points: d.score }], "date", isoTime));
+  const BT = card("Backtest: the AI basket coloured by the score's band, and the score",
+    el("div", { class: "legend" }, ...BAND_EDGES.map(([lo, hi, k]) => swatch(BAND_COL[k], lo + "–" + hi + " " + BAND_LAB[k])), csv),
+    bandLineChart((d.lines || {})["AI basket"] || [], d.score, { log: true, fmt: v => num(v, 0) }),
+    bandLineChart(d.score, d.score, { small: true, fmt: v => num(v, 0), hlines: [10, 90] }),
+    note("Top: the equal-weight AI basket (100 = 2 Jan 2020, log scale), each day coloured by that day's score band. Bottom: the score, dashed at 10 and 90. Use the date buttons above to move both. " +
+      "The bands rank each day against the whole history since 2020, days after it included: a description of the past, not a rule anyone could have traded."));
+  const E = d.score_episodes || {}, part = (v, p) => v == null ? "–" : pct(v, 0) + (p ? " so far" : "");
+  const nm = e => e.name ? el("span", { class: "muted" }, " · " + e.name) : null;
+  const GT = card("Each washout episode (score below 10)", table(["Started", "Score", "Basket", "Best gain, next 6 months", "Best gain, next 12 months"],
+    (E.green || []).map(e => el("tr", {}, td([dateOf(e.date), nm(e)]), td(num(e.score, 1)), td(num(e.level, 0)), td(part(e.best6m, e.partial6m), "up"), td(part(e.best12m, e.partial12m), "up")))),
+    note("An episode starts on the first day below 10, at least 30 days after the last day below 10. Best gain: the highest close in the next 126 (or 252) trading days against the close that day. Small sample, not a forecast."));
+  const RT = card("Each stretched episode (score 90 or above)", table(["Started", "Score", "Basket", "Worst fall, next 90 days"],
+    (E.red || []).map(e => el("tr", {}, td([dateOf(e.date), nm(e)]), td(num(e.score, 1)), td(num(e.level, 0)), td(part(e.worst90d, e.partial), "down")))),
+    note("Worst fall: the lowest close in the next 90 calendar days against the close that day (0 when it never closed lower). Names come from data/ai-stocks/events.csv."));
+  const H = ["1m", "3m", "6m"], HL = { "1m": "1 month", "3m": "3 months", "6m": "6 months" };
+  const ST = card("What each band has meant: forward basket returns from every day in it since 2020",
+    table(["Band", "Days", "Episodes", ...H.map(h => HL[h] + ": median"), ...H.map(h => HL[h] + ": higher")],
+      (d.band_stats || []).map(r => el("tr", {}, td([swatch(BAND_COL[r.band], r.lo + "–" + r.hi + " " + r.label)]), td(num(r.days)), td(num(r.episodes)),
+        ...H.map(h => td(r[h].median == null ? "–" : pct(r[h].median, 1), cls(r[h].median))), ...H.map(h => td(r[h].hit == null ? "–" : share(r[h].hit) + " of " + num(r[h].n)))))),
+    note("Forward returns over 21, 63 and 126 trading days from each day in the band, counting only days whose horizon has passed. Neighbouring days overlap, so the episodes column is the number of independent samples. Small-sample history, not a forecast, and not investment advice."));
+  return [G, BT, GT, RT, ST];
+}
+
 function stockCard(c) {
   const row = (l, v, k) => el("div", { style: "display:flex;justify-content:space-between;gap:8px" }, el("span", { class: "muted" }, l), el("b", { class: k || "" }, v));
   return el("div", { style: "border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface,transparent)" },
@@ -28,6 +110,7 @@ const VIEWS = {
   async setup() {
     const d = await api("setup"), N = d.now || {};
     const head = card("Where we are", followHead([
+      ...(d.score ? [{ label: "AI Setup Score", points: d.score, fmt: v => num(v, 0) + " · " + BAND_LAB[bandOf(v)], cls: v => bandCls(bandOf(v)) }] : []),
       { label: "AI basket below its high", points: d.dd, fmt: ddf, cls: v => v < -0.2 ? "down" : v > -0.05 ? "up" : "" },
       { label: "Stocks above their 50-day", points: d.breadth50, fmt: share, cls: v => v < 0.2 ? "down" : v > 0.6 ? "up" : "" },
       { label: "Basket RSI 14", points: d.rsi, fmt: v => num(v, 0), cls: rsiCls },
@@ -50,7 +133,8 @@ const VIEWS = {
       ...linesChart(Object.entries(d.lines).map(([k, p]) => ({ name: k, points: p, color: css(k === "AI basket" ? "--s1" : k === "QQQ" ? "--s2" : k === "Owner's picks" ? "--s3" : "--s4") })), v => num(v, 0), { log: true }),
       note("Equal-weight basket of NVDA, AVGO, AMD, TSM, ASML, MU, ARM, MSFT, GOOGL, AMZN, META, ORCL and PLTR, rebalanced daily (Arm from its listing in September 2023). Owner's picks: the same method on its 10 stocks. Prices without dividends, log scale."))
       : unavailable("Basket against QQQ and SPY", d, "lines");
-    return [head, cards, picks, L];
+    const [G, BT, ...tabs] = scoreCards(d);
+    return [G, head, BT, ...tabs, cards, picks, L].filter(Boolean);
   },
 
   async drawdown() {
@@ -169,5 +253,5 @@ const VIEWS = {
     return [head, RV, CX, T];
   },
 };
-window.TOPIC = { VIEWS };
+window.TOPIC = { VIEWS, presets: [["1m", "1M", 30], ["3m", "3M", 91], ["6m", "6M", 182], ["1y", "1Y", 365], ["5y", "5Y", 1826], ["all", "All", 0]] };
 })();
