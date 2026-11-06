@@ -200,9 +200,10 @@
    "id": "ai-stocks-build",
    "title": "Build the AI Stocks dashboard",
    "owner": "session:ai-stocks",
-   "status": "in_progress",
+   "status": "done",
    "since": "2026-11-05",
-   "detail": "First version on main (5c4b3bc): Setup, Drawdown, Trend & breadth, After past dips, Fear & relative, Fundamentals. Live 4 Nov: basket -15.5% from its high, 15% above the 50-day, RSI 36.5, VIX 16.6. Phase 2 in session_01Hguru3NTcATdNFZJk1KsMC: owner's picks group, AI Setup Score with backtest, index strip, Institutions (13F), Form 4 panel and Insiders tab."
+   "detail": "First version on main (5c4b3bc): Setup, Drawdown, Trend & breadth, After past dips, Fear & relative, Fundamentals. Live 4 Nov: basket -15.5% from its high, 15% above the 50-day, RSI 36.5, VIX 16.6. Phase 2 in session_01Hguru3NTcATdNFZJk1KsMC: owner's picks group, AI Setup Score with backtest, index strip, Institutions (13F), Form 4 panel and Insiders tab. Phase 2 done on 6 Nov: owner's picks (401b922), Setup Score and backtest (62fd68b), index strip (889794f), Institutions from 13F (378a8ab), Form 4 panel and Insiders tab (36bb559). One check open: NVDA's 10b5-1 share of insider sales.",
+   "done": "2026-11-06"
   }
  ],
  "roadmap": [
@@ -384,12 +385,13 @@
   {
    "id": "r-ai-stocks",
    "title": "AI Stocks: the setup after the dip",
-   "horizon": "now",
-   "status": "in_progress",
+   "horizon": "done",
+   "status": "done",
    "area": "Dashboards",
    "by": "session:ai-stocks",
    "approved": "2026-11-05",
-   "detail": "Asked by the owner on 5 Nov. Thirteen AI stocks against QQQ, SPY and SMH: drawdown from the high, trend and breadth, RSI, past dips and what followed, VIX and relative strength, and revenue growth. Five signals proposed with it: basket drawdown, breadth above the 50-day, basket RSI, VIX, AI vs QQQ."
+   "detail": "Asked by the owner on 5 Nov. Thirteen AI stocks against QQQ, SPY and SMH: drawdown from the high, trend and breadth, RSI, past dips and what followed, VIX and relative strength, and revenue growth. Five signals proposed with it: basket drawdown, breadth above the 50-day, basket RSI, VIX, AI vs QQQ.",
+   "done": "2026-11-06"
   }
  ],
  "log": [
@@ -733,10 +735,47 @@
      "what": "Five signals wired (2025 EV exports are a record) and the AI models and Markets top cards follow the timeline",
      "commit": "1e41936",
      "by": "session:china-us-tech"
+    },
+    {
+     "dashboard": "AI Stocks",
+     "slug": "ai-stocks",
+     "what": "Owner's picks as a second group (SanDisk, Nebius, Bloom, Marvell, Oracle, IREN, AppLovin, AMD, Rocket Lab, Nvidia)",
+     "commit": "401b922",
+     "by": "session:ai-stocks"
+    },
+    {
+     "dashboard": "AI Stocks",
+     "slug": "ai-stocks",
+     "what": "AI Setup Score 0–100 with backtest: 22 on 4 Nov; washouts in 2020, 2022 and Apr 2025; the Jun 2026 stretched reading was followed by a 19% fall",
+     "commit": "62fd68b",
+     "by": "session:ai-stocks"
+    },
+    {
+     "dashboard": "AI Stocks",
+     "slug": "ai-stocks",
+     "what": "Index and stock strip at the top of Setup",
+     "commit": "889794f",
+     "by": "session:ai-stocks"
+    },
+    {
+     "dashboard": "AI Stocks",
+     "slug": "ai-stocks",
+     "tab": "institutions",
+     "what": "Institutions from 13F: 4 of 10 funds net-added last quarter; Berkshire added about $17bn of Alphabet",
+     "commit": "378a8ab",
+     "by": "session:ai-stocks"
+    },
+    {
+     "dashboard": "AI Stocks",
+     "slug": "ai-stocks",
+     "tab": "insiders",
+     "what": "Insider purchases and sales (Form 4), clusters, and a per-stock panel with fundamentals",
+     "commit": "36bb559",
+     "by": "session:ai-stocks"
     }
    ],
    "next": [
-    "AI Stocks phase 2, pushed step by step",
+    "Verify NVDA's 10b5-1 share of insider sales (handed back to the AI Stocks session)",
     "Proposed AI Stocks signals wait for the owner's OK"
    ],
    "asks": [
