@@ -59,6 +59,11 @@ DD_TABLE = -0.10                    # drawdowns listed on the Drawdown tab
 DD_STUDY = -0.15                    # drawdowns studied on the After past dips tab
 HORIZONS = {"1m": 21, "3m": 63, "6m": 126}          # trading days
 # SEC filers reporting in US GAAP with quarterly 10-Qs; TSMC, ASML and Arm file 20-F/6-K under IFRS without quarterly facts in companyfacts
+# every dashboard stock's SEC CIK (www.sec.gov/files/company_tickers.json, checked 6 Nov 2026): Form 4 insider filings, companyfacts
+CIKS = {"NVDA": 1045810, "AVGO": 1730168, "AMD": 2488, "TSM": 1046179, "ASML": 937966, "MU": 723125, "ARM": 1973239, "MSFT": 789019,
+        "GOOGL": 1652044, "AMZN": 1018724, "META": 1326801, "ORCL": 1341439, "PLTR": 1321655, "SNDK": 2023554, "NBIS": 1513845,
+        "BE": 1664703, "MRVL": 1835632, "IREN": 1878848, "APP": 1751008, "RKLB": 1819994}
+FORM4_LIST = "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={cik:010d}&type=4&dateb=&owner=include&count=40"
 REV_CIKS = {"NVDA": 1045810, "AVGO": 1730168, "AMD": 2488, "MU": 723125, "MSFT": 789019, "GOOGL": 1652044, "AMZN": 1018724, "META": 1326801,
             "ORCL": 1341439, "PLTR": 1321655}
 
@@ -181,6 +186,20 @@ def stock_card(sym: str, s: pd.Series) -> dict:
     return {"sym": sym, "name": NAMES.get(sym, sym), "price": _r(s.iloc[-1], 2), "date": str(s.index[-1].date()),
             "dd52": last(s / hi - 1), "vs50": last(s / m50 - 1), "vs200": last(s / m200 - 1), "rsi": _r(r.iloc[-1], 1),
             "high52": _r(hi.iloc[-1], 2), "high52_date": str(s[s.index >= s.index[-1] - pd.Timedelta(days=366)].idxmax().date())}
+
+
+def strip(px: dict[str, pd.Series]) -> list[dict]:
+    """The row at the top of Setup: SPY, QQQ and SMH, then every stock of both groups, with the last close and the day's move."""
+    out = []
+    for sym, group in [(e, "index") for e in ("SPY", "QQQ", "SMH")] + [(s, "core") for s in BASKET] + [(s, "picks") for s in PICKS if s not in BASKET]:
+        s = px.get(sym)
+        if s is None or len(s.dropna()) < 2:
+            continue
+        s = s.dropna()
+        out.append({"sym": sym, "name": NAMES.get(sym, sym), "group": group, "both": sym in BASKET and sym in PICKS, "price": _r(s.iloc[-1], 2),
+                    "day": _r(s.iloc[-1] / s.iloc[-2] - 1, 4), "date": str(s.index[-1].date()),
+                    **({"form4": FORM4_LIST.format(cik=CIKS[sym])} if sym in CIKS else {})})
+    return out
 
 
 def breadth(px: dict[str, pd.Series], n: int, members: tuple = BASKET) -> pd.Series:
@@ -455,6 +474,7 @@ def _setup_now() -> dict:
                   sources=M["sources"] + [FRED_VIX, CBOE_VIX])
     out["cards"] = cards
     out["pick_cards"] = pick_cards
+    out["strip"] = strip(px)
     out["picks_dd"] = _pts(M["pdd"], 4) if M["pdd"] is not None else None
     out["picks_now"] = {"dd": last(M["pdd"]) if M["pdd"] is not None else None, "breadth50": last(M["pb50"]) if M["pb50"] is not None else None,
                         "above200": sum(1 for c in pick_cards if (c["vs200"] or 0) > 0), "n": len(pick_cards),

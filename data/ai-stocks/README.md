@@ -23,7 +23,7 @@ server gets back from each source (FRED and Cboe VIX, Nasdaq for a stock and an 
 
 | Tab | Cards | Source | Automated? | Cadence |
 |---|---|---|---|---|
-| Setup | one card per stock, in two groups (the AI basket and the owner's picks): drawdown from its 52-week high, % above or below its 50- and 200-day averages, RSI 14; both indexes against QQQ and SPY; "where we are" | Nasdaq quote API (`_base.nasdaq_daily`; 20 stocks as `stocks`, QQQ/SPY/SMH as `etf`) | yes | daily |
+| Setup | a strip at the top: SPY, QQQ and SMH with their day's move, then every stock of both groups with its last close and day's move (a stock links to its Form 4 filings on EDGAR; CIKs in `CIKS`, from the SEC's company_tickers.json); one card per stock, in two groups (the AI basket and the owner's picks): drawdown from its 52-week high, % above or below its 50- and 200-day averages, RSI 14; both indexes against QQQ and SPY; "where we are" | Nasdaq quote API (`_base.nasdaq_daily`; 20 stocks as `stocks`, QQQ/SPY/SMH as `etf`) | yes | daily |
 | Drawdown | basket and per-stock drawdown from the running peak since 2020; the current dip; every basket drawdown over 10%; the owner's picks index and each pick over its own history | same | yes | daily |
 | Trend & breadth | share of the basket above its 50- and 200-day averages; basket RSI 14; basket with its 50- and 200-day averages; the 50/200 crosses | same | yes | daily |
 | After past dips | for each basket drawdown of 15% or more: returns 1, 3 and 6 months after the 15% point and after the bottom; median and range | same | yes | daily |

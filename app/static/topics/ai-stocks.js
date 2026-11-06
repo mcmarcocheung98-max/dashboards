@@ -95,6 +95,22 @@ function scoreCards(d) {
   return [G, BT, GT, RT, ST];
 }
 
+// the strip at the top of Setup: SPY, QQQ, SMH, then every stock; a stock opens its panel (openStock), else its EDGAR Form 4 list
+function stripCard(d) {
+  const S = d.strip || [];
+  if (!S.length) return null;
+  const chip = x => {
+    const body = [el("b", {}, x.sym), " ", el("span", {}, usd(x.price, 2)), " ", el("span", { class: cls(x.day) }, pct(x.day, 1))];
+    const st = "display:inline-flex;gap:4px;align-items:baseline;border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:13px;white-space:nowrap;text-decoration:none;color:inherit;background:var(--surface,transparent)" + (x.group === "index" ? ";font-weight:600" : "");
+    if (x.group === "index") return el("span", { style: st, title: x.name }, ...body);
+    if (window.openStock) return el("button", { type: "button", style: st + ";cursor:pointer;font:inherit;font-size:13px", title: x.name + ": insiders, institutions, fundamentals", onclick: () => window.openStock(x.sym) }, ...body);
+    return el("a", { href: x.form4, target: "_blank", rel: "noopener", style: st, title: x.name + ": Form 4 insider filings on EDGAR" }, ...body);
+  };
+  const row = (lab, xs) => xs.length ? el("div", { style: "display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px" }, el("span", { class: "muted", style: "min-width:96px" }, lab), ...xs.map(chip)) : null;
+  return card(null, row("Indexes", S.filter(x => x.group === "index")), row("AI basket", S.filter(x => x.group === "core")), row("Owner's picks", (d.pick_cards || []).map(c => S.find(x => x.sym === c.sym)).filter(Boolean)),
+    note("Last close and the move on the day" + (S[0] ? ", " + dateOf(S[0].date) : "") + ". " + (window.openStock ? "Click a stock for its insiders, institutions and fundamentals." : "Click a stock for its Form 4 insider filings on EDGAR.") + " " + SMALL));
+}
+
 function stockCard(c) {
   const row = (l, v, k) => el("div", { style: "display:flex;justify-content:space-between;gap:8px" }, el("span", { class: "muted" }, l), el("b", { class: k || "" }, v));
   return el("div", { style: "border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface,transparent)" },
@@ -134,7 +150,7 @@ const VIEWS = {
       note("Equal-weight basket of NVDA, AVGO, AMD, TSM, ASML, MU, ARM, MSFT, GOOGL, AMZN, META, ORCL and PLTR, rebalanced daily (Arm from its listing in September 2023). Owner's picks: the same method on its 10 stocks. Prices without dividends, log scale."))
       : unavailable("Basket against QQQ and SPY", d, "lines");
     const [G, BT, ...tabs] = scoreCards(d);
-    return [G, head, BT, ...tabs, cards, picks, L].filter(Boolean);
+    return [stripCard(d), G, head, BT, ...tabs, cards, picks, L].filter(Boolean);
   },
 
   async drawdown() {

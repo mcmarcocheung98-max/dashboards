@@ -234,6 +234,10 @@ def test_setup(mocked):
     assert [c["sym"] for c in p["pick_cards"]] == list(M.PICKS) and "Owner's picks" in p["lines"]
     assert p["picks_now"]["since"]["SNDK"] == "2025-03-03" and p["picks_now"]["since"]["NBIS"] == "2024-11-01"
     assert p["picks_dd"][-1][1] <= 0 and p["picks_now"]["n"] == 10
+    st = p["strip"]
+    assert [x["sym"] for x in st[:3]] == ["SPY", "QQQ", "SMH"] and {x["sym"] for x in st} == set(M.STOCKS) | {"SPY", "QQQ", "SMH"}
+    assert all("form4" in x and f"CIK={M.CIKS[x['sym']]:010d}" in x["form4"] for x in st if x["group"] != "index")
+    assert next(x for x in st if x["sym"] == "NVDA")["both"] and abs(st[0]["day"]) < 0.2
     S = p["score_now"]
     assert 0 <= S["v"] <= 100 and S["band"] == M.band_of(S["v"]) and set(S["parts"]) == set(M.SCORE_PARTS) and "not a forecast" in S["sentence"]
     assert p["score"][-1][1] == S["v"] and len(p["band_stats"]) == 6 and sum(r["days"] for r in p["band_stats"]) == len(p["score"])
