@@ -486,7 +486,7 @@
    "date": "2026-11-06",
    "run": "scheduled",
    "result": "ok",
-   "summary": "Email built, not sent (no Gmail secrets). Signals 50 of 67 wired, 15 crossed. Reviewed AI Stocks: one table overflow, fixed by its session within the hour. Live check still running at the time of this entry.",
+   "summary": "Email built, not sent (no Gmail secrets). Signals 50 of 67 wired, 15 crossed. Reviewed AI Stocks: one table overflow, fixed by its session within the hour. Live check: every tab loads; four restart blips were absorbed by the retry. Dev notes was flagged twice because a note quoted the error phrase; the check now looks for the error card itself.",
    "fixed": [],
    "handed": [
     "ai-stocks"
@@ -681,7 +681,7 @@
    "changes": [
     {
      "dashboard": "Site",
-     "what": "Live check: a tab showing 'Could not load' is reloaded once after 20 s, and the line says 'loaded on retry' or 'failed twice'",
+     "what": "Live check: a tab that fails to load is reloaded once after 20 s, and the line says 'loaded on retry' or 'failed twice'",
      "commit": "05239f3",
      "by": "agent"
     },
