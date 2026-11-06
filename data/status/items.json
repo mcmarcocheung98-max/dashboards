@@ -202,7 +202,7 @@
    "owner": "session:ai-stocks",
    "status": "in_progress",
    "since": "2026-11-05",
-   "detail": "Session session_01Hguru33HhMq9DoqY2C26R6 started from the dev agent's brief; it reports back to the parent when pushed."
+   "detail": "First version on main (5c4b3bc): Setup, Drawdown, Trend & breadth, After past dips, Fear & relative, Fundamentals. Live 4 Nov: basket -15.5% from its high, 15% above the 50-day, RSI 36.5, VIX 16.6. Phase 2 in session_01Hguru3NTcATdNFZJk1KsMC: owner's picks group, AI Setup Score with backtest, index strip, Institutions (13F), Form 4 panel and Insiders tab."
   }
  ],
  "roadmap": [
@@ -705,6 +705,44 @@
     "Say 'go' to the four sessions waiting on you: China vs US tech, Pokémon cards, Compute & chips, Autonomous cars (signals and follow heads)",
     "Approve or skip r-watch-recalibrate and r-private-signals",
     "Add the Gmail secrets: this morning's email was built but not sent"
+   ]
+  },
+  {
+   "date": "2026-11-06",
+   "title": "AI Stocks is live; Graphify shows daily tokens",
+   "summary": "The AI Stocks dashboard went live on real prices: the AI basket was 15.5% below its high on 4 Nov, with only 15% of its stocks above their 50-day average. Its second phase (the owner's picks, a setup score with backtest, fund holdings and insider trades) is being built. The Graphify Map gained a Daily tokens tab.",
+   "changes": [
+    {
+     "dashboard": "AI Stocks",
+     "slug": "ai-stocks",
+     "what": "New dashboard: Setup, Drawdown, Trend & breadth, After past dips, Fear & relative, Fundamentals; five signals proposed",
+     "commit": "5c4b3bc",
+     "by": "session:ai-stocks"
+    },
+    {
+     "dashboard": "Graphify Map",
+     "slug": "graphify",
+     "tab": "usage",
+     "what": "Daily tokens tab: tokens used per day, tokens saved by graphify per day, and each session's total and cost",
+     "commit": "914e827",
+     "by": "agent"
+    },
+    {
+     "dashboard": "China vs US Tech",
+     "slug": "china-us-tech",
+     "what": "Five signals wired (2025 EV exports are a record) and the AI models and Markets top cards follow the timeline",
+     "commit": "1e41936",
+     "by": "session:china-us-tech"
+    }
+   ],
+   "next": [
+    "AI Stocks phase 2, pushed step by step",
+    "Proposed AI Stocks signals wait for the owner's OK"
+   ],
+   "asks": [
+    "Approve or skip the AI Stocks signals once the setup score is in",
+    "Approve or skip r-watch-recalibrate and r-private-signals",
+    "Add the Gmail secrets"
    ]
   }
  ]
