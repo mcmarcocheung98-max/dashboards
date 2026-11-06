@@ -154,7 +154,7 @@ def changes(slug: str) -> dict:
 # The index page groups dashboards under these headings, in this order. A dashboard not listed here goes under "More".
 CATEGORIES = (
     ("Signals", "The one thing to watch on each dashboard, and today's email.", ("signals",)),
-    ("Money & markets", "Prices, rates and where capital is flowing.", ("btc-cycles", "altcoins", "debt-rates", "housing", "pokemon-cards")),
+    ("Money & markets", "Prices, rates and where capital is flowing.", ("btc-cycles", "altcoins", "ai-stocks", "debt-rates", "housing", "pokemon-cards")),
     ("AI & technology", "How fast AI, chips and machines are arriving, and who leads.", ("ai", "compute-chips", "china-us-tech", "robotaxi", "space")),
     ("People & planet", "The slow forces: population, health and climate.", ("demographics", "longevity", "climate")),
     ("Sentiment & attention", "What people are betting on and paying attention to.", ("prediction-markets", "trends")),
@@ -235,6 +235,8 @@ PROBE_URLS = {   # fixed list: what each dashboard downloads, to see from the se
     "world bank api": "https://api.worldbank.org/v2/country/USA/indicator/SP.POP.TOTL?format=json",
     "gcat launches": "https://planet4589.org/space/gcat/tsv/launch/launch.tsv",
     "celestrak satcat": "https://celestrak.org/pub/satcat.csv",
+    "fred vix": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS",
+    "cboe vix history": "https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv",
 }
 
 
