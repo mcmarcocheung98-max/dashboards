@@ -8,6 +8,8 @@ trend         share of the basket above its 50- and 200-day averages, the basket
 dips          every past basket drawdown of 15% or more: returns 1, 3 and 6 months after the 15% point and after the bottom
 fear          VIX (FRED VIXCLS, Cboe's history file when FRED does not answer), the basket against QQQ and SMH against SPY over 3 and 12 months
 fundamentals  revenue growth on a year for the basket's US filers (SEC EDGAR companyfacts) and hyperscaler capex (compute_chips' series)
+insiders      Form 4 open-market purchases (P) and sales (S) of the last 90 days for every US filer; cluster buys (background fill_insiders)
+companies     not a tab: each stock's fundamentals for the stock panel (companyfacts, 10-Q and 10-K, trailing four quarters)
 institutions  10 funds' latest two 13F-HR filings (EDGAR, background job fill_13f, kept 7 days): New/Added/Trimmed/Sold in our stocks
 layout        not a tab: what this server gets back from each source, to check reachability from Railway
 
@@ -37,7 +39,7 @@ TOPIC = Topic(SLUG, "AI Stocks: the setup after the dip",
               "dips like this before? Thirteen AI leaders in an equal-weight basket, and the owner's ten picks as a second group, against QQQ, "
               "SPY and SMH, with VIX and revenue growth.",
               "ai_stocks", (("setup", "Setup"), ("drawdown", "Drawdown"), ("trend", "Trend & breadth"), ("dips", "After past dips"),
-                            ("fear", "Fear & relative"), ("fundamentals", "Fundamentals"), ("institutions", "Institutions")),
+                            ("fear", "Fear & relative"), ("fundamentals", "Fundamentals"), ("institutions", "Institutions"), ("insiders", "Insiders")),
               ("setup", "drawdown", "trend", "dips", "fear", "fundamentals"), icon="chart")
 
 BASKET = ("NVDA", "AVGO", "AMD", "TSM", "ASML", "MU", "ARM", "MSFT", "GOOGL", "AMZN", "META", "ORCL", "PLTR")
@@ -77,7 +79,8 @@ SOURCES = [{"name": "Nasdaq quote API (daily closes of the 13 basket stocks, the
            {"name": "Cboe VIX history (fallback when FRED does not answer)", "url": "https://www.cboe.com/tradable_products/vix/vix_historical_data/", "cadence": "daily"},
            {"name": "SEC EDGAR companyfacts (10-Q, 10-K revenue)", "url": "https://www.sec.gov/edgar/sec-api-documentation", "cadence": "quarterly"},
            {"name": "Hyperscaler capex from the AI Compute, Power & Chips dashboard", "url": "/compute-chips#capex", "cadence": "quarterly"},
-           {"name": "SEC EDGAR 13F-HR information tables (10 funds, data/ai-stocks/funds.csv)", "url": "https://www.sec.gov/divisions/investment/13ffaq", "cadence": "quarterly"}]
+           {"name": "SEC EDGAR 13F-HR information tables (10 funds, data/ai-stocks/funds.csv)", "url": "https://www.sec.gov/divisions/investment/13ffaq", "cadence": "quarterly"},
+           {"name": "SEC EDGAR Form 4 insider filings (open-market purchases and sales)", "url": "https://www.sec.gov/files/forms-3-4-5.pdf", "cadence": "daily"}]
 NOTES = ("Not investment advice: this page shows where AI share prices stand against their own history and makes no buy or sell call. "
          "The basket is an equal-weight index of 13 AI stocks, rebalanced daily, 100 on 2 January 2020; prices exclude dividends. "
          "After past dips draws on a handful of drawdowns since 2020: a small sample, history and not a forecast. "
@@ -746,10 +749,10 @@ def _snap_text(url: str, max_age: float | None = None) -> str | None:
     return None
 
 
-def edgar(url: str, ttl: float, reduce=None, min_bytes: int = 20) -> str:
+def edgar(url: str, ttl: float, reduce=None, min_bytes: int = 20, key: str = "") -> str:
     """For the BACKGROUND jobs: the disk copy while it is younger than ttl, else a paced download through fetch (which keeps the new
     copy, reduced, as the snapshot). Uses compute_chips' SEC User-Agent (name and email, as the SEC asks)."""
-    have = _snap_text(url, ttl)
+    have = _snap_text(url + key, ttl)
     if have is not None:
         return have
     with _EDGAR_TURN:
@@ -757,14 +760,15 @@ def edgar(url: str, ttl: float, reduce=None, min_bytes: int = 20) -> str:
         if wait > 0:
             time.sleep(wait)
         try:
-            return fetch(url, ttl, headers={**CC.SEC_HEADERS, "Accept": "*/*"}, reduce=reduce, min_bytes=min_bytes, timeout=90)
+            return fetch(url, ttl, headers={**CC.SEC_HEADERS, "Accept": "*/*"}, reduce=reduce, min_bytes=min_bytes, timeout=90,
+                         **({"key": url + key} if key else {}))
         finally:
             _edgar_last[0] = time.time()
 
 
-def cached_text(url: str, ttl: float = 0, reduce=None, min_bytes: int = 0) -> str:
+def cached_text(url: str, ttl: float = 0, reduce=None, min_bytes: int = 0, key: str = "") -> str:
     """For page views: the kept copy only (LookupError when the background job has not fetched it yet)."""
-    have = _snap_text(url)
+    have = _snap_text(url + key)
     if have is None:
         raise LookupError("not fetched yet")
     return have
@@ -920,6 +924,225 @@ def _institutions_now() -> dict:
     return out
 
 
+# ------------------------------------------------------------------ Form 4: insiders
+F4_DAYS = 90                        # transactions shown
+F4_TTL = DAY                        # submissions; each Form 4 never changes, so it is kept a year
+CLUSTER_DAYS, CLUSTER_MIN = 30, 2   # a cluster buy: 2 or more insiders of one company buying within 30 days
+FOREIGN = {"TSM", "ASML", "ARM"}    # file 20-F/6-K as foreign private issuers: no quarterly facts in companyfacts, insiders exempt from Form 4
+
+
+def reduce_form4(text: str) -> str:
+    """A Form 4 XML -> its transaction table only: the reporting owners and their roles, whether the filing marks a Rule 10b5-1 plan
+    (the aff10b5One box, or a footnote naming 10b5-1), and the open-market purchases (P) and sales (S) of non-derivative stock."""
+    from xml.etree import ElementTree as ET
+    root = ET.fromstring(text.lstrip("\ufeff").encode("utf-8") if text.lstrip().startswith("<?xml") else text.lstrip("\ufeff"))
+    val = lambda e, path: ((e.find(path).text or "").strip() if e is not None and e.find(path) is not None else "")
+    owners = []
+    for o in root.findall("reportingOwner"):
+        rel = o.find("reportingOwnerRelationship")
+        roles = [r for r, k in (("Director", "isDirector"), ("10% owner", "isTenPercentOwner")) if val(rel, k) in ("1", "true")]
+        if val(rel, "isOfficer") in ("1", "true"):
+            roles.insert(0, val(rel, "officerTitle") or "Officer")
+        if val(rel, "isOther") in ("1", "true") and not roles:
+            roles.append(val(rel, "otherText") or "Other")
+        owners.append({"name": val(o, "reportingOwnerId/rptOwnerName"), "role": ", ".join(roles)})
+    plan = val(root, "aff10b5One") in ("1", "true") or any("10b5-1" in (f.text or "") for f in root.iter("footnote"))
+    txns = []
+    for x in root.iter("nonDerivativeTransaction"):
+        code = val(x, "transactionCoding/transactionCode")
+        if code not in ("P", "S"):
+            continue
+        try:
+            sh = float(val(x, "transactionAmounts/transactionShares/value") or 0)
+            px = float(val(x, "transactionAmounts/transactionPricePerShare/value") or 0)
+        except ValueError:
+            continue
+        txns.append({"code": code, "date": val(x, "transactionDate/value")[:10], "shares": sh, "price": px})
+    return json.dumps({"issuer": int(val(root, "issuer/issuerCik") or 0), "owners": owners, "plan": plan, "txns": txns})
+
+
+def form4_rows(sym: str, get, today: pd.Timestamp | None = None) -> list[dict]:
+    """Every open-market purchase and sale of `sym` in the last F4_DAYS days, from its Form 4 filings (issuer = the company: filings
+    where the company is itself the reporting owner of another stock are left out)."""
+    cik = CIKS[sym]
+    today = today or pd.Timestamp.now().normalize()
+    since = today - pd.Timedelta(days=F4_DAYS)
+    subs = json.loads(get(SUBMISSIONS.format(cik=cik), F4_TTL, reduce=_reduce_subs(("4", "4/A")), key="#form4"))
+    out = []
+    for form, acc, filed, rep_, doc in subs["filings"]:
+        if pd.Timestamp(filed) < since - pd.Timedelta(days=5):
+            continue
+        base = ARCHIVE.format(cik=cik, acc=acc.replace("-", ""))
+        f = json.loads(get(base + doc.split("/")[-1], FOREVER, reduce=reduce_form4))
+        if f["issuer"] and f["issuer"] != cik:
+            continue
+        who = " & ".join(o["name"] for o in f["owners"]) or "–"
+        role = next((o["role"] for o in f["owners"] if o["role"]), "")
+        for x in f["txns"]:
+            if not x["date"] or pd.Timestamp(x["date"]) < since:
+                continue
+            out.append({"sym": sym, "name": who, "role": role, "date": x["date"], "filed": filed, "code": x["code"], "shares": _r(x["shares"], 0),
+                        "price": _r(x["price"], 2), "value": _r(x["shares"] * x["price"], 0), "plan": f["plan"], "link": base + acc + "-index.htm"})
+    return out
+
+
+def flag_clusters(buys: list[dict]) -> list[dict]:
+    """Mark each purchase made within CLUSTER_DAYS of a purchase by another insider of the same company."""
+    for b in buys:
+        t = pd.Timestamp(b["date"])
+        others = {x["name"] for x in buys if x["sym"] == b["sym"] and abs((pd.Timestamp(x["date"]) - t).days) <= CLUSTER_DAYS}
+        b["cluster"] = len(others) >= CLUSTER_MIN
+    return buys
+
+
+def insider_summary(rows: list[dict]) -> dict:
+    buys = [r for r in rows if r["code"] == "P"]
+    sells = [r for r in rows if r["code"] == "S"]
+    plan = [r for r in sells if r["plan"]]
+    return {"buys": sorted(buys, key=lambda r: r["date"], reverse=True),
+            "sales": {"n": len(sells), "insiders": len({r["name"] for r in sells}), "shares": _r(sum(r["shares"] or 0 for r in sells), 0),
+                      "value": _r(sum(r["value"] or 0 for r in sells), 0), "plan_value": _r(sum(r["value"] or 0 for r in plan), 0), "plan_n": len(plan)}}
+
+
+def _insiders_now() -> dict:
+    per, errors, buys = {}, {}, []
+    for sym in STOCKS:
+        if sym in FOREIGN:
+            continue
+        try:
+            rows = form4_rows(sym, cached_text)
+        except Exception as e:
+            errors[sym] = "not fetched yet" if isinstance(e, LookupError) and "fetched" in str(e) else type(e).__name__
+            continue
+        per[sym] = rows
+        buys += [r for r in rows if r["code"] == "P"]
+    flag_clusters(buys)
+    stocks = {s: insider_summary(r) for s, r in per.items()}
+    today = pd.Timestamp.now().normalize()
+    last30 = [b for b in buys if pd.Timestamp(b["date"]) >= today - pd.Timedelta(days=30)]
+    return {"buys": sorted(buys, key=lambda r: (r["date"], r["value"] or 0), reverse=True), "stocks": stocks, "errors": errors,
+            "foreign": sorted(FOREIGN & set(STOCKS)), "days": F4_DAYS, "cluster_days": CLUSTER_DAYS,
+            "buys30": len(last30), "clusters30": sorted({b["sym"] for b in last30 if b["cluster"]}),
+            "as_of": max((r["filed"] for rs in per.values() for r in rs), default=None), "updated": int(time.time()), "stale": {}}
+
+
+# ------------------------------------------------------------------ per-stock fundamentals (companyfacts, for the stock panel)
+FACT_TAGS = {"rev": CC.REVENUE_TAGS, "gp": ("GrossProfit",), "cogs": ("CostOfRevenue", "CostOfGoodsAndServicesSold"), "op": ("OperatingIncomeLoss",),
+             "ni": ("NetIncomeLoss", "NetIncomeLossAvailableToCommonStockholdersBasic", "ProfitLoss"), "eps": ("EarningsPerShareDiluted",), "cfo": ("NetCashProvidedByUsedInOperatingActivities",),
+             "capex": CC.CAPEX_TAGS, "eq": ("StockholdersEquity", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"), "debt": ("LongTermDebt",), "debt_nc": ("LongTermDebtNoncurrent",),
+             "debt_c": ("LongTermDebtCurrent",)}
+INSTANT = {"eq", "debt", "debt_nc", "debt_c"}
+FORMS = ("10-Q", "10-K", "10-Q/A", "10-K/A")
+
+
+def reduce_facts(text: str) -> str:
+    """companyfacts -> the us-gaap tags FACT_TAGS uses, in USD (EPS in USD per share), from 10-Q and 10-K only."""
+    j = json.loads(text)
+    g = (j.get("facts") or {}).get("us-gaap") or {}
+    keep = {}
+    for tags in FACT_TAGS.values():
+        for tg in tags:
+            units = (g.get(tg) or {}).get("units") or {}
+            facts = units.get("USD/shares" if tg == "EarningsPerShareDiluted" else "USD") or []
+            rows = [{k: f.get(k) for k in ("start", "end", "val", "filed", "form")} for f in facts if f.get("form") in FORMS]
+            if rows:
+                keep[tg] = rows
+    return json.dumps({"taxonomies": sorted((j.get("facts") or {}).keys()), "facts": keep})
+
+
+def _instant(facts: list[dict]) -> pd.Series:
+    per = {}
+    for f in sorted(facts, key=lambda f: f.get("filed") or ""):
+        if f.get("end") and f.get("val") is not None and not f.get("start"):
+            per[pd.Timestamp(f["end"])] = float(f["val"])
+    return pd.Series(per, dtype=float).sort_index()
+
+
+def _series(facts: dict, key: str) -> pd.Series:
+    """One measure by period end; where tags overlap, the tag with the latest data wins (Nvidia's revenue tag of 2022 is not used)."""
+    make = _instant if key in INSTANT else CC.quarterly
+    ss = sorted((make(facts[t]) for t in FACT_TAGS[key] if t in facts), key=lambda s: s.index.max() if len(s) else pd.Timestamp(0))
+    out = pd.Series(dtype=float)
+    for s in ss:
+        out = s.combine_first(out) if len(out) else s
+    return out.sort_index()
+
+
+def ttm(s: pd.Series) -> pd.Series:
+    """Sum of four consecutive quarters (the four ends spanning 250-300 days), else a gap."""
+    s = s.dropna()
+    out = {}
+    for i in range(3, len(s)):
+        if 250 <= (s.index[i] - s.index[i - 3]).days <= 300:
+            out[s.index[i]] = s.iloc[i - 3:i + 1].sum()
+    return pd.Series(out, dtype=float)
+
+
+def fundamentals_of(reduced: str, today: pd.Timestamp | None = None) -> dict:
+    """Trailing-four-quarter measures from 10-Q and 10-K facts, each with its quarterly history (5 years) for a sparkline."""
+    j = json.loads(reduced)
+    f = j["facts"]
+    today = today or pd.Timestamp.now().normalize()
+    S = {k: _series(f, k) for k in FACT_TAGS}
+    if not len(S["rev"]):
+        return {"available": False, "why": "no US GAAP revenue facts from 10-Q or 10-K filings in EDGAR", "taxonomies": j.get("taxonomies")}
+    rev, op, ni, eps = ttm(S["rev"]), ttm(S["op"]), ttm(S["ni"]), ttm(S["eps"])
+    gp = ttm(S["gp"]) if len(S["gp"]) else ttm((S["rev"] - S["cogs"]).dropna())
+    fcf = ttm(S["cfo"]) - ttm(S["capex"]).reindex(ttm(S["cfo"]).index).fillna(0)
+    eq = S["eq"].reindex(rev.index, method="ffill", tolerance=pd.Timedelta(days=10)) if len(S["eq"]) else pd.Series(dtype=float)
+    cands = [s for s in (S["debt"], S["debt_nc"].add(S["debt_c"], fill_value=0) if len(S["debt_nc"]) else pd.Series(dtype=float)) if len(s)]
+    debt = max(cands, key=lambda s: s.index.max()) if cands else pd.Series(dtype=float)       # whichever is reported up to date
+    debt = debt.reindex(rev.index, method="ffill", tolerance=pd.Timedelta(days=10)) if len(debt) else pd.Series(dtype=float)
+
+    def growth(x):
+        b = x.shift(4)
+        span = pd.Series(x.index, index=x.index).diff(4).dt.days
+        return (x / b - 1).where((b > 0) & span.between(350, 380))
+    m = {"rev_growth": growth(rev), "eps_growth": growth(eps), "gross_margin": gp / rev, "op_margin": op / rev, "fcf": fcf / 1e9,
+         "roe": ni / eq.where(eq > 0) if len(eq) else pd.Series(dtype=float), "debt_equity": debt / eq.where(eq > 0) if len(eq) and len(debt) else pd.Series(dtype=float)}
+    last_end = S["rev"].index.max()
+    filed = max((x.get("filed") or "", x.get("form") or "", x.get("end") or "") for tg in FACT_TAGS["rev"] for x in f.get(tg, []))
+    out = {"available": True, "period_end": str(last_end.date()), "form": filed[1], "filed": filed[0], "stale": bool((today - last_end).days > 200), "metrics": {}}
+    for k, s in m.items():
+        s = s.replace([np.inf, -np.inf], np.nan).dropna()
+        s = s[s.index >= last_end - pd.Timedelta(days=5 * 365 + 10)]
+        cur = len(s) and s.index[-1] >= last_end - pd.Timedelta(days=10)      # a figure for the latest quarter, not an older one
+        out["metrics"][k] = {"v": _r(s.iloc[-1], 4) if cur else None, "end": str(s.index[-1].date()) if len(s) else None, "spark": _pts(s, 4)}
+    return out
+
+
+def _companies_now() -> dict:
+    """Not a tab: each stock's fundamentals for the stock panel, from the copies the background job kept."""
+    out, errors = {}, {}
+    for sym in STOCKS:
+        if sym in FOREIGN:
+            out[sym] = {"available": False, "foreign": True,
+                        "why": "files 20-F and 6-K as a foreign issuer (TSMC and ASML under IFRS), so EDGAR has no quarterly facts for it"}
+            continue
+        try:
+            out[sym] = fundamentals_of(cached_text(EDGAR.format(cik=CIKS[sym]), key="#panel"))
+        except Exception as e:
+            errors[sym] = "not fetched yet" if isinstance(e, LookupError) and "fetched" in str(e) else type(e).__name__
+    return {"stocks": out, "errors": errors, "names": NAMES, "ciks": CIKS, "updated": int(time.time()), "stale": {},
+            "as_of": max((v["period_end"] for v in out.values() if v.get("available")), default=None)}
+
+
+def fill_insiders() -> dict:
+    """BACKGROUND job: each company's submissions (a day), the Form 4 filings of the last 90 days (once each) and its companyfacts cut
+    down to the panel's tags (a day), paced."""
+    res = {}
+    for sym in STOCKS:
+        if sym in FOREIGN:
+            continue
+        try:
+            form4_rows(sym, edgar)
+            edgar(EDGAR.format(cik=CIKS[sym]), DAY, reduce=reduce_facts, key="#panel")
+            res[sym] = "ok"
+        except Exception as e:
+            res[sym] = type(e).__name__
+    return res
+
+
 # ------------------------------------------------------------------ readings and signals (cached payloads only)
 def _cached_payload(name: str) -> dict:
     from ..cache import _cache
@@ -972,6 +1195,11 @@ def READINGS() -> list[dict]:
         k, n = ins["net_adding"], ins["with_change"]
         add("institutions", "funds_net_adding", f"Funds net-adding AI stocks in their latest 13F (of {n})", k, _band(k / n, 0.4, 0.6),
             "+1 when more than 60% of the funds added to the dashboard's stocks on the quarter, -1 when fewer than 40%")
+    ii = _cached_payload("insiders")
+    if ii.get("stocks"):
+        cl = ii.get("clusters30") or []
+        add("insiders", "insider_buys_30d", "Insider open-market purchases across both groups, last 30 days", ii.get("buys30", 0), 1 if cl else 0,
+            "+1 when there is a cluster buy (2 or more insiders of one company within 30 days)" + (": " + ", ".join(cl) if cl else "; 0 otherwise (selling is mostly planned or tax-driven, so it is not counted)"))
     by = u.get("basket_yoy") or []
     if by:
         add("fundamentals", "revenue_yoy", "Basket revenue growth on a year, latest quarter (%)", _r(100 * by[-1][1], 1),
@@ -1039,6 +1267,7 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 _prices = _cached_ep("prices", _prices_now)
 ENDPOINTS = {"setup": _cached_ep("setup", _setup_now), "drawdown": _cached_ep("drawdown", _drawdown_now), "trend": _cached_ep("trend", _trend_now),
              "dips": _cached_ep("dips", _dips_now), "fear": _cached_ep("fear", _fear_now), "fundamentals": _cached_ep("fundamentals", _fundamentals_now),
-             "institutions": _cached_ep("institutions", _institutions_now, 1800),
+             "institutions": _cached_ep("institutions", _institutions_now, 1800), "insiders": _cached_ep("insiders", _insiders_now, 1800),
+             "companies": _cached_ep("companies", _companies_now, 1800),
              "layout": _cached_ep("layout", _layout_now, 1800)}
-BACKGROUND = [fill_13f]             # slow, paced EDGAR downloads the server runs outside page requests (app/server.py _warm)
+BACKGROUND = [fill_13f, fill_insiders]             # slow, paced EDGAR downloads the server runs outside page requests (app/server.py _warm)

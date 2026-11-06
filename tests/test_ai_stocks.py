@@ -102,9 +102,69 @@ def submissions(cik: int) -> str:
     return json.dumps({"name": f"FUND {cik}", "filings": {"recent": {c: [r[i] for r in rows] for i, c in enumerate(cols)}}})
 
 
+TODAY = pd.Timestamp.now().normalize()
+ago = lambda n: str((TODAY - pd.Timedelta(days=n)).date())
+# each company's Form 4 filings: (accession tail, filed days ago, issuer CIK or None = the company, owner, role xml, plan box, footnote, [(code, days ago, shares, price)])
+DIRECTOR = "<isDirector>1</isDirector><isOfficer>0</isOfficer>"
+CFO = "<isDirector>0</isDirector><isOfficer>1</isOfficer><officerTitle>Chief Financial Officer</officerTitle>"
+FORM4 = {
+    "NVDA": [("01", 3, None, "DOE JANE", DIRECTOR, "0", "", [("P", 4, 1000, 150.0)]),
+             ("02", 12, None, "ROE RICHARD", CFO, "0", "", [("P", 14, 500, 160.0), ("S", 14, 100, 161.0)]),          # a cluster with Jane Doe
+             ("03", 20, None, "HUANG J", "<isOfficer>1</isOfficer><officerTitle>CEO</officerTitle>", "1", "", [("S", 21, 50000, 170.0), ("G", 21, 9, 0.0)]),
+             ("04", 30, None, "KRESS C", CFO, "0", "Sold under a Rule 10b5-1 trading plan adopted in May.", [("S", 31, 2000, 165.0)]),
+             ("05", 150, None, "OLD BUYER", DIRECTOR, "0", "", [("P", 151, 100, 100.0)]),                              # older than 90 days
+             ("06", 5, 999999, "NVIDIA CORP", "<isTenPercentOwner>1</isTenPercentOwner>", "0", "", [("P", 6, 1e6, 10.0)])],  # Nvidia buying another stock
+    "AMD": [("01", 50, None, "SMITH A", DIRECTOR, "0", "", [("P", 50, 300, 200.0)])],
+}
+
+
+def form4_xml(sym: str, row) -> str:
+    acc, filed, issuer, owner, rel, plan, foot, txns = row
+    tx = "".join(f"<nonDerivativeTransaction><securityTitle><value>Common</value></securityTitle><transactionDate><value>{ago(d)}</value></transactionDate>"
+                 f"<transactionCoding><transactionFormType>4</transactionFormType><transactionCode>{c}</transactionCode></transactionCoding>"
+                 f"<transactionAmounts><transactionShares><value>{sh}</value></transactionShares><transactionPricePerShare><value>{px}</value></transactionPricePerShare>"
+                 f"<transactionAcquiredDisposedCode><value>{'A' if c == 'P' else 'D'}</value></transactionAcquiredDisposedCode></transactionAmounts></nonDerivativeTransaction>"
+                 for c, d, sh, px in txns)
+    return (f'<?xml version="1.0"?><ownershipDocument><schemaVersion>X0609</schemaVersion><documentType>4</documentType>'
+            f"<issuer><issuerCik>{issuer or M.CIKS[sym]:010d}</issuerCik><issuerTradingSymbol>{sym}</issuerTradingSymbol></issuer>"
+            f"<reportingOwner><reportingOwnerId><rptOwnerCik>0000000001</rptOwnerCik><rptOwnerName>{owner}</rptOwnerName></reportingOwnerId>"
+            f"<reportingOwnerRelationship>{rel}</reportingOwnerRelationship></reportingOwner><aff10b5One>{plan}</aff10b5One>"
+            f"<nonDerivativeTable>{tx}<nonDerivativeHolding><securityTitle><value>Common</value></securityTitle></nonDerivativeHolding></nonDerivativeTable>"
+            + (f'<footnotes><footnote id="F1">{foot}</footnote></footnotes>' if foot else "") + "</ownershipDocument>")
+
+
+def company_submissions(cik: int) -> str:
+    sym = next(s for s, c in M.CIKS.items() if c == cik)
+    rows = [("4", f"0000000001-26-{cik % 10000:04d}{r[0]}", ago(r[1]), "", f"xslF345X06/form4_{r[0]}.xml") for r in FORM4.get(sym, [])]
+    rows.append(("10-Q", "0000000001-26-000099", ago(10), ago(40), "q.htm"))
+    cols = ["form", "accessionNumber", "filingDate", "reportDate", "primaryDocument"]
+    return json.dumps({"name": sym, "filings": {"recent": {c: [r[i] for r in rows] for i, c in enumerate(cols)}}})
+
+
+def panel_facts(cik: int) -> str:
+    """companyfacts for the stock panel: income statement in 3-month facts, cash flows year to date, equity and debt at period ends."""
+    g = {}
+    for tag, scale, ytd in (("Revenues", 10, False), ("GrossProfit", 6, False), ("OperatingIncomeLoss", 3, False), ("NetIncomeLoss", 2, False),
+                            ("NetCashProvidedByUsedInOperatingActivities", 3, True), ("PaymentsToAcquirePropertyPlantAndEquipment", 1, True)):
+        g[tag] = json.loads(TC.companyfacts(scale, tag, year_to_date=ytd))["facts"]["us-gaap"][tag]
+    eps = json.loads(TC.companyfacts(1e-9, "EarningsPerShareDiluted", year_to_date=False))["facts"]["us-gaap"]["EarningsPerShareDiluted"]["units"]["USD"]
+    g["EarningsPerShareDiluted"] = {"units": {"USD/shares": eps}}
+    ends = [e for y in range(2019, 2027) for e in (f"{y}-03-31", f"{y}-06-30", f"{y}-09-30", f"{y}-12-31") if e <= "2026-06-30"]
+    g["StockholdersEquity"] = {"units": {"USD": [{"end": e, "val": 80e9 + i * 1e9, "filed": e, "form": "10-Q"} for i, e in enumerate(ends)]}}
+    g["LongTermDebt"] = {"units": {"USD": [{"end": e, "val": 20e9, "filed": e, "form": "10-Q"} for e in ends]}}
+    return json.dumps({"cik": cik, "facts": {"us-gaap": g, "dei": {}}})
+
+
 def edgar_fixture(url: str) -> str:
+    if "/companyfacts/" in url:
+        return panel_facts(int(url.rsplit("CIK", 1)[1].split(".")[0]))
     if "/submissions/CIK" in url:
-        return submissions(int(url.rsplit("CIK", 1)[1].split(".")[0]))
+        cik = int(url.rsplit("CIK", 1)[1].split(".")[0])
+        return company_submissions(cik) if cik in M.CIKS.values() else submissions(cik)
+    if "/form4_" in url:
+        cik, acc = url.split("/data/")[1].split("/")[:2]
+        sym = next(s for s, c in M.CIKS.items() if c == int(cik))
+        return form4_xml(sym, next(r for r in FORM4[sym] if acc.endswith(r[0])))
     if url.endswith("index.json"):
         return json.dumps({"directory": {"item": [{"name": "primary_doc.xml"}, {"name": "infotable.xml"}, {"name": "x-index.html"}]}})
     if url.endswith("infotable.xml"):
@@ -114,7 +174,7 @@ def edgar_fixture(url: str) -> str:
 
 
 def is_edgar(url: str) -> bool:
-    return "sec.gov/submissions" in url or "/Archives/edgar/" in url
+    return "sec.gov/submissions" in url or "/Archives/edgar/" in url or "/companyfacts/" in url
 
 
 def patch_download(set_attr=setattr):
@@ -124,7 +184,7 @@ def patch_download(set_attr=setattr):
 
 
 def fake_fetch(url, ttl=0, **k):
-    if is_edgar(url):
+    if is_edgar(url) and ("/companyfacts/" not in url or k.get("key", "").endswith("#panel")):
         return B.fetch(url, ttl, **k)
     if "fredgraph" in url:
         return vix_csv()
@@ -149,7 +209,8 @@ def smoke_patch():
     M.EDGAR_PACE = 0
     patch_download()
     TC.smoke_patch()
-    M.fill_13f()                                                       # what the background job would have kept
+    M.fill_13f()                                                       # what the background jobs would have kept
+    M.fill_insiders()
 
 
 @pytest.fixture
@@ -173,8 +234,8 @@ def mocked(tmp_path, monkeypatch):
 # ------------------------------------------------------------------ pure pieces
 def test_registered():
     t = topics.REGISTRY["ai-stocks"]
-    assert t.module == "ai_stocks" and {k for k, _ in t.tabs} == {"setup", "drawdown", "trend", "dips", "fear", "fundamentals", "institutions"} <= set(M.ENDPOINTS)
-    assert M.fill_13f in M.BACKGROUND
+    assert t.module == "ai_stocks" and {k for k, _ in t.tabs} == {"setup", "drawdown", "trend", "dips", "fear", "fundamentals", "institutions", "insiders"} <= set(M.ENDPOINTS)
+    assert M.fill_13f in M.BACKGROUND and M.fill_insiders in M.BACKGROUND
     assert topics.category("ai-stocks") == "Money & markets"
     m = topics.meta("ai-stocks")
     assert m["sources"] and "Not investment advice" in m["notes"] and "Not investment advice" in m["footer"] and m["method"]
@@ -346,6 +407,58 @@ def test_institutions_tab_reads_only_what_the_background_job_kept(mocked, monkey
     B.json_safe(p)
 
 
+def test_reduce_form4_keeps_purchases_and_sales_with_roles_and_plans():
+    f = json.loads(M.reduce_form4(form4_xml("NVDA", FORM4["NVDA"][2])))
+    assert f["issuer"] == M.CIKS["NVDA"] and f["owners"] == [{"name": "HUANG J", "role": "CEO"}] and f["plan"] is True
+    assert [x["code"] for x in f["txns"]] == ["S"]                          # the gift (G) is not an open-market trade
+    f = json.loads(M.reduce_form4(form4_xml("NVDA", FORM4["NVDA"][3])))
+    assert f["plan"] is True and f["owners"][0]["role"] == "Chief Financial Officer"   # 10b5-1 named in a footnote
+    f = json.loads(M.reduce_form4(form4_xml("NVDA", FORM4["NVDA"][0])))
+    assert f["plan"] is False and f["owners"][0]["role"] == "Director" and f["txns"][0] == {"code": "P", "date": ago(4), "shares": 1000.0, "price": 150.0}
+
+
+def test_insiders_tab_and_clusters(mocked):
+    p = M._insiders_now()
+    assert not p["stocks"] and "not fetched yet" in set(p["errors"].values())           # a page view never downloads
+    assert set(M.fill_insiders().values()) == {"ok"}
+    p = M._insiders_now()
+    assert not p["errors"] and set(p["foreign"]) == {"TSM", "ASML", "ARM"} and "TSM" not in p["stocks"]
+    buys = p["buys"]
+    assert [(b["sym"], b["name"]) for b in buys] == [("NVDA", "DOE JANE"), ("NVDA", "ROE RICHARD"), ("AMD", "SMITH A")]   # newest first; old and non-issuer left out
+    assert buys[0]["cluster"] and buys[1]["cluster"] and not buys[2]["cluster"]           # two NVDA insiders within 30 days
+    assert buys[0]["value"] == 150000 and buys[0]["link"].endswith("-index.htm")
+    s = p["stocks"]["NVDA"]["sales"]
+    assert s["n"] == 3 and s["insiders"] == 3 and s["plan_n"] == 2 and s["value"] == 100 * 161 + 50000 * 170 + 2000 * 165
+    assert s["plan_value"] == 50000 * 170 + 2000 * 165
+    assert p["buys30"] == 2 and p["clusters30"] == ["NVDA"]
+    B.json_safe(p)
+
+
+def test_flag_clusters_needs_two_insiders():
+    b = lambda n, d: {"sym": "X", "name": n, "date": d}
+    rows = M.flag_clusters([b("A", "2026-01-01"), b("A", "2026-01-10"), b("B", "2026-03-01"), b("C", "2026-03-30")])
+    assert [r["cluster"] for r in rows] == [False, False, True, True]
+
+
+def test_stock_fundamentals(mocked):
+    M.fill_insiders()
+    c = M._companies_now()
+    assert not c["errors"] and c["stocks"]["TSM"]["foreign"] and "IFRS" in c["stocks"]["ASML"]["why"]
+    f = c["stocks"]["NVDA"]
+    assert f["available"] and f["period_end"] == "2026-06-30" and f["form"] == "10-Q"
+    m = {k: v["v"] for k, v in f["metrics"].items()}
+    assert m["gross_margin"] == pytest.approx(0.6) and m["op_margin"] == pytest.approx(0.3) and m["rev_growth"] > 0 and m["eps_growth"] > 0
+    assert m["fcf"] == pytest.approx(2 * sum(1 + 0.04 * (12 * 4 + q) for q in range(-2, 2)), rel=1e-3)   # (3 - 1) x the quarterly base, $bn
+    assert m["debt_equity"] == pytest.approx(20 / (80 + 29), abs=1e-3) and 0 < m["roe"] < 1
+    assert all(len(v["spark"]) >= 8 for v in f["metrics"].values())
+    B.json_safe(c)
+
+
+def test_fundamentals_of_says_when_there_are_no_us_gaap_facts():
+    r = M.fundamentals_of(json.dumps({"taxonomies": ["ifrs-full"], "facts": {}}))
+    assert r["available"] is False and "no US GAAP" in r["why"]
+
+
 # ------------------------------------------------------------------ endpoints on fixtures
 def test_setup(mocked):
     p = M.ENDPOINTS["setup"]()
@@ -445,7 +558,8 @@ def test_revenue_uses_its_own_cache_key_not_compute_chips_capex_copy(mocked):
 def test_readings_and_signals(mocked):
     assert M.SIGNALS() == [] and M.READINGS() == []                         # nothing cached: nothing downloaded
     M.fill_13f()
-    for k in ("setup", "drawdown", "trend", "dips", "fear", "fundamentals", "institutions"):
+    M.fill_insiders()
+    for k in ("setup", "drawdown", "trend", "dips", "fear", "fundamentals", "institutions", "insiders"):
         M.ENDPOINTS[k]()
     r = M.READINGS()
     assert {x["tab"] for x in r} == {t for t, _ in topics.REGISTRY["ai-stocks"].tabs} and all(x["lean"] in (-1, 0, 1) for x in r)
@@ -481,7 +595,7 @@ def test_every_endpoint_through_the_server(mocked):
 
     async def go():
         async with TestClient(TestServer(make_app())) as c:
-            for name in ("setup", "drawdown", "trend", "dips", "fear", "fundamentals", "institutions", "meta"):
+            for name in ("setup", "drawdown", "trend", "dips", "fear", "fundamentals", "institutions", "insiders", "companies", "meta"):
                 r = await c.get(f"/api/ai-stocks/{name}")
                 assert r.status == 200, name
             r = await c.get("/ai-stocks")

@@ -95,6 +95,82 @@ function scoreCards(d) {
   return [G, BT, GT, RT, ST];
 }
 
+// ---------- the stock panel (from the strip): insiders (Form 4), institutions (13F consensus) and fundamentals (companyfacts)
+const ONCE = {};
+const once = name => ONCE[name] || (ONCE[name] = api(name).catch(e => { delete ONCE[name]; return { error: e.message }; }));
+const money = v => v == null ? "–" : (v < 0 ? "−$" : "$") + big(Math.abs(v));
+function spark(pts, fmt) {
+  if (!pts || pts.length < 2) return el("span", { class: "muted" }, "–");
+  return svgBox(28, (host, w, h) => {
+    const s = svgEl("svg", { width: w, height: h }, host), vs = pts.map(p => p[1]), lo = Math.min(...vs), hi = Math.max(...vs), t0 = pts[0][0], t1 = pts[pts.length - 1][0];
+    const x = t => 2 + (w - 4) * (t - t0) / ((t1 - t0) || 1), y = v => h - 3 - (h - 6) * (v - lo) / ((hi - lo) || 1);
+    if (lo < 0 && hi > 0) svgEl("line", { x1: 0, x2: w, y1: y(0), y2: y(0), stroke: css("--line") }, s);
+    svgEl("polyline", { points: pts.map(p => x(p[0]) + "," + y(p[1])).join(" "), fill: "none", stroke: css("--s1"), "stroke-width": 1.6 }, s);
+    const title = svgEl("title", {}, s); title.textContent = pts.map(p => dayOf(p[0]) + ": " + fmt(p[1])).join("\n");
+  });
+}
+const METRICS = [["rev_growth", "Revenue growth (4 quarters on a year)", v => pct(v, 0)], ["eps_growth", "EPS growth (diluted, 4 quarters on a year)", v => pct(v, 0)],
+  ["gross_margin", "Gross margin", v => (v * 100).toFixed(1) + "%"], ["op_margin", "Operating margin", v => (v * 100).toFixed(1) + "%"], ["fcf", "Free cash flow, 4 quarters", v => (v < 0 ? "−$" : "$") + Math.abs(v).toFixed(1) + "bn"],
+  ["roe", "Return on equity", v => pct(v, 0)], ["debt_equity", "Debt to equity", v => num(v, 2)]];
+
+function buyTable(rows, withSym) {
+  return table([...(withSym ? ["Stock"] : []), "Insider", "Role", "Date", "Shares", "Price", "Value", ""],
+    rows.map(b => el("tr", {}, ...(withSym ? [td(el("b", {}, b.sym))] : []), td(link(b.name, b.link)), td(b.role || "–"), td(dateOf(b.date)), td(num(b.shares)), td(usd(b.price, 2)), td(money(b.value), "up"),
+      td(b.cluster ? el("span", { class: "pill", style: "color:var(--up);font-size:11px" }, "cluster buy") : ""))));
+}
+
+async function panelBody(sym) {
+  const [I, N, C] = await Promise.all([once("insiders"), once("institutions"), once("companies")]);
+  const name = ((C && C.names) || {})[sym] || sym, cik = ((C && C.ciks) || {})[sym];
+  const src = (t, s) => el("div", { class: "src", style: "margin-top:4px" }, s);
+  const sec = (title, ...kids) => el("div", { style: "border-top:1px solid var(--line);padding-top:10px;margin-top:12px" }, el("h3", { style: "margin:0 0 6px;font-size:15px" }, title), ...kids);
+  // insiders
+  const S = ((I && I.stocks) || {})[sym];
+  let ins;
+  if ((I.foreign || []).includes(sym)) ins = el("div", { class: "muted" }, name + " is a foreign private issuer: its insiders do not file Form 4.");
+  else if (!S) ins = el("div", { class: "muted" }, "Not fetched yet (" + (((I && I.errors) || {})[sym] || (I && I.error) || "no data") + "): the server downloads Form 4 filings in the background.");
+  else {
+    const sl = S.sales || {};
+    ins = el("div", {}, S.buys.length ? buyTable(S.buys) : el("div", {}, el("b", {}, "No open-market purchases"), " in the last " + I.days + " days."),
+      el("div", { style: "margin-top:6px" }, el("span", { class: "muted" }, "Sales: "), sl.n ? [num(sl.n) + " sales by " + num(sl.insiders) + " insider" + (sl.insiders === 1 ? "" : "s") + ", " + num(sl.shares) + " shares, " + money(sl.value) + "; ",
+        el("b", {}, money(sl.plan_value)), " (" + num(sl.plan_n) + " of " + num(sl.n) + ") under a Rule 10b5-1 plan."] : "none."),
+      note("Most insider selling is planned (10b5-1) or tax-driven; purchases with their own money carry more signal."));
+  }
+  // institutions
+  const row = ((N && N.consensus) || []).find(r => r.ticker === sym);
+  const inst = !N || N.error || !(N.funds || []).length ? el("div", { class: "muted" }, "13F filings not fetched yet.")
+    : row ? el("div", {}, el("b", { class: cls(row.net) }, (row.net > 0 ? "+" : "") + row.net + " net funds"), ": " + row.n_buy + " opened or added, " + row.n_sell + " trimmed or sold, net " + (row.net_usd > 0 ? "+" : "") + money(row.net_usd) + ".",
+        el("div", { class: "muted", style: "font-size:12px;margin-top:2px" }, [...row.buyers, ...row.sellers].join(", ")))
+    : el("div", { class: "muted" }, "None of the " + N.funds.length + " funds changed its position last quarter.");
+  // fundamentals
+  const F = ((C && C.stocks) || {})[sym];
+  let fun;
+  if (!F) fun = el("div", { class: "muted" }, "Not fetched yet (" + (((C && C.errors) || {})[sym] || (C && C.error) || "no data") + ").");
+  else if (!F.available) fun = el("div", { class: "muted" }, name + ": " + F.why + ".");
+  else fun = el("div", {}, F.stale ? el("div", { class: "warn" }, "The latest facts are for a period ending " + dateOf(F.period_end) + ": over 200 days old.") : null,
+    table(["Measure", "Latest", "5 years"], METRICS.map(([k, lab, f]) => { const m = (F.metrics || {})[k] || {}; return el("tr", {}, td(lab), td(m.v == null ? "–" : f(m.v), k === "fcf" || k.endsWith("growth") || k.endsWith("margin") || k === "roe" ? cls(m.v) : ""), el("td", { style: "width:42%;min-width:120px" }, spark(m.spark, f))); })),
+    note("Trailing four quarters from 10-Q and 10-K facts. Growth against the same four quarters a year before (– when the base was a loss). ROE: net income over equity at the period end. Debt: long-term debt including its current part."));
+  return [
+    sec("Insiders: Form 4, last " + ((I && I.days) || 90) + " days", ins, src(0, ["SEC EDGAR Form 4 filings", I && I.as_of ? ", latest filed " + dateOf(I.as_of) : "", " · ", link("all " + sym + " Form 4s", cik ? "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=" + String(cik).padStart(10, "0") + "&type=4&dateb=&owner=include&count=40" : null)])),
+    sec("Institutions: 13F consensus", inst, src(0, ["SEC EDGAR 13F-HR filings of 10 funds, quarter to " + dateOf(N && N.as_of) + " (each fund its own latest). US long positions only."])),
+    sec("Fundamentals", fun, src(0, ["SEC EDGAR companyfacts", F && F.available ? ": " + F.form + " for the period to " + dateOf(F.period_end) + ", filed " + dateOf(F.filed) : ""])),
+    el("div", { class: "muted", style: "margin-top:12px" }, SMALL)];
+}
+
+window.openStock = sym => {
+  const old = document.getElementById("stockpanel"); if (old) old.remove();
+  const close = () => { wrap.remove(); document.removeEventListener("keydown", esc); };
+  const esc = e => { if (e.key === "Escape") close(); };
+  const body = el("div", {}, el("div", { class: "muted" }, "Loading…"));
+  const box = el("div", { role: "dialog", "aria-modal": "true", "aria-label": sym, style: "background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:12px;max-width:760px;width:100%;box-sizing:border-box;max-height:90vh;overflow:auto;padding:14px 16px;box-shadow:0 10px 40px rgba(0,0,0,.25)" },
+    el("div", { style: "display:flex;justify-content:space-between;align-items:baseline;gap:8px" }, el("h2", { style: "margin:0", id: "stockpanel-title" }, sym), el("button", { type: "button", "aria-label": "Close", style: "border:0;background:none;font-size:22px;cursor:pointer;color:var(--muted)", onclick: close }, "×")),
+    body);
+  const wrap = el("div", { id: "stockpanel", style: "position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:flex-start;justify-content:center;padding:4vh 12px;z-index:50", onclick: e => { if (e.target === wrap) close(); } }, box);
+  document.body.append(wrap); document.addEventListener("keydown", esc);
+  once("companies").then(C => { const n = ((C && C.names) || {})[sym]; const h = document.getElementById("stockpanel-title"); if (n && h) h.textContent = sym + " · " + n; });
+  panelBody(sym).then(kids => body.replaceChildren(...kids)).catch(e => body.replaceChildren(el("div", { class: "muted" }, "Not available right now (" + e.message + ").")));
+};
+
 // the strip at the top of Setup: SPY, QQQ, SMH, then every stock; a stock opens its panel (openStock), else its EDGAR Form 4 list
 function stripCard(d) {
   const S = d.strip || [];
@@ -297,6 +373,24 @@ const VIEWS = {
         td((r.net > 0 ? "+" : "") + r.net, cls(r.net)), td(signed(r.net_usd), cls(r.net_usd)), td(el("span", { class: "muted", style: "font-size:12px" }, [...r.buyers, ...r.sellers].join(", ")))))),
       note("Sorted by net buyers (funds that opened or added minus funds that trimmed or sold), then by net dollars. Each fund is compared with its own previous quarter. Stocks no fund changed are not listed. " + SMALL));
     return [head, G, T];
+  },
+
+  async insiders() {
+    const d = await api("insiders"), B = d.buys || [], S = d.stocks || {};
+    const head = card("Insiders buying with their own money (Form 4)",
+      el("div", { class: "kpis" }, kpi("Open-market purchases, last 30 days", num(d.buys30), d.buys30 ? "up" : ""), kpi("Purchases, last " + d.days + " days", num(B.length)),
+        kpi("Cluster buys, last 30 days", (d.clusters30 || []).length ? d.clusters30.join(", ") : "none", (d.clusters30 || []).length ? "up" : ""), kpi("Latest filing", dateOf(d.as_of))),
+      note("Every open-market purchase (Form 4 code P) by an officer, director or 10% owner of a stock in either group in the last " + d.days + " days. A cluster buy: 2 or more insiders of one company buying within " + d.cluster_days +
+        " days. Most insider selling is planned under Rule 10b5-1 or tax-driven; purchases carry more signal, but they are few and small next to the market. " + (d.foreign || []).join(", ") + " are foreign private issuers: their insiders do not file Form 4. " + SMALL),
+      errs(d, "Some companies are"));
+    const T = B.length ? card("Every open-market purchase, newest first", buyTable(B, true), note("Value: shares times the price reported. Click a name for the filing on EDGAR. Click a stock in the strip on Setup for its panel."))
+      : card("Every open-market purchase", el("div", { class: "muted" }, Object.keys(S).length ? "No open-market purchases in the last " + d.days + " days." : "Not fetched yet: the server downloads Form 4 filings in the background."));
+    const rows = Object.entries(S).sort((a, b) => (b[1].sales.value || 0) - (a[1].sales.value || 0));
+    const SL = card("Sales by company, last " + d.days + " days (totals)", table(["Stock", "Purchases", "Sales", "Insiders selling", "Value sold", "Under a 10b5-1 plan"],
+      rows.map(([k, v]) => el("tr", {}, td(el("button", { type: "button", style: "border:0;background:none;padding:0;font:inherit;font-weight:650;cursor:pointer;color:var(--accent)", onclick: () => window.openStock(k) }, k)),
+        td(num(v.buys.length), v.buys.length ? "up" : ""), td(num(v.sales.n)), td(num(v.sales.insiders)), td(money(v.sales.value)), td(v.sales.value ? share(v.sales.plan_value / v.sales.value) + " of the value" : "–")))),
+      note("Sales (code S) summed. A filing counts as under a plan when it ticks the Rule 10b5-1 box or a footnote names 10b5-1."));
+    return [head, T, SL];
   },
 };
 window.TOPIC = { VIEWS, presets: [["1m", "1M", 30], ["3m", "3M", 91], ["6m", "6M", 182], ["1y", "1Y", 365], ["5y", "5Y", 1826], ["all", "All", 0]] };

@@ -23,13 +23,15 @@ server gets back from each source (FRED and Cboe VIX, Nasdaq for a stock and an 
 
 | Tab | Cards | Source | Automated? | Cadence |
 |---|---|---|---|---|
-| Setup | a strip at the top: SPY, QQQ and SMH with their day's move, then every stock of both groups with its last close and day's move (a stock links to its Form 4 filings on EDGAR; CIKs in `CIKS`, from the SEC's company_tickers.json); one card per stock, in two groups (the AI basket and the owner's picks): drawdown from its 52-week high, % above or below its 50- and 200-day averages, RSI 14; both indexes against QQQ and SPY; "where we are" | Nasdaq quote API (`_base.nasdaq_daily`; 20 stocks as `stocks`, QQQ/SPY/SMH as `etf`) | yes | daily |
+| Setup | a strip at the top: SPY, QQQ and SMH with their day's move, then every stock of both groups with its last close and day's move (a stock opens its panel: insiders, institutions, fundamentals; CIKs in `CIKS`, from the SEC's company_tickers.json); one card per stock, in two groups (the AI basket and the owner's picks): drawdown from its 52-week high, % above or below its 50- and 200-day averages, RSI 14; both indexes against QQQ and SPY; "where we are" | Nasdaq quote API (`_base.nasdaq_daily`; 20 stocks as `stocks`, QQQ/SPY/SMH as `etf`) | yes | daily |
 | Drawdown | basket and per-stock drawdown from the running peak since 2020; the current dip; every basket drawdown over 10%; the owner's picks index and each pick over its own history | same | yes | daily |
 | Trend & breadth | share of the basket above its 50- and 200-day averages; basket RSI 14; basket with its 50- and 200-day averages; the 50/200 crosses | same | yes | daily |
 | After past dips | for each basket drawdown of 15% or more: returns 1, 3 and 6 months after the 15% point and after the bottom; median and range | same | yes | daily |
 | Fear & relative | VIX; AI basket ÷ QQQ; SMH ÷ SPY; 3- and 12-month returns side by side | FRED `VIXCLS` (CSV through curl), Cboe `VIX_History.csv` when FRED fails; Nasdaq | yes | daily |
 | Fundamentals | revenue growth on a year per company and for the basket; hyperscaler capex (trailing four quarters) and its growth | SEC EDGAR companyfacts; capex from `compute_chips._capex()` (imported, not re-downloaded) | yes | quarterly |
 | Institutions | one card per fund (latest 13F quarter end, filing date, total reported value, link, the quarter compared, its three largest changes in our stocks tagged New/Added/Trimmed/Sold with the dollar change); a consensus table per stock | SEC EDGAR: submissions JSON per fund, then the information-table XML of its latest two 13F-HR filings | yes, background job `fill_13f`, kept 7 days | quarterly |
+| Insiders | every open-market insider purchase (Form 4 code P) across both groups in the last 90 days, newest first, cluster buys flagged; sales by company as totals with the share under a 10b5-1 plan | SEC EDGAR: submissions JSON per company, then each Form 4 XML (transaction table only) | yes, background job `fill_insiders`, kept a day | daily |
+| (stock panel) | opened from a stock in the Setup strip: its insiders (buys in full, sales as totals), its 13F consensus line, and its fundamentals (revenue and EPS growth, gross and operating margin, free cash flow, ROE, debt to equity, each with a 5-year sparkline), each part dated with its source | Form 4 and 13F as above; SEC EDGAR companyfacts (10-Q and 10-K) | yes, same background jobs | daily / quarterly |
 
 The basket: NVDA, AVGO, AMD, TSM, ASML, MU, ARM, MSFT, GOOGL, AMZN, META, ORCL, PLTR. Benchmarks: QQQ, SPY, and SMH for semiconductors.
 
@@ -114,6 +116,26 @@ Yahoo is not used: it answers Railway with 429.
     0.15 s (under 7 a second; the SEC's limit is 10), with compute_chips' User-Agent (name and email, as the SEC asks). A page view
     reads only the kept copies and never downloads; before the first fill the tab says "not fetched yet".
 
+- **Insiders (Form 4).** For every stock with a US insider-reporting duty (not TSMC, ASML or Arm: foreign private issuers, whose
+  insiders do not file Form 4): the company's submissions JSON (cut down to Form 4 rows), then each Form 4 filed in the last 90 days
+  (plus 5 days of slack), reduced to its transaction table: the reporting owners and their roles, whether the filing marks a Rule
+  10b5-1 plan (the box added in 2023, or a footnote naming 10b5-1), and the non-derivative transactions coded **P** (open-market
+  purchase) and **S** (open-market sale) dated in the last 90 days. Gifts, option exercises, tax withholding and awards are left out.
+  A filing whose issuer is another company (the company itself reporting a stake elsewhere) is left out. Value = shares x price.
+  A **cluster buy** is a purchase within 30 days of a purchase by another insider of the same company. A background job
+  (`fill_insiders`) keeps submissions a day and each Form 4 once (they never change), paced like the 13F job; page views read only
+  the kept copies. **Most insider selling is planned (10b5-1) or tax-driven, so it says little; purchases with the insider's own
+  money carry more signal.** The panel and the tab show purchases in full and sales only as totals.
+- **Stock panel fundamentals (companyfacts).** From each company's 10-Q and 10-K facts (US GAAP, USD): trailing four quarters of
+  revenue, gross profit (or revenue minus cost of revenue), operating income, net income, diluted EPS, operating cash flow and
+  capex (cash-flow facts are year to date; quarters come out by difference, as in compute_chips). Revenue and EPS growth: against
+  the same four quarters a year before (blank when the base was a loss). Margins: over revenue. Free cash flow: operating cash flow
+  minus capex. ROE: net income over equity at the period end. Debt to equity: long-term debt (with its current part) over equity.
+  Where several tags carry a measure, the one with the latest data wins, so a tag a company stopped using (Nvidia's revenue tag of
+  FY2022) never shows as current; a measure is shown only for the latest quarter, never an older one. The panel names the form,
+  period end and filing date. TSMC and ASML report under IFRS and Arm files annual 20-F: none has quarterly facts, and their panels
+  say so. Nebius's companyfacts hold only Yandex's rouble facts to 2023, so its panel says there are no US GAAP facts.
+
 ## Caveats and gaps
 
 - **13F filings are a partial, late view.** US long positions only: no shorts, cash, non-13F assets (most foreign shares, private
@@ -167,6 +189,7 @@ describes the numbers, not a trade.
 | Fear & relative | `vix` | below 20 | above 25 |
 | Fear & relative | `ai_vs_qqq` | AI ahead by more than 3 points over 3 months | behind by more than 3 |
 | Institutions | `funds_net_adding` | more than 60% of the funds with two quarters on file net-added to our stocks | fewer than 40% |
+| Insiders | `insider_buys_30d` | a cluster buy in the last 30 days (2 or more insiders of one company) | (never: selling is not counted) |
 | Fundamentals | `revenue_yoy` | basket revenue growth sped up by more than 2 points on the quarter before | slowed by more than 2 |
 
 ## Upkeep
