@@ -126,6 +126,16 @@ def test_basket_index_is_equal_weight_and_joins_late_members():
     assert s.iloc[-1] / s.iloc[-2] == pytest.approx(1 + 1.0 / 3)
 
 
+def test_full_months_joins_picks_from_their_first_full_month():
+    s = pd.Series(np.arange(1, 41, dtype=float), index=pd.bdate_range("2025-02-24", periods=40))
+    j = M.full_months(s)
+    assert j.index[0] == pd.Timestamp("2025-02-28") and j.index[1] == pd.Timestamp("2025-03-03")   # base: the last close before March
+    old = pd.Series(np.arange(1, 41, dtype=float), index=pd.bdate_range("2019-01-02", periods=40))
+    assert M.full_months(old).equals(old)
+    on_first = pd.Series(np.arange(1, 41, dtype=float), index=pd.bdate_range("2025-04-01", periods=40))
+    assert M.full_months(on_first).index[0] == pd.Timestamp("2025-04-01")
+
+
 def test_drawdown_and_episodes():
     d = pd.bdate_range("2020-01-01", periods=12)
     s = pd.Series([100, 110, 99, 88, 90, 112, 105, 100, 95, 92, 93, 94.0], index=d)
@@ -162,9 +172,12 @@ def test_setup(mocked):
     assert len(p["cards"]) == 13 and {c["sym"] for c in p["cards"]} == set(M.BASKET)
     c = p["cards"][0]
     assert c["dd52"] <= 0 and c["vs50"] is not None and 0 <= c["rsi"] <= 100
-    assert set(p["lines"]) == {"AI basket", "QQQ", "SPY"} and p["lines"]["AI basket"][0][1] == 100
+    assert set(p["lines"]) == {"AI basket", "Owner's picks", "QQQ", "SPY"} and p["lines"]["AI basket"][0][1] == 100
     assert p["now"]["dd"] < -0.1 and p["vix_source"] == "FRED" and "below its high" in p["where"]
     assert "buy" not in p["where"].lower() and "sell" not in p["where"].lower()
+    assert [c["sym"] for c in p["pick_cards"]] == list(M.PICKS) and "Owner's picks" in p["lines"]
+    assert p["picks_now"]["since"]["SNDK"] == "2025-03-03" and p["picks_now"]["since"]["NBIS"] == "2024-11-01"
+    assert p["picks_dd"][-1][1] <= 0 and p["picks_now"]["n"] == 10
     B.json_safe(p)
 
 
@@ -192,6 +205,9 @@ def test_drawdown_tab(mocked):
     assert p["current"]["episode"]["ongoing"] and p["current"]["peak"] >= "2026-09-01"
     closed = [e for e in eps if not e["ongoing"]]
     assert len(closed) >= 3 and all(e["days_to_recover"] is not None for e in closed)
+    assert set(p["pick_stocks"]) == set(M.PICKS) and p["picks_basket"][-1][1] <= 0 and p["picks_current"]["dd"] <= 0
+    assert p["pick_since"]["NBIS"] == "2024-10-21" and p["pick_since"]["RKLB"] == "2021-08-25"      # own history: from the listing
+    assert p["pick_since"]["NVDA"] == "2020-01-01"
     B.json_safe(p)
 
 
@@ -284,4 +300,6 @@ def test_every_endpoint_through_the_server(mocked):
 @pytest.mark.network
 def test_live_sources():
     assert len(M.nasdaq("NVDA")) > 1000 and len(M.nasdaq("SMH", "etf")) > 1000
+    for s in M.PICKS:
+        assert len(M.nasdaq(s)) > 100, s
     assert len(M.vix()[0]) > 1000

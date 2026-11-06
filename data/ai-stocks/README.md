@@ -9,6 +9,12 @@ happened after dips like this before?
 Asked for by the owner on 5 Nov 2026 ("start a stock dashboard for AI stock setup after the dip we see in the market, find metrics like
 we do with other dashboard, build signals"). Category: Money & markets.
 
+Extended on 5-6 Nov 2026 at the owner's request: "include sandisk, nebius, bloom, marvell, oracle, iren, applive, AMD, rocket lab,
+nvidia" (the **Owner's picks** group below; "applive" is read as **AppLovin**, ticker APP, the closest listed name and an AI
+advertising stock that fits the list; tell us if another company was meant), and "take inspiration of this page" (a third-party quant dashboard: we
+take its ideas, a setup score with a backtest, institutional holdings from 13F filings and insider trades from Form 4, and build them
+from our own sources; we never call that page's API).
+
 Code: `app/topics/ai_stocks.py` (data), `app/static/topics/ai-stocks.js` (cards), `tests/test_ai_stocks.py` (fixtures and `smoke_patch()`).
 Data for each tab: `/api/ai-stocks/<setup|drawdown|trend|dips|fear|fundamentals>`. `/api/ai-stocks/layout` (not a tab) shows what the
 server gets back from each source (FRED and Cboe VIX, Nasdaq for a stock and an ETF, EDGAR), with FRED also tried through curl.
@@ -17,14 +23,18 @@ server gets back from each source (FRED and Cboe VIX, Nasdaq for a stock and an 
 
 | Tab | Cards | Source | Automated? | Cadence |
 |---|---|---|---|---|
-| Setup | one card per stock: drawdown from its 52-week high, % above or below its 50- and 200-day averages, RSI 14; the basket against QQQ and SPY; "where we are" | Nasdaq quote API (`_base.nasdaq_daily`; 13 stocks as `stocks`, QQQ/SPY/SMH as `etf`) | yes | daily |
-| Drawdown | basket and per-stock drawdown from the running peak since 2020; the current dip; every basket drawdown over 10% | same | yes | daily |
+| Setup | one card per stock, in two groups (the AI basket and the owner's picks): drawdown from its 52-week high, % above or below its 50- and 200-day averages, RSI 14; both indexes against QQQ and SPY; "where we are" | Nasdaq quote API (`_base.nasdaq_daily`; 20 stocks as `stocks`, QQQ/SPY/SMH as `etf`) | yes | daily |
+| Drawdown | basket and per-stock drawdown from the running peak since 2020; the current dip; every basket drawdown over 10%; the owner's picks index and each pick over its own history | same | yes | daily |
 | Trend & breadth | share of the basket above its 50- and 200-day averages; basket RSI 14; basket with its 50- and 200-day averages; the 50/200 crosses | same | yes | daily |
 | After past dips | for each basket drawdown of 15% or more: returns 1, 3 and 6 months after the 15% point and after the bottom; median and range | same | yes | daily |
 | Fear & relative | VIX; AI basket ÷ QQQ; SMH ÷ SPY; 3- and 12-month returns side by side | FRED `VIXCLS` (CSV through curl), Cboe `VIX_History.csv` when FRED fails; Nasdaq | yes | daily |
 | Fundamentals | revenue growth on a year per company and for the basket; hyperscaler capex (trailing four quarters) and its growth | SEC EDGAR companyfacts; capex from `compute_chips._capex()` (imported, not re-downloaded) | yes | quarterly |
 
 The basket: NVDA, AVGO, AMD, TSM, ASML, MU, ARM, MSFT, GOOGL, AMZN, META, ORCL, PLTR. Benchmarks: QQQ, SPY, and SMH for semiconductors.
+
+**Owner's picks**, a second group shown on Setup and Drawdown with its own equal-weight index: SNDK (SanDisk), NBIS (Nebius), BE (Bloom
+Energy), MRVL (Marvell), ORCL (Oracle), IREN, APP (AppLovin), AMD, RKLB (Rocket Lab), NVDA. Oracle, AMD and Nvidia are in both groups;
+the core 13 are unchanged. Every ticker was checked against Nasdaq's quote API on 6 Nov 2026 (all ten answer with daily closes).
 Yahoo is not used: it answers Railway with 429.
 
 ## Method
@@ -33,7 +43,15 @@ Yahoo is not used: it answers Railway with 429.
   (members with a close that day and the day before), chained, and rebased to 100 on the first trading day of 2020. Prices are
   closes without dividends. Prices are fetched from 2019 so the 200-day averages exist from the start; charts start in 2020.
   Arm listed on 14 September 2023 and joins the basket the day after its first close, so before that the basket has 12 members.
-- **Drawdown** is the fall from the running peak since 2 January 2020 (0 at a new high). The **52-week high** on Setup is the highest
+- **The owner's picks index** uses the same method, but a stock joins it from its **first full month** of trading: its returns count
+  from the first trading day of the month after it listed (SanDisk from March 2025, Nebius from November 2024, IREN from December
+  2021, AppLovin from May 2021, Rocket Lab from September 2021). Closes before a company traded as itself are dropped: Nasdaq's
+  history for NBIS runs back through Yandex (suspended in February 2022, its last price repeated until the Nebius relisting on
+  21 October 2024), RKLB's through the Vector Acquisition SPAC (Rocket Lab from 25 August 2021), and SanDisk's starts with
+  when-issued trading (counted from 24 February 2025, its first regular-way day after the spin-off from Western Digital).
+- **Drawdown** is the fall from the running peak since 2 January 2020 (0 at a new high). Each stock's drawdown counts over its own
+  history: from 2020, or from its own first close when it listed later (Arm, and among the picks SanDisk, Nebius, IREN, AppLovin
+  and Rocket Lab), so a young stock's peak is its own, not a price from before it existed. The **52-week high** on Setup is the highest
   close of the last 252 trading days, so a stock's 52-week drawdown can be shallower than its drawdown since 2020.
 - **Averages** are simple 50- and 200-day averages of closes. **RSI 14** is Wilder's (exponential smoothing with alpha 1/14), the same
   as the altcoin signals; 100 when there were no down days.
@@ -103,4 +121,5 @@ describes the numbers, not a trade.
 ## Upkeep
 
 Nothing is hand-entered. To change the basket, edit `BASKET` (and `REV_CIKS` for US GAAP filers) in `app/topics/ai_stocks.py`; the
-index, breadth and episodes follow. The forward-return table grows by itself as new drawdowns finish.
+index, breadth and episodes follow. The owner's picks are `PICKS`; a stock that listed after 2019 also needs its first day as itself
+in `LISTED`. The forward-return table grows by itself as new drawdowns finish.

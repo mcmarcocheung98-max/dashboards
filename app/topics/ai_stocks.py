@@ -2,7 +2,7 @@
 breaking down, and what has happened after dips like this before? Not investment advice: no buy or sell calls, only where the numbers stand.
 
 setup         one card per stock (drawdown from its 52-week high, against its 50- and 200-day averages, RSI 14), the equal-weight AI
-              basket against QQQ and SPY, and a plain-English "where we are" line built from the signals
+              basket and the owner's picks (a second group with its own index) against QQQ and SPY, and a plain-English "where we are" line
 drawdown      the basket's and each stock's drawdown from its running peak since 2020, the current dip, and every basket drawdown over 10%
 trend         share of the basket above its 50- and 200-day averages, the basket's RSI 14, and its 50/200-day crosses
 dips          every past basket drawdown of 15% or more: returns 1, 3 and 6 months after the 15% point and after the bottom
@@ -12,7 +12,8 @@ layout        not a tab: what this server gets back from each source, to check r
 
 Prices: daily closes from Nasdaq's quote API (Yahoo answers Railway with 429). The basket is an equal-weight index rebalanced daily
 (the average of its members' daily returns, chained), 100 on the first trading day of 2020; a member joins the day after its first close
-(Arm listed in September 2023). Leans: +1 = the setup reads healthier (shallower drawdown, broader trend, calmer VIX, AI ahead),
+(Arm listed in September 2023). The owner's picks (PICKS) are a second equal-weight index on the same method, each stock from its
+first full month of trading (full_months). Leans: +1 = the setup reads healthier (shallower drawdown, broader trend, calmer VIX, AI ahead),
 -1 = more stress. A lean describes the numbers, not a trade.
 """
 from __future__ import annotations
@@ -32,15 +33,26 @@ from ._base import DAY, _pts, _r, fetch, fetch_json, handled, payload
 SLUG = "ai-stocks"
 TOPIC = Topic(SLUG, "AI Stocks: the setup after the dip",
               "After the pullback in AI stocks: how deep is the dip, is it washing out or still breaking down, and what happened after "
-              "dips like this before? Thirteen AI leaders in an equal-weight basket against QQQ, SPY and SMH, with VIX and revenue growth.",
+              "dips like this before? Thirteen AI leaders in an equal-weight basket, and the owner's ten picks as a second group, against QQQ, "
+              "SPY and SMH, with VIX and revenue growth.",
               "ai_stocks", (("setup", "Setup"), ("drawdown", "Drawdown"), ("trend", "Trend & breadth"), ("dips", "After past dips"),
                             ("fear", "Fear & relative"), ("fundamentals", "Fundamentals")),
               ("setup", "drawdown", "trend", "dips", "fear", "fundamentals"), icon="chart")
 
 BASKET = ("NVDA", "AVGO", "AMD", "TSM", "ASML", "MU", "ARM", "MSFT", "GOOGL", "AMZN", "META", "ORCL", "PLTR")
 ETFS = ("QQQ", "SPY", "SMH")
+# the owner's picks (5-6 Nov 2026: "sandisk, nebius, bloom, marvell, oracle, iren, applive, AMD, rocket lab, nvidia"; "applive" read as
+# AppLovin), a second group with its own equal-weight index; ORCL, AMD and NVDA are in both groups
+PICKS = ("SNDK", "NBIS", "BE", "MRVL", "ORCL", "IREN", "APP", "AMD", "RKLB", "NVDA")
+STOCKS = BASKET + tuple(s for s in PICKS if s not in BASKET)
 NAMES = {"NVDA": "Nvidia", "AVGO": "Broadcom", "AMD": "AMD", "TSM": "TSMC", "ASML": "ASML", "MU": "Micron", "ARM": "Arm", "MSFT": "Microsoft",
-         "GOOGL": "Alphabet", "AMZN": "Amazon", "META": "Meta", "ORCL": "Oracle", "PLTR": "Palantir"}
+         "GOOGL": "Alphabet", "AMZN": "Amazon", "META": "Meta", "ORCL": "Oracle", "PLTR": "Palantir", "SNDK": "SanDisk", "NBIS": "Nebius",
+         "BE": "Bloom Energy", "MRVL": "Marvell", "IREN": "IREN", "APP": "AppLovin", "RKLB": "Rocket Lab"}
+GROUPS = {"core": "AI basket", "picks": "Owner's picks"}
+# first day of trading as the company it is now: closes before it are dropped. Nasdaq's history for NBIS runs back through Yandex
+# (suspended Feb 2022, its price repeated until the Nebius relisting); RKLB's through the Vector Acquisition SPAC; SanDisk's starts with
+# when-issued trading before the spin-off from Western Digital
+LISTED = {"SNDK": "2025-02-24", "NBIS": "2024-10-21", "RKLB": "2021-08-25", "IREN": "2021-11-17", "APP": "2021-04-15"}
 DATA_START = "2019-01-01"           # a year before the index starts, so the 200-day averages exist from its first day
 INDEX_START = pd.Timestamp("2020-01-01")
 DD_TABLE = -0.10                    # drawdowns listed on the Drawdown tab
@@ -54,7 +66,7 @@ FRED_VIX = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS"
 CBOE_VIX = "https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv"
 EDGAR = CC.EDGAR
 
-SOURCES = [{"name": "Nasdaq quote API (daily closes of the 13 stocks, QQQ, SPY, SMH)", "url": "https://www.nasdaq.com/market-activity/stocks/nvda/historical", "cadence": "daily"},
+SOURCES = [{"name": "Nasdaq quote API (daily closes of the 13 basket stocks, the owner's 10 picks, QQQ, SPY, SMH)", "url": "https://www.nasdaq.com/market-activity/stocks/nvda/historical", "cadence": "daily"},
            {"name": "FRED: CBOE Volatility Index (VIXCLS)", "url": "https://fred.stlouisfed.org/series/VIXCLS", "cadence": "daily"},
            {"name": "Cboe VIX history (fallback when FRED does not answer)", "url": "https://www.cboe.com/tradable_products/vix/vix_historical_data/", "cadence": "daily"},
            {"name": "SEC EDGAR companyfacts (10-Q, 10-K revenue)", "url": "https://www.sec.gov/edgar/sec-api-documentation", "cadence": "quarterly"},
@@ -77,12 +89,29 @@ def _src(sym: str, cls: str) -> str:
 
 def _prices_now() -> dict:
     px, errors = {}, {}
-    for sym, cls in [(s, "stocks") for s in BASKET] + [(s, "etf") for s in ETFS]:
+    for sym, cls in [(s, "stocks") for s in STOCKS] + [(s, "etf") for s in ETFS]:
         try:
-            px[sym] = nasdaq(sym, cls)
+            s = nasdaq(sym, cls)
+            if sym in LISTED:
+                s = s[s.index >= LISTED[sym]]
+                if len(s) < 2:
+                    raise LookupError("no closes since listing")
+            px[sym] = s
         except Exception as e:
             errors[sym] = type(e).__name__
-    return {"px": px, "errors": errors, "sources": [_src(s, "stocks") for s in BASKET] + [_src(s, "etf") for s in ETFS]}
+    return {"px": px, "errors": errors, "sources": [_src(s, "stocks") for s in STOCKS] + [_src(s, "etf") for s in ETFS]}
+
+
+def full_months(s: pd.Series) -> pd.Series:
+    """A stock joins the picks index from its first full month of trading: the closes from the last one before that month starts
+    (so the month's first day is its first return). A stock trading since before DATA_START is unchanged."""
+    s = s.dropna()
+    if not len(s) or s.index[0] <= pd.Timestamp(DATA_START) + pd.Timedelta(days=7):
+        return s
+    first = s.index[0]
+    start = first if first.day <= 4 else first + pd.offsets.MonthBegin(1)         # listed on the month's first trading day or a later one
+    before = s.index[s.index < start]
+    return s[s.index >= before[-1]] if len(before) else s
 
 
 def basket_index(px: dict[str, pd.Series], start: pd.Timestamp = INDEX_START) -> pd.Series:
@@ -154,10 +183,10 @@ def stock_card(sym: str, s: pd.Series) -> dict:
             "high52": _r(hi.iloc[-1], 2), "high52_date": str(s[s.index >= s.index[-1] - pd.Timedelta(days=366)].idxmax().date())}
 
 
-def breadth(px: dict[str, pd.Series], n: int) -> pd.Series:
-    """Share (0-1) of basket members above their own n-day average, among members that have one that day."""
+def breadth(px: dict[str, pd.Series], n: int, members: tuple = BASKET) -> pd.Series:
+    """Share (0-1) of a group's members above their own n-day average, among members that have one that day."""
     above, have = [], []
-    for sym in BASKET:
+    for sym in members:
         s = px.get(sym)
         if s is None:
             continue
@@ -185,8 +214,12 @@ def _model() -> dict:
     idx = basket_index(members)
     m50, m200 = _ma(idx, 50), _ma(idx, 200)
     b50, b200 = breadth(members, 50), breadth(members, 200)
+    picks = {k: v for k, v in px.items() if k in PICKS}
+    pidx = basket_index({k: full_months(v) for k, v in picks.items()}) if picks else None
     return {"px": px, "members": members, "idx": idx, "m50": m50, "m200": m200, "rsi": rsi(idx), "b50": b50, "b200": b200,
-            "dd": drawdown(idx), "episodes": episodes(idx), "errors": p["errors"], "sources": p["sources"]}
+            "dd": drawdown(idx), "episodes": episodes(idx), "errors": p["errors"], "sources": p["sources"],
+            "picks": picks, "pidx": pidx, "pdd": drawdown(pidx) if pidx is not None else None,
+            "pb50": breadth(picks, 50, PICKS) if picks else None}
 
 
 def crosses(m50: pd.Series, m200: pd.Series) -> list[dict]:
@@ -259,13 +292,16 @@ def vix() -> tuple[pd.Series, str]:
 def _setup_now() -> dict:
     M = _model()
     px, idx = M["px"], M["idx"]
-    cards = []
-    for sym in BASKET:
-        if sym in px:
-            try:
-                cards.append(stock_card(sym, px[sym]))
-            except Exception:
-                pass
+    def group_cards(syms):
+        out = []
+        for sym in syms:
+            if sym in px:
+                try:
+                    out.append(stock_card(sym, px[sym]))
+                except Exception:
+                    pass
+        return out
+    cards, pick_cards = group_cards(BASKET), group_cards(PICKS)
     try:
         V, vsrc = vix()
     except Exception:
@@ -273,6 +309,8 @@ def _setup_now() -> dict:
 
     def lines():
         out = {"AI basket": _pts(idx[idx.index >= INDEX_START], 2)}
+        if M["pidx"] is not None:
+            out["Owner's picks"] = _pts(M["pidx"][M["pidx"].index >= INDEX_START], 2)
         for e in ("QQQ", "SPY"):
             if e in px:
                 s = px[e][px[e].index >= INDEX_START]
@@ -285,6 +323,11 @@ def _setup_now() -> dict:
                    "rsi": lambda: _pts(r[r.index >= INDEX_START], 1), "vix": lambda: _pts(V[V.index >= INDEX_START], 2) if V is not None else None},
                   sources=M["sources"] + [FRED_VIX, CBOE_VIX])
     out["cards"] = cards
+    out["pick_cards"] = pick_cards
+    out["picks_dd"] = _pts(M["pdd"], 4) if M["pdd"] is not None else None
+    out["picks_now"] = {"dd": last(M["pdd"]) if M["pdd"] is not None else None, "breadth50": last(M["pb50"]) if M["pb50"] is not None else None,
+                        "above200": sum(1 for c in pick_cards if (c["vs200"] or 0) > 0), "n": len(pick_cards),
+                        "since": {s: str(full_months(px[s]).index[1].date()) for s in PICKS if s in px and s in LISTED}}
     out["now"] = {"dd": last(dd), "breadth50": last(b50), "breadth200": last(M["b200"]), "rsi": _r(r.iloc[-1], 1), "vix": last(V) if V is not None else None,
                   "above200": sum(1 for c in cards if (c["vs200"] or 0) > 0), "n": len(cards)}
     out["where"] = where_line(out["now"]["dd"], out["now"]["breadth50"], out["now"]["rsi"], out["now"]["vix"], idx, M["m50"], study)
@@ -308,6 +351,15 @@ def _drawdown_now() -> dict:
                       "low_date": str(dd[dd.index >= peak_t].idxmin().date()) if peak_t is not None else None,
                       "days": int((dd.index[-1] - peak_t).days) if peak_t is not None else None, "episode": cur}
     out["stock_now"] = {s: _r(drawdown(v).iloc[-1], 4) for s, v in M["members"].items()}
+    pdd = M["pdd"]
+    out["picks_basket"] = _pts(pdd, 4) if pdd is not None else None
+    out["pick_stocks"] = {s: _pts(drawdown(v), 4) for s, v in M["picks"].items()}
+    out["pick_now"] = {s: _r(drawdown(v).iloc[-1], 4) for s, v in M["picks"].items()}
+    out["pick_since"] = {s: str(drawdown(v).index[0].date()) for s, v in M["picks"].items()}
+    if pdd is not None and len(pdd):
+        pk = pdd[pdd >= 0].index[-1] if (pdd >= 0).any() else pdd.index[0]
+        out["picks_current"] = {"dd": _r(pdd.iloc[-1], 4), "peak": str(pk.date()), "low": _r(pdd[pdd.index >= pk].min(), 4),
+                                "low_date": str(pdd[pdd.index >= pk].idxmin().date()), "days": int((pdd.index[-1] - pk).days)}
     out["errors"] = M["errors"]
     out["as_of"] = B.latest_date(M["idx"])
     return out

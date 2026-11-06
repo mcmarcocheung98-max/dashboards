@@ -34,15 +34,23 @@ const VIEWS = {
       ...(d.vix ? [{ label: "VIX", points: d.vix, fmt: v => num(v, 1), cls: v => v > 30 ? "down" : v < 20 ? "up" : "" }] : [])]),
       el("p", { style: "margin:10px 0 0;line-height:1.5" }, d.where || ""),
       note(N.n ? N.above200 + " of " + N.n + " stocks are above their 200-day average. " + SMALL : SMALL), errs(d, "Some prices are"), asOf(d), stale(d));
-    const cards = (d.cards || []).length ? card("Each stock: how far from its high, against its averages",
-      el("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px" }, ...d.cards.map(stockCard)),
+    const grid = cs => el("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px" }, ...cs.map(stockCard));
+    const cards = (d.cards || []).length ? card("AI basket (13 stocks): how far from its high, against its averages", grid(d.cards),
       note("From 52-week high: the last close against the highest close of the last 252 trading days. vs 50-day and vs 200-day: the close against its simple average. RSI 14 (Wilder): under 30 reads oversold, over 70 overbought."))
       : unavailable("Stocks", d, "cards");
-    const L = d.lines ? card("The AI basket against QQQ and SPY, 100 = 2 Jan 2020",
-      ...linesChart(Object.entries(d.lines).map(([k, p]) => ({ name: k, points: p, color: css(k === "AI basket" ? "--s1" : k === "QQQ" ? "--s2" : "--s4") })), v => num(v, 0), { log: true }),
-      note("Equal-weight basket of NVDA, AVGO, AMD, TSM, ASML, MU, ARM, MSFT, GOOGL, AMZN, META, ORCL and PLTR, rebalanced daily (Arm from its listing in September 2023). Prices without dividends, log scale."))
+    const P = d.picks_now || {}, since = Object.entries(P.since || {});
+    const picks = (d.pick_cards || []).length ? card("Owner's picks (10 stocks), their own equal-weight index",
+      d.picks_dd ? followHead([{ label: "Owner's picks below their high", points: d.picks_dd, fmt: ddf, cls: v => v < -0.2 ? "down" : v > -0.05 ? "up" : "" }]) : null,
+      note(P.n ? P.above200 + " of " + P.n + " picks are above their 200-day average" + (P.breadth50 != null ? ", " + share(P.breadth50) + " above their 50-day." : ".") : ""),
+      grid(d.pick_cards),
+      note("SanDisk, Nebius, Bloom Energy, Marvell, Oracle, IREN, AppLovin, AMD, Rocket Lab and Nvidia (Oracle, AMD and Nvidia are in both groups). A stock joins the picks index from its first full month of trading" +
+        (since.length ? " (" + since.map(([k, v]) => k + " " + month(Date.parse(v) / 1000)).join(", ") + ")" : "") + "; Nebius counts from its October 2024 relisting, not Yandex before it. " + SMALL))
+      : unavailable("Owner's picks", d, "pick_cards");
+    const L = d.lines ? card("The AI basket and the owner's picks against QQQ and SPY, 100 = 2 Jan 2020",
+      ...linesChart(Object.entries(d.lines).map(([k, p]) => ({ name: k, points: p, color: css(k === "AI basket" ? "--s1" : k === "QQQ" ? "--s2" : k === "Owner's picks" ? "--s3" : "--s4") })), v => num(v, 0), { log: true }),
+      note("Equal-weight basket of NVDA, AVGO, AMD, TSM, ASML, MU, ARM, MSFT, GOOGL, AMZN, META, ORCL and PLTR, rebalanced daily (Arm from its listing in September 2023). Owner's picks: the same method on its 10 stocks. Prices without dividends, log scale."))
       : unavailable("Basket against QQQ and SPY", d, "lines");
-    return [head, cards, L];
+    return [head, cards, picks, L];
   },
 
   async drawdown() {
@@ -58,11 +66,21 @@ const VIEWS = {
     const S = d.stocks ? card("Each stock's drawdown from its peak since 2020",
       ...linesChart(Object.entries(d.stocks).map(([k, p]) => ({ name: k + " " + ddf((d.stock_now || {})[k]), points: p })), ddf, { small: false }),
       note("Click a name to hide it. A stock that listed after 2020 (Arm) counts from its first close.")) : unavailable("Stock drawdowns", d, "stocks");
+    const PC = d.picks_current || {};
+    const PB = d.picks_basket ? card("Owner's picks index: drawdown since 2020, the current dip in red",
+      el("div", { class: "kpis" }, kpi("Below its peak now", ddf(PC.dd), PC.dd != null && PC.dd < -0.2 ? "down" : ""), kpi("Peak", dateOf(PC.peak)), kpi("Deepest so far", ddf(PC.low), PC.low != null && PC.low < -0.2 ? "down" : ""),
+        kpi("Days since the peak", PC.days == null ? "–" : num(PC.days))),
+      ...linesChart([{ name: "Owner's picks", points: d.picks_basket, color: css("--s3") }, { name: "Current dip", points: currentDip(d.picks_basket), color: css("--down") }], ddf, { hlines: [-0.1, -0.2] }),
+      note("Equal-weight index of the 10 picks, each from its first full month of trading. Dashed lines at -10% and -20%.")) : unavailable("Owner's picks drawdown", d, "picks_basket");
+    const PS = d.pick_stocks && Object.keys(d.pick_stocks).length ? card("Each pick's drawdown over its own history",
+      ...linesChart(Object.entries(d.pick_stocks).map(([k, p]) => ({ name: k + " " + ddf((d.pick_now || {})[k]), points: p })), ddf, { small: false }),
+      note("Each stock from 2020 or from its own first close, whichever is later: " + Object.entries(d.pick_since || {}).filter(([k, v]) => v > "2020-01-10").map(([k, v]) => k + " from " + dateOf(v)).join(", ") +
+        ". Nebius from its October 2024 relisting; Rocket Lab from its August 2021 listing, not the SPAC before it.")) : unavailable("Pick drawdowns", d, "pick_stocks");
     const T = card("Every basket drawdown over 10% since 2020", table(["Peak", "Bottom", "Depth", "Days to bottom", "Recovered", "Days to recover"],
       E.map(e => el("tr", {}, td(dateOf(e.peak)), td(dateOf(e.trough)), td(ddf(e.depth), e.depth < -0.2 ? "down" : ""), td(num(e.days_to_bottom)),
         td(e.ongoing ? "not yet" : dateOf(e.recovered)), td(e.days_to_recover == null ? "–" : num(e.days_to_recover))))),
       note("Calendar days, peak to bottom and bottom to the next new high. The row marked \"not yet\" is the dip we are in."));
-    return [head, B, S, T];
+    return [head, B, S, PB, PS, T];
   },
 
   async trend() {
