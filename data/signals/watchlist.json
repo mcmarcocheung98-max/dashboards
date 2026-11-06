@@ -97,10 +97,10 @@
   {"key": "credits", "signal": "API credits left this month", "watch": "below 15% with more than a week to go"}
  ],
  "ai-stocks": [
-  {"key": "basket_drawdown", "signal": "AI basket drawdown from its high", "watch": "deeper than -20% (a bear market), or back within -5% (dip repaired)", "proposed": true},
-  {"key": "breadth_50d", "signal": "Share of the AI basket above its 50-day average", "watch": "below 20% (washout), or back above 60% (recovery broadening)", "proposed": true},
-  {"key": "rsi_basket", "signal": "AI basket RSI 14", "watch": "below 30 (oversold) or above 70", "proposed": true},
-  {"key": "vix", "signal": "VIX", "watch": "above 30 (fear), or back below 20 after being above 25 in the last month", "proposed": true},
-  {"key": "ai_vs_qqq", "signal": "AI basket minus QQQ, 3-month return", "watch": "a 10-point gap either way", "proposed": true}
+  {"key": "basket_drawdown", "signal": "AI basket drawdown from its high", "watch": "deeper than -20% (a bear market), or back within -5% (dip repaired, after a dip of 10% or more in the last 3 months)", "approved": "2026-11-06"},
+  {"key": "breadth_50d", "signal": "Share of the AI basket above its 50-day average", "watch": "below 20% (washout), or back above 60% (recovery broadening, after being below 40% in the last 3 months)", "approved": "2026-11-06"},
+  {"key": "rsi_basket", "signal": "AI basket RSI 14", "watch": "below 30 (oversold) or above 70", "approved": "2026-11-06"},
+  {"key": "vix", "signal": "VIX", "watch": "above 30 (fear), or back below 20 after being above 25 in the last month", "approved": "2026-11-06"},
+  {"key": "ai_vs_qqq", "signal": "AI basket minus QQQ, 3-month return", "watch": "a 10-point gap either way", "approved": "2026-11-06"}
  ]
 }

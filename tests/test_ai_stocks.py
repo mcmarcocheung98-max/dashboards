@@ -245,7 +245,7 @@ def test_readings_and_signals(mocked):
     assert {x["tab"] for x in r} == {t for t, _ in topics.REGISTRY["ai-stocks"].tabs} and all(x["lean"] in (-1, 0, 1) for x in r)
     sig = {x["key"]: x for x in M.SIGNALS()}
     wl = json.loads((B.MANUAL_DIR / "signals" / "watchlist.json").read_text())["ai-stocks"]
-    assert set(sig) == {w["key"] for w in wl} and all(w.get("proposed") for w in wl)
+    assert set(sig) == {w["key"] for w in wl} and all(w.get("approved") and not w.get("proposed") for w in wl)
     assert all(isinstance(x["crossed"], bool) and x["lean"] in (-1, 0, 1) for x in sig.values())
     dd = sig["basket_drawdown"]["value"]
     assert not sig["basket_drawdown"]["crossed"] or dd < -20 or dd >= -5

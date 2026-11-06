@@ -70,9 +70,9 @@ Yahoo is not used: it answers Railway with 429.
 - **VIX from FRED** has timed out from Railway for other series (see `ai_jobs.py`); when it fails, Cboe's own history file is used and
   the FRED failure is marked handled in `/api/health`. Check with `/api/probe` (`fred vix`, `cboe vix history`) or `/api/ai-stocks/layout`.
 
-## Signals (`data/signals/watchlist.json`, proposed)
+## Signals (`data/signals/watchlist.json`, approved 6 Nov 2026)
 
-Five watch points, marked `"proposed": true` until the owner approves them; the signals board shows them either way. `SIGNALS()` reads
+Five watch points, approved by the owner on 6 Nov 2026, including the two "back to" rules below (a repaired dip counts only after a dip of 10% or more in the last 3 months; breadth back above 60% only after being below 40%). The planned `setup_score` replaces `rsi_basket` when the score is built, approved with them. `SIGNALS()` reads
 only the cached tab payloads, and each row's `crossed` comes from its own rule:
 
 | Key | Value | Crossed when (the rule) | Lean |

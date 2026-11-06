@@ -548,7 +548,7 @@ def READINGS() -> list[dict]:
 
 
 def SIGNALS() -> list[dict]:
-    """The proposed watch points (data/signals/watchlist.json, marked proposed until the owner approves), from cached payloads only.
+    """The owner's approved watch points (data/signals/watchlist.json, approved 6 Nov 2026), from cached payloads only.
     lean +1 = healthier setup, -1 = more stress. Each crossed comes from its own test."""
     out = []
 
