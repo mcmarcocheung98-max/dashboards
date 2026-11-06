@@ -152,12 +152,23 @@
   },
   {
    "date": "2026-11-06",
+   "session": "ai-stocks",
+   "input": 511,
+   "cache_write": 2316,
+   "cache_read": 798830,
+   "output": 607,
+   "cost_usd": 0.19,
+   "source": "totals",
+   "since": "2026-11-06T00:11"
+  },
+  {
+   "date": "2026-11-06",
    "session": "dev-agent",
-   "input": 48,
-   "cache_write": 61998,
-   "cache_read": 10658988,
-   "output": 25588,
-   "lookups": 1,
+   "input": 166,
+   "cache_write": 674952,
+   "cache_read": 40360498,
+   "output": 59209,
+   "lookups": 5,
    "source": "transcript"
   }
  ],
@@ -299,12 +310,12 @@
   },
   "ai-stocks": {
    "id": "session_01Hguru33HhMq9DoqY2C26R6",
-   "as_of": "2026-11-06T00:11:39.235388Z",
-   "input": 120,
-   "cache_write": 203658,
-   "cache_read": 11436910,
-   "output": 60945,
-   "cost_usd": 5.136
+   "as_of": "2026-11-06T00:42:57.116292Z",
+   "input": 631,
+   "cache_write": 205974,
+   "cache_read": 12235740,
+   "output": 61552,
+   "cost_usd": 5.328503999999999
   },
   "daily-check": {
    "id": "session_01Hguru4ZnmwKFghzbQZHzmL",
@@ -314,9 +325,18 @@
    "cache_read": 20008608,
    "output": 58475,
    "cost_usd": 19.7629
+  },
+  "ai-stocks-2": {
+   "id": "session_01Hguru3NTcATdNFZJk1KsMC",
+   "as_of": "2026-11-06T02:13:02.307860Z",
+   "input": 237,
+   "cache_write": 282791,
+   "cache_read": 28327149,
+   "output": 131374,
+   "cost_usd": 10.556185800000002
   }
  },
  "saving_per_lookup": 112958,
  "saving_measured": "2026-10-31",
- "updated": "2026-11-06 00:15 UTC"
+ "updated": "2026-11-06 07:42 UTC"
 }
