@@ -370,7 +370,9 @@ const VIEWS = {
       : card("Funds", el("div", { class: "muted" }, "Not fetched yet: the server downloads the 13F filings in the background, paced, and keeps them for 7 days. Check back in a few minutes."));
     const T = card("Consensus: per stock, how many funds bought and sold", table(["Stock", "Opened or added", "Trimmed or sold", "Net funds", "Net dollar change", "Who"],
       C.map(r => el("tr", {}, td([el("b", {}, r.ticker), " ", el("span", { class: "muted" }, r.name)]), td(num(r.n_buy), r.n_buy ? "up" : ""), td(num(r.n_sell), r.n_sell ? "down" : ""),
-        td((r.net > 0 ? "+" : "") + r.net, cls(r.net)), td(signed(r.net_usd), cls(r.net_usd)), td(el("span", { class: "muted", style: "font-size:12px" }, [...r.buyers, ...r.sellers].join(", ")))))),
+        td((r.net > 0 ? "+" : "") + r.net, cls(r.net)), td(signed(r.net_usd), cls(r.net_usd)), el("td", { class: "wrap", style: "font-size:12px;min-width:160px" }, el("details", {}, el("summary", { style: "cursor:pointer" }, (r.n_buy + r.n_sell) + " funds"),
+          r.buyers.length ? el("div", {}, el("span", { class: "up" }, "Bought: "), r.buyers.join(", ")) : null,
+          r.sellers.length ? el("div", {}, el("span", { class: "down" }, "Sold or trimmed: "), r.sellers.join(", ")) : null))))),
       note("Sorted by net buyers (funds that opened or added minus funds that trimmed or sold), then by net dollars. Each fund is compared with its own previous quarter. Stocks no fund changed are not listed. " + SMALL));
     return [head, G, T];
   },
