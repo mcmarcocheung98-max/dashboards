@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-05",
+ "updated": "2026-11-06",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -481,6 +481,16 @@
     "pokemon-cards",
     "ai"
    ]
+  },
+  {
+   "date": "2026-11-06",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Email built, not sent (no Gmail secrets). Signals 50 of 67 wired, 15 crossed. Reviewed AI Stocks: one table overflow, fixed by its session within the hour. Live check still running at the time of this entry.",
+   "fixed": [],
+   "handed": [
+    "ai-stocks"
+   ]
   }
  ],
  "notes": [
@@ -712,7 +722,7 @@
   {
    "date": "2026-11-06",
    "title": "AI Stocks is live; Graphify shows daily tokens",
-   "summary": "The AI Stocks dashboard went live on real prices: the AI basket was 15.5% below its high on 4 Nov, with only 15% of its stocks above their 50-day average. Its second phase (the owner's picks, a setup score with backtest, fund holdings and insider trades) is being built. The Graphify Map gained a Daily tokens tab.",
+   "summary": "The AI Stocks dashboard went live on real prices: the AI basket was 15.5% below its high on 4 Nov, with only 15% of its stocks above their 50-day average. Its second phase (the owner's picks, a setup score with backtest, fund holdings and insider trades) is being built. The Graphify Map gained a Daily tokens tab. Signals: 50 of 67 wired, 15 crossed. Four sessions wait for the owner's own reply in their threads.",
    "changes": [
     {
      "dashboard": "AI Stocks",
@@ -772,17 +782,40 @@
      "what": "Insider purchases and sales (Form 4), clusters, and a per-stock panel with fundamentals",
      "commit": "36bb559",
      "by": "session:ai-stocks"
+    },
+    {
+     "dashboard": "AI Stocks",
+     "slug": "ai-stocks",
+     "what": "Insider plan detection also reads remarks; NVDA checked against the filings: $946m of $968m sold by director Mark Stevens outside any 10b5-1 plan",
+     "commit": "41a289d",
+     "by": "session:ai-stocks"
+    },
+    {
+     "dashboard": "AI Stocks",
+     "slug": "ai-stocks",
+     "tab": "institutions",
+     "what": "Review fix: the consensus table's fund list wraps behind a disclosure; no sideways scroll at phone width",
+     "commit": "8e7e95c",
+     "by": "session:ai-stocks"
+    },
+    {
+     "dashboard": "Graphify Map",
+     "slug": "graphify",
+     "tab": "usage",
+     "what": "First daily token figures recorded for the AI Stocks sessions; collection now about 78k tokens instead of 217k",
+     "by": "agent"
     }
    ],
    "next": [
-    "Verify NVDA's 10b5-1 share of insider sales (handed back to the AI Stocks session)",
-    "Proposed AI Stocks signals wait for the owner's OK"
+    "Pokémon cards, Longevity, Compute & chips and Debt & rates wait for the owner's reply in their own sessions",
+    "Next review: the dashboard reviewed least recently"
    ],
    "asks": [
-    "Approve or skip the AI Stocks signals once the setup score is in",
+    "Reply in the Pokémon cards, Longevity, Compute & chips and Debt & rates sessions",
     "Approve or skip r-watch-recalibrate and r-private-signals",
     "Add the Gmail secrets"
-   ]
+   ],
+   "review": "ai-stocks"
   }
  ]
 }
