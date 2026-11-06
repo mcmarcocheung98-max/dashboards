@@ -65,6 +65,18 @@ entry, its README and its page in a smoke screenshot. Look for: stale or failing
 signals not wired, numbers without a date or source, unclear copy, a mobile layout that overflows. Fix the small things
 (per section 4), propose the rest, and record `review: <slug>` in the note.
 
+## 5b. Token usage for the Graphify Map (Daily tokens tab)
+
+- `python scripts/graphify_usage.py --transcript <this session's transcript .jsonl> --session dev-agent` (the newest .jsonl under
+  ~/.claude/projects/; measured tokens and graphify lookups per day for this session).
+- The other sessions: call `list_sessions` once and keep only the dashboard sessions (the Session IDs below) whose last activity is
+  later than their `as_of` in `data/graphify/usage.json` `snapshots`. For those only, hand a helper agent the list: per session,
+  `list_events` with kinds `["result"]` and limit 40; from the newest result, `internal_anthropic_catchall.modelUsage` summed over
+  models (inputTokens, cacheCreationInputTokens, cacheReadInputTokens, outputTokens, costUSD) and its created_at. It writes
+  `{"collected_at", "sessions": {slug: {"id", "as_of", "input", "cache_write", "cache_read", "output", "cost_usd"}}}` to the
+  scratchpad and replies in one line per session. Then `python scripts/graphify_usage.py --totals <that file>`.
+- Commit `data/graphify/usage.json` with the day's status commit. Keep this cheap: never read whole transcripts of other sessions.
+
 ## 6. Write the note and update the page
 
 Append one entry to `notes` in `data/status/items.json`:

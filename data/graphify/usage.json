@@ -1,0 +1,322 @@
+{
+ "days": [
+  {
+   "date": "2026-10-20",
+   "session": "dev-agent",
+   "input": 1126,
+   "cache_write": 279987,
+   "cache_read": 6454951,
+   "output": 85807,
+   "lookups": 0,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-10-21",
+   "session": "dev-agent",
+   "input": 294,
+   "cache_write": 676772,
+   "cache_read": 2512798,
+   "output": 19279,
+   "lookups": 0,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-10-22",
+   "session": "dev-agent",
+   "input": 354,
+   "cache_write": 248464,
+   "cache_read": 3263638,
+   "output": 4728,
+   "lookups": 0,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-10-24",
+   "session": "dev-agent",
+   "input": 936,
+   "cache_write": 846372,
+   "cache_read": 9940780,
+   "output": 27536,
+   "lookups": 0,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-10-25",
+   "session": "dev-agent",
+   "input": 1788,
+   "cache_write": 2834382,
+   "cache_read": 95914337,
+   "output": 271374,
+   "lookups": 0,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-10-26",
+   "session": "dev-agent",
+   "input": 282,
+   "cache_write": 1024920,
+   "cache_read": 35652914,
+   "output": 127477,
+   "lookups": 0,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-10-27",
+   "session": "dev-agent",
+   "input": 48,
+   "cache_write": 757717,
+   "cache_read": 9409559,
+   "output": 32573,
+   "lookups": 0,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-10-28",
+   "session": "dev-agent",
+   "input": 80,
+   "cache_write": 509689,
+   "cache_read": 19011486,
+   "output": 30442,
+   "lookups": 0,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-10-30",
+   "session": "dev-agent",
+   "input": 296,
+   "cache_write": 1341362,
+   "cache_read": 44658944,
+   "output": 86612,
+   "lookups": 3,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-10-31",
+   "session": "dev-agent",
+   "input": 518,
+   "cache_write": 748912,
+   "cache_read": 13828914,
+   "output": 40868,
+   "lookups": 3,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-11-01",
+   "session": "dev-agent",
+   "input": 260,
+   "cache_write": 810381,
+   "cache_read": 7612848,
+   "output": 27138,
+   "lookups": 2,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-11-02",
+   "session": "dev-agent",
+   "input": 166,
+   "cache_write": 1658179,
+   "cache_read": 5327687,
+   "output": 2122,
+   "lookups": 0,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-11-03",
+   "session": "dev-agent",
+   "input": 32726,
+   "cache_write": 1098786,
+   "cache_read": 8934358,
+   "output": 52632,
+   "lookups": 1,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-11-04",
+   "session": "dev-agent",
+   "input": 190,
+   "cache_write": 1138717,
+   "cache_read": 24978055,
+   "output": 59179,
+   "lookups": 2,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-11-05",
+   "session": "dev-agent",
+   "input": 144,
+   "cache_write": 1499068,
+   "cache_read": 24276837,
+   "output": 34873,
+   "lookups": 1,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-11-06",
+   "session": "dev-agent",
+   "input": 48,
+   "cache_write": 61998,
+   "cache_read": 10658988,
+   "output": 25588,
+   "lookups": 1,
+   "source": "transcript"
+  }
+ ],
+ "snapshots": {
+  "housing": {
+   "id": "session_01PTPxuP1i5cZzbFuked5sRt",
+   "as_of": "2026-11-05T15:31:14.607141Z",
+   "input": 24831,
+   "cache_write": 5245057,
+   "cache_read": 92750758,
+   "output": 177228,
+   "cost_usd": 64.1028
+  },
+  "ai": {
+   "id": "session_01V4gwm4gpbgR2T3g3neGZfo",
+   "as_of": "2026-11-05T15:29:50.197309Z",
+   "input": 69125,
+   "cache_write": 6647955,
+   "cache_read": 102120170,
+   "output": 160373,
+   "cost_usd": 76.7939
+  },
+  "robotaxi": {
+   "id": "session_015aqbbZFdfXcibzEC7yT94z",
+   "as_of": "2026-11-05T15:43:47.254545Z",
+   "input": 2887416,
+   "cache_write": 5004327,
+   "cache_read": 103747088,
+   "output": 441068,
+   "cost_usd": 66.881
+  },
+  "btc-cycles": {
+   "id": "session_01AgBzbLd5WvgunSFvXxYQJW",
+   "as_of": "2026-11-04T20:07:12.847484Z",
+   "input": 3555062,
+   "cache_write": 6800862,
+   "cache_read": 225998120,
+   "output": 675200,
+   "cost_usd": 156.6307
+  },
+  "compute-chips": {
+   "id": "session_01VySeUhZQDQ5Q3LRA2F2Br4",
+   "as_of": "2026-11-05T17:34:28.757126Z",
+   "input": 3778,
+   "cache_write": 2335380,
+   "cache_read": 26630611,
+   "output": 79650,
+   "cost_usd": 25.6173
+  },
+  "demographics": {
+   "id": "session_017FZw3HVNpap7DPqmrSzp9Y",
+   "as_of": "2026-11-03T19:21:26.209463Z",
+   "input": 125009,
+   "cache_write": 1351162,
+   "cache_read": 35400951,
+   "output": 95285,
+   "cost_usd": 19.7667
+  },
+  "debt-rates": {
+   "id": "session_01DjiLHK9jLscwzRAtBrW7hR",
+   "as_of": "2026-11-03T19:21:30.034810Z",
+   "input": 99262,
+   "cache_write": 3059296,
+   "cache_read": 135233904,
+   "output": 273735,
+   "cost_usd": 56.9715
+  },
+  "climate": {
+   "id": "session_016qhyE8K2Ta61cxezGrnnSf",
+   "as_of": "2026-11-03T19:37:38.822180Z",
+   "input": 14080,
+   "cache_write": 1726031,
+   "cache_read": 73936172,
+   "output": 137966,
+   "cost_usd": 31.4111
+  },
+  "china-us-tech": {
+   "id": "session_015gcf1pJ9RbvZdFmKtFDJmc",
+   "as_of": "2026-11-05T23:52:02.285547Z",
+   "input": 120703,
+   "cache_write": 2633681,
+   "cache_read": 41320965,
+   "output": 118208,
+   "cost_usd": 31.6839
+  },
+  "longevity": {
+   "id": "session_018wSWDkkykdb9BRc5pT72HC",
+   "as_of": "2026-11-05T08:09:43.341525Z",
+   "input": 22115,
+   "cache_write": 1605500,
+   "cache_read": 35580178,
+   "output": 99975,
+   "cost_usd": 21.9904
+  },
+  "space": {
+   "id": "session_01NWRBg9G3RhsJj6HU51qjDD",
+   "as_of": "2026-11-03T23:05:12.749644Z",
+   "input": 16001,
+   "cache_write": 2046122,
+   "cache_read": 44228013,
+   "output": 107522,
+   "cost_usd": 27.3647
+  },
+  "pokemon-cards": {
+   "id": "session_01E2rgzyuaUHsMjB6PAC9UoM",
+   "as_of": "2026-11-05T15:35:03.292798Z",
+   "input": 8683,
+   "cache_write": 3554101,
+   "cache_read": 117949533,
+   "output": 236317,
+   "cost_usd": 56.7838
+  },
+  "prediction-markets": {
+   "id": "session_01J3ZVbej7kofN2W2QvFMciM",
+   "as_of": "2026-11-03T19:04:50.436316Z",
+   "input": 12373,
+   "cache_write": 2814174,
+   "cache_read": 82141303,
+   "output": 144471,
+   "cost_usd": 41.8806
+  },
+  "trends": {
+   "id": "session_01DDQTR7e3Cpv1twBcXdfFFq",
+   "as_of": "2026-11-04T20:05:58.145767Z",
+   "input": 3868,
+   "cache_write": 1940983,
+   "cache_read": 48975893,
+   "output": 131044,
+   "cost_usd": 27.9594
+  },
+  "nba-odds": {
+   "id": "session_01HgurtzQez3NndAMfZFsyAp",
+   "as_of": "2026-11-04T22:15:25.104609Z",
+   "input": 43225,
+   "cache_write": 1792568,
+   "cache_read": 34091556,
+   "output": 185427,
+   "cost_usd": 39.1127
+  },
+  "ai-stocks": {
+   "id": "session_01Hguru33HhMq9DoqY2C26R6",
+   "as_of": "2026-11-06T00:11:39.235388Z",
+   "input": 120,
+   "cache_write": 203658,
+   "cache_read": 11436910,
+   "output": 60945,
+   "cost_usd": 5.136
+  },
+  "daily-check": {
+   "id": "session_01Hguru4ZnmwKFghzbQZHzmL",
+   "as_of": "2026-11-04T20:25:22.708164Z",
+   "input": 6400,
+   "cache_write": 1089834,
+   "cache_read": 20008608,
+   "output": 58475,
+   "cost_usd": 19.7629
+  }
+ },
+ "saving_per_lookup": 112958,
+ "saving_measured": "2026-10-31",
+ "updated": "2026-11-06 00:15 UTC"
+}

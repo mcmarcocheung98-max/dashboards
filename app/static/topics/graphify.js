@@ -1,4 +1,4 @@
-// Graphify Map: tabs and cards. Data from /api/graphify/<map|savings> (committed exports, see data/graphify/README.md); helpers from topic.html.
+// Graphify Map: tabs and cards. Data from /api/graphify/<map|savings|usage> (committed exports, see data/graphify/README.md); helpers from topic.html.
 // Two live force-directed canvases (the cluster sky and the explorer) are drawn by hand here: no chart library suits a graph.
 (() => {
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -166,6 +166,37 @@ const VIEWS = {
     setTimeout(() => rows.forEach(r => r.fill()), reduced ? 0 : 150);
     const method = card("How this was measured", el("div", { class: "muted" }, S.method + " Measured " + S.measured + " over " + n0(S.repo_files) + " files (" + n0(S.repo_tokens) + " tokens of code and docs)."));
     return [hero, worth, race, method];
+  },
+
+  async usage() {
+    const U = await api("usage"); const D = U.days || [];
+    const t = d => Date.parse(d + "T00:00:00Z") / 1000, M = v => v == null ? "–" : num(v / 1e6, 1) + "m";
+    const since = D.filter(x => x.date >= U.installed), last = D[D.length - 1] || {}, wk = D.slice(-7);
+    const sum = (a, k) => a.reduce((s, x) => s + (x[k] || 0), 0);
+    const savedAll = sum(since, "saved") + sum(since, "saved_est"), usedAll = sum(since, "total");
+    const head = card(null, el("div", { class: "kpis" },
+        kpi("Tokens used, " + (last.date || "latest day"), M(last.total)), kpi("Average a day, last 7 days", M(sum(wk, "total") / Math.max(1, wk.length))),
+        kpi("Saved by graphify, last 7 days", M(sum(wk, "saved") + sum(wk, "saved_est")), "up"), kpi("Lookups counted since " + U.installed, n0(sum(since, "lookups"))),
+        kpi("Saved since installed", M(savedAll), "up")),
+      note("All tokens a session's model processed: new input, cache writes, cache reads (the conversation re-read on every turn, which is most of the total) and output. " +
+        "Updated " + U.updated + "; the dev agent adds each day's figures every morning."));
+    const used = card("Tokens used per day",
+      ...linesChart([{ name: "All tokens", bar: true, color: css("--s1"), points: D.map(x => [t(x.date), x.total]) },
+        { name: "New input and output (no cache)", axis: "left", color: css("--down"), points: D.map(x => [t(x.date), x.input + x.cache_write + x.output]) }], M),
+      note("Bars: everything processed that day, right axis. Line: the part that is not a cache read, left axis. Days before the other sessions' totals were first collected show the dev agent session only."));
+    const saved = card("Tokens saved by graphify per day",
+      ...linesChart([{ name: "Saved, counted lookups", bar: true, color: css("--up"), points: D.filter(x => x.date >= U.installed).map(x => [t(x.date), x.saved]) },
+        { name: "Saved, other sessions (estimated)", color: css("--sellt"), dashed: true, points: D.filter(x => x.date >= U.installed).map(x => [t(x.date), x.saved_est]) },
+        { name: "Lookups counted", axis: "left", color: css("--s1"), points: D.filter(x => x.date >= U.installed).map(x => [t(x.date), x.lookups]), fmt: v => num(v, 0) }], M),
+      note("Saved = lookups x " + n0(U.saving_per_lookup) + " tokens, the median saving per question in the benchmark on the Token savings tab (measured " + (U.saving_measured || "–") + "). " +
+        "Lookups (graphify query, explain and path) are counted in the dev agent's own transcript; the other sessions' are estimated at its rate of " + U.lookups_per_million +
+        " lookups per million tokens, so that line is an estimate. Conservative: a file not read also stays out of every later turn's cache reads, which this does not count."));
+    const rows = (U.sessions || []).map(x => el("tr", {}, el("td", {}, x.session), el("td", {}, M(x.to_date == null ? x.total : x.to_date)), el("td", {}, x.cost_to_date == null ? "–" : "$" + num(x.cost_to_date, 0)),
+      el("td", {}, M(x.total)), el("td", {}, x.last)));
+    const table = card("By session", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Session", "Tokens since it started", "Cost at list price", "In the daily chart", "Last active"].map(h => el("th", {}, h))), ...rows)),
+      note("dev-agent is this site's parent session (measured from its transcript). The dashboard sessions are measured from their running totals, collected each morning from " +
+        "the day their first totals were recorded; a session idle for several days shows its whole gap on the day it next ran."));
+    return [head, used, saved, table];
   },
 
   async how() {
