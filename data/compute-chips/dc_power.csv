@@ -1,8 +1,9 @@
 date,series,value,source,note
-2014-01-01,US,60,https://eta-publications.lbl.gov/sites/default/files/2024-12/lbnl-2024-united-states-data-center-energy-usage-report.pdf,LBNL Dec 2024 report: roughly flat near 60 TWh 2014-2016; verify
-2018-01-01,US,76,https://eta-publications.lbl.gov/sites/default/files/2024-12/lbnl-2024-united-states-data-center-energy-usage-report.pdf,LBNL Dec 2024: 76 TWh (1.9% of US electricity); verify
-2023-01-01,US,176,https://eta-publications.lbl.gov/sites/default/files/2024-12/lbnl-2024-united-states-data-center-energy-usage-report.pdf,LBNL Dec 2024: 176 TWh (4.4% of US electricity); verify
-2024-01-01,US,183,https://www.iea.org/reports/energy-and-ai,IEA Energy & AI (Apr 2025): US about 45% of the world's 415 TWh; verify
-2024-01-01,China,104,https://www.iea.org/reports/energy-and-ai,IEA Energy & AI (Apr 2025): China about 25% of the world's 415 TWh; verify
-2024-01-01,World,415,https://www.iea.org/reports/energy-and-ai,IEA Energy & AI (Apr 2025): about 1.5% of world electricity; verify
-2024-01-01,UK,7,https://www.neso.energy/publications/future-energy-scenarios-fes,commonly cited ~2.5% of UK electricity; replace with the NESO FES data workbook's data-centre line; verify
+2014-01-01,US,58,https://energyanalysis.lbl.gov/news/berkeley-lab-report-evaluates-increase-electricity-demand-data-centers,"LBNL 2024 report as summarised by Berkeley Lab (17 Jan 2025): 'climbed from 58 TWh in 2014 to 176 TWh in 2023'; checked 2026-11-06"
+2018-01-01,US,76,https://eta-publications.lbl.gov/sites/default/files/2024-12/lbnl-2024-united-states-data-center-energy-usage-report.pdf,"LBNL Dec 2024: 76 TWh (1.9% of US electricity); checked 2026-11-06 only against DatacenterDynamics' summary of the report, the PDF could not be opened; verify"
+2023-01-01,US,176,https://energyanalysis.lbl.gov/news/berkeley-lab-report-evaluates-increase-electricity-demand-data-centers,"LBNL 2024 report as summarised by Berkeley Lab (17 Jan 2025): 176 TWh, about 4.4% of US electricity; checked 2026-11-06"
+2023-01-01,UK,4.1,https://assets.publishing.service.gov.uk/media/6a3e9f25da47783d87723bf2/Data_centre_electricity_consumption_in_Great_Britain__2020_to_2024.pdf,"Great Britain, grid electricity, colocation/managed/hyperscale only (enterprise sites excluded); DESNZ Energy Trends special article 30 Jun 2026; checked 2026-11-06"
+2024-01-01,US,183,https://www.iea.org/reports/energy-and-ai,"IEA Energy & AI (Apr 2025): US about 45% of the world's 415 TWh; checked 2026-11-06 but iea.org could not be opened; verify"
+2024-01-01,China,104,https://www.iea.org/reports/energy-and-ai,"IEA Energy & AI (Apr 2025): China about 25% of the world's 415 TWh; checked 2026-11-06 but iea.org could not be opened; verify"
+2024-01-01,World,415,https://www.iea.org/reports/energy-and-ai,"IEA Energy & AI (Apr 2025): about 1.5% of world electricity; checked 2026-11-06 but iea.org could not be opened; verify"
+2024-01-01,UK,4.5,https://assets.publishing.service.gov.uk/media/6a3e9f25da47783d87723bf2/Data_centre_electricity_consumption_in_Great_Britain__2020_to_2024.pdf,"Great Britain: 4.5 TWh, 2% of the 249.2 TWh drawn from the grid; same scope as 2023; DESNZ Energy Trends special article 30 Jun 2026 (was 7 from memory); checked 2026-11-06"
