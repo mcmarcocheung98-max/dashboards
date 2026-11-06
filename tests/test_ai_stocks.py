@@ -417,6 +417,18 @@ def test_reduce_form4_keeps_purchases_and_sales_with_roles_and_plans():
     assert f["plan"] is False and f["owners"][0]["role"] == "Director" and f["txns"][0] == {"code": "P", "date": ago(4), "shares": 1000.0, "price": 150.0}
 
 
+def test_plan_detection_box_footnote_remarks():
+    real = "The reported transaction was effected pursuant to a Rule 10b5-1 trading plan adopted by the Reporting Person on June 16, 2026."
+    row = lambda foot: ("09", 3, None, "KRESS COLETTE", CFO, "0", foot, [("S", 4, 1000, 220.0)])     # Nvidia, Sep 2026 (real footnote text)
+    plan = lambda xml: json.loads(M.reduce_form4(xml))["plan"]
+    assert plan(form4_xml("NVDA", row(real)))
+    assert plan(form4_xml("NVDA", row("Sold under a RULE 10B5-1(c) trading arrangement.")))
+    assert plan(form4_xml("NVDA", row("Plan under Rule 10b5\u20111.")))
+    no_plan = form4_xml("NVDA", row("Represents weighted average sales price. The shares were sold at prices ranging from $220.60 to $221.28."))
+    assert not plan(no_plan)                                     # Mark Stevens' sales of Sep 2026: no box, no plan footnote, no remarks
+    assert plan(no_plan.replace("</ownershipDocument>", "<remarks>All sales pursuant to a 10b5-1 plan.</remarks></ownershipDocument>"))
+
+
 def test_insiders_tab_and_clusters(mocked):
     p = M._insiders_now()
     assert not p["stocks"] and "not fetched yet" in set(p["errors"].values())           # a page view never downloads

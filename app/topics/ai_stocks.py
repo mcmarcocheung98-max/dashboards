@@ -931,6 +931,9 @@ CLUSTER_DAYS, CLUSTER_MIN = 30, 2   # a cluster buy: 2 or more insiders of one c
 FOREIGN = {"TSM", "ASML", "ARM"}    # file 20-F/6-K as foreign private issuers: no quarterly facts in companyfacts, insiders exempt from Form 4
 
 
+PLAN_RE = __import__("re").compile(r"10b\s*5\s*[-\u2010\u2011\u2013]\s*1", __import__("re").I)   # "Rule 10b5-1", "10B5-1(c)", "10b5\u20111"
+
+
 def reduce_form4(text: str) -> str:
     """A Form 4 XML -> its transaction table only: the reporting owners and their roles, whether the filing marks a Rule 10b5-1 plan
     (the aff10b5One box, or a footnote naming 10b5-1), and the open-market purchases (P) and sales (S) of non-derivative stock."""
@@ -946,7 +949,8 @@ def reduce_form4(text: str) -> str:
         if val(rel, "isOther") in ("1", "true") and not roles:
             roles.append(val(rel, "otherText") or "Other")
         owners.append({"name": val(o, "reportingOwnerId/rptOwnerName"), "role": ", ".join(roles)})
-    plan = val(root, "aff10b5One") in ("1", "true") or any("10b5-1" in (f.text or "") for f in root.iter("footnote"))
+    notes = [f.text or "" for f in root.iter("footnote")] + [r.text or "" for r in root.iter("remarks")]
+    plan = val(root, "aff10b5One").lower() in ("1", "true") or any(PLAN_RE.search(n) for n in notes)
     txns = []
     for x in root.iter("nonDerivativeTransaction"):
         code = val(x, "transactionCoding/transactionCode")
