@@ -1,0 +1,23 @@
+date,cusip,ticker,issuer,class,source
+# CUSIP -> ticker for 13F matching (by CUSIP only, never by name). date = when the row was seen in the information table cited (Citadel Advisors, Q2 2026 13F-HR).
+2026-11-06,67066G104,NVDA,NVIDIA CORPORATION,COM,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,11135F101,AVGO,BROADCOM INC,COM,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,007903107,AMD,ADVANCED MICRO DEVICES INC,COM,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,874039100,TSM,TAIWAN SEMICONDUCTOR MANUFAC,SPONSORED ADS,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,N07059210,ASML,ASML HLDG NV,N Y REGISTRY SHS,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,595112103,MU,MICRON TECHNOLOGY INC,COM,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,042068205,ARM,ARM HOLDINGS PLC,SPONSORED ADS,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,594918104,MSFT,MICROSOFT CORP,COM,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,02079K305,GOOGL,ALPHABET INC,CAP STK CL A,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,02079K107,GOOGL,ALPHABET INC,CAP STK CL C (GOOG; counted with Alphabet),https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,023135106,AMZN,AMAZON COM INC,COM,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,30303M102,META,META PLATFORMS INC,CL A,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,68389X105,ORCL,ORACLE CORP,COM,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,69608A108,PLTR,PALANTIR TECHNOLOGIES INC,CL A,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,80004C200,SNDK,SANDISK CORP,COM,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,N97284108,NBIS,NEBIUS GROUP N.V.,SHS CLASS A,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,093712107,BE,BLOOM ENERGY CORP,COM CL A,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,573874104,MRVL,MARVELL TECHNOLOGY INC,COM,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,Q4982L109,IREN,IREN LIMITED,ORDINARY SHARES,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,03831W108,APP,APPLOVIN CORP,COM CL A,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml
+2026-11-06,773121108,RKLB,ROCKET LAB CORP,COM,https://www.sec.gov/Archives/edgar/data/1423053/000110465926097200/infotable.xml

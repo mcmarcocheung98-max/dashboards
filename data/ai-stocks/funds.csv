@@ -1,0 +1,12 @@
+date,name,short,cik,source
+# Funds on the Institutions tab. date = when the CIK was checked live on EDGAR (the submissions JSON answered with this name). Add a line to add a fund.
+2026-11-06,Berkshire Hathaway,Berkshire,1067983,https://data.sec.gov/submissions/CIK0001067983.json
+2026-11-06,Soros Fund Management,Soros,1029160,https://data.sec.gov/submissions/CIK0001029160.json
+2026-11-06,Appaloosa,Appaloosa,1656456,https://data.sec.gov/submissions/CIK0001656456.json
+2026-11-06,Pershing Square Capital Management,Pershing Square,1336528,https://data.sec.gov/submissions/CIK0001336528.json
+2026-11-06,Bridgewater Associates,Bridgewater,1350694,https://data.sec.gov/submissions/CIK0001350694.json
+2026-11-06,Citadel Advisors,Citadel,1423053,https://data.sec.gov/submissions/CIK0001423053.json
+2026-11-06,Renaissance Technologies,Renaissance,1037389,https://data.sec.gov/submissions/CIK0001037389.json
+2026-11-06,Point72 Asset Management,Point72,1603466,https://data.sec.gov/submissions/CIK0001603466.json
+2026-11-06,Tiger Global Management,Tiger Global,1167483,https://data.sec.gov/submissions/CIK0001167483.json
+2026-11-06,Coatue Management,Coatue,1135730,https://data.sec.gov/submissions/CIK0001135730.json

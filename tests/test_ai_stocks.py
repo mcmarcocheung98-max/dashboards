@@ -66,7 +66,66 @@ def revenue_facts(cik: int) -> str:
     return TC.companyfacts(1 + cik % 7, "Revenues", year_to_date=False)
 
 
+# ---- EDGAR fixtures: each fund's submissions, filing index and 13F information table (two quarters)
+FUND_CIKS = [int(r["cik"]) for r in B.manual_rows("ai-stocks", "funds")]
+CUSIP = {v: k for k, v in M.cusip_map().items()}                         # ticker -> a CUSIP (GOOGL: class C, the later row)
+
+
+def holdings(cik: int, q: int) -> list[tuple]:
+    """(cusip, name, shares, value, putCall) rows of fund `cik` in quarter q (0 = latest, 1 = the one before)."""
+    rng = np.random.default_rng(cik + q)
+    tickers = list(M.STOCKS)
+    held = [s for i, s in enumerate(tickers) if (cik + i + q) % 3]                # a different set each quarter: New and Sold
+    rows = [(CUSIP[s], M.NAMES[s].upper(), float(rng.integers(1, 50) * 1000), float(rng.integers(1, 500) * 1e5), "") for s in held]
+    rows += [("000000AA0", "NVIDIA CORP", 5000.0, 9e6, ""),                       # the right name, a wrong CUSIP: never counted
+             (CUSIP["NVDA"], "NVIDIA CORPORATION", 100.0, 7e6, "Call"),          # an option row: not a holding
+             ("12345X101", "OTHER CO", 100.0, 3e8, "")]
+    return rows
+
+
+def infotable_xml(rows) -> str:
+    one = lambda c, n, sh, v, pc: (f"<infoTable><nameOfIssuer>{n}</nameOfIssuer><titleOfClass>COM</titleOfClass><cusip>{c}</cusip><value>{v:.0f}</value>"
+                                   f"<shrsOrPrnAmt><sshPrnamt>{sh:.0f}</sshPrnamt><sshPrnamtType>SH</sshPrnamtType></shrsOrPrnAmt>"
+                                   + (f"<putCall>{pc}</putCall>" if pc else "") + "<investmentDiscretion>SOLE</investmentDiscretion></infoTable>")
+    return ('<?xml version="1.0"?><informationTable xmlns="http://www.sec.gov/edgar/document/thirteenf/informationtable">'
+            + "".join(one(*r) for r in rows) + "</informationTable>")
+
+
+QUARTERS = [("2026-06-30", "2026-08-14"), ("2026-03-31", "2026-05-15"), ("2025-12-31", "2026-02-13")]
+
+
+def submissions(cik: int) -> str:
+    rows = [("13F-HR", f"0000000000-26-{cik % 1000:03d}{i}00", f, q, "primary_doc.xml") for i, (q, f) in enumerate(QUARTERS)]
+    rows.insert(0, ("13F-HR/A", f"0000000000-26-{cik % 1000:03d}900", "2026-09-02", QUARTERS[0][0], "primary_doc.xml"))   # an amendment: skipped
+    rows.append(("SC 13G", "0000000000-26-000001", "2026-01-01", "", "x.htm"))
+    cols = ["form", "accessionNumber", "filingDate", "reportDate", "primaryDocument"]
+    return json.dumps({"name": f"FUND {cik}", "filings": {"recent": {c: [r[i] for r in rows] for i, c in enumerate(cols)}}})
+
+
+def edgar_fixture(url: str) -> str:
+    if "/submissions/CIK" in url:
+        return submissions(int(url.rsplit("CIK", 1)[1].split(".")[0]))
+    if url.endswith("index.json"):
+        return json.dumps({"directory": {"item": [{"name": "primary_doc.xml"}, {"name": "infotable.xml"}, {"name": "x-index.html"}]}})
+    if url.endswith("infotable.xml"):
+        cik, acc = url.split("/data/")[1].split("/")[:2]
+        return infotable_xml(holdings(int(cik), int(acc[-3])))
+    raise ConnectionError("fixture: unknown EDGAR url " + url)
+
+
+def is_edgar(url: str) -> bool:
+    return "sec.gov/submissions" in url or "/Archives/edgar/" in url
+
+
+def patch_download(set_attr=setattr):
+    """EDGAR answers from the fixtures at the download level, so the real fetch keeps memory and disk copies as on the server."""
+    real = B._download
+    set_attr(B, "_download", lambda url, *a, **k: edgar_fixture(url) if is_edgar(url) else real(url, *a, **k))
+
+
 def fake_fetch(url, ttl=0, **k):
+    if is_edgar(url):
+        return B.fetch(url, ttl, **k)
     if "fredgraph" in url:
         return vix_csv()
     if "cboe" in url:
@@ -87,7 +146,10 @@ def smoke_patch():
     """Used by scripts/smoke.py: every source of this dashboard answers from the fixtures above (capex through compute_chips' fixtures)."""
     M.fetch = fake_fetch
     M.fetch_json = fake_fetch_json
+    M.EDGAR_PACE = 0
+    patch_download()
     TC.smoke_patch()
+    M.fill_13f()                                                       # what the background job would have kept
 
 
 @pytest.fixture
@@ -96,6 +158,8 @@ def mocked(tmp_path, monkeypatch):
     monkeypatch.setattr(B, "SNAP_DIR", tmp_path / "snaps")
     monkeypatch.setattr(M, "fetch", fake_fetch)
     monkeypatch.setattr(M, "fetch_json", fake_fetch_json)
+    monkeypatch.setattr(M, "EDGAR_PACE", 0)
+    patch_download(monkeypatch.setattr)
     monkeypatch.setattr(CC, "_get", TC.fake_get)
     monkeypatch.setattr(CC, "fetch", TC.fake_fetch)
     monkeypatch.setattr(CC, "fetch_json", TC.fake_fetch_json)
@@ -109,7 +173,8 @@ def mocked(tmp_path, monkeypatch):
 # ------------------------------------------------------------------ pure pieces
 def test_registered():
     t = topics.REGISTRY["ai-stocks"]
-    assert t.module == "ai_stocks" and {k for k, _ in t.tabs} == {"setup", "drawdown", "trend", "dips", "fear", "fundamentals"} <= set(M.ENDPOINTS)
+    assert t.module == "ai_stocks" and {k for k, _ in t.tabs} == {"setup", "drawdown", "trend", "dips", "fear", "fundamentals", "institutions"} <= set(M.ENDPOINTS)
+    assert M.fill_13f in M.BACKGROUND
     assert topics.category("ai-stocks") == "Money & markets"
     m = topics.meta("ai-stocks")
     assert m["sources"] and "Not investment advice" in m["notes"] and "Not investment advice" in m["footer"] and m["method"]
@@ -222,6 +287,65 @@ def test_events_name_episodes(mocked):
     assert M._event_name(pd.Timestamp("2021-07-01"), ev) is None
 
 
+def test_reduce_13f_matches_by_cusip_only_and_keeps_options_apart():
+    rows = holdings(1067983, 0)
+    out = json.loads(M.reduce_13f(M.cusip_map())(infotable_xml(rows)))
+    assert out["rows"] == len(rows) and out["total"] == pytest.approx(sum(r[3] for r in rows))     # the total counts every row
+    held = {s for s in M.STOCKS if any(r[0] == CUSIP[s] and not r[4] for r in rows)}
+    assert set(out["hold"]) == held
+    if "NVDA" in held:                                                      # the decoy named NVIDIA CORP with another CUSIP is not added
+        nv = [r for r in rows if r[0] == CUSIP["NVDA"] and not r[4]][0]
+        assert out["hold"]["NVDA"]["shares"] == nv[2]
+    assert out["options"]["NVDA"] == 7e6
+    by_name = M.reduce_13f({})(infotable_xml(rows))                         # an empty map: nothing is matched, whatever the names say
+    assert json.loads(by_name)["hold"] == {}
+    two = infotable_xml([(CUSIP["MSFT"], "MICROSOFT CORP", 10.0, 100.0, ""), (CUSIP["MSFT"], "MICROSOFT CORP", 5.0, 50.0, ""),
+                         ("02079K305", "ALPHABET INC", 1.0, 10.0, ""), ("02079K107", "ALPHABET INC", 2.0, 20.0, "")])
+    h = json.loads(M.reduce_13f(M.cusip_map())(two))["hold"]
+    assert h["MSFT"] == {"shares": 15.0, "value": 150.0} and h["GOOGL"] == {"shares": 3.0, "value": 30.0}   # rows summed; class A and C
+
+
+def test_cusip_map_is_complete_and_unique():
+    rows = B.manual_rows("ai-stocks", "cusips")
+    assert set(M.cusip_map().values()) == set(M.STOCKS) and len({r["cusip"] for r in rows}) == len(rows)
+    assert all(len(r["cusip"]) == 9 and r["source"].startswith("https://www.sec.gov/") for r in rows)
+    assert len(M.funds()) == 10 and len({f["cik"] for f in M.funds()}) == 10
+
+
+def test_classify_new_added_trimmed_sold():
+    prev = {"A": {"shares": 100, "value": 1000}, "B": {"shares": 50, "value": 500}, "C": {"shares": 10, "value": 100}, "D": {"shares": 5, "value": 50}}
+    now = {"A": {"shares": 150, "value": 1800}, "B": {"shares": 20, "value": 300}, "D": {"shares": 5, "value": 80}, "E": {"shares": 7, "value": 70}}
+    c = {x["ticker"]: x for x in M.classify(prev, now)}
+    assert {k: v["tag"] for k, v in c.items()} == {"A": "Added", "B": "Trimmed", "C": "Sold", "E": "New"}     # D unchanged: not listed
+    assert c["A"]["usd"] == 600 and c["B"]["usd"] == -450 and c["C"]["usd"] == -100 and c["E"]["usd"] == 70  # shares x this quarter's price
+    cards = [{"short": "F1", "changes": M.classify(prev, now)}, {"short": "F2", "changes": [{"ticker": "C", "tag": "New", "usd": 900}]}]
+    cs = M.consensus(cards)
+    assert [r["ticker"] for r in cs][:2] == ["A", "E"] and next(r for r in cs if r["ticker"] == "C")["net"] == 0
+    assert next(r for r in cs if r["ticker"] == "C")["net_usd"] == 800 and cs[-1]["ticker"] == "B"
+
+
+def test_institutions_tab_reads_only_what_the_background_job_kept(mocked, monkeypatch):
+    p = M._institutions_now()
+    assert not p["funds"] and set(p["errors"].values()) == {"not fetched yet"}               # a page view never downloads
+    calls = []
+    real = M.fetch
+    monkeypatch.setattr(M, "fetch", lambda url, *a, **k: calls.append(url) or real(url, *a, **k))
+    assert set(M.fill_13f().values()) == {"ok"}
+    assert len(calls) == 10 * 5                                             # submissions, then index + table for two quarters
+    calls.clear()
+    M.fill_13f()
+    assert calls == []                                                      # kept copies younger than their TTL: nothing downloaded
+    p = M._institutions_now()
+    assert len(p["funds"]) == 10 and not p["errors"]
+    f = p["funds"][0]
+    assert f["quarter"] == "2026-06-30" and f["prev_quarter"] == "2026-03-31" and f["filed"] == "2026-08-14"   # the amendment is skipped
+    assert f["link"].endswith("-index.htm") and f["total"] > f["ai_value"] > 0 and len(f["top"]) <= 3
+    assert {c["tag"] for x in p["funds"] for c in x["changes"]} == {"New", "Added", "Trimmed", "Sold"}
+    assert p["consensus"] == sorted(p["consensus"], key=lambda r: (-r["net"], -r["net_usd"]))
+    assert 0 <= p["net_adding"] <= p["with_change"] == 10
+    B.json_safe(p)
+
+
 # ------------------------------------------------------------------ endpoints on fixtures
 def test_setup(mocked):
     p = M.ENDPOINTS["setup"]()
@@ -320,7 +444,8 @@ def test_revenue_uses_its_own_cache_key_not_compute_chips_capex_copy(mocked):
 
 def test_readings_and_signals(mocked):
     assert M.SIGNALS() == [] and M.READINGS() == []                         # nothing cached: nothing downloaded
-    for k in ("setup", "drawdown", "trend", "dips", "fear", "fundamentals"):
+    M.fill_13f()
+    for k in ("setup", "drawdown", "trend", "dips", "fear", "fundamentals", "institutions"):
         M.ENDPOINTS[k]()
     r = M.READINGS()
     assert {x["tab"] for x in r} == {t for t, _ in topics.REGISTRY["ai-stocks"].tabs} and all(x["lean"] in (-1, 0, 1) for x in r)
@@ -356,7 +481,7 @@ def test_every_endpoint_through_the_server(mocked):
 
     async def go():
         async with TestClient(TestServer(make_app())) as c:
-            for name in ("setup", "drawdown", "trend", "dips", "fear", "fundamentals", "meta"):
+            for name in ("setup", "drawdown", "trend", "dips", "fear", "fundamentals", "institutions", "meta"):
                 r = await c.get(f"/api/ai-stocks/{name}")
                 assert r.status == 200, name
             r = await c.get("/ai-stocks")

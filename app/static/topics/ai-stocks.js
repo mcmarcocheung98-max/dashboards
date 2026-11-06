@@ -1,4 +1,4 @@
-// AI Stocks: the setup after the dip. Data from /api/ai-stocks/<setup|drawdown|trend|dips|fear|fundamentals>; helpers from topic.html.
+// AI Stocks: the setup after the dip. Data from /api/ai-stocks/<setup|drawdown|trend|dips|fear|fundamentals|institutions>; helpers from topic.html.
 // Leans: +1 = the setup reads healthier, -1 = more stress. Not investment advice: the page describes, it makes no buy or sell call.
 (() => {
 const dateOf = s => s ? new Date(s).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }) : "–";
@@ -267,6 +267,36 @@ const VIEWS = {
     const T = card("Latest quarter by company", table(["Company", "Quarter", "Revenue", "On a year"],
       Object.entries(L).map(([k, r]) => el("tr", {}, td(k), td(r.quarter), td(usd(r.revenue, 1) + "bn"), td(pct(r.yoy, 1), cls(r.yoy))))));
     return [head, RV, CX, T];
+  },
+
+  async institutions() {
+    const d = await api("institutions"), F = d.funds || [], C = d.consensus || [];
+    const TAG = { New: "up", Added: "up", Trimmed: "down", Sold: "down" };
+    const money = v => v == null ? "–" : (v < 0 ? "−$" : "$") + big(Math.abs(v));
+    const signed = v => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + "$" + big(Math.abs(v));
+    const qlab = q => q ? "quarter to " + dateOf(q) : "–";
+    const head = card("What big funds did with these stocks last quarter (13F filings)",
+      el("div", { class: "kpis" }, kpi("Funds net-adding our stocks", (d.net_adding ?? "–") + " of " + (d.with_change ?? "–"), d.with_change ? (d.net_adding / d.with_change > 0.6 ? "up" : d.net_adding / d.with_change < 0.4 ? "down" : "") : ""),
+        kpi("Latest quarter end", dateOf(d.as_of)), kpi("Funds", num(F.length))),
+      el("div", { class: "warn", style: "margin-top:8px" }, "13F filings show US long positions only: no shorts, cash, non-13F assets or full derivative exposure. They are filed up to 45 days after the quarter ends, so read them by quarter end, not filing date. Each fund shows its own latest quarter, and some file late. Not investment advice."),
+      note("Legend: New = first appears this quarter; Added = more shares than the previous quarter; Trimmed = fewer; Sold = no longer reported. Dollar change: New = the value now, Sold = the value before, Added and Trimmed = the change in shares at this quarter's end price."),
+      errs(d, "Some funds are"));
+    const fundCard = f => el("div", { style: "border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface,transparent)" },
+      el("div", { style: "display:flex;justify-content:space-between;gap:8px;align-items:baseline" }, el("b", {}, f.name), link("13F ↗", f.link)),
+      el("div", { class: "muted", style: "margin:2px 0 6px" }, qlab(f.quarter) + " · filed " + dateOf(f.filed) + " · compared with " + qlab(f.prev_quarter)),
+      el("div", { style: "display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px" }, el("span", {}, el("span", { class: "muted" }, "Reported "), el("b", {}, money(f.total))),
+        el("span", {}, el("span", { class: "muted" }, "In our stocks "), el("b", {}, money(f.ai_value))),
+        el("span", {}, el("span", { class: "muted" }, "Net change "), el("b", { class: cls(f.net_usd) }, signed(f.net_usd)))),
+      ...(f.top && f.top.length ? f.top.map(c => el("div", { style: "display:flex;justify-content:space-between;gap:8px" },
+          el("span", {}, el("b", {}, c.ticker), " ", el("span", { class: "pill", style: "font-size:11px;color:var(--" + TAG[c.tag] + ")" }, c.tag)), el("b", { class: cls(c.usd) }, signed(c.usd))))
+        : [el("div", { class: "muted" }, f.prev_quarter ? "No change in our stocks." : "Only one quarter on file.")]));
+    const G = F.length ? card("Each fund: its three largest changes in our stocks", el("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px" }, ...F.map(fundCard)))
+      : card("Funds", el("div", { class: "muted" }, "Not fetched yet: the server downloads the 13F filings in the background, paced, and keeps them for 7 days. Check back in a few minutes."));
+    const T = card("Consensus: per stock, how many funds bought and sold", table(["Stock", "Opened or added", "Trimmed or sold", "Net funds", "Net dollar change", "Who"],
+      C.map(r => el("tr", {}, td([el("b", {}, r.ticker), " ", el("span", { class: "muted" }, r.name)]), td(num(r.n_buy), r.n_buy ? "up" : ""), td(num(r.n_sell), r.n_sell ? "down" : ""),
+        td((r.net > 0 ? "+" : "") + r.net, cls(r.net)), td(signed(r.net_usd), cls(r.net_usd)), td(el("span", { class: "muted", style: "font-size:12px" }, [...r.buyers, ...r.sellers].join(", ")))))),
+      note("Sorted by net buyers (funds that opened or added minus funds that trimmed or sold), then by net dollars. Each fund is compared with its own previous quarter. Stocks no fund changed are not listed. " + SMALL));
+    return [head, G, T];
   },
 };
 window.TOPIC = { VIEWS, presets: [["1m", "1M", 30], ["3m", "3M", 91], ["6m", "6M", 182], ["1y", "1Y", 365], ["5y", "5Y", 1826], ["all", "All", 0]] };

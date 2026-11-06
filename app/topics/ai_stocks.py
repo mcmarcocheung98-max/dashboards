@@ -8,6 +8,7 @@ trend         share of the basket above its 50- and 200-day averages, the basket
 dips          every past basket drawdown of 15% or more: returns 1, 3 and 6 months after the 15% point and after the bottom
 fear          VIX (FRED VIXCLS, Cboe's history file when FRED does not answer), the basket against QQQ and SMH against SPY over 3 and 12 months
 fundamentals  revenue growth on a year for the basket's US filers (SEC EDGAR companyfacts) and hyperscaler capex (compute_chips' series)
+institutions  10 funds' latest two 13F-HR filings (EDGAR, background job fill_13f, kept 7 days): New/Added/Trimmed/Sold in our stocks
 layout        not a tab: what this server gets back from each source, to check reachability from Railway
 
 Prices: daily closes from Nasdaq's quote API (Yahoo answers Railway with 429). The basket is an equal-weight index rebalanced daily
@@ -36,7 +37,7 @@ TOPIC = Topic(SLUG, "AI Stocks: the setup after the dip",
               "dips like this before? Thirteen AI leaders in an equal-weight basket, and the owner's ten picks as a second group, against QQQ, "
               "SPY and SMH, with VIX and revenue growth.",
               "ai_stocks", (("setup", "Setup"), ("drawdown", "Drawdown"), ("trend", "Trend & breadth"), ("dips", "After past dips"),
-                            ("fear", "Fear & relative"), ("fundamentals", "Fundamentals")),
+                            ("fear", "Fear & relative"), ("fundamentals", "Fundamentals"), ("institutions", "Institutions")),
               ("setup", "drawdown", "trend", "dips", "fear", "fundamentals"), icon="chart")
 
 BASKET = ("NVDA", "AVGO", "AMD", "TSM", "ASML", "MU", "ARM", "MSFT", "GOOGL", "AMZN", "META", "ORCL", "PLTR")
@@ -75,7 +76,8 @@ SOURCES = [{"name": "Nasdaq quote API (daily closes of the 13 basket stocks, the
            {"name": "FRED: CBOE Volatility Index (VIXCLS)", "url": "https://fred.stlouisfed.org/series/VIXCLS", "cadence": "daily"},
            {"name": "Cboe VIX history (fallback when FRED does not answer)", "url": "https://www.cboe.com/tradable_products/vix/vix_historical_data/", "cadence": "daily"},
            {"name": "SEC EDGAR companyfacts (10-Q, 10-K revenue)", "url": "https://www.sec.gov/edgar/sec-api-documentation", "cadence": "quarterly"},
-           {"name": "Hyperscaler capex from the AI Compute, Power & Chips dashboard", "url": "/compute-chips#capex", "cadence": "quarterly"}]
+           {"name": "Hyperscaler capex from the AI Compute, Power & Chips dashboard", "url": "/compute-chips#capex", "cadence": "quarterly"},
+           {"name": "SEC EDGAR 13F-HR information tables (10 funds, data/ai-stocks/funds.csv)", "url": "https://www.sec.gov/divisions/investment/13ffaq", "cadence": "quarterly"}]
 NOTES = ("Not investment advice: this page shows where AI share prices stand against their own history and makes no buy or sell call. "
          "The basket is an equal-weight index of 13 AI stocks, rebalanced daily, 100 on 2 January 2020; prices exclude dividends. "
          "After past dips draws on a handful of drawdowns since 2020: a small sample, history and not a forecast. "
@@ -723,6 +725,201 @@ def _layout_now() -> dict:
     return out
 
 
+# ------------------------------------------------------------------ SEC EDGAR, paced and cached on disk (13F and Form 4)
+SUBMISSIONS = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
+ARCHIVE = "https://www.sec.gov/Archives/edgar/data/{cik}/{acc}/"
+EDGAR_PACE = 0.15                   # seconds between EDGAR downloads: under 7 a second, well inside the SEC's 10
+_EDGAR_TURN = __import__("threading").Lock()
+_edgar_last = [0.0]
+
+
+def _snap_text(url: str, max_age: float | None = None) -> str | None:
+    """The text kept for `url` (memory, else the disk snapshot), when younger than max_age seconds; None otherwise. Never downloads
+    and never marks a source stale: these files are refreshed by the background jobs on their own schedule."""
+    from ..cache import _cache
+    hit = _cache.get(f"topic:{url}")
+    if hit and (max_age is None or time.time() - hit[0] < max_age):
+        return hit[1]
+    f = B._snap(url)
+    if f.exists() and (max_age is None or time.time() - f.stat().st_mtime < max_age):
+        return f.read_text(encoding="utf-8")
+    return None
+
+
+def edgar(url: str, ttl: float, reduce=None, min_bytes: int = 20) -> str:
+    """For the BACKGROUND jobs: the disk copy while it is younger than ttl, else a paced download through fetch (which keeps the new
+    copy, reduced, as the snapshot). Uses compute_chips' SEC User-Agent (name and email, as the SEC asks)."""
+    have = _snap_text(url, ttl)
+    if have is not None:
+        return have
+    with _EDGAR_TURN:
+        wait = _edgar_last[0] + EDGAR_PACE - time.time()
+        if wait > 0:
+            time.sleep(wait)
+        try:
+            return fetch(url, ttl, headers={**CC.SEC_HEADERS, "Accept": "*/*"}, reduce=reduce, min_bytes=min_bytes, timeout=90)
+        finally:
+            _edgar_last[0] = time.time()
+
+
+def cached_text(url: str, ttl: float = 0, reduce=None, min_bytes: int = 0) -> str:
+    """For page views: the kept copy only (LookupError when the background job has not fetched it yet)."""
+    have = _snap_text(url)
+    if have is None:
+        raise LookupError("not fetched yet")
+    return have
+
+
+def _reduce_subs(forms: tuple[str, ...]):
+    """Submissions JSON -> only the recent filings of these forms: [[form, accession, filed, report date, primary document], ...]."""
+    def go(text: str) -> str:
+        r = json.loads(text)["filings"]["recent"]
+        keep = [[f, a, d, p, doc] for f, a, d, p, doc in zip(r["form"], r["accessionNumber"], r["filingDate"], r["reportDate"], r["primaryDocument"]) if f in forms]
+        return json.dumps({"name": json.loads(text).get("name"), "filings": keep})
+    return go
+
+
+# ------------------------------------------------------------------ 13F: institutions
+F13_TTL = 7 * DAY                   # submissions; a filing's own files never change, so they are kept a year
+FOREVER = 365 * DAY
+
+
+def funds() -> list[dict]:
+    return [{"name": r["name"], "short": r.get("short") or r["name"], "cik": int(r["cik"])} for r in B.manual_rows(SLUG, "funds") if r.get("cik")]
+
+
+def cusip_map() -> dict[str, str]:
+    """CUSIP -> ticker (data/ai-stocks/cusips.csv). A 13F row counts only when its CUSIP is here: names are never matched."""
+    return {r["cusip"].upper(): r["ticker"] for r in B.manual_rows(SLUG, "cusips") if r.get("cusip") and r.get("ticker")}
+
+
+def reduce_13f(cusips: dict[str, str]):
+    """An information table XML -> {"total": $ of every row, "rows": n, "hold": {ticker: {"shares", "value"}}, "options": {ticker: $}}.
+    Parsed streaming (iterparse, each row cleared once read); only rows whose CUSIP is in the map are kept. Share rows (no putCall)
+    make the position; put and call rows are summed apart and not counted as holdings."""
+    import io
+    from xml.etree import ElementTree as ET
+
+    def go(text: str) -> str:
+        total, n, hold, opts = 0.0, 0, {}, {}
+        for _, e in ET.iterparse(io.StringIO(text.lstrip("\ufeff"))):
+            if not e.tag.endswith("infoTable"):
+                continue
+            g = {c.tag.rsplit("}", 1)[-1]: (c.text or "").strip() for c in e.iter()}
+            v = float(g.get("value") or 0)
+            total += v
+            n += 1
+            tk = cusips.get((g.get("cusip") or "").upper())
+            if tk:
+                if g.get("putCall"):
+                    opts[tk] = opts.get(tk, 0.0) + v
+                elif g.get("sshPrnamtType", "SH") == "SH":
+                    h = hold.setdefault(tk, {"shares": 0.0, "value": 0.0})
+                    h["shares"] += float(g.get("sshPrnamt") or 0)
+                    h["value"] += v
+            e.clear()
+        if not n:
+            raise ValueError("no information table rows")
+        return json.dumps({"total": total, "rows": n, "hold": hold, "options": opts})
+    return go
+
+
+def _infotable_name(index_json: str) -> str:
+    items = json.loads(index_json)["directory"]["item"]
+    xs = [i["name"] for i in items if i["name"].lower().endswith(".xml") and i["name"].lower() != "primary_doc.xml"]
+    if not xs:
+        raise LookupError("no information table in the filing")
+    return xs[0]
+
+
+def classify(prev: dict, now: dict) -> list[dict]:
+    """Position changes between two quarters for one fund: New (not held before), Added (more shares), Trimmed (fewer), Sold (no
+    longer reported). dollars: New = the value now; Sold = minus the value before; Added and Trimmed = the change in shares at this
+    quarter's end price (value / shares), so a price move alone is not a purchase."""
+    out = []
+    for tk in sorted(set(prev) | set(now)):
+        p, n = prev.get(tk, {}).get("shares", 0) or 0, now.get(tk, {}).get("shares", 0) or 0
+        if n > 0 and p <= 0:
+            tag, usd = "New", now[tk]["value"]
+        elif n <= 0 and p > 0:
+            tag, usd = "Sold", -prev[tk]["value"]
+        elif n > p:
+            tag, usd = "Added", (n - p) * now[tk]["value"] / n
+        elif n < p:
+            tag, usd = "Trimmed", (n - p) * now[tk]["value"] / n
+        else:
+            continue
+        out.append({"ticker": tk, "tag": tag, "usd": _r(usd, 0), "shares": _r(n, 0), "prev_shares": _r(p, 0), "value": _r(now.get(tk, {}).get("value", 0), 0)})
+    return out
+
+
+def consensus(cards: list[dict]) -> list[dict]:
+    """Per stock: funds that opened or added it, funds that trimmed or sold it, and the net dollar change; most net buyers first."""
+    per: dict[str, dict] = {}
+    for c in cards:
+        for ch in c.get("changes") or []:
+            r = per.setdefault(ch["ticker"], {"ticker": ch["ticker"], "name": NAMES.get(ch["ticker"], ch["ticker"]), "buyers": [], "sellers": [], "net_usd": 0.0})
+            (r["buyers"] if ch["tag"] in ("New", "Added") else r["sellers"]).append(c["short"] + " (" + ch["tag"].lower() + ")")
+            r["net_usd"] += ch["usd"] or 0
+    rows = [{**r, "n_buy": len(r["buyers"]), "n_sell": len(r["sellers"]), "net": len(r["buyers"]) - len(r["sellers"]), "net_usd": _r(r["net_usd"], 0)} for r in per.values()]
+    return sorted(rows, key=lambda r: (-r["net"], -(r["net_usd"] or 0)))
+
+
+def fund_card(f: dict, get) -> dict:
+    """One fund's latest two 13F-HR quarters through `get` (edgar in the background job, cached_text on a page view)."""
+    subs = json.loads(get(SUBMISSIONS.format(cik=f["cik"]), F13_TTL, reduce=_reduce_subs(("13F-HR",))))
+    by_q: dict[str, list] = {}
+    for form, acc, filed, rep, doc in subs["filings"]:                 # newest first; the first original filing of each quarter
+        if rep and rep not in by_q:
+            by_q[rep] = [acc, filed]
+    qs = sorted(by_q, reverse=True)[:2]
+    if not qs:
+        raise LookupError("no 13F-HR filed")
+    cmap = cusip_map()
+    tables = []
+    for q in qs:
+        acc, filed = by_q[q]
+        base = ARCHIVE.format(cik=f["cik"], acc=acc.replace("-", ""))
+        name = _infotable_name(get(base + "index.json", FOREVER))
+        tables.append({"quarter": q, "filed": filed, "acc": acc, "link": base + acc + "-index.htm",
+                       **json.loads(get(base + name, FOREVER, reduce=reduce_13f(cmap)))})
+    now, prev = tables[0], (tables[1] if len(tables) > 1 else None)
+    changes = classify(prev["hold"], now["hold"]) if prev else []
+    return {"name": f["name"], "short": f["short"], "cik": f["cik"], "quarter": now["quarter"], "filed": now["filed"], "link": now["link"],
+            "total": _r(now["total"], 0), "positions": now["rows"], "prev_quarter": prev["quarter"] if prev else None,
+            "prev_total": _r(prev["total"], 0) if prev else None, "held": {k: _r(v["value"], 0) for k, v in now["hold"].items()},
+            "ai_value": _r(sum(v["value"] for v in now["hold"].values()), 0), "options": {k: _r(v, 0) for k, v in now["options"].items()},
+            "changes": changes, "top": sorted(changes, key=lambda c: -abs(c["usd"] or 0))[:3],
+            "net_usd": _r(sum(c["usd"] or 0 for c in changes), 0) if prev else None}
+
+
+def fill_13f() -> dict:
+    """BACKGROUND job: download what is missing or older than its TTL (submissions 7 days, filings once), paced."""
+    res = {}
+    for f in funds():
+        try:
+            fund_card(f, edgar)
+            res[f["short"]] = "ok"
+        except Exception as e:
+            res[f["short"]] = type(e).__name__
+    return res
+
+
+def _institutions_now() -> dict:
+    cards, errors = [], {}
+    for f in funds():
+        try:
+            cards.append(fund_card(f, cached_text))
+        except Exception as e:
+            errors[f["short"]] = "not fetched yet" if isinstance(e, LookupError) and "fetched" in str(e) else type(e).__name__
+    cs = consensus(cards)
+    adding = [c for c in cards if c.get("net_usd") is not None]
+    out = {"funds": cards, "consensus": cs, "errors": errors, "net_adding": sum(1 for c in adding if c["net_usd"] > 0), "with_change": len(adding),
+           "stocks": list(STOCKS), "updated": int(time.time()),
+           "as_of": max((c["quarter"] for c in cards), default=None), "stale": {}}
+    return out
+
+
 # ------------------------------------------------------------------ readings and signals (cached payloads only)
 def _cached_payload(name: str) -> dict:
     from ..cache import _cache
@@ -770,6 +967,11 @@ def READINGS() -> list[dict]:
     g = (((f.get("relative") or {}).get("AI basket vs QQQ") or {}).get("3m") or {}).get("gap")
     if g is not None:
         add("fear", "ai_vs_qqq", "AI basket minus QQQ, 3-month return (pts)", g, _band(g, -3, 3), "+1 when AI leads by more than 3 points, -1 when it lags by more")
+    ins = _cached_payload("institutions")
+    if ins.get("with_change"):
+        k, n = ins["net_adding"], ins["with_change"]
+        add("institutions", "funds_net_adding", f"Funds net-adding AI stocks in their latest 13F (of {n})", k, _band(k / n, 0.4, 0.6),
+            "+1 when more than 60% of the funds added to the dashboard's stocks on the quarter, -1 when fewer than 40%")
     by = u.get("basket_yoy") or []
     if by:
         add("fundamentals", "revenue_yoy", "Basket revenue growth on a year, latest quarter (%)", _r(100 * by[-1][1], 1),
@@ -837,4 +1039,6 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 _prices = _cached_ep("prices", _prices_now)
 ENDPOINTS = {"setup": _cached_ep("setup", _setup_now), "drawdown": _cached_ep("drawdown", _drawdown_now), "trend": _cached_ep("trend", _trend_now),
              "dips": _cached_ep("dips", _dips_now), "fear": _cached_ep("fear", _fear_now), "fundamentals": _cached_ep("fundamentals", _fundamentals_now),
+             "institutions": _cached_ep("institutions", _institutions_now, 1800),
              "layout": _cached_ep("layout", _layout_now, 1800)}
+BACKGROUND = [fill_13f]             # slow, paced EDGAR downloads the server runs outside page requests (app/server.py _warm)

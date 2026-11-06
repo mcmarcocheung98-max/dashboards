@@ -29,6 +29,7 @@ server gets back from each source (FRED and Cboe VIX, Nasdaq for a stock and an 
 | After past dips | for each basket drawdown of 15% or more: returns 1, 3 and 6 months after the 15% point and after the bottom; median and range | same | yes | daily |
 | Fear & relative | VIX; AI basket ÷ QQQ; SMH ÷ SPY; 3- and 12-month returns side by side | FRED `VIXCLS` (CSV through curl), Cboe `VIX_History.csv` when FRED fails; Nasdaq | yes | daily |
 | Fundamentals | revenue growth on a year per company and for the basket; hyperscaler capex (trailing four quarters) and its growth | SEC EDGAR companyfacts; capex from `compute_chips._capex()` (imported, not re-downloaded) | yes | quarterly |
+| Institutions | one card per fund (latest 13F quarter end, filing date, total reported value, link, the quarter compared, its three largest changes in our stocks tagged New/Added/Trimmed/Sold with the dollar change); a consensus table per stock | SEC EDGAR: submissions JSON per fund, then the information-table XML of its latest two 13F-HR filings | yes, background job `fill_13f`, kept 7 days | quarterly |
 
 The basket: NVDA, AVGO, AMD, TSM, ASML, MU, ARM, MSFT, GOOGL, AMZN, META, ORCL, PLTR. Benchmarks: QQQ, SPY, and SMH for semiconductors.
 
@@ -93,7 +94,32 @@ Yahoo is not used: it answers Railway with 429.
   50-day average), or stopped making new lows, or back above the 50-day; then VIX; then, when the basket is 15% or more below its
   high, the median and range of past 3-month returns after the 15% point.
 
+- **Institutions (13F).** Ten funds in `data/ai-stocks/funds.csv` (Berkshire Hathaway, Soros Fund Management, Appaloosa, Pershing
+  Square, Bridgewater, Citadel Advisors, Renaissance Technologies, Point72, Tiger Global, Coatue), each CIK checked live on EDGAR on
+  6 Nov 2026; add a line to add a fund. For each fund: its submissions JSON (`data.sec.gov/submissions/CIK##########.json`, cut
+  down to 13F-HR rows), then for its latest two quarters (by report date; the first original 13F-HR of each quarter, amendments
+  `13F-HR/A` skipped) the filing's `index.json` to find the information table, then that XML. The XML is parsed streaming
+  (`iterparse`, each row cleared after reading) inside `fetch(..., reduce=...)`, so memory and disk keep only the total value, the
+  row count and the rows whose **CUSIP** is in `data/ai-stocks/cusips.csv`: matched by CUSIP only, never by name. Each CUSIP was
+  read from a real information table (Citadel Advisors, Q2 2026); Alphabet's class A and class C are both counted as GOOGL. Rows
+  for one CUSIP are summed (funds report one row per manager). Put and call rows are kept apart and not counted as holdings.
+  Values are in dollars (13F values have been in dollars since January 2023).
+  - **Tags:** New = first appears this quarter; Added = more shares than the previous quarter; Trimmed = fewer; Sold = no longer
+    reported. Classified on shares, so a price move alone is not a purchase. **Dollar change:** New = the value now; Sold = minus the
+    value before; Added and Trimmed = the change in shares times this quarter's end price (value / shares).
+  - **Consensus:** per stock, the funds that opened or added it and the funds that trimmed or sold it, with the net dollar change;
+    sorted by net buyers, then net dollars.
+  - **Fetching:** a BACKGROUND job (`fill_13f`, run by the server at start and every 6 hours) downloads only what is missing or
+    older than its TTL: submissions after 7 days, a filing's own files once (they never change). EDGAR is asked at most once every
+    0.15 s (under 7 a second; the SEC's limit is 10), with compute_chips' User-Agent (name and email, as the SEC asks). A page view
+    reads only the kept copies and never downloads; before the first fill the tab says "not fetched yet".
+
 ## Caveats and gaps
+
+- **13F filings are a partial, late view.** US long positions only: no shorts, cash, non-13F assets (most foreign shares, private
+  holdings) or full derivative exposure. They are filed up to 45 days after the quarter ends, so read them by quarter end, not by
+  filing date. Each fund shows its own latest quarter, and some file late (Pershing Square's latest on 6 Nov 2026 was the quarter
+  to March 2026). A fund that trades actively (Citadel, Point72, Renaissance) can have changed everything since.
 
 - **The AI Setup Score is small-sample history.** Since 2020 there are a handful of washout and stretched episodes; the band
   statistics count thousands of overlapping days but only a few independent episodes. Not a forecast, not investment advice.
@@ -140,6 +166,7 @@ describes the numbers, not a trade.
 | After past dips | `past_dips` | (context only, lean 0) | |
 | Fear & relative | `vix` | below 20 | above 25 |
 | Fear & relative | `ai_vs_qqq` | AI ahead by more than 3 points over 3 months | behind by more than 3 |
+| Institutions | `funds_net_adding` | more than 60% of the funds with two quarters on file net-added to our stocks | fewer than 40% |
 | Fundamentals | `revenue_yoy` | basket revenue growth sped up by more than 2 points on the quarter before | slowed by more than 2 |
 
 ## Upkeep
