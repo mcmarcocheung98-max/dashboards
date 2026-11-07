@@ -176,6 +176,9 @@ def test_payloads_readings_and_signals(mocked):
     assert A["baskets"]["watch"]["z12"] < 0 < A["baskets"]["bag"]["z12"] or A["baskets"]["watch"]["z12"] < A["baskets"]["bag"]["z12"]   # the fixture fades the Rolex articles in 2026
     assert len(A["baskets"]["watch"]["points"]) > 120 and A["last_full_month"] == "2026-10-01"
     assert L["ebay"]["set_up"] is False and "EBAY_APP_ID" in L["ebay"]["message"] and len(L["ebay"]["items"]) == 13 and M.BACKGROUND == [M.EBAY.fill]
+    LG = L["log"]
+    assert LG["n_rows"] >= 15 and {x["metric"] for x in LG["latest"]} >= {"chrono24_listings", "stockx_last_sale", "watchcharts_days_to_sell"} and LG["chrono24_total"][0][1] > 3000
+    assert all(x["source"].startswith("http") and x["metric"] in M.LOG_METRICS for x in LG["latest"])
     assert O["kpi"]["n_watches"] == 8 and O["kpi"]["n_bags"] == 5 and len(O["items"]) == 13 and O["where"]
     assert len(W["items"]) == 8 and len(G["items"]) == 5 and "calendar" in G and G["retail_rise"]["brand"]
     assert len(O["rolex_premium"]) > 24 and len(G["ratio"]) >= 3, "the committed points must give both baskets a monthly history (the bag basket starts in 2026: three of its five bags have no earlier resale record)"
@@ -287,3 +290,25 @@ def test_auction_lots_estimates_and_sell_through(mocked, monkeypatch):
     assert st["watch"]["sales"][0]["basis"] == "from lots entered" and st["watch"]["sales"][0]["offered"] == 4 and st["watch"]["sales"][0]["rate"] == 0.75
     r = {x["key"]: x for x in M.readings(lambda n: {"liquidity": {"auctions": {"sell_through": st}}}.get(n, {}))}
     assert r["sell_through_watch"]["value"] == 75.0 and r["sell_through_watch"]["lean"] == 0 and r["sell_through_bag"]["lean"] == 0
+
+
+def test_liquidity_log_spreads_and_totals(mocked, monkeypatch):
+    log_rows = [{"date": "2026-11-07", "item": "hermes-birkin25-togo", "platform": "stockx", "metric": "stockx_bid", "value": "10000", "currency": "USD", "source": "https://x/1", "note": "verify"},
+                {"date": "2026-11-05", "item": "hermes-birkin25-togo", "platform": "stockx", "metric": "stockx_ask", "value": "13000", "currency": "USD", "source": "https://x/2", "note": ""},
+                {"date": "2026-11-07", "item": "sub-126610ln", "platform": "chrono24", "metric": "chrono24_listings", "value": "800", "currency": "", "source": "https://x/3", "note": ""},
+                {"date": "2026-11-07", "item": "daytona-126500ln", "platform": "chrono24", "metric": "chrono24_listings", "value": "700", "currency": "", "source": "https://x/4", "note": ""},
+                {"date": "2026-10-31", "item": "sub-126610ln", "platform": "chrono24", "metric": "chrono24_listings", "value": "850", "currency": "", "source": "https://x/5", "note": ""},
+                {"date": "2026-11-07", "item": "sub-126610ln", "platform": "watchcharts", "metric": "watchcharts_days_to_sell", "value": "17", "currency": "", "source": "https://x/6", "note": ""},
+                {"date": "2026-11-07", "item": "nope", "platform": "x", "metric": "chrono24_listings", "value": "5", "currency": "", "source": "https://x/7", "note": "unknown item, skipped"},
+                {"date": "2026-11-07", "item": "sub-126610ln", "platform": "x", "metric": "made_up", "value": "5", "currency": "", "source": "https://x/8", "note": "unknown metric, skipped"}]
+    real_rows = M.rows
+    monkeypatch.setattr(M, "rows", lambda name: log_rows if name == "liquidity" else real_rows(name))
+    L = M.liquidity_log(M.fx())
+    assert L["n_rows"] == 6 and L["n_verify"] == 1 and L["first"] == "2026-10-31" and L["last"] == "2026-11-07"
+    sp = L["spreads"]["hermes-birkin25-togo"]
+    assert sp["spread"] == 0.3 and sp["bid"] == round(10000 / 1.3) and sp["date"] == "2026-11-07"
+    assert L["chrono24_total"] == [[int(pd.Timestamp("2026-11-01").timestamp()), 850], [int(pd.Timestamp("2026-11-08").timestamp()), 1500]] and L["chrono24_items"] == ["daytona-126500ln", "sub-126610ln"]
+    lat = {(x["item"], x["metric"]): x for x in L["latest"]}
+    assert lat[("sub-126610ln", "chrono24_listings")]["value"] == 800 and lat[("sub-126610ln", "watchcharts_days_to_sell")]["kind"] == "days"
+    r = {x["key"]: x for x in M.readings(lambda n: {"liquidity": {"log": L}}.get(n, {}))}
+    assert r["stockx_spread"]["value"] == 30.0 and r["stockx_spread"]["lean"] == 0

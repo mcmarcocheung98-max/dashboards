@@ -215,7 +215,19 @@ const VIEWS = {
         ...linesChart([...Object.values(EC).filter(c => c.count && c.count.length).map(c => ({ name: c.name + ": listings", points: c.count })), ...Object.values(EC).filter(c => c.median && c.median.length).map(c => ({ name: c.name + ": median ask", points: c.median, axis: "left", dashed: true }))], v => num(v, 0), { small: true }),
         table(["Item", "Query", "Date", "Listings", "Median ask", "Lowest ask", "Listings on a year"], Object.values(EI).map(i => el("tr", {}, el("td", {}, i.name), el("td", { class: "wrap" }, i.query || "–"), el("td", {}, i.latest ? dateOf(i.latest.date) : "–"), el("td", {}, i.latest ? num(i.latest.count) : "–"), el("td", {}, i.latest ? gbp(i.latest.median) : "–"), el("td", {}, i.latest ? gbp(i.latest.low) : "–"), el("td", { class: cls(i.count_1y) }, pct(i.count_1y, 0))))),
         note((Eb.note || "") + ". " + (Eb.days || 0) + " days of snapshots. More listings against a falling premium means sellers are stuck (the liquidity signal watches this once a year of history exists)."));
-    return [head, bk, per, tbl, eb, ve, st, lots, changesCard("liquidity")];
+    // ---- the weekly manual log
+    const Lg = d.log || {}, SP = Lg.spreads || {}, byItem = {};
+    (Lg.latest || []).forEach(x => { (byItem[x.item] = byItem[x.item] || { name: x.name, category: x.category, m: {} }).m[x.metric] = x; });
+    const cell = (x, f) => x ? el("td", { title: x.note || "" }, f(x.value) + (x.verify ? " ·v" : "")) : el("td", {}, "–");
+    const log = card("Weekly log: listings, bids, asks and days to sell (liquidity.csv)" + (Lg.last ? " · latest " + dateOf(Lg.last) : ""),
+      Object.keys(SP).length ? el("div", { class: "kpis" }, ...Object.values(SP).map(s => kpi(s.name + ": StockX bid-ask spread (" + dateOf(s.date) + ")", pct(s.spread, 0), s.spread < 0.10 ? "up" : s.spread > 0.30 ? "down" : ""))) : null,
+      Lg.chrono24_total && Lg.chrono24_total.length >= 2 ? el("div", {}, ...linesChart([{ name: "Chrono24 listings, references logged (" + (Lg.chrono24_items || []).length + ")", points: Lg.chrono24_total }], v => num(v, 0), { small: true, whitespace: monthsWs() })) : null,
+      table(["Item", "Chrono24 listings", "Days to sell", "StockX last sale", "StockX bid", "StockX ask", "Fashionphile sold", "Dates"],
+        Object.values(byItem).map(r => el("tr", {}, el("td", {}, r.name), cell(r.m.chrono24_listings, v => num(v)), cell(r.m.watchcharts_days_to_sell, v => num(v, 1)), cell(r.m.stockx_last_sale, v => gbp(v)), cell(r.m.stockx_bid, v => gbp(v)), cell(r.m.stockx_ask, v => gbp(v)), cell(r.m.fashionphile_sold_count, v => num(v)),
+          el("td", { class: "wrap" }, [...new Set(Object.values(r.m).map(x => x.date))].map(dateOf).join(", "))))),
+      note("Hand-entered once a week (the dev agent's weekly step appends rows): Chrono24's listing count on the reference's public page, StockX's last sale, highest bid and lowest ask for the bags (USD converted to GBP), WatchCharts' median days on market, and Fashionphile's sold counts where visible. ·v marks a reading not confirmed on the page. " + (Lg.n_rows || 0) + " rows, " + (Lg.n_verify || 0) + " to verify" + (Lg.first ? ", since " + dateOf(Lg.first) : "") + ". A wide bid-ask spread and more listings mean a market where sellers wait; days to sell is the most direct liquidity measure here."),
+      cite(Object.values(byItem).flatMap(r => Object.values(r.m)).map(x => ({ source: x.source, date: x.date })).filter((x, i, a) => a.findIndex(y => y.source === x.source) === i).slice(0, 10)));
+    return [head, bk, per, tbl, eb, log, ve, st, lots, changesCard("liquidity")];
   },
 
   async fees() {

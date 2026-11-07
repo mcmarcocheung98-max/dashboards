@@ -17,7 +17,9 @@ liquidity  how easily each item trades: attention (monthly Wikipedia pageviews p
            (auctions.csv, one row per lot at Phillips, Christie's, Sotheby's, Bonhams: hammer or price with premium against the estimate
            midpoint) and the sell-through rate per sale (auction_sales.csv, lots sold / offered) as a liquidity series; eBay UK active
            listings per item once a day (luxury_ebay.py: the Browse API with the owner's EBAY_APP_ID and EBAY_CERT_ID, a daily snapshot
-           on the volume so history accrues; "not set up yet" until the keys are set)
+           on the volume so history accrues; "not set up yet" until the keys are set); the weekly manual log (liquidity.csv: Chrono24
+           listing counts per reference, StockX bid, ask and last sale for bags, WatchCharts days to sell, Fashionphile sold counts where
+           visible), with the StockX bid-ask spread per bag
 
 Data. The brand sites and the resale platforms have no free API and refuse servers, so prices are hand-entered, dated and sourced
 (data/luxury/*.csv): items.csv (one row per item), retail.csv (official list prices as they change), resale.csv (asking or sold points
@@ -681,6 +683,60 @@ def vs_estimate_series(lots: list[dict]) -> dict:
     return out
 
 
+# ------------------------------------------------------------------ the weekly manual log (liquidity.csv)
+LOG_METRICS = {"chrono24_listings": ("Chrono24 listings", "count", "active listings for the reference on Chrono24, worldwide"),
+               "chrono24_price": ("Chrono24 price", "money", "Chrono24's approximate price for the reference"),
+               "stockx_last_sale": ("StockX last sale", "money", "the last sale on StockX"), "stockx_bid": ("StockX highest bid", "money", "the highest standing offer"),
+               "stockx_ask": ("StockX lowest ask", "money", "the lowest standing ask"),
+               "fashionphile_sold_count": ("Fashionphile sold", "count", "sold items visible on Fashionphile"), "fashionphile_listings": ("Fashionphile in stock", "count", "items in stock on Fashionphile"),
+               "watchcharts_days_to_sell": ("Days to sell (WatchCharts)", "days", "median days on market, WatchCharts"), "watchcharts_listings": ("WatchCharts listings", "count", "listings tracked by WatchCharts"),
+               "watchfinder_stock": ("Watchfinder stock", "count", "pieces in stock at Watchfinder")}
+
+
+def liquidity_log(FX: dict | None = None) -> dict:
+    """liquidity.csv (date, item, platform, metric, value, currency, source, note), appended weekly: per item and metric the series (money
+    in GBP at the month's rate) and the latest reading; the StockX bid-ask spread per bag (ask / bid - 1, needing both within 14 days);
+    the Chrono24 listing count summed over the watches that have one, week by week."""
+    its = {i["id"]: i for i in items(with_watchlist=True)}
+    series: dict[str, dict[str, dict]] = {}
+    latest: list[dict] = []
+    for r in rows("liquidity"):
+        v = _f(r.get("value"))
+        if v is None or r.get("metric") not in LOG_METRICS or r.get("item") not in its:
+            continue
+        t = pd.Timestamp(r["date"])
+        kind = LOG_METRICS[r["metric"]][1]
+        gv = to_gbp(v, r.get("currency") or "GBP", t, FX) if kind == "money" else v
+        if gv is None:
+            continue
+        series.setdefault(r["item"], {}).setdefault(r["metric"], {})[t] = float(gv)
+        latest.append({"item": r["item"], "name": its[r["item"]]["name"], "category": its[r["item"]]["category"], "metric": r["metric"], "label": LOG_METRICS[r["metric"]][0], "kind": kind,
+                       "value": _r(gv, 0 if kind != "days" else 1), "orig": f"{r['value']} {r.get('currency') or ''}".strip(), "date": str(t.date()), "platform": r.get("platform") or "", "source": r.get("source"),
+                       "note": r.get("note") or "", "verify": _verify(r)})
+    newest: dict[tuple, dict] = {}
+    for x in latest:
+        k = (x["item"], x["metric"])
+        if k not in newest or x["date"] > newest[k]["date"]:
+            newest[k] = x
+    spreads = {}
+    for item, ms in series.items():
+        bid, ask = ms.get("stockx_bid"), ms.get("stockx_ask")
+        if bid and ask:
+            tb, ta = max(bid), max(ask)
+            if abs((tb - ta).days) <= 14 and bid[tb] > 0:
+                spreads[item] = {"name": its[item]["name"], "bid": _r(bid[tb], 0), "ask": _r(ask[ta], 0), "spread": _r(ask[ta] / bid[tb] - 1, 4), "date": str(max(tb, ta).date())}
+    c24 = {}
+    for item, ms in series.items():
+        for t, v in (ms.get("chrono24_listings") or {}).items():
+            c24.setdefault(t.to_period("W").to_timestamp("W"), {})[item] = v
+    c24_pts = [[int(w.timestamp()), int(sum(d.values()))] for w, d in sorted(c24.items())]
+    return {"series": {i: {m: _pts(pd.Series(d, dtype=float).sort_index(), 1) for m, d in ms.items()} for i, ms in series.items()},
+            "latest": sorted(newest.values(), key=lambda x: (x["category"], x["name"], x["metric"])), "spreads": spreads,
+            "chrono24_total": c24_pts, "chrono24_items": sorted({i for d in c24.values() for i in d}), "metrics": {k: {"label": v[0], "kind": v[1], "words": v[2]} for k, v in LOG_METRICS.items()},
+            "n_rows": len(latest), "n_verify": sum(1 for x in latest if x["verify"]), "weeks": len({x["date"][:7] + str(pd.Timestamp(x["date"]).week) for x in latest}),
+            "first": min((x["date"] for x in latest), default=None), "last": max((x["date"] for x in latest), default=None)}
+
+
 # ------------------------------------------------------------------ tab payloads
 def _views(cat: str | None = None) -> list[dict]:
     FX = _fx_cached()
@@ -821,7 +877,7 @@ def _liquidity_now() -> dict:
         ebay = EBAY.payload(its)
     except Exception as e:
         ebay = {"set_up": EBAY.set_up(), "message": f"{type(e).__name__}: {str(e)[:120]}", "items": {}, "categories": {}, "days": 0}
-    return {"attention": att, "attention_errors": errs, "auctions": auc, "ebay": ebay, "fx_fallback": FX["fallback"],
+    return {"attention": att, "attention_errors": errs, "auctions": auc, "ebay": ebay, "log": liquidity_log(FX), "fx_fallback": FX["fallback"],
             "as_of": max([d for d in (att.get("last_full_month"), lots[-1]["date"] if lots else None) if d], default=None),
             "stale": B.stale_info([wiki_key(t) for t in sorted({i["wiki"] for i in its if i.get("wiki")})]), "updated": int(time.time())}
 
@@ -877,6 +933,11 @@ def readings(got) -> list[dict]:
         if c.get("latest") and c.get("count") and len(c["count"]) >= 2:
             v = c["latest"]["count"]
             add("liquidity", f"ebay_listings_{cat}", f"{name}: active eBay UK listings (basket)", v, 0, "a supply count; neutral until a year of history gives a z-score")
+    LG = got("liquidity").get("log") or {}
+    sp = [v["spread"] for v in (LG.get("spreads") or {}).values() if v.get("spread") is not None]
+    if sp:
+        v = float(np.median(sp))
+        add("liquidity", "stockx_spread", "Bags: StockX bid-ask spread (median of the bags with both)", _r(100 * v, 1), 1 if v < 0.10 else -1 if v > 0.30 else 0, "%; +1 under 10% (a tight market), -1 over 30% (bids far below asks)")
     ST = (got("liquidity").get("auctions") or {}).get("sell_through") or {}
     for cat, name in CATEGORIES:
         v = (ST.get(cat) or {}).get("latest")
