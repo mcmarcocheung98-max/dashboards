@@ -244,3 +244,36 @@ def test_wiki_attention_helpers(mocked):
     a = M.attention({"Rolex Submariner": s, "Birkin bag": M.wiki_views("Birkin bag")}, [{"id": "a", "name": "A", "category": "watch", "wiki": "Rolex Submariner"}, {"id": "b", "name": "B", "category": "bag", "wiki": "Birkin bag"}, {"id": "c", "name": "C", "category": "bag", "wiki": "Missing"}])
     assert a["items"][2]["last"] is None and a["items"][0]["last"]["month"] == "2026-10-01" and a["baskets"]["watch"]["titles"] == ["Rolex Submariner"]
     assert abs(sum(p[1] for p in a["baskets"]["bag"]["points"]) / len(a["baskets"]["bag"]["points"]) - 100) < 1
+
+
+def test_auction_lots_estimates_and_sell_through(mocked, monkeypatch):
+    lots_rows = [{"date": "2022-05-08", "house": "Phillips", "sale": "Geneva XV", "lot": "12", "item": "daytona-126500ln", "price": "60000", "currency": "CHF", "basis": "with premium", "est_low": "30000", "est_high": "50000", "sold": "yes", "source": "https://x/1", "note": ""},
+                 {"date": "2022-05-08", "house": "Phillips", "sale": "Geneva XV", "lot": "13", "item": "sub-126610ln", "price": "18000", "currency": "CHF", "basis": "with premium", "est_low": "15000", "est_high": "25000", "sold": "yes", "source": "https://x/2", "note": "verify"},
+                 {"date": "2022-05-08", "house": "Phillips", "sale": "Geneva XV", "lot": "14", "item": "gmt-126710blro", "price": "", "currency": "CHF", "basis": "", "est_low": "20000", "est_high": "30000", "sold": "no", "source": "https://x/3", "note": "bought in"},
+                 {"date": "2024-11-10", "house": "Christie's", "sale": "Rare Watches", "lot": "5", "item": "daytona-126500ln", "price": "32000", "currency": "USD", "basis": "hammer", "est_low": "30000", "est_high": "40000", "sold": "yes", "source": "https://x/4", "note": ""},
+                 {"date": "2024-11-12", "house": "Christie's", "sale": "Handbags HK", "lot": "7", "item": "hermes-birkin25-togo", "price": "150000", "currency": "HKD", "basis": "with premium", "est_low": "120000", "est_high": "180000", "sold": "yes", "source": "https://x/5", "note": ""}]
+    sales_rows = [{"date": "2022-05-08", "house": "Phillips", "sale": "Geneva XV", "category": "watch", "offered": "200", "sold": "200", "total": "35m", "currency": "CHF", "source": "https://x/s1", "note": ""},
+                  {"date": "2024-11-12", "house": "Christie's", "sale": "Handbags HK", "category": "bag", "offered": "250", "sold": "190", "total": "", "currency": "HKD", "source": "https://x/s2", "note": "verify"}]
+    real_rows = M.rows
+    monkeypatch.setattr(M, "rows", lambda name: {"auctions": lots_rows, "auction_sales": sales_rows}.get(name, real_rows(name)))
+    FX = M.fx()
+    lots = M.auction_lots(FX)
+    assert [l["lot"] for l in lots] == ["12", "13", "14", "5", "7"] and lots[2]["price"] is None and not lots[2]["sold"] and lots[1]["verify"]
+    assert abs(lots[0]["price"] - 60000 / 1.17) < 60 and abs(lots[0]["vs_estimate"] - 0.5) < 1e-6 and lots[0]["category"] == "watch" and lots[4]["category"] == "bag"
+    assert lots[4]["price"] == 10 * 150000 // 100 or lots[4]["price"] == 15000        # HKD has no FRED fixing: the fallback 0.10
+    ve = M.vs_estimate_series(lots)
+    assert len(ve["watch"]["lots"]) == 2 and ve["watch"]["latest"] == round(32000 / 35000 - 1, 4) and set(ve["watch"]["by_item"]) == {"daytona-126500ln", "sub-126610ln"}
+    assert len(ve["watch"]["half_year_median"]) == 2 and ve["bag"]["latest"] == 0.0
+    st = M.sell_through(lots)
+    w = st["watch"]
+    assert w["latest"] is None or w["points"], w
+    assert [s["basis"] for s in w["sales"]] == ["house count"] and w["sales"][0]["rate"] == 1.0 and w["lots_sold_share"] == 0.75 and w["n_lots"] == 4
+    assert st["bag"]["sales"][0]["rate"] == 0.76 and st["bag"]["latest"] == 0.76 and st["bag"]["sales"][0]["verify"]
+    # three lots of one sale with no house count: a sample-based rate, marked so
+    lots_rows[3]["house"], lots_rows[3]["sale"], lots_rows[3]["date"] = "Phillips", "Geneva XV", "2022-05-08"
+    sales_rows.pop(0)
+    lots = M.auction_lots(FX)
+    st = M.sell_through(lots)
+    assert st["watch"]["sales"][0]["basis"] == "from lots entered" and st["watch"]["sales"][0]["offered"] == 4 and st["watch"]["sales"][0]["rate"] == 0.75
+    r = {x["key"]: x for x in M.readings(lambda n: {"liquidity": {"auctions": {"sell_through": st}}}.get(n, {}))}
+    assert r["sell_through_watch"]["value"] == 75.0 and r["sell_through_watch"]["lean"] == 0 and r["sell_through_bag"]["lean"] == 0

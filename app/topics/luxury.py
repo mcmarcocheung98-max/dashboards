@@ -13,7 +13,9 @@ heat       a heat score for watches and one for bags, like Pokémon's: the baske
            the share of items above retail, and the public indices' direction
 fees       the platform fee table with links
 liquidity  how easily each item trades: attention (monthly Wikipedia pageviews per item since July 2015, a demand proxy: the Wikimedia
-           REST API, free, as trends.py uses it), with the 12-month z-score per item and the basket's attention line
+           REST API, free, as trends.py uses it), with the 12-month z-score per item and the basket's attention line; auction results
+           (auctions.csv, one row per lot at Phillips, Christie's, Sotheby's, Bonhams: hammer or price with premium against the estimate
+           midpoint) and the sell-through rate per sale (auction_sales.csv, lots sold / offered) as a liquidity series
 
 Data. The brand sites and the resale platforms have no free API and refuse servers, so prices are hand-entered, dated and sourced
 (data/luxury/*.csv): items.csv (one row per item), retail.csv (official list prices as they change), resale.csv (asking or sold points
@@ -604,6 +606,77 @@ def _wiki_all(its: list[dict]) -> tuple[dict[str, pd.Series], dict[str, str]]:
     return out, errs
 
 
+# ------------------------------------------------------------------ auction results: hammer vs estimate, sell-through
+def auction_lots(FX: dict | None = None) -> list[dict]:
+    """auctions.csv, one row per lot: price and estimates in GBP (converted at the month's rate), the ratio of price to the estimate
+    midpoint, and whether the lot sold; a lot with no price is unsold (bought in)."""
+    its = {i["id"]: i for i in items(with_watchlist=True)}
+    out = []
+    for r in rows("auctions"):
+        t = pd.Timestamp(r["date"])
+        cur = r.get("currency") or "GBP"
+        price = _f(r.get("price"))
+        lo, hi = _f(r.get("est_low")), _f(r.get("est_high"))
+        sold = (r.get("sold") or ("yes" if price else "no")).strip().lower() in ("yes", "y", "true", "1", "sold")
+        g = lambda v: _r(to_gbp(v, cur, t, FX), 0) if v is not None else None
+        mid = (lo + hi) / 2 if lo is not None and hi is not None else None
+        out.append({"date": str(t.date()), "t": t, "house": r.get("house") or "", "sale": r.get("sale") or "", "lot": r.get("lot") or "", "item": r.get("item") or "",
+                    "name": its.get(r.get("item"), {}).get("name") or r.get("item") or "", "category": its.get(r.get("item"), {}).get("category"),
+                    "price": g(price), "est_low": g(lo), "est_high": g(hi), "est_mid": g(mid), "orig": f"{r.get('price') or '-'} {cur}", "basis": (r.get("basis") or "").lower(),
+                    "vs_estimate": _r(price / mid - 1, 4) if price and mid else None, "sold": sold, "source": r.get("source"), "note": r.get("note") or "", "verify": _verify(r)})
+    return sorted(out, key=lambda x: x["t"])
+
+
+def sell_through(lots: list[dict]) -> dict:
+    """Per category: the sell-through rate per sale, from auction_sales.csv (lots sold / offered, the house's own count) and, where a sale
+    has no such row, from the lots entered for it (fewer, so marked 'from lots entered'); a monthly series of the rate, each sale's point
+    carried to the month end; the share of lots sold overall."""
+    out = {}
+    its = {i["id"]: i for i in items(with_watchlist=True)}
+    sales = rows("auction_sales")
+    for cat, name in CATEGORIES:
+        pts, table = {}, []
+        for r in sales:
+            if (r.get("category") or "").lower() not in (cat, cat + "es", cat + "s"):
+                continue
+            off, sold = _f(r.get("offered")), _f(r.get("sold"))
+            if off and sold is not None:
+                t = pd.Timestamp(r["date"])
+                rate = sold / off
+                pts.setdefault(t.to_period("M").to_timestamp("M"), []).append(rate)
+                table.append({"date": r["date"], "house": r.get("house"), "sale": r.get("sale"), "offered": int(off), "sold": int(sold), "rate": _r(rate, 4), "total": r.get("total"),
+                              "currency": r.get("currency"), "source": r.get("source"), "note": r.get("note") or "", "basis": "house count", "verify": _verify(r)})
+        seen = {(x["house"], x["sale"]) for x in table}
+        by_sale: dict[tuple, list] = {}
+        for l in lots:
+            if l["category"] == cat and (l["house"], l["sale"]) not in seen:
+                by_sale.setdefault((l["house"], l["sale"], l["date"]), []).append(l)
+        for (house, sale, date), ls in by_sale.items():
+            if len(ls) >= 3:                                      # one or two lots say nothing about a sale
+                rate = sum(1 for l in ls if l["sold"]) / len(ls)
+                pts.setdefault(pd.Timestamp(date).to_period("M").to_timestamp("M"), []).append(rate)
+                table.append({"date": date, "house": house, "sale": sale, "offered": len(ls), "sold": sum(1 for l in ls if l["sold"]), "rate": _r(rate, 4), "total": None, "currency": None,
+                              "source": ls[0]["source"], "note": "", "basis": "from lots entered", "verify": any(l["verify"] for l in ls)})
+        series = pd.Series({t: float(np.mean(v)) for t, v in pts.items()}, dtype=float).sort_index()
+        cat_lots = [l for l in lots if l["category"] == cat]
+        out[cat] = {"name": name, "points": _pts(series, 4), "latest": _r(float(series.iloc[-1]), 4) if len(series) else None, "latest_date": str(series.index[-1].date()) if len(series) else None,
+                    "sales": sorted(table, key=lambda x: x["date"], reverse=True), "lots_sold_share": _r(sum(1 for l in cat_lots if l["sold"]) / len(cat_lots), 4) if cat_lots else None, "n_lots": len(cat_lots)}
+    return out
+
+
+def vs_estimate_series(lots: list[dict]) -> dict:
+    """Per category: each sold lot's price against the estimate midpoint over time, and the median per half-year as a line."""
+    out = {}
+    for cat, name in CATEGORIES:
+        ls = [l for l in lots if l["category"] == cat and l["vs_estimate"] is not None and l["sold"]]
+        s = pd.Series({l["t"]: l["vs_estimate"] for l in ls}, dtype=float).sort_index() if ls else pd.Series(dtype=float)
+        s = s[~s.index.duplicated(keep="last")]
+        half = s.groupby(s.index.to_period("2Q").to_timestamp("Q")).median() if len(s) else pd.Series(dtype=float)
+        out[cat] = {"name": name, "lots": _pts(s, 4), "half_year_median": _pts(half, 4), "latest": _r(float(s.iloc[-1]), 4) if len(s) else None,
+                    "by_item": {i: _pts(pd.Series({l["t"]: l["vs_estimate"] for l in ls if l["item"] == i}, dtype=float).sort_index(), 4) for i in sorted({l["item"] for l in ls})}}
+    return out
+
+
 # ------------------------------------------------------------------ tab payloads
 def _views(cat: str | None = None) -> list[dict]:
     FX = _fx_cached()
@@ -736,7 +809,12 @@ def _liquidity_now() -> dict:
     its = items()
     views, errs = _wiki_all(its)
     att = attention(views, its) if views else {"articles": {}, "items": [], "baskets": {}, "last_full_month": None}
-    return {"attention": att, "attention_errors": errs, "as_of": att.get("last_full_month"),
+    FX = _fx_cached()
+    lots = auction_lots(FX)
+    auc = {"lots": [{k: v for k, v in l.items() if k != "t"} for l in reversed(lots)], "vs_estimate": vs_estimate_series(lots), "sell_through": sell_through(lots),
+           "n_lots": len(lots), "n_verify": sum(1 for l in lots if l["verify"]), "houses": sorted({l["house"] for l in lots}), "cited": cited("auctions", "auction_sales")}
+    return {"attention": att, "attention_errors": errs, "auctions": auc, "fx_fallback": FX["fallback"],
+            "as_of": max([d for d in (att.get("last_full_month"), lots[-1]["date"] if lots else None) if d], default=None),
             "stale": B.stale_info([wiki_key(t) for t in sorted({i["wiki"] for i in its if i.get("wiki")})]), "updated": int(time.time())}
 
 
@@ -783,6 +861,11 @@ def readings(got) -> list[dict]:
     for cat, name in CATEGORIES:
         z = (A.get(cat) or {}).get("z12")
         add("liquidity", f"attention_{cat}", f"{name}: Wikipedia attention, 12-month z (demand proxy)", z, lean(z, 1.0), "last full month against the 12 before; +1 at +1 sd or above, -1 at -1 sd or below")
+    ST = (got("liquidity").get("auctions") or {}).get("sell_through") or {}
+    for cat, name in CATEGORIES:
+        v = (ST.get(cat) or {}).get("latest")
+        add("liquidity", f"sell_through_{cat}", f"{name}: auction sell-through, latest sale", _r(100 * v, 1) if v is not None else None, 1 if v is not None and v >= 0.9 else -1 if v is not None and v < 0.7 else 0,
+            "%; +1 at 90% or more (bidders for everything), -1 under 70% (lots bought in)")
     return out
 
 

@@ -191,7 +191,23 @@ const VIEWS = {
       (A.items || []).map(i => el("tr", {}, el("td", {}, i.name), el("td", {}, i.url ? link(i.title, i.url) : i.title || "–"), el("td", {}, i.last ? i.last.month.slice(0, 7) : "–"), el("td", {}, i.last ? num(i.last.views) : "–"),
         el("td", { class: cls(i.change_1y) }, pct(i.change_1y, 0)), el("td", { class: zc(i.z12) }, z(i.z12))))),
       note("Two GMT-Master II references share one article; the Alma BB has none, so Louis Vuitton's article stands for it; the Le 5 à 7 and the Ava use their brands' articles. Listings, spreads and sell-through join this tab in the next steps."));
-    return [head, bk, per, tbl, changesCard("liquidity")];
+    // ---- auction results
+    const Au = d.auctions || {}, VE = Au.vs_estimate || {}, ST = Au.sell_through || {};
+    const ve = card("Auction results: price against the estimate midpoint",
+      el("div", { class: "kpis" }, ...Object.values(VE).map(v => kpi(v.name + ": latest sold lot vs estimate midpoint", pct(v.latest, 0), cls(v.latest))),
+        ...Object.values(ST).map(s => kpi(s.name + ": sell-through, latest sale" + (s.latest_date ? " (" + dateOf(s.latest_date) + ")" : ""), s.latest == null ? "–" : (s.latest * 100).toFixed(0) + "%", s.latest == null ? "" : s.latest >= 0.9 ? "up" : s.latest < 0.7 ? "down" : ""))),
+      ...linesChart([...Object.values(VE).map(v => ({ name: v.name + ": lots (price / estimate midpoint - 1)", points: v.lots, dashed: true })),
+        ...Object.values(VE).map(v => ({ name: v.name + ": half-year median", points: v.half_year_median, width: 3 }))], v => pct(v, 0), { hlines: [0], whitespace: monthsWs(), small: true }),
+      note("Each point is one sold lot at Phillips, Christie's, Sotheby's or Bonhams (auctions.csv, hand-entered and cited): the price (hammer, or with the buyer's premium where that is what the house publishes; the table says which) against the midpoint of the pre-sale estimate. Above zero: bidders paid more than the house expected. Prices in other currencies are converted at the month's rate." + (Au.n_lots ? " " + Au.n_lots + " lots entered, " + Au.n_verify + " marked verify." : " No lots entered yet.")));
+    const st = card("Sell-through rate per sale (lots sold / lots offered)",
+      ...linesChart(Object.values(ST).filter(s => s.points && s.points.length).map(s => ({ name: s.name, points: s.points })), v => (v * 100).toFixed(0) + "%", { hlines: [0.7, 0.9], whitespace: monthsWs(), small: true }),
+      table(["Date", "House", "Sale", "Offered", "Sold", "Rate", "Basis", "Source"], Object.values(ST).flatMap(s => s.sales || []).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 40).map(r => el("tr", {}, el("td", {}, dateOf(r.date)), el("td", {}, r.house), el("td", { class: "wrap" }, r.sale), el("td", {}, r.offered), el("td", {}, r.sold), el("td", { class: r.rate >= 0.9 ? "up" : r.rate < 0.7 ? "down" : "" }, (r.rate * 100).toFixed(0) + "%"), el("td", {}, r.basis), srcCell(r.source, r.verify ? "verify" : "")))),
+      note("A sale's own count (auction_sales.csv) where the house published one; otherwise the lots entered for that sale (three or more), which is a sample, not the sale. Near 100%: a bidder for everything; under 70%: lots bought in, the market's way of saying no. A liquidity series, not a price."));
+    const lots = card("Lots", table(["Date", "House", "Sale · lot", "Item", "Price (GBP)", "Basis", "Estimate (GBP)", "vs mid", "Sold", "Source"],
+      (Au.lots || []).slice(0, 80).map(l => el("tr", {}, el("td", {}, dateOf(l.date)), el("td", {}, l.house), el("td", { class: "wrap" }, l.sale + (l.lot ? " · lot " + l.lot : "")), el("td", {}, l.name), el("td", {}, l.price == null ? "–" : gbp(l.price) + " (" + l.orig + ")"), el("td", {}, l.basis || "–"),
+        el("td", {}, l.est_low == null ? "–" : gbp(l.est_low) + "–" + gbp(l.est_high)), el("td", { class: cls(l.vs_estimate) }, pct(l.vs_estimate, 0)), el("td", {}, l.sold ? "yes" : "no"), srcCell(l.source, (l.verify ? "verify" : "") + (l.note ? (l.verify ? " · " : "") + l.note : ""))))),
+      note("One row per lot, newest first (the first 80). Add lots in data/luxury/auctions.csv; a lot with no price is bought in."), cite(Au.cited));
+    return [head, bk, per, tbl, ve, st, lots, changesCard("liquidity")];
   },
 
   async fees() {
