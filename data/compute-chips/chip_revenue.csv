@@ -3,14 +3,14 @@ date,series,value,source,note
 2023-03-31,TSMC,16.72,https://investor.tsmc.com/english/quarterly-results,verify
 2023-06-30,TSMC,15.68,https://investor.tsmc.com/english/quarterly-results,verify
 2023-09-30,TSMC,17.28,https://investor.tsmc.com/english/quarterly-results,verify
-2023-12-31,TSMC,19.62,https://investor.tsmc.com/english/quarterly-results,verify
-2024-03-31,TSMC,18.87,https://investor.tsmc.com/english/quarterly-results,verify
-2024-06-30,TSMC,20.82,https://investor.tsmc.com/english/quarterly-results,verify
-2024-09-30,TSMC,23.50,https://investor.tsmc.com/english/quarterly-results,verify
-2024-12-31,TSMC,26.88,https://investor.tsmc.com/english/quarterly-results,verify
-2025-03-31,TSMC,25.53,https://investor.tsmc.com/english/quarterly-results,verify
-2025-06-30,TSMC,30.07,https://investor.tsmc.com/english/quarterly-results,verify
-2025-09-30,TSMC,33.10,https://investor.tsmc.com/english/quarterly-results,verify
+2023-12-31,TSMC,19.62,https://investor.tsmc.com/english/quarterly-results/2023/q4,"TSMC 4Q23 results page, guidance table Actual column: US$19.62bn; also 26.88 / 1.370 from the 4Q24 release; checked 2026-11-07"
+2024-03-31,TSMC,18.87,https://investor.tsmc.com/english/quarterly-results,"checked 2026-11-07, page could not be opened; verify"
+2024-06-30,TSMC,20.82,https://investor.tsmc.com/english/quarterly-results/2024/q2,"TSMC 2Q24 results page, guidance table Actual column: US$20.82bn; checked 2026-11-07"
+2024-09-30,TSMC,23.50,https://investor.tsmc.com/english/quarterly-results,"matches 26.88 / 1.144 (4Q24 release, +14.4% QoQ) and 33.10 / 1.408 (3Q25 release, +40.8% YoY); 3Q24 page could not be opened; checked 2026-11-07; verify"
+2024-12-31,TSMC,26.88,https://www.sec.gov/Archives/edgar/data/1046179/000104617925000004/a4q24e_withguidancexfinal.htm,"4Q24 earnings release: 'fourth quarter revenue was $26.88 billion', +37.0% YoY, +14.4% QoQ; checked 2026-11-07"
+2025-03-31,TSMC,25.53,https://investor.tsmc.com/english/quarterly-results/2025/q1,"TSMC 1Q25 results page, guidance table Actual column: US$25.53bn; checked 2026-11-07"
+2025-06-30,TSMC,30.07,https://investor.tsmc.com/english/quarterly-results,"matches 33.10 / 1.101 (3Q25 release, +10.1% QoQ); 2Q25 page could not be opened; checked 2026-11-07; verify"
+2025-09-30,TSMC,33.10,https://pr.tsmc.com/english/news/3264,"3Q25 earnings release: 'third quarter revenue was $33.10 billion', +40.8% YoY, +10.1% QoQ; checked 2026-11-07"
 2023-03-31,ASML (EUR),6.75,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
 2023-06-30,ASML (EUR),6.90,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
 2023-09-30,ASML (EUR),6.67,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
