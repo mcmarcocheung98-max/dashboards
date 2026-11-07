@@ -240,7 +240,7 @@
    "owner": "session:luxury",
    "status": "in_progress",
    "since": "2026-11-07",
-   "detail": "Five steps, pushed one by one: Wikipedia attention, auction results, eBay Browse API (keyed), the weekly manual log, the Liquidity tab with its score and signal. Step 1 done (ae24707): Wikipedia attention per item since 2015, on a new Liquidity tab. Step 2 done (b52ca39): auctions.csv and auction_sales.csv. Step 3 done (5ddc59d): the eBay feed, waiting on the owner's keys."
+   "detail": "Five steps, pushed one by one: Wikipedia attention, auction results, eBay Browse API (keyed), the weekly manual log, the Liquidity tab with its score and signal. Step 1 done (ae24707): Wikipedia attention per item since 2015, on a new Liquidity tab. Step 2 done (b52ca39): auctions.csv and auction_sales.csv. Step 3 done (5ddc59d): the eBay feed, waiting on the owner's keys. Step 4 done (422bd5a): liquidity.csv seeded."
   }
  ],
  "roadmap": [
@@ -955,6 +955,14 @@
      "tab": "liquidity",
      "what": "Liquidity step 3: eBay daily listings per item (count, median and lowest ask), saved on the volume every day; dark until EBAY_APP_ID and EBAY_CERT_ID are set",
      "commit": "5ddc59d",
+     "by": "session:luxury"
+    },
+    {
+     "dashboard": "Luxury Tracker",
+     "slug": "luxury",
+     "tab": "liquidity",
+     "what": "Liquidity step 4: the weekly hand log, seeded with 17 readings. Chrono24 lists 700 to 950 pieces per steel Rolex reference; typical days to sell 12 (Daytona) to 20 (Batman)",
+     "commit": "422bd5a",
      "by": "session:luxury"
     }
    ],

@@ -69,7 +69,9 @@ signals not wired, numbers without a date or source, unclear copy, a mobile layo
 
 Append this week's rows to `data/luxury/liquidity.csv` (date, item, source, metric, value, URL), by web search, one reading
 each: `chrono24_listings` per Rolex reference (the count on Chrono24's public search page for the reference), `stockx_bid`,
-`stockx_ask` and `stockx_last_sale` per bag where StockX lists it. One number per item per source, cited; never bulk-collect.
+`stockx_ask` and `stockx_last_sale` per bag where StockX lists it, `watchcharts_days_to_sell` per reference. One number per item per
+  source, cited; never bulk-collect. Restricting the search to chrono24.co.uk surfaces the reference pages that carry the listing count.
+  Columns: date, item, platform, metric, value, currency, source, note; mark `verify` when the excerpt carries no page date.
 Also enter any new auction results (Phillips, Christie's, Sotheby's, Bonhams) for the tracked items in `auctions.csv`. Commit
 with the day's status commit.
 
