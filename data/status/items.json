@@ -102,6 +102,16 @@
    "status": "open",
    "detail": "The builder could not open the brand pages from its network, so these come from search excerpts and are marked verify: Celine Ava 193952BZJ.04LU £1,300; Saint Laurent Le 5 à 7 6572282R20W1000 £1,755; Louis Vuitton Alma BB M46990 £1,450. Open each product page, reply to the dev agent with the price and today's date (and any earlier prices you know), and the verify rows are cleared.",
    "link": "https://dashboards-production-bde6.up.railway.app/luxury"
+  },
+  {
+   "id": "ebay-developer-key",
+   "title": "Create a free eBay developer account and add its keys on Railway",
+   "area": "Luxury Tracker",
+   "priority": "medium",
+   "since": "2026-11-07",
+   "status": "open",
+   "detail": "The Luxury Tracker's daily listing counts and asking prices per item come from eBay's Browse API, which needs an app key. Sign in at developer.ebay.com with your eBay account, create an application keyset (production), and add EBAY_APP_ID and EBAY_CERT_ID as variables on the dashboards service on Railway. Until then the Liquidity tab's eBay card says not set up yet. eBay's sold-price data (Marketplace Insights) is a separate, restricted programme; ask the dev agent to draft the application if you want it.",
+   "link": "https://developer.ebay.com/"
   }
  ],
  "pending": [
@@ -223,6 +233,14 @@
    "since": "2026-11-07",
    "detail": "Session session_01Hguru15vQ5yfAZ9A1uCCyE started from the dev agent's brief; it reports back to the parent when pushed. The brand sites could not be added to the environment's network, so prices come from web search and are cited; any the session cannot find are left for the owner. Pushed as 4f7c014: 13 items, 192 price points (100 marked verify), six tabs, five approved signals. Follow-up: the 12-month retail rise only counts brands with a price a year earlier.",
    "done": "2026-11-07"
+  },
+  {
+   "id": "luxury-liquidity",
+   "title": "Liquidity tab and feeds for the Luxury Tracker",
+   "owner": "session:luxury",
+   "status": "in_progress",
+   "since": "2026-11-07",
+   "detail": "Five steps, pushed one by one: Wikipedia attention, auction results, eBay Browse API (keyed), the weekly manual log, the Liquidity tab with its score and signal."
   }
  ],
  "roadmap": [
@@ -422,6 +440,16 @@
    "approved": "2026-11-07",
    "detail": "Asked by the owner on 7 Nov. Retail vs resale over time for eight Rolex references and five bags (the owner's Celine Ava, Saint Laurent Le 5 à 7 and Louis Vuitton Alma BB, plus a Birkin 25 and a Chanel Classic Flap for contrast), ROI after platform fees, a market-heat score, and five signals the owner approved on 7 Nov, before the first push. Hand-entered, dated, sourced price points: the resale platforms have no free API.",
    "done": "2026-11-07"
+  },
+  {
+   "id": "r-luxury-liquidity",
+   "title": "Luxury Tracker: resale liquidity with a long history",
+   "horizon": "now",
+   "status": "in_progress",
+   "area": "Luxury Tracker",
+   "by": "session:luxury",
+   "approved": "2026-11-07",
+   "detail": "The owner chose the free route on 7 Nov: Wikipedia attention since 2015, auction results from Phillips, Christie's, Sotheby's and Bonhams, eBay daily listings behind a free developer key, and a weekly hand log of Chrono24 counts and StockX bid-ask. A Liquidity tab, a liquidity score per market, and a sixth signal."
   }
  ],
  "log": [

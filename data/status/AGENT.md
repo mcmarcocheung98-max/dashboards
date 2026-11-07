@@ -65,6 +65,14 @@ entry, its README and its page in a smoke screenshot. Look for: stale or failing
 signals not wired, numbers without a date or source, unclear copy, a mobile layout that overflows. Fix the small things
 (per section 4), propose the rest, and record `review: <slug>` in the note.
 
+## 5a. Weekly luxury liquidity log (Mondays)
+
+Append this week's rows to `data/luxury/liquidity.csv` (date, item, source, metric, value, URL), by web search, one reading
+each: `chrono24_listings` per Rolex reference (the count on Chrono24's public search page for the reference), `stockx_bid`,
+`stockx_ask` and `stockx_last_sale` per bag where StockX lists it. One number per item per source, cited; never bulk-collect.
+Also enter any new auction results (Phillips, Christie's, Sotheby's, Bonhams) for the tracked items in `auctions.csv`. Commit
+with the day's status commit.
+
 ## 5b. Token usage for the Graphify Map (Daily tokens tab)
 
 - `python scripts/graphify_usage.py --transcript <this session's transcript .jsonl> --session dev-agent` (the newest .jsonl under
