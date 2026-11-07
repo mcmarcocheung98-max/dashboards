@@ -92,6 +92,16 @@
    "status": "done",
    "detail": "China vs US tech (signals built and tested, on a branch), Pokémon cards (signals and follow-the-timeline), Compute & chips (signals, follow heads, reduce= tidy-up) and Autonomous cars (signals) won't act on work the dev agent relays until you confirm. Reply 'go all' to the dev agent (it passes it on; China vs US tech accepts that), or say go in each session's own thread. Until then 26 of 62 signals stay unwired. The owner said 'go all' on 5 Nov; the dev agent passed it to all four sessions.",
    "done": "2026-11-05"
+  },
+  {
+   "id": "luxury-bag-prices",
+   "title": "Confirm the current retail price of your three bags",
+   "area": "Luxury Tracker",
+   "priority": "low",
+   "since": "2026-11-07",
+   "status": "open",
+   "detail": "The builder could not open the brand pages from its network, so these come from search excerpts and are marked verify: Celine Ava 193952BZJ.04LU £1,300; Saint Laurent Le 5 à 7 6572282R20W1000 £1,755; Louis Vuitton Alma BB M46990 £1,450. Open each product page, reply to the dev agent with the price and today's date (and any earlier prices you know), and the verify rows are cleared.",
+   "link": "https://dashboards-production-bde6.up.railway.app/luxury"
   }
  ],
  "pending": [
@@ -209,9 +219,10 @@
    "id": "luxury-build",
    "title": "Build the Luxury Tracker dashboard",
    "owner": "session:luxury",
-   "status": "in_progress",
+   "status": "done",
    "since": "2026-11-07",
-   "detail": "Session session_01Hguru15vQ5yfAZ9A1uCCyE started from the dev agent's brief; it reports back to the parent when pushed. The brand sites could not be added to the environment's network, so prices come from web search and are cited; any the session cannot find are left for the owner."
+   "detail": "Session session_01Hguru15vQ5yfAZ9A1uCCyE started from the dev agent's brief; it reports back to the parent when pushed. The brand sites could not be added to the environment's network, so prices come from web search and are cited; any the session cannot find are left for the owner. Pushed as 4f7c014: 13 items, 192 price points (100 marked verify), six tabs, five approved signals. Follow-up: the 12-month retail rise only counts brands with a price a year earlier.",
+   "done": "2026-11-07"
   }
  ],
  "roadmap": [
@@ -404,12 +415,13 @@
   {
    "id": "r-luxury",
    "title": "Luxury Tracker: Rolex and designer bags on the second-hand market",
-   "horizon": "now",
-   "status": "in_progress",
+   "horizon": "done",
+   "status": "done",
    "area": "Dashboards",
    "by": "session:luxury",
    "approved": "2026-11-07",
-   "detail": "Asked by the owner on 7 Nov. Retail vs resale over time for eight Rolex references and five bags (the owner's Celine Ava, Saint Laurent Le 5 à 7 and Louis Vuitton Alma BB, plus a Birkin 25 and a Chanel Classic Flap for contrast), ROI after platform fees, a market-heat score, and five signals the owner approved on 7 Nov, before the first push. Hand-entered, dated, sourced price points: the resale platforms have no free API."
+   "detail": "Asked by the owner on 7 Nov. Retail vs resale over time for eight Rolex references and five bags (the owner's Celine Ava, Saint Laurent Le 5 à 7 and Louis Vuitton Alma BB, plus a Birkin 25 and a Chanel Classic Flap for contrast), ROI after platform fees, a market-heat score, and five signals the owner approved on 7 Nov, before the first push. Hand-entered, dated, sourced price points: the resale platforms have no free API.",
+   "done": "2026-11-07"
   }
  ],
  "log": [
@@ -847,8 +859,8 @@
   },
   {
    "date": "2026-11-07",
-   "title": "AI stocks cross into a bear market; Debt & Rates reviewed",
-   "summary": "The 5 November sell-off reached the data: the AI basket is 20.7% below its high, past the -20% bear-market watch point, with only 15% of its stocks above their 50-day average. Reviewed Debt & Rates: the Hong Kong chart on Interest cost is broken and the FOMC tab is far too long; both went to its session.",
+   "title": "AI stocks in a bear market; Luxury Tracker launched; Debt & Rates reviewed",
+   "summary": "The 5 November sell-off reached the data: the AI basket is 20.7% below its high, past the -20% bear-market watch point, with only 15% of its stocks above their 50-day average. Reviewed Debt & Rates: the Hong Kong chart on Interest cost is broken and the FOMC tab is far too long; both went to its session. The Luxury Tracker went live the same afternoon: Rolex steel sports trade 17.6% above retail at the median, led by the Pepsi GMT at +69%, while the owner's three bags resell below retail except the Alma BB.",
    "changes": [
     {
      "dashboard": "AI: Compute, Power & Chips",
@@ -877,15 +889,23 @@
      "what": "Session totals now collected when three or more sessions ran, or weekly; nothing is lost between collections",
      "commit": "a582360",
      "by": "agent"
+    },
+    {
+     "dashboard": "Luxury Tracker",
+     "slug": "luxury",
+     "what": "New dashboard: eight Rolex references and five bags, retail vs resale, ROI after platform fees, market heat, fee table; 192 hand-entered price points, 100 to verify; five approved signals",
+     "commit": "4f7c014",
+     "by": "session:luxury"
     }
    ],
    "review": "debt-rates",
    "next": [
-    "Luxury Tracker being built in its own session",
     "Debt & Rates: fix the Hong Kong chart and shorten the FOMC list (handed over)",
-    "Pokémon cards, Longevity, Compute & chips: still waiting for the owner's reply in their sessions"
+    "Pokémon cards, Longevity, Compute & chips: still waiting for the owner's reply in their sessions",
+    "Luxury Tracker: the daily verify routine clears the 100 'verify' price points, the three bags first"
    ],
    "asks": [
+    "Confirm your three bags' current retail prices (action on /status)",
     "Reply in the Pokémon cards, Longevity, Compute & chips and Debt & rates sessions",
     "Approve or skip r-watch-recalibrate and r-private-signals",
     "Add the Gmail secrets"
