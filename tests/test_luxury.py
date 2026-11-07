@@ -21,10 +21,27 @@ FIX = {"CPIAUCSL": _fred("CPIAUCSL", "2015-01-01", 142, 230, 0.8), "GBRCPIALLMIN
        "DEXUSEU": _fred("DEXUSEU", "2015-01-01", 3100, 1.10, 0.0, "B"), "SP500": _fred("SP500", "2016-11-07", 2600, 2100, 2.0, "B")}
 
 
+def wiki_json(url: str) -> str:
+    """Monthly pageviews for any article: a level from the title, a yearly cycle, a 2022 hump and a recent fade for Rolex articles."""
+    import re
+    m = re.search(r"/per-article/en\.wikipedia/all-access/user/([^/]+)/monthly/(\d{8})\d*/(\d{8})", url)
+    assert m, url
+    title = m.group(1)
+    level = 20000 + sum(ord(c) for c in title) % 9000
+    months = pd.date_range(pd.Timestamp(m.group(2)), pd.Timestamp(m.group(3)), freq="MS")
+    items = []
+    for i, d in enumerate(months):
+        v = level * (1 + 0.15 * ((i % 12) / 11)) * (1.6 if d.year == 2022 else 1) * (0.8 if title.startswith("Rolex") and d.year == 2026 else 1)
+        items.append({"project": "en.wikipedia", "article": title, "granularity": "monthly", "timestamp": d.strftime("%Y%m%d00"), "access": "all-access", "agent": "user", "views": int(v)})
+    return json.dumps({"items": items})
+
+
 def fake_fetch(url, ttl=0, **k):
     for sid, text in FIX.items():
         if url.endswith("id=" + sid):
             return text
+    if "/metrics/pageviews/" in url:
+        return wiki_json(url)
     raise ConnectionError("fixture: no such source " + url)
 
 
@@ -49,7 +66,7 @@ def mocked(tmp_path, monkeypatch):
 
 def test_topic_is_registered():
     t = topics.REGISTRY["luxury"]
-    assert [k for k, _ in t.tabs] == ["overview", "watches", "bags", "roi", "heat", "fees"] and set(t.slow) <= set(M.ENDPOINTS)
+    assert [k for k, _ in t.tabs] == ["overview", "watches", "bags", "roi", "heat", "liquidity", "fees"] and set(t.slow) <= set(M.ENDPOINTS)
     assert topics.category("luxury") == "Money & markets" and "FRED" in json.dumps(M.SOURCES)
     assert "Not investment advice" in M.NOTES and "Not investment advice" in M.FOOTER
     for name in ("fred cpi us", "fred cpi uk", "fred gbpusd", "fred chfusd", "fred sp500"):
@@ -60,7 +77,7 @@ def test_items_and_files_have_the_starter_set():
     ids = {i["id"] for i in M.items()}
     assert {"sub-126610ln", "gmt-126710blnr", "gmt-126710blro", "daytona-126500ln", "dj41-126334", "explorer-124270", "op41-124300", "daydate-228238"} <= ids
     assert {"celine-ava-triomphe", "ysl-le57-smooth", "lv-alma-bb-mono", "hermes-birkin25-togo", "chanel-cf-medium-caviar"} <= ids
-    assert all(i["category"] in ("watch", "bag") and i["source"] for i in M.items())
+    assert all(i["category"] in ("watch", "bag") and i["source"] and i["wiki"] for i in M.items())
     used = {r["item"] for r in M.rows("retail")} | {r["item"] for r in M.rows("resale")}
     assert used <= ids, used - ids                                     # every price row names a known item
     for r in M.rows("retail") + M.rows("resale"):
@@ -144,14 +161,18 @@ def test_payloads_readings_and_signals(mocked):
     for k in M.ENDPOINTS:
         d = M.ENDPOINTS[k]()
         B.json_safe(d)
-    O, W, G, R, H, F = (M.ENDPOINTS[k]() for k in ("overview", "watches", "bags", "roi", "heat", "fees"))
+    O, W, G, R, H, F, L = (M.ENDPOINTS[k]() for k in ("overview", "watches", "bags", "roi", "heat", "fees", "liquidity"))
+    A = L["attention"]
+    assert len(A["articles"]) == 12 and len(A["items"]) == 13 and set(A["baskets"]) == {"watch", "bag"} and not L["attention_errors"]
+    assert A["baskets"]["watch"]["z12"] < 0 < A["baskets"]["bag"]["z12"] or A["baskets"]["watch"]["z12"] < A["baskets"]["bag"]["z12"]   # the fixture fades the Rolex articles in 2026
+    assert len(A["baskets"]["watch"]["points"]) > 120 and A["last_full_month"] == "2026-10-01"
     assert O["kpi"]["n_watches"] == 8 and O["kpi"]["n_bags"] == 5 and len(O["items"]) == 13 and O["where"]
     assert len(W["items"]) == 8 and len(G["items"]) == 5 and "calendar" in G and G["retail_rise"]["brand"]
     assert len(O["rolex_premium"]) > 24 and len(G["ratio"]) >= 3, "the committed points must give both baskets a monthly history (the bag basket starts in 2026: three of its five bags have no earlier resale record)"
     assert R["sp500_source"] == "FRED" and R["cpi_uk_source"] == "FRED" and R["rows"] and all(r["net"] <= r["gross"] for r in R["rows"])
     assert H["watch"]["score"] is not None and H["bag"]["score"] is not None and H["score"] is not None and F["fees"]
     r = {x["key"]: x for x in M.READINGS()}
-    assert {"rolex_premium", "bags_ratio", "heat_watch", "heat_bag"} <= set(r) and all(x["tab"] in {t for t, _ in topics.REGISTRY["luxury"].tabs} and x["lean"] in (-1, 0, 1) for x in r.values())
+    assert {"rolex_premium", "bags_ratio", "heat_watch", "heat_bag", "attention_watch", "attention_bag"} <= set(r) and all(x["tab"] in {t for t, _ in topics.REGISTRY["luxury"].tabs} and x["lean"] in (-1, 0, 1) for x in r.values())
     sig = {x["key"]: x for x in M.SIGNALS()}
     wl = json.loads((B.MANUAL_DIR / "signals" / "watchlist.json").read_text())["luxury"]
     assert set(sig) == {w["key"] for w in wl} and all(w.get("approved") and not w.get("proposed") for w in wl)   # approved by the owner on 7 Nov 2026
@@ -211,3 +232,15 @@ def test_retail_rise_needs_a_price_dated_a_year_ago(monkeypatch):
     monkeypatch.setattr(M, "_cached_payload", lambda n: {"bags": {"retail_rise": rr}}.get(n, {}))
     sig = {s["key"]: s for s in M.SIGNALS()}
     assert sig["retail_rise"]["value"] is None and sig["retail_rise"]["crossed"] is False and "no" in sig["retail_rise"]["note"]
+
+
+def test_wiki_attention_helpers(mocked):
+    s = M.wiki_views("Rolex Submariner")
+    assert s.index[0] == pd.Timestamp("2015-07-01") and s.index[-1] >= pd.Timestamp("2026-10-01") and M.wiki_key("Rolex Submariner").endswith("/monthly/2015070100/now")
+    assert "Rolex_Submariner" in M.wiki_url("Rolex Submariner") and M.wiki_url("Celine (brand)").count("%28") == 1
+    z = M.z12(pd.Series([100.0, 110.0] * 6 + [160.0, 105.0], index=pd.date_range("2025-01-01", periods=14, freq="MS")))
+    assert len(z) == 2 and z.iloc[0] == 3.0 and abs(z.iloc[1]) < 0.5      # (160 - 105) / 5 clips to +3; a flat history (sd 0) gives no z
+    assert len(M.z12(pd.Series([100.0] * 13, index=pd.date_range("2025-01-01", periods=13, freq="MS")))) == 0
+    a = M.attention({"Rolex Submariner": s, "Birkin bag": M.wiki_views("Birkin bag")}, [{"id": "a", "name": "A", "category": "watch", "wiki": "Rolex Submariner"}, {"id": "b", "name": "B", "category": "bag", "wiki": "Birkin bag"}, {"id": "c", "name": "C", "category": "bag", "wiki": "Missing"}])
+    assert a["items"][2]["last"] is None and a["items"][0]["last"]["month"] == "2026-10-01" and a["baskets"]["watch"]["titles"] == ["Rolex Submariner"]
+    assert abs(sum(p[1] for p in a["baskets"]["bag"]["points"]) / len(a["baskets"]["bag"]["points"]) - 100) < 1

@@ -12,6 +12,8 @@ roi        for a buyer at retail on a chosen date, what they would net today aft
 heat       a heat score for watches and one for bags, like Pokémon's: the basket premium against its own history, the 1-year change,
            the share of items above retail, and the public indices' direction
 fees       the platform fee table with links
+liquidity  how easily each item trades: attention (monthly Wikipedia pageviews per item since July 2015, a demand proxy: the Wikimedia
+           REST API, free, as trends.py uses it), with the 12-month z-score per item and the basket's attention line
 
 Data. The brand sites and the resale platforms have no free API and refuse servers, so prices are hand-entered, dated and sourced
 (data/luxury/*.csv): items.csv (one row per item), retail.csv (official list prices as they change), resale.csv (asking or sold points
@@ -25,6 +27,7 @@ from __future__ import annotations
 import re
 import time
 from io import StringIO
+from urllib.parse import quote
 
 import numpy as np
 import pandas as pd
@@ -32,13 +35,14 @@ import pandas as pd
 from . import Topic
 from . import _base as B
 from ._base import DAY, _pts, _r, fetch, handled, manual_rows, manual_sources
+from .trends import BOT as WIKI_BOT, parse_wiki
 
 SLUG = "luxury"
 TOPIC = Topic(SLUG, "Luxury Tracker: watches & bags",
               "Rolex steel sports references and designer bags: what they cost new, what they sell for second-hand, the premium or discount to "
               "retail over time, what a buyer at retail would net after platform fees, and a heat score for each market.",
-              "luxury", (("overview", "Overview"), ("watches", "Watches"), ("bags", "Bags"), ("roi", "ROI"), ("heat", "Market heat"), ("fees", "Fees & how to sell")),
-              ("overview", "watches", "bags", "roi", "heat", "fees"), icon="chart", order=36)
+              "luxury", (("overview", "Overview"), ("watches", "Watches"), ("bags", "Bags"), ("roi", "ROI"), ("heat", "Market heat"), ("liquidity", "Liquidity"), ("fees", "Fees & how to sell")),
+              ("overview", "watches", "bags", "roi", "heat", "liquidity", "fees"), icon="chart", order=36)
 
 FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={id}"
 FRED_IDS = {"cpi_us": "CPIAUCSL", "cpi_uk": "GBRCPIALLMINMEI", "gbpusd": "DEXUSUK", "chfusd": "DEXSZUS", "eurusd": "DEXUSEU", "sp500": "SP500"}
@@ -46,6 +50,8 @@ ONS_CPI = "https://www.ons.gov.uk/generator?format=csv&uri=/economy/inflationand
 NASDAQ_SPX = "https://api.nasdaq.com/api/quote/SPX/historical?assetclass=index&fromdate={a}&todate={b}&limit=9999"
 PLAIN_UA = {"User-Agent": "dashboards/1.0 (+https://github.com/mcmarcocheung98-max/dashboards)"}   # FRED answers a plain client at once where the browser UA stalls
 NASDAQ_HEADERS = {"Accept": "application/json, text/plain, */*", "Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"}
+WIKI_MONTHLY = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/{title}/monthly/2015070100/{b}"
+WIKI_HEALTH = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia"
 FX_FALLBACK = {"USD": 0.78, "CHF": 0.88, "EUR": 0.86, "HKD": 0.10}        # GBP per unit, rough 2020-2026 averages, only when FRED has never answered
 CATEGORIES = (("watch", "Watches"), ("bag", "Bags"))
 DEFAULT_PLATFORM = {"watch": "Chrono24", "bag": "Vestiaire Collective"}
@@ -59,6 +65,7 @@ SOURCES = [{"name": "Hand-entered, cited per row: brand list prices (Rolex, Herm
             "url": "https://github.com/mcmarcocheung98-max/dashboards/tree/main/data/luxury", "cadence": "monthly / as prices change"},
            {"name": "Chrono24 ChronoPulse and WatchCharts market indices (headline figures, hand-entered)", "url": "https://watchcharts.com/watches/market_index", "cadence": "monthly"},
            {"name": "Rebag Clair report, The RealReal resale report, Knight Frank Luxury Investment Index (hand-entered)", "url": "https://www.knightfrank.com/wealthreport", "cadence": "yearly"},
+           {"name": "Wikimedia REST API: monthly pageviews of each item's English Wikipedia article since July 2015 (attention, a demand proxy)", "url": "https://wikimedia.org/api/rest_v1/", "cadence": "daily"},
            {"name": "FRED: US CPI (CPIAUCSL), UK CPI (GBRCPIALLMINMEI; ONS D7BT when it answers), USD, CHF and EUR to GBP (DEXUSUK, DEXSZUS, DEXUSEU), S&P 500 (SP500)",
             "url": "https://fred.stlouisfed.org/", "cadence": "daily"}]
 NOTES = ("Hand-entered points are sparse: a premium is the last resale point against the list price in force on that date, not a daily market. "
@@ -531,6 +538,72 @@ def roi_rows(views: list[dict], fee_list: list[dict], spx: pd.Series | None, cpi
     return out
 
 
+# ------------------------------------------------------------------ attention: Wikipedia pageviews (a demand proxy)
+def wiki_url(title: str, end: pd.Timestamp | None = None) -> str:
+    end = end or _now()
+    return WIKI_MONTHLY.format(title=quote(title.replace(" ", "_"), safe=""), b=end.strftime("%Y%m%d") + "00")
+
+
+def wiki_key(title: str) -> str:
+    """The stable address of one article's series for the snapshot and /api/health (the end date moves every day)."""
+    return WIKI_MONTHLY.format(title=quote(title.replace(" ", "_"), safe=""), b="now")
+
+
+def wiki_views(title: str) -> pd.Series:
+    """Monthly pageviews of an English Wikipedia article (users, all access) since July 2015, indexed by month start."""
+    j = __import__("json").loads(fetch(wiki_url(title), DAY, headers=WIKI_BOT, timeout=30, min_bytes=40, key=wiki_key(title)))
+    d = parse_wiki(j)
+    s = pd.Series({pd.Timestamp(k): v for k, v in d.items()}, dtype=float).sort_index()
+    if len(s) < 12:
+        raise ValueError(f"Wikimedia: {len(s)} months for {title}")
+    return s
+
+
+def z12(s: pd.Series) -> pd.Series:
+    """Each month against the 12 months before it: (x - mean) / sd, clipped to +-3."""
+    prev = s.shift(1)
+    m, sd = prev.rolling(12).mean(), prev.rolling(12).std(ddof=0)
+    return ((s - m) / sd.replace(0, np.nan)).clip(-3, 3).dropna()
+
+
+def attention(views: dict[str, pd.Series], its: list[dict] | None = None) -> dict:
+    """Per item (by its article): monthly views, the last full month, its 12-month z; per category the basket line (each article's
+    views as a share of its own whole-history mean, averaged, x100) and the basket's 12-month z."""
+    its = its if its is not None else items()
+    last_full = (_now().to_period("M") - 1).to_timestamp()
+    per_title = {}
+    for title, s in views.items():
+        s = s[s.index <= last_full]
+        if not len(s):
+            continue
+        z = z12(s)
+        per_title[title] = {"title": title, "url": "https://en.wikipedia.org/wiki/" + quote(title.replace(" ", "_")), "points": _pts(s, 0), "last": {"month": str(s.index[-1].date()), "views": _r(float(s.iloc[-1]), 0)},
+                            "z12": _r(float(z.iloc[-1]), 2) if len(z) else None, "z_points": _pts(z, 2), "change_1y": _r(float(s.iloc[-1] / s.iloc[-13] - 1), 4) if len(s) > 13 and s.iloc[-13] else None}
+    per_item = [{"id": i["id"], "name": i["name"], "category": i["category"], "title": i.get("wiki") or "", **({k: per_title[i["wiki"]][k] for k in ("last", "z12", "change_1y", "url")} if i.get("wiki") in per_title else {"last": None, "z12": None, "change_1y": None, "url": None})} for i in its]
+    baskets = {}
+    for cat, name in CATEGORIES:
+        titles = sorted({i["wiki"] for i in its if i["category"] == cat and i.get("wiki") in views})
+        norm = [views[t][views[t].index <= last_full] / views[t][views[t].index <= last_full].mean() for t in titles]
+        if not norm:
+            continue
+        line = (pd.concat(norm, axis=1).mean(axis=1) * 100).dropna()
+        z = z12(line)
+        baskets[cat] = {"name": name, "titles": titles, "points": _pts(line, 1), "z12": _r(float(z.iloc[-1]), 2) if len(z) else None, "z_points": _pts(z, 2),
+                        "change_1y": _r(float(line.iloc[-1] / line.iloc[-13] - 1), 4) if len(line) > 13 else None, "last_month": str(line.index[-1].date())}
+    return {"articles": per_title, "items": per_item, "baskets": baskets, "last_full_month": str(last_full.date())}
+
+
+def _wiki_all(its: list[dict]) -> tuple[dict[str, pd.Series], dict[str, str]]:
+    """Every distinct article's series, each failing on its own: ({title: series}, {title: error})."""
+    out, errs = {}, {}
+    for title in sorted({i["wiki"] for i in its if i.get("wiki")}):
+        try:
+            out[title] = wiki_views(title)
+        except Exception as e:
+            errs[title] = f"{type(e).__name__}: {str(e)[:120]}"
+    return out, errs
+
+
 # ------------------------------------------------------------------ tab payloads
 def _views(cat: str | None = None) -> list[dict]:
     FX = _fx_cached()
@@ -659,6 +732,14 @@ def _heat_now() -> dict:
     return out
 
 
+def _liquidity_now() -> dict:
+    its = items()
+    views, errs = _wiki_all(its)
+    att = attention(views, its) if views else {"articles": {}, "items": [], "baskets": {}, "last_full_month": None}
+    return {"attention": att, "attention_errors": errs, "as_of": att.get("last_full_month"),
+            "stale": B.stale_info([wiki_key(t) for t in sorted({i["wiki"] for i in its if i.get("wiki")})]), "updated": int(time.time())}
+
+
 def _fees_now() -> dict:
     return {"fees": fees(), "cited": cited("fees"), "as_of": max((r["date"] for r in rows("fees")), default=None), "updated": int(time.time())}
 
@@ -673,7 +754,7 @@ def _cached_ep(name, fn, ttl=3600):
 
 
 ENDPOINTS = {"overview": _cached_ep("overview", _overview_now), "watches": _cached_ep("watches", lambda: _cat_now("watch")), "bags": _cached_ep("bags", lambda: _cat_now("bag")),
-             "roi": _cached_ep("roi", _roi_now), "heat": _cached_ep("heat", _heat_now), "fees": _cached_ep("fees", _fees_now, 600), "items": _cached_ep("items", _items_now, 600)}
+             "roi": _cached_ep("roi", _roi_now), "heat": _cached_ep("heat", _heat_now), "liquidity": _cached_ep("liquidity", _liquidity_now), "fees": _cached_ep("fees", _fees_now, 600), "items": _cached_ep("items", _items_now, 600)}
 
 
 # ------------------------------------------------------------------ READINGS and SIGNALS (cached payloads only)
@@ -698,6 +779,10 @@ def readings(got) -> list[dict]:
     for cat, name in CATEGORIES:
         s = (H.get(cat) or {}).get("score")
         add("heat", f"heat_{cat}", f"{name} heat score (-2 cold ... +2 overheated)", s, lean(s), f"{verdict(s)}; +1 at +0.5 or above, -1 at -0.5 or below")
+    A = (got("liquidity").get("attention") or {}).get("baskets") or {}
+    for cat, name in CATEGORIES:
+        z = (A.get(cat) or {}).get("z12")
+        add("liquidity", f"attention_{cat}", f"{name}: Wikipedia attention, 12-month z (demand proxy)", z, lean(z, 1.0), "last full month against the 12 before; +1 at +1 sd or above, -1 at -1 sd or below")
     return out
 
 

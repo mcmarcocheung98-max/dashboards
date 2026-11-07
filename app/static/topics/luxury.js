@@ -175,6 +175,25 @@ const VIEWS = {
     return [head, gauge(d.watch), gauge(d.bag), cite(d.cited) ? card("Index sources", cite(d.cited)) : null, changesCard("heat")];
   },
 
+  async liquidity() {
+    const d = await api("liquidity"), A = d.attention || {}, B = A.baskets || {}, arts = A.articles || {};
+    const z = v => v == null ? "–" : (v > 0 ? "+" : "") + num(v, 1) + " sd";
+    const zc = v => v == null ? "" : v >= 1 ? "up" : v <= -1 ? "down" : "";
+    const head = card("Attention: Wikipedia pageviews (a demand proxy)",
+      followHead([{ label: "Watches basket attention (own-mean = 100)", points: (B.watch || {}).points || [], fmt: v => num(v, 0), delta: { lag: "1y" } },
+        { label: "Bags basket attention (own-mean = 100)", points: (B.bag || {}).points || [], fmt: v => num(v, 0), delta: { lag: "1y" } },
+        { label: "Watches: 12-month z", points: (B.watch || {}).z_points || [], fmt: z, cls: zc }, { label: "Bags: 12-month z", points: (B.bag || {}).z_points || [], fmt: z, cls: zc }], { latest: "Last full month" }),
+      note("Monthly views of each item's English Wikipedia article (Wikimedia REST API, users, all access) since July 2015. People look a watch or bag up before they buy or sell, so attention is a demand proxy, not a price. Each article is scaled to its own whole-history mean, the basket is the mean of those; the z-score sets the last full month against the 12 before it."),
+      Object.keys(d.attention_errors || {}).length ? el("div", { class: "muted" }, "Not available right now: " + Object.entries(d.attention_errors).map(([k, v]) => k + " (" + v + ")").join(", ") + ".") : null, asOf(d), stale(d));
+    const bk = card("Basket attention, month by month", ...linesChart(Object.values(B).map(b => ({ name: b.name, points: b.points })), v => num(v, 0), { small: true }));
+    const per = card("Each article, monthly views (log scale)", ...linesChart(Object.values(arts).map(a => ({ name: a.title, points: a.points })), v => big(v), { log: true }));
+    const tbl = card("Items: attention now", table(["Item", "Article", "Last full month", "Views", "On a year", "12-month z"],
+      (A.items || []).map(i => el("tr", {}, el("td", {}, i.name), el("td", {}, i.url ? link(i.title, i.url) : i.title || "–"), el("td", {}, i.last ? i.last.month.slice(0, 7) : "–"), el("td", {}, i.last ? num(i.last.views) : "–"),
+        el("td", { class: cls(i.change_1y) }, pct(i.change_1y, 0)), el("td", { class: zc(i.z12) }, z(i.z12))))),
+      note("Two GMT-Master II references share one article; the Alma BB has none, so Louis Vuitton's article stands for it; the Le 5 à 7 and the Ava use their brands' articles. Listings, spreads and sell-through join this tab in the next steps."));
+    return [head, bk, per, tbl, changesCard("liquidity")];
+  },
+
   async fees() {
     const d = await api("fees"), F = d.fees || [];
     const tbl = card("What each platform takes", table(["Platform", "Type", "Seller pays", "Buyer pays", "Authentication", "Paid after", "Region", "Source"],

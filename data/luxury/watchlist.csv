@@ -1,2 +1,2 @@
-date,id,brand,model,reference,category,currency,source,note
-#,"Add an item here in the same shape as items.csv (date = launch, id = a short slug used in retail.csv and resale.csv, category watch or bag). It shows under /api/luxury/items; move it to items.csv to put it in the baskets",,,,,,,https://github.com/mcmarcocheung98-max/dashboards/tree/main/data/luxury,
+date,id,brand,model,reference,category,currency,wiki,source,note
+#,"Add an item here in the same shape as items.csv (date = launch, id = a short slug used in retail.csv and resale.csv, category watch or bag, wiki = the English Wikipedia article for the attention line). It shows under /api/luxury/items; move it to items.csv to put it in the baskets",,,,,,,,https://github.com/mcmarcocheung98-max/dashboards/tree/main/data/luxury,

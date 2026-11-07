@@ -2,7 +2,7 @@
 
 **The question:** for each item, what does it cost new today, what does it sell for second-hand, and what return (or loss) would a buyer at retail see after platform fees, over time.
 
-Six tabs. Data at `/api/luxury/<overview|watches|bags|roi|heat|fees>`; `/api/luxury/items` lists the items and the owner's watchlist. Started 7 Nov 2026 from the owner's request: "a luxury brand tracker dashboard, for watches like Rolex and designer bags, study second hand market data and roi on items", with three product links (Celine Ava 193952BZJ.04LU, Saint Laurent Le 5 à 7 6572282R20W1000, Louis Vuitton Alma BB M46990).
+Seven tabs. Data at `/api/luxury/<overview|watches|bags|roi|heat|liquidity|fees>`; `/api/luxury/items` lists the items and the owner's watchlist. Started 7 Nov 2026 from the owner's request: "a luxury brand tracker dashboard, for watches like Rolex and designer bags, study second hand market data and roi on items", with three product links (Celine Ava 193952BZJ.04LU, Saint Laurent Le 5 à 7 6572282R20W1000, Louis Vuitton Alma BB M46990).
 
 **Not investment advice.** The page gives no buy or sell calls; a return shown is what a past buyer would have seen, not a forecast.
 
@@ -16,6 +16,7 @@ Six tabs. Data at `/api/luxury/<overview|watches|bags|roi|heat|fees>`; `/api/lux
 | Heat | Public resale indices' headline figures | Chrono24 ChronoPulse, WatchCharts, Subdial, Bob's Watches / Morgan Stanley, Rebag Clair, The RealReal, Knight Frank Luxury Investment Index, Bernstein's auction tracker | hand-entered: `indices.csv` (`date,series,category,value,unit,source,note`; `unit` level, pct for a published 12-month change, or pts for a premium in percentage points) | as published |
 | Fees, ROI | Platform fee schedules | each platform's own fee page | hand-entered: `fees.csv` (`date,platform,kind,seller_pct,seller_text,buyer_pct,buyer_text,authentication,payout_days,region,source,note`) | when a schedule changes |
 | ROI | US CPI, UK CPI, USD / CHF / EUR to GBP, the S&P 500 | FRED (`CPIAUCSL`, `GBRCPIALLMINMEI`, `DEXUSUK`, `DEXSZUS`, `DEXUSEU`, `SP500`); ONS `D7BT` for UK CPI when it answers (FRED's copy of the OECD series stops in March 2025); Nasdaq's index quote API for the S&P 500 when FRED does not answer | yes, daily, through `_base.fetch` with a disk snapshot | daily |
+| Liquidity | Attention: monthly pageviews of each item's English Wikipedia article since July 2015 (a demand proxy) | Wikimedia REST API per-article pageviews, monthly granularity, users, all access (the `wiki` column of `items.csv` names the article; the same fetcher and bot header as the Trends dashboard) | yes, daily, through `_base.fetch` with a disk snapshot per article | daily |
 | – | `watchlist.csv` | the owner's additions, same shape as `items.csv`; shown under `/api/luxury/items`, moved to `items.csv` to join a basket | hand-entered | – |
 
 None of the brand sites or resale platforms has a free API, and most refuse servers or forbid scraping in their terms, so nothing is scraped: every price is a dated, cited row. The FRED series are in `PROBE_URLS` (`/api/probe`) so the daily check sees from the server whether they answer; from Railway FRED sometimes answers 429 or times out, in which case the snapshot is served and the ROI tab says so.
@@ -35,6 +36,8 @@ None of the brand sites or resale platforms has a free API, and most refuse serv
 **Fees.** `seller_pct` is the blended seller rate on a £5,000–£10,000 item (the tiers are in `seller_text`); buyout houses have no fee, their margin sits inside the offer. The ROI tab's default platform is Chrono24 for watches and Vestiaire Collective for bags.
 
 **ROI.** For a buyer at retail on a date: bought at the list price then in force; sold today at the item's latest resale point; fee = gross × the platform's seller rate; net = gross − fee; return = net ÷ buy price − 1; annualised = (1 + return)^(365.25 ÷ days) − 1 (blank under 30 days or on a total loss). The S&P 500 is its price change over the same dates (dividends left out); UK CPI the index change; the real return = (1 + return) ÷ (1 + CPI change) − 1. The table uses 1 January of each year from 2020 (or launch, if later); the calculator takes any item, date, price and platform, computed in the browser, nothing stored. Shipping, insurance, servicing, VAT and duty are not deducted.
+
+**Attention** (Liquidity tab): monthly views of each item's English Wikipedia article (`wiki` in `items.csv`; two GMT-Master II references share one article, the Alma BB has none so Louis Vuitton's article stands for it, the Le 5 à 7 and the Ava use their brands' articles). Per article: the last full month, its change on a year, and a **12-month z** (the last full month against the mean and standard deviation of the 12 months before it, clipped to ±3). Per basket: each article's views as a share of its own whole-history mean, averaged across the basket's articles, ×100, and the same 12-month z on that line. People look a watch or bag up before they buy or sell, so this is a demand proxy, not a price or a sale count.
 
 ## The heat score
 
@@ -58,6 +61,7 @@ Words: +1 or more **overheated**, +0.5 running hot, −0.5 to +0.5 neutral, −0
 | overview | `rolex_premium` | Rolex basket premium to retail, % | above +2% | below −2% |
 | overview | `bags_ratio` | bag basket resale ÷ retail | 1.0 or more | under 0.7 |
 | heat | `heat_watch`, `heat_bag` | each heat score | +0.5 or above | −0.5 or below |
+| liquidity | `attention_watch`, `attention_bag` | each basket's Wikipedia attention, 12-month z | +1 sd or above | −1 sd or below |
 
 Signals (`data/signals/watchlist.json`, approved by the owner on 7 Nov 2026): `rolex_premium` (watch: below 0% or above +50%), `rolex_1y` (a 15% move either way), `bags_ratio` (below 0.5 or above 1.0), `retail_rise` (any brand above 10% in 12 months), `heat` (above +1.5 or below −1).
 
