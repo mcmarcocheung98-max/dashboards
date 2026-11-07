@@ -496,7 +496,7 @@
    "date": "2026-11-07",
    "run": "scheduled",
    "result": "ok",
-   "summary": "Email built, not sent (no Gmail secrets). Signals 50 of 67 wired, 16 crossed: the AI basket passed -20% (bear market). Reviewed Debt & Rates: Hong Kong chart broken, FOMC list too long; handed over. Live check still running at the time of this entry.",
+   "summary": "Email built, not sent (no Gmail secrets). Signals 50 of 67 wired, 16 crossed: the AI basket passed -20% (bear market). Reviewed Debt & Rates: Hong Kong chart broken, FOMC list too long; handed over. Live check: every tab of every dashboard loads, all OK.",
    "fixed": [],
    "handed": [
     "debt-rates"
