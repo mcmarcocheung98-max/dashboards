@@ -154,7 +154,7 @@ def changes(slug: str) -> dict:
 # The index page groups dashboards under these headings, in this order. A dashboard not listed here goes under "More".
 CATEGORIES = (
     ("Signals", "The one thing to watch on each dashboard, and today's email.", ("signals",)),
-    ("Money & markets", "Prices, rates and where capital is flowing.", ("btc-cycles", "altcoins", "ai-stocks", "debt-rates", "housing", "pokemon-cards")),
+    ("Money & markets", "Prices, rates and where capital is flowing.", ("btc-cycles", "altcoins", "ai-stocks", "debt-rates", "housing", "pokemon-cards", "luxury")),
     ("AI & technology", "How fast AI, chips and machines are arriving, and who leads.", ("ai", "compute-chips", "china-us-tech", "robotaxi", "space")),
     ("People & planet", "The slow forces: population, health and climate.", ("demographics", "longevity", "climate")),
     ("Sentiment & attention", "What people are betting on and paying attention to.", ("prediction-markets", "trends")),
@@ -237,6 +237,14 @@ PROBE_URLS = {   # fixed list: what each dashboard downloads, to see from the se
     "celestrak satcat": "https://celestrak.org/pub/satcat.csv",
     "fred vix": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS",
     "cboe vix history": "https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv",
+    "fred cpi us": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPIAUCSL",
+    "fred cpi uk": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=GBRCPIALLMINMEI",
+    "fred gbpusd": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXUSUK",
+    "fred chfusd": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXSZUS",
+    "fred eurusd": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXUSEU",
+    "fred sp500": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=SP500",
+    "ons cpi d7bt": "https://www.ons.gov.uk/generator?format=csv&uri=/economy/inflationandpriceindices/timeseries/d7bt/mm23",
+    "nasdaq spx": "https://api.nasdaq.com/api/quote/SPX/historical?assetclass=index&fromdate=2026-09-01&limit=50",
 }
 
 

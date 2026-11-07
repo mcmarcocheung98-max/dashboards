@@ -102,5 +102,12 @@
   {"key": "setup_score", "signal": "AI Setup Score (0 = washout, 100 = euphoria)", "watch": "below 10 (washout) or above 90 (stretched)", "approved": "2026-11-06"},
   {"key": "vix", "signal": "VIX", "watch": "above 30 (fear), or back below 20 after being above 25 in the last month", "approved": "2026-11-06"},
   {"key": "ai_vs_qqq", "signal": "AI basket minus QQQ, 3-month return", "watch": "a 10-point gap either way", "approved": "2026-11-06"}
+ ],
+ "luxury": [
+  {"key": "rolex_premium", "signal": "Rolex basket: median resale premium to retail", "watch": "below 0% (steel sports below retail) or above +50%", "approved": "2026-11-07"},
+  {"key": "rolex_1y", "signal": "Rolex basket resale, change on a year", "watch": "a 15% move either way", "approved": "2026-11-07"},
+  {"key": "bags_ratio", "signal": "Bag basket: resale / retail", "watch": "below 0.5 or above 1.0", "approved": "2026-11-07"},
+  {"key": "retail_rise", "signal": "Largest brand retail increase, last 12 months", "watch": "any brand above 10%", "approved": "2026-11-07"},
+  {"key": "heat", "signal": "Luxury market heat score (watches and bags, -2 to +2)", "watch": "above +1.5 or below -1", "approved": "2026-11-07"}
  ]
 }
