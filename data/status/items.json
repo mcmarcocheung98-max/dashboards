@@ -204,6 +204,14 @@
    "since": "2026-11-05",
    "detail": "First version on main (5c4b3bc): Setup, Drawdown, Trend & breadth, After past dips, Fear & relative, Fundamentals. Live 4 Nov: basket -15.5% from its high, 15% above the 50-day, RSI 36.5, VIX 16.6. Phase 2 in session_01Hguru3NTcATdNFZJk1KsMC: owner's picks group, AI Setup Score with backtest, index strip, Institutions (13F), Form 4 panel and Insiders tab. Phase 2 done on 6 Nov: owner's picks (401b922), Setup Score and backtest (62fd68b), index strip (889794f), Institutions from 13F (378a8ab), Form 4 panel and Insiders tab (36bb559). One check open: NVDA's 10b5-1 share of insider sales.",
    "done": "2026-11-06"
+  },
+  {
+   "id": "luxury-build",
+   "title": "Build the Luxury Tracker dashboard",
+   "owner": "session:luxury",
+   "status": "in_progress",
+   "since": "2026-11-07",
+   "detail": "Session session_01Hguru15vQ5yfAZ9A1uCCyE started from the dev agent's brief; it reports back to the parent when pushed. The brand sites could not be added to the environment's network, so prices come from web search and are cited; any the session cannot find are left for the owner."
   }
  ],
  "roadmap": [
@@ -392,6 +400,16 @@
    "approved": "2026-11-05",
    "detail": "Asked by the owner on 5 Nov. Thirteen AI stocks against QQQ, SPY and SMH: drawdown from the high, trend and breadth, RSI, past dips and what followed, VIX and relative strength, and revenue growth. Five signals proposed with it: basket drawdown, breadth above the 50-day, basket RSI, VIX, AI vs QQQ.",
    "done": "2026-11-06"
+  },
+  {
+   "id": "r-luxury",
+   "title": "Luxury Tracker: Rolex and designer bags on the second-hand market",
+   "horizon": "now",
+   "status": "in_progress",
+   "area": "Dashboards",
+   "by": "session:luxury",
+   "approved": "2026-11-07",
+   "detail": "Asked by the owner on 7 Nov. Retail vs resale over time for eight Rolex references and five bags (the owner's Celine Ava, Saint Laurent Le 5 à 7 and Louis Vuitton Alma BB, plus a Birkin 25 and a Chanel Classic Flap for contrast), ROI after platform fees, a market-heat score, and five proposed signals. Hand-entered, dated, sourced price points: the resale platforms have no free API."
   }
  ],
  "log": [
@@ -863,6 +881,7 @@
    ],
    "review": "debt-rates",
    "next": [
+    "Luxury Tracker being built in its own session",
     "Debt & Rates: fix the Hong Kong chart and shorten the FOMC list (handed over)",
     "Pokémon cards, Longevity, Compute & chips: still waiting for the owner's reply in their sessions"
    ],

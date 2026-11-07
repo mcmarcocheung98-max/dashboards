@@ -118,5 +118,6 @@ climate `session_016qhyE8K2Ta61cxezGrnnSf` · china-us-tech `session_015gcf1pJ9R
 longevity `session_018wSWDkkykdb9BRc5pT72HC` · space `session_01NWRBg9G3RhsJj6HU51qjDD` ·
 pokemon-cards `session_01E2rgzyuaUHsMjB6PAC9UoM` · prediction-markets `session_01J3ZVbej7kofN2W2QvFMciM` ·
 trends `session_01DDQTR7e3Cpv1twBcXdfFFq` · nba-odds `session_01HgurtzQez3NndAMfZFsyAp` ·
+luxury `session_01Hguru15vQ5yfAZ9A1uCCyE` ·
 ai-stocks `session_01Hguru3NTcATdNFZJk1KsMC` (phase 2; the first build session_01Hguru33HhMq9DoqY2C26R6 stood down) ·
 the former daily-check session `session_01Hguru4ZnmwKFghzbQZHzmL` (retired; its scheduled task is paused).
