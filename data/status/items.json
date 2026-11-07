@@ -240,7 +240,7 @@
    "owner": "session:luxury",
    "status": "in_progress",
    "since": "2026-11-07",
-   "detail": "Five steps, pushed one by one: Wikipedia attention, auction results, eBay Browse API (keyed), the weekly manual log, the Liquidity tab with its score and signal."
+   "detail": "Five steps, pushed one by one: Wikipedia attention, auction results, eBay Browse API (keyed), the weekly manual log, the Liquidity tab with its score and signal. Step 1 done (ae24707): Wikipedia attention per item since 2015, on a new Liquidity tab."
   }
  ],
  "roadmap": [
