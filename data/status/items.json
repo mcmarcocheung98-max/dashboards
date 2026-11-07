@@ -240,7 +240,7 @@
    "owner": "session:luxury",
    "status": "in_progress",
    "since": "2026-11-07",
-   "detail": "Five steps, pushed one by one: Wikipedia attention, auction results, eBay Browse API (keyed), the weekly manual log, the Liquidity tab with its score and signal. Step 1 done (ae24707): Wikipedia attention per item since 2015, on a new Liquidity tab. Step 2 done (b52ca39): auctions.csv and auction_sales.csv."
+   "detail": "Five steps, pushed one by one: Wikipedia attention, auction results, eBay Browse API (keyed), the weekly manual log, the Liquidity tab with its score and signal. Step 1 done (ae24707): Wikipedia attention per item since 2015, on a new Liquidity tab. Step 2 done (b52ca39): auctions.csv and auction_sales.csv. Step 3 done (5ddc59d): the eBay feed, waiting on the owner's keys."
   }
  ],
  "roadmap": [
@@ -947,6 +947,14 @@
      "tab": "liquidity",
      "what": "Liquidity step 2: auction results since 2019 (24 lots, 6 sale counts). Geneva watch sales still clear 99-100% of lots; watch lots sell well above estimate; no 2015-2018 lots found yet",
      "commit": "b52ca39",
+     "by": "session:luxury"
+    },
+    {
+     "dashboard": "Luxury Tracker",
+     "slug": "luxury",
+     "tab": "liquidity",
+     "what": "Liquidity step 3: eBay daily listings per item (count, median and lowest ask), saved on the volume every day; dark until EBAY_APP_ID and EBAY_CERT_ID are set",
+     "commit": "5ddc59d",
      "by": "session:luxury"
     }
    ],
