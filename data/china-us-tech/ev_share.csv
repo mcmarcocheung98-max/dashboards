@@ -1,6 +1,6 @@
 date,series,value,source,note
-2019-01-01,China,5,https://www.iea.org/reports/global-ev-outlook-2025,"from memory; IEA GEVO 2023 gives only 'under 6% between 2018 and 2020' for China, no single-year figure found; verify"
-2020-01-01,China,6,https://www.iea.org/reports/global-ev-outlook-2025,"from memory; IEA GEVO 2023 gives only 'under 6% between 2018 and 2020' for China, no single-year figure found; verify"
+2019-01-01,China,4.8,https://www.iea.org/reports/global-ev-outlook-2021/trends-and-developments-in-electric-vehicle-markets,"checked 2026-11-07: IEA GEVO 2021: 'a sales share of 5.7%, up from 4.8% in 2019'; was 5"
+2020-01-01,China,5.7,https://www.iea.org/reports/global-ev-outlook-2021/trends-and-developments-in-electric-vehicle-markets,"checked 2026-11-07: IEA GEVO 2021: 'a sales share of 5.7%, up from 4.8% in 2019'; was 6"
 2021-01-01,China,16,https://www.iea.org/reports/global-ev-outlook-2023/trends-in-electric-light-duty-vehicles,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2023: 16% in 2021
 2022-01-01,China,29,https://www.iea.org/reports/global-ev-outlook-2023/trends-in-electric-light-duty-vehicles,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2023: 29% in 2022
 2023-01-01,China,38,https://iea.blob.core.windows.net/assets/a9e3544b-0b12-4e15-b407-65f5c8ce1b5f/GlobalEVOutlook2024.pdf,fallback when Our World in Data (IEA) is not reachable; checked 2026-11-03: IEA GEVO 2024: 'more than one in three' in 2023; 38 is within that
@@ -27,4 +27,4 @@ date,series,value,source,note
 2021-01-01,Hong Kong,24.4,https://www.legco.gov.hk/yr2023/english/panels/ea/papers/ea20230421cb1-333-3-e.pdf,EV share of new private car first registrations; checked 2026-11-03 against LegCo EA Panel paper CB(1)333/2023(03) table; was 25
 2022-01-01,Hong Kong,52.8,https://www.legco.gov.hk/yr2023/english/panels/ea/papers/ea20230421cb1-333-3-e.pdf,EV share of new private car first registrations; checked 2026-11-03 against LegCo EA Panel paper CB(1)333/2023(03) table; was 53
 2023-01-01,Hong Kong,64.6,https://www.info.gov.hk/gia/general/202405/22/P2024052200366.htm,EV share of new private car first registrations; checked 2026-11-03 against LCQ3 22 May 2024 (64.6 per cent); was 64
-2024-01-01,Hong Kong,70,https://www.epd.gov.hk/epd/english/environmentinhk/air/prob_solutions/promotion_ev.html,EV share of new private car first registrations; from memory; news reports quote about 70% (Chief Executive) but no government table found yet; verify
+2024-01-01,Hong Kong,70,https://www.info.gov.hk/gia/general/202505/14/P2025051400318.htm,"EV share of new private car first registrations; checked 2026-11-07: LCQ3 14 May 2025 says 'about seven out of every 10 newly registered private cars are electric' (currently, no calendar-year figure); LegCo EA Panel papers with the 2024 table could not be opened; verify"
