@@ -179,6 +179,16 @@ const VIEWS = {
     const d = await api("liquidity"), A = d.attention || {}, B = A.baskets || {}, arts = A.articles || {};
     const z = v => v == null ? "–" : (v > 0 ? "+" : "") + num(v, 1) + " sd";
     const zc = v => v == null ? "" : v >= 1 ? "up" : v <= -1 ? "down" : "";
+    const LS = d.liquidity || {};
+    const sc = v => v == null ? "–" : (v > 0 ? "+" : "") + num(v, 2);
+    const scCls = v => v == null ? "" : v >= 0.5 ? "up" : v <= -0.5 ? "down" : "";
+    const score = card("Liquidity score: " + (LS.verdict || "–") + (LS.score == null ? "" : " (" + sc(LS.score) + ")"),
+      el("div", { class: "kpis" }, kpi("Watches", sc((LS.watch || {}).score), scCls((LS.watch || {}).score)), kpi("Bags", sc((LS.bag || {}).score), scCls((LS.bag || {}).score)), kpi("Both (mean)", sc(LS.score), scCls(LS.score))),
+      el("div", { class: "grid2", style: "margin-top:8px" }, ...["watch", "bag"].map(c => { const x = LS[c] || {}; return el("div", {}, el("h2", {}, (x.name || c) + ": " + (x.verdict || "–") + " · " + (x.n_components || 0) + " of 5 components"),
+        el("div", { class: "kpis" }, ...(x.components || []).map(k => kpi(k.label, k.value == null ? "no data yet" : sc(k.value), scCls(k.value)))),
+        el("div", { class: "muted", style: "margin-top:4px" }, (x.listings_1y == null ? "No year of listings yet" : "Listings " + pct(x.listings_1y, 0) + " on a year (" + x.listings_source + ")") + (x.sell_through_latest == null ? "" : "; latest auction sell-through " + (x.sell_through_latest * 100).toFixed(0) + "%") + ".")); })),
+      table(["Score", "Words"], (LS.bands || []).map(b => el("tr", {}, el("td", {}, b[0]), el("td", {}, b[1])))),
+      note("Like the heat score: each component is scored -2 … +2 and the score is their mean (at least two needed). Supply: the listing count against its own history, sign flipped (eBay UK daily once 60 days exist, else Chrono24's weekly total once 8 weeks exist). Spread: StockX ask / bid - 1 (bags). Sell-through: the latest auction sale. Days to sell: WatchCharts' median days on market (watches). Attention: the Wikipedia 12-month z. The liquidity signal watches listings up 50% on a year with the premium falling, or sell-through under 70%. " + (LS.watch && LS.watch.components || []).map(k => k.label + ": " + k.words).join(" ")));
     const head = card("Attention: Wikipedia pageviews (a demand proxy)",
       followHead([{ label: "Watches basket attention (own-mean = 100)", points: (B.watch || {}).points || [], fmt: v => num(v, 0), delta: { lag: "1y" } },
         { label: "Bags basket attention (own-mean = 100)", points: (B.bag || {}).points || [], fmt: v => num(v, 0), delta: { lag: "1y" } },
@@ -227,7 +237,7 @@ const VIEWS = {
           el("td", { class: "wrap" }, [...new Set(Object.values(r.m).map(x => x.date))].map(dateOf).join(", "))))),
       note("Hand-entered once a week (the dev agent's weekly step appends rows): Chrono24's listing count on the reference's public page, StockX's last sale, highest bid and lowest ask for the bags (USD converted to GBP), WatchCharts' median days on market, and Fashionphile's sold counts where visible. ·v marks a reading not confirmed on the page. " + (Lg.n_rows || 0) + " rows, " + (Lg.n_verify || 0) + " to verify" + (Lg.first ? ", since " + dateOf(Lg.first) : "") + ". A wide bid-ask spread and more listings mean a market where sellers wait; days to sell is the most direct liquidity measure here."),
       cite(Object.values(byItem).flatMap(r => Object.values(r.m)).map(x => ({ source: x.source, date: x.date })).filter((x, i, a) => a.findIndex(y => y.source === x.source) === i).slice(0, 10)));
-    return [head, bk, per, tbl, eb, log, ve, st, lots, changesCard("liquidity")];
+    return [score, head, bk, per, tbl, eb, log, ve, st, lots, changesCard("liquidity")];
   },
 
   async fees() {

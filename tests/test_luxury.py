@@ -196,6 +196,8 @@ def test_payloads_readings_and_signals(mocked):
     assert sig["bags_ratio"]["crossed"] == (sig["bags_ratio"]["value"] < 0.5 or sig["bags_ratio"]["value"] > 1.0)
     assert sig["retail_rise"]["crossed"] == (sig["retail_rise"]["value"] is not None and sig["retail_rise"]["value"] > 10)
     assert sig["heat"]["crossed"] == (sig["heat"]["value"] > 1.5 or sig["heat"]["value"] < -1)
+    assert "liquidity" in sig and isinstance(sig["liquidity"]["crossed"], bool) and "sell-through" in sig["liquidity"]["note"]
+    assert {"liquidity_watch", "liquidity_bag"} <= set(r) and L["liquidity"]["watch"]["n_components"] >= 2 and L["liquidity"]["bands"]
 
 
 def test_signal_tests_at_the_edges(monkeypatch):
@@ -312,3 +314,33 @@ def test_liquidity_log_spreads_and_totals(mocked, monkeypatch):
     assert lat[("sub-126610ln", "chrono24_listings")]["value"] == 800 and lat[("sub-126610ln", "watchcharts_days_to_sell")]["kind"] == "days"
     r = {x["key"]: x for x in M.readings(lambda n: {"liquidity": {"log": L}}.get(n, {}))}
     assert r["stockx_spread"]["value"] == 30.0 and r["stockx_spread"]["lean"] == 0
+
+
+def test_liquidity_score_and_signal(monkeypatch):
+    monkeypatch.setattr(M, "_now", lambda: TODAY)
+    att = {"baskets": {"watch": {"z12": -1.0}, "bag": {"z12": 2.5}}}
+    auc = {"sell_through": {"watch": {"latest": 0.95}, "bag": {"latest": 0.65}}}
+    day = 86400
+    counts = [[int(TODAY.timestamp()) - (400 - i) * day, 100 if i < 399 else 300] for i in range(400)]     # a year of eBay days flat at 100, today far above
+    ebay = {"categories": {"watch": {"count": counts}, "bag": {"count": []}}}
+    log = {"spreads": {"b": {"spread": 0.30}}, "chrono24_total": [], "latest": [{"category": "watch", "metric": "watchcharts_days_to_sell", "value": 20.0, "date": "2026-11-01"},
+                                                                                 {"category": "watch", "metric": "watchcharts_days_to_sell", "value": 60.0, "date": "2026-01-01"}]}
+    w = M.liquidity_score("watch", att, auc, ebay, log)
+    c = {k["key"]: k["value"] for k in w["components"]}
+    assert c["supply"] == -2.0 and c["spread"] is None and c["sell_through"] == 1.0 and c["days_to_sell"] == 1.0 and c["attention"] == -1.0
+    assert w["n_components"] == 4 and w["score"] == -0.25 and w["verdict"] == "normal" and w["listings_1y"] == 2.0 and w["supply_source"] == "eBay UK"
+    b = M.liquidity_score("bag", att, auc, ebay, log)
+    cb = {k["key"]: k["value"] for k in b["components"]}
+    assert cb["supply"] is None and cb["spread"] == -1.0 and cb["sell_through"] == -2.0 and cb["days_to_sell"] is None and cb["attention"] == 2.0 and b["score"] == -0.33
+    assert M.liquidity_verdict(1.2) == "tight" and M.liquidity_verdict(-1.5) == "stuck" and M.liquidity_verdict(None) == "not enough data yet"
+    # the signal: watches have listings +200% with the premium falling, bags a sell-through under 70%
+    prem = [[int(TODAY.timestamp()) - (14 - i) * 30 * day, 0.3 - 0.01 * i] for i in range(14)]
+    pay = {"overview": {"kpi": {"rolex_premium": 0.1, "rolex_1y": 0.0, "bags_ratio": 0.9}, "rolex_premium": prem, "bags_ratio": []}, "heat": {"score": 0.1}, "bags": {"retail_rise": {"brand": "x", "value": 0.0}},
+           "liquidity": {"liquidity": {"watch": w, "bag": b, "score": -0.29}}}
+    monkeypatch.setattr(M, "_cached_payload", lambda n: pay.get(n, {}))
+    sig = {x["key"]: x for x in M.SIGNALS()}
+    assert sig["liquidity"]["crossed"] and "sellers stuck: Watches" in sig["liquidity"]["note"] and "sell-through under 70%: Bags" in sig["liquidity"]["note"] and sig["liquidity"]["value"] == -0.29
+    b["sell_through_latest"] = 0.9
+    w["listings_1y"] = 0.2
+    sig = {x["key"]: x for x in M.SIGNALS()}
+    assert not sig["liquidity"]["crossed"]

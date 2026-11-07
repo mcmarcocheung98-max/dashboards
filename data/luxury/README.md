@@ -62,6 +62,20 @@ One score for watches and one for bags, like the Pokémon dashboard's, on −2 (
 
 Words: +1 or more **overheated**, +0.5 running hot, −0.5 to +0.5 neutral, −0.5 cooling, −1 or less **cold**. The overview's "where the market is" line is each category's words plus whether its basket trades above, around or below retail. The luxury-wide score (the `heat` signal) is the mean of the two.
 
+## The liquidity score
+
+One score per market on −2 (stuck) … +2 (tight), like the heat score: five components each clipped to ±2, the score their mean (at least two present).
+
+| Component | Built from | Scale |
+|---|---|---|
+| Supply | the basket's listing count against its own history as a z-score, sign flipped (more listings than usual = looser): eBay UK daily counts once 60 days exist, else the Chrono24 weekly total once 8 weeks exist | −z, clipped |
+| Bid-ask spread | median StockX lowest ask ÷ highest bid − 1 across the bags with both (bags only) | 0% = +2, 10% = +1, 20% = 0, 30% = −1 |
+| Auction sell-through | the latest sale's lots sold ÷ offered | 95% = +1, 85% = 0, 75% = −1 |
+| Days to sell | WatchCharts' median days on market across the references logged in the last 60 days (watches) | 20 days = +1, 30 = 0, 40 = −1 |
+| Attention | the basket's Wikipedia 12-month z | the z, clipped |
+
+Words: +1 **tight** (few listings, narrow spreads, everything sells), +0.5 liquid, −0.5 to +0.5 normal, −0.5 loosening, −1 **stuck** (listings pile up, spreads widen, lots bought in). The luxury-wide score (the `liquidity` signal's value) is the mean of the two.
+
 ## READINGS and signals: what +1 and −1 mean
 
 **+1 = heating, −1 = cooling, 0 = neutral**, from cached tab data only.
@@ -74,9 +88,10 @@ Words: +1 or more **overheated**, +0.5 running hot, −0.5 to +0.5 neutral, −0
 | liquidity | `attention_watch`, `attention_bag` | each basket's Wikipedia attention, 12-month z | +1 sd or above | −1 sd or below |
 | liquidity | `sell_through_watch`, `sell_through_bag` | auction sell-through, latest sale (%) | 90% or more | under 70% |
 | liquidity | `ebay_listings_watch`, `ebay_listings_bag` | active eBay UK listings per basket (once two days of snapshots exist) | never (a count) | never |
+| liquidity | `liquidity_watch`, `liquidity_bag` | each liquidity score | +0.5 or above | −0.5 or below |
 | liquidity | `stockx_spread` | bags: StockX bid-ask spread, median of the bags with both (%) | under 10% | over 30% |
 
-Signals (`data/signals/watchlist.json`, approved by the owner on 7 Nov 2026): `rolex_premium` (watch: below 0% or above +50%), `rolex_1y` (a 15% move either way), `bags_ratio` (below 0.5 or above 1.0), `retail_rise` (any brand above 10% in 12 months), `heat` (above +1.5 or below −1).
+Signals (`data/signals/watchlist.json`, approved by the owner on 7 Nov 2026): `rolex_premium` (watch: below 0% or above +50%), `rolex_1y` (a 15% move either way), `bags_ratio` (below 0.5 or above 1.0), `retail_rise` (any brand above 10% in 12 months), `heat` (above +1.5 or below −1), and the sixth, `liquidity` (approved 7 Nov 2026 with the free data route): listings up 50% on a year with the premium falling (sellers stuck), or auction sell-through below 70%; its value is the luxury-wide liquidity score.
 
 ## Caveats
 

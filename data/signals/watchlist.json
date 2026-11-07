@@ -108,6 +108,7 @@
   {"key": "rolex_1y", "signal": "Rolex basket resale, change on a year", "watch": "a 15% move either way", "approved": "2026-11-07"},
   {"key": "bags_ratio", "signal": "Bag basket: resale / retail", "watch": "below 0.5 or above 1.0", "approved": "2026-11-07"},
   {"key": "retail_rise", "signal": "Largest brand retail increase, last 12 months", "watch": "any brand above 10%", "approved": "2026-11-07"},
-  {"key": "heat", "signal": "Luxury market heat score (watches and bags, -2 to +2)", "watch": "above +1.5 or below -1", "approved": "2026-11-07"}
+  {"key": "heat", "signal": "Luxury market heat score (watches and bags, -2 to +2)", "watch": "above +1.5 or below -1", "approved": "2026-11-07"},
+  {"key": "liquidity", "signal": "Liquidity: listings against the premium, and auction sell-through", "watch": "listings up 50% on a year with the premium falling (sellers stuck), or sell-through below 70% at auction", "approved": "2026-11-07"}
  ]
 }

@@ -19,7 +19,8 @@ liquidity  how easily each item trades: attention (monthly Wikipedia pageviews p
            listings per item once a day (luxury_ebay.py: the Browse API with the owner's EBAY_APP_ID and EBAY_CERT_ID, a daily snapshot
            on the volume so history accrues; "not set up yet" until the keys are set); the weekly manual log (liquidity.csv: Chrono24
            listing counts per reference, StockX bid, ask and last sale for bags, WatchCharts days to sell, Fashionphile sold counts where
-           visible), with the StockX bid-ask spread per bag
+           visible), with the StockX bid-ask spread per bag; and a liquidity score per market, like the heat score: supply (listings
+           against their own history, more = looser), the spread, auction sell-through, days to sell and attention
 
 Data. The brand sites and the resale platforms have no free API and refuse servers, so prices are hand-entered, dated and sourced
 (data/luxury/*.csv): items.csv (one row per item), retail.csv (official list prices as they change), resale.csv (asking or sold points
@@ -737,6 +738,59 @@ def liquidity_log(FX: dict | None = None) -> dict:
             "first": min((x["date"] for x in latest), default=None), "last": max((x["date"] for x in latest), default=None)}
 
 
+# ------------------------------------------------------------------ the liquidity score
+LIQ = {"supply": ("Supply: listings vs own history", "The basket's listing count (eBay UK daily once 60 days exist, else the Chrono24 weekly total once 8 weeks exist) as a z-score against its own history, sign flipped: more listings than usual scores negative (a looser market)."),
+       "spread": ("Bid-ask spread (StockX)", "Median StockX lowest-ask / highest-bid spread across the bags with both: 0% scores +2, 10% +1, 20% 0, 30% -1."),
+       "sell_through": ("Auction sell-through", "The latest sale's lots sold / offered: 95% scores +1, 85% 0, 75% -1."),
+       "days_to_sell": ("Days to sell (WatchCharts)", "Median days on market across the references logged in the last 60 days: 20 days scores +1, 30 days 0, 40 days -1."),
+       "attention": ("Attention (Wikipedia, 12-month z)", "The basket's attention z: people looking the items up is demand looking for supply.")}
+
+
+def liquidity_verdict(x) -> str:
+    if x is None:
+        return "not enough data yet"
+    return "tight" if x >= 1 else "liquid" if x >= 0.5 else "stuck" if x <= -1 else "loosening" if x <= -0.5 else "normal"
+
+
+def liquidity_score(cat: str, att: dict, auc: dict, ebay: dict, log: dict) -> dict:
+    """The five components for one market (each -2 ... +2, None where no source gives one yet), the score (mean of those present, at least
+    two), the words, and the signal's inputs: the listing count's change on a year and whether the premium fell."""
+    comp: dict[str, float | None] = {}
+    # supply: eBay daily once 60 days, else Chrono24 weekly once 8 weeks; z against own history, sign flipped
+    counts = ((ebay.get("categories") or {}).get(cat) or {}).get("count") or []
+    src = "eBay UK"
+    if len(counts) < 60 and cat == "watch":
+        counts, src = log.get("chrono24_total") or [], "Chrono24"
+    if (len(counts) >= 60 and src == "eBay UK") or (len(counts) >= 8 and src == "Chrono24"):
+        c = pd.Series({pd.Timestamp(t, unit="s"): v for t, v in counts}, dtype=float)
+        sd = float(c.std(ddof=0))
+        comp["supply"] = None if sd == 0 else float(np.clip(-(c.iloc[-1] - c.mean()) / sd, -2, 2))
+    else:
+        comp["supply"] = None
+    sp = [v["spread"] for v in (log.get("spreads") or {}).values() if v.get("spread") is not None] if cat == "bag" else []
+    comp["spread"] = float(np.clip((0.20 - float(np.median(sp))) / 0.10, -2, 2)) if sp else None
+    st = ((auc.get("sell_through") or {}).get(cat) or {}).get("latest")
+    comp["sell_through"] = float(np.clip((st - 0.85) / 0.10, -2, 2)) if st is not None else None
+    days = [x["value"] for x in (log.get("latest") or []) if x["category"] == cat and x["metric"] == "watchcharts_days_to_sell" and x["value"] is not None
+            and (_now() - pd.Timestamp(x["date"])).days <= 60]
+    comp["days_to_sell"] = float(np.clip((30 - float(np.median(days))) / 10, -2, 2)) if days else None
+    az = ((att.get("baskets") or {}).get(cat) or {}).get("z12")
+    comp["attention"] = float(np.clip(az, -2, 2)) if az is not None else None
+    have = [v for v in comp.values() if v is not None]
+    score = _r(float(np.clip(np.mean(have), -2, 2)), 2) if len(have) >= 2 else None
+    # the signal's inputs
+    listings_1y = None
+    if len(counts) >= 2:
+        c = pd.Series({pd.Timestamp(t, unit="s"): v for t, v in counts}, dtype=float)
+        past = c[c.index <= c.index[-1] - pd.Timedelta(days=365)]
+        if len(past) and past.iloc[-1]:
+            listings_1y = _r(float(c.iloc[-1] / past.iloc[-1] - 1), 4)
+    return {"category": cat, "name": dict(CATEGORIES)[cat], "score": score, "verdict": liquidity_verdict(score),
+            "components": [{"key": k, "label": LIQ[k][0], "words": LIQ[k][1], "value": _r(v, 2) if v is not None else None} for k, v in comp.items()],
+            "supply_source": src if comp["supply"] is not None else None, "listings_1y": listings_1y, "listings_source": src if listings_1y is not None else None,
+            "sell_through_latest": _r(st, 4) if st is not None else None, "n_components": len(have)}
+
+
 # ------------------------------------------------------------------ tab payloads
 def _views(cat: str | None = None) -> list[dict]:
     FX = _fx_cached()
@@ -877,7 +931,13 @@ def _liquidity_now() -> dict:
         ebay = EBAY.payload(its)
     except Exception as e:
         ebay = {"set_up": EBAY.set_up(), "message": f"{type(e).__name__}: {str(e)[:120]}", "items": {}, "categories": {}, "days": 0}
-    return {"attention": att, "attention_errors": errs, "auctions": auc, "ebay": ebay, "log": liquidity_log(FX), "fx_fallback": FX["fallback"],
+    log = liquidity_log(FX)
+    scores = {cat: liquidity_score(cat, att, auc, ebay, log) for cat, _ in CATEGORIES}
+    both = [x["score"] for x in scores.values() if x["score"] is not None]
+    scores["score"] = _r(float(np.mean(both)), 2) if both else None
+    scores["verdict"] = liquidity_verdict(scores["score"])
+    scores["bands"] = [["+1 or more", "tight: few listings, narrow spreads, everything sells"], ["+0.5 to +1", "liquid"], ["-0.5 to +0.5", "normal"], ["-1 to -0.5", "loosening"], ["-1 or less", "stuck: listings pile up, spreads widen, lots bought in"]]
+    return {"attention": att, "attention_errors": errs, "auctions": auc, "ebay": ebay, "log": log, "liquidity": scores, "fx_fallback": FX["fallback"],
             "as_of": max([d for d in (att.get("last_full_month"), lots[-1]["date"] if lots else None) if d], default=None),
             "stale": B.stale_info([wiki_key(t) for t in sorted({i["wiki"] for i in its if i.get("wiki")})]), "updated": int(time.time())}
 
@@ -923,6 +983,10 @@ def readings(got) -> list[dict]:
     for cat, name in CATEGORIES:
         s = (H.get(cat) or {}).get("score")
         add("heat", f"heat_{cat}", f"{name} heat score (-2 cold ... +2 overheated)", s, lean(s), f"{verdict(s)}; +1 at +0.5 or above, -1 at -0.5 or below")
+    LS = got("liquidity").get("liquidity") or {}
+    for cat, name in CATEGORIES:
+        v = (LS.get(cat) or {}).get("score")
+        add("liquidity", f"liquidity_{cat}", f"{name} liquidity score (-2 stuck ... +2 tight)", v, lean(v), f"{liquidity_verdict(v)}; +1 at +0.5 or above, -1 at -0.5 or below")
     A = (got("liquidity").get("attention") or {}).get("baskets") or {}
     for cat, name in CATEGORIES:
         z = (A.get(cat) or {}).get("z12")
@@ -992,4 +1056,23 @@ def SIGNALS() -> list[dict]:
     s = H.get("score")
     if s is not None:
         add("heat", "heat", "Luxury market heat score (watches and bags)", s, "", lean(s), "above +1.5 or below -1", s > 1.5 or s < -1, verdict(s))
+    LS = (_cached_payload("liquidity") or {}).get("liquidity") or {}
+    if LS.get("score") is not None or any((LS.get(c) or {}).get("sell_through_latest") is not None for c, _ in CATEGORIES):
+        stuck, low, notes = [], [], []
+        for cat, name in CATEGORIES:
+            x = LS.get(cat) or {}
+            prem = O.get("rolex_premium") if cat == "watch" else O.get("bags_ratio")
+            falling = None
+            if prem and len(prem) > 12:
+                falling = prem[-1][1] < prem[-13][1]
+            if x.get("listings_1y") is not None and x["listings_1y"] >= 0.5 and falling:
+                stuck.append(name)
+            if x.get("sell_through_latest") is not None and x["sell_through_latest"] < 0.7:
+                low.append(name)
+            notes.append(f"{name}: listings {'+' if (x.get('listings_1y') or 0) >= 0 else ''}{round(100 * x['listings_1y'])}% on a year" if x.get("listings_1y") is not None else f"{name}: no year of listings yet")
+            if x.get("sell_through_latest") is not None:
+                notes[-1] += f", sell-through {round(100 * x['sell_through_latest'])}%"
+        add("liquidity", "liquidity", "Liquidity score (watches and bags, -2 stuck ... +2 tight)", LS.get("score"), "", lean(LS.get("score")),
+            "listings up 50% on a year with the premium falling (sellers stuck), or sell-through below 70% at auction", bool(stuck or low),
+            ("sellers stuck: " + ", ".join(stuck) + "; " if stuck else "") + ("sell-through under 70%: " + ", ".join(low) + "; " if low else "") + "; ".join(notes))
     return out

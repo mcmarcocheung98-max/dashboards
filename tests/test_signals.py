@@ -26,7 +26,7 @@ def test_watchlist_covers_the_approved_dashboards():
     assert "btc-cycles" not in wl and "altcoins" not in wl
     for slug, rows in wl.items():
         assert slug in topics.REGISTRY, slug
-        assert 3 <= len(rows) <= 5 and len({r["key"] for r in rows}) == len(rows)
+        assert 3 <= len(rows) <= (6 if slug == "luxury" else 5) and len({r["key"] for r in rows}) == len(rows)    # luxury: a sixth, the liquidity signal (approved 7 Nov 2026)
         assert all(r["signal"] and r["watch"] for r in rows)
 
 
