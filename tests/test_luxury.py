@@ -46,17 +46,26 @@ def fake_fetch(url, ttl=0, **k):
 
 
 def smoke_patch():
-    """Used by scripts/smoke.py: FRED answers from the fixtures above; the hand-entered CSVs are the committed ones."""
+    """Used by scripts/smoke.py: FRED and Wikimedia answer from the fixtures above; the hand-entered CSVs are the committed ones; the eBay
+    feed has no keys, so its card says it is not set up."""
+    import tempfile
+    from pathlib import Path
+    from app.topics import luxury_ebay as E
     M.fetch = fake_fetch
     M._now = lambda: TODAY
+    E.DIR = Path(tempfile.mkdtemp()) / "ebay"
 
 
 @pytest.fixture
 def mocked(tmp_path, monkeypatch):
     from app import cache
+    from app.topics import luxury_ebay as E
     monkeypatch.setattr(B, "SNAP_DIR", tmp_path / "snaps")
     monkeypatch.setattr(M, "fetch", fake_fetch)
     monkeypatch.setattr(M, "_now", lambda: TODAY)
+    monkeypatch.setattr(E, "DIR", tmp_path / "ebay")
+    monkeypatch.delenv("EBAY_APP_ID", raising=False)
+    monkeypatch.delenv("EBAY_CERT_ID", raising=False)
     cache._cache.clear()
     B.STALE.clear()
     yield
@@ -77,7 +86,7 @@ def test_items_and_files_have_the_starter_set():
     ids = {i["id"] for i in M.items()}
     assert {"sub-126610ln", "gmt-126710blnr", "gmt-126710blro", "daytona-126500ln", "dj41-126334", "explorer-124270", "op41-124300", "daydate-228238"} <= ids
     assert {"celine-ava-triomphe", "ysl-le57-smooth", "lv-alma-bb-mono", "hermes-birkin25-togo", "chanel-cf-medium-caviar"} <= ids
-    assert all(i["category"] in ("watch", "bag") and i["source"] and i["wiki"] for i in M.items())
+    assert all(i["category"] in ("watch", "bag") and i["source"] and i["wiki"] and i["ebay"] for i in M.items())
     used = {r["item"] for r in M.rows("retail")} | {r["item"] for r in M.rows("resale")}
     assert used <= ids, used - ids                                     # every price row names a known item
     for r in M.rows("retail") + M.rows("resale"):
@@ -166,6 +175,7 @@ def test_payloads_readings_and_signals(mocked):
     assert len(A["articles"]) == 12 and len(A["items"]) == 13 and set(A["baskets"]) == {"watch", "bag"} and not L["attention_errors"]
     assert A["baskets"]["watch"]["z12"] < 0 < A["baskets"]["bag"]["z12"] or A["baskets"]["watch"]["z12"] < A["baskets"]["bag"]["z12"]   # the fixture fades the Rolex articles in 2026
     assert len(A["baskets"]["watch"]["points"]) > 120 and A["last_full_month"] == "2026-10-01"
+    assert L["ebay"]["set_up"] is False and "EBAY_APP_ID" in L["ebay"]["message"] and len(L["ebay"]["items"]) == 13 and M.BACKGROUND == [M.EBAY.fill]
     assert O["kpi"]["n_watches"] == 8 and O["kpi"]["n_bags"] == 5 and len(O["items"]) == 13 and O["where"]
     assert len(W["items"]) == 8 and len(G["items"]) == 5 and "calendar" in G and G["retail_rise"]["brand"]
     assert len(O["rolex_premium"]) > 24 and len(G["ratio"]) >= 3, "the committed points must give both baskets a monthly history (the bag basket starts in 2026: three of its five bags have no earlier resale record)"

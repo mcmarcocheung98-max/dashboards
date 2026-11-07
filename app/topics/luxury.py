@@ -15,7 +15,9 @@ fees       the platform fee table with links
 liquidity  how easily each item trades: attention (monthly Wikipedia pageviews per item since July 2015, a demand proxy: the Wikimedia
            REST API, free, as trends.py uses it), with the 12-month z-score per item and the basket's attention line; auction results
            (auctions.csv, one row per lot at Phillips, Christie's, Sotheby's, Bonhams: hammer or price with premium against the estimate
-           midpoint) and the sell-through rate per sale (auction_sales.csv, lots sold / offered) as a liquidity series
+           midpoint) and the sell-through rate per sale (auction_sales.csv, lots sold / offered) as a liquidity series; eBay UK active
+           listings per item once a day (luxury_ebay.py: the Browse API with the owner's EBAY_APP_ID and EBAY_CERT_ID, a daily snapshot
+           on the volume so history accrues; "not set up yet" until the keys are set)
 
 Data. The brand sites and the resale platforms have no free API and refuse servers, so prices are hand-entered, dated and sourced
 (data/luxury/*.csv): items.csv (one row per item), retail.csv (official list prices as they change), resale.csv (asking or sold points
@@ -38,6 +40,7 @@ from . import Topic
 from . import _base as B
 from ._base import DAY, _pts, _r, fetch, handled, manual_rows, manual_sources
 from .trends import BOT as WIKI_BOT, parse_wiki
+from . import luxury_ebay as EBAY
 
 SLUG = "luxury"
 TOPIC = Topic(SLUG, "Luxury Tracker: watches & bags",
@@ -68,6 +71,7 @@ SOURCES = [{"name": "Hand-entered, cited per row: brand list prices (Rolex, Herm
            {"name": "Chrono24 ChronoPulse and WatchCharts market indices (headline figures, hand-entered)", "url": "https://watchcharts.com/watches/market_index", "cadence": "monthly"},
            {"name": "Rebag Clair report, The RealReal resale report, Knight Frank Luxury Investment Index (hand-entered)", "url": "https://www.knightfrank.com/wealthreport", "cadence": "yearly"},
            {"name": "Wikimedia REST API: monthly pageviews of each item's English Wikipedia article since July 2015 (attention, a demand proxy)", "url": "https://wikimedia.org/api/rest_v1/", "cadence": "daily"},
+           {"name": "eBay Browse API (eBay UK): active fixed-price listings per item, count and asking prices, one snapshot a day once EBAY_APP_ID and EBAY_CERT_ID are set", "url": "https://developer.ebay.com/api-docs/buy/browse/overview.html", "cadence": "daily"},
            {"name": "FRED: US CPI (CPIAUCSL), UK CPI (GBRCPIALLMINMEI; ONS D7BT when it answers), USD, CHF and EUR to GBP (DEXUSUK, DEXSZUS, DEXUSEU), S&P 500 (SP500)",
             "url": "https://fred.stlouisfed.org/", "cadence": "daily"}]
 NOTES = ("Hand-entered points are sparse: a premium is the last resale point against the list price in force on that date, not a daily market. "
@@ -813,7 +817,11 @@ def _liquidity_now() -> dict:
     lots = auction_lots(FX)
     auc = {"lots": [{k: v for k, v in l.items() if k != "t"} for l in reversed(lots)], "vs_estimate": vs_estimate_series(lots), "sell_through": sell_through(lots),
            "n_lots": len(lots), "n_verify": sum(1 for l in lots if l["verify"]), "houses": sorted({l["house"] for l in lots}), "cited": cited("auctions", "auction_sales")}
-    return {"attention": att, "attention_errors": errs, "auctions": auc, "fx_fallback": FX["fallback"],
+    try:
+        ebay = EBAY.payload(its)
+    except Exception as e:
+        ebay = {"set_up": EBAY.set_up(), "message": f"{type(e).__name__}: {str(e)[:120]}", "items": {}, "categories": {}, "days": 0}
+    return {"attention": att, "attention_errors": errs, "auctions": auc, "ebay": ebay, "fx_fallback": FX["fallback"],
             "as_of": max([d for d in (att.get("last_full_month"), lots[-1]["date"] if lots else None) if d], default=None),
             "stale": B.stale_info([wiki_key(t) for t in sorted({i["wiki"] for i in its if i.get("wiki")})]), "updated": int(time.time())}
 
@@ -830,6 +838,8 @@ def _cached_ep(name, fn, ttl=3600):
     from ..cache import _cached
     return lambda: _cached(f"topic:{SLUG}:{name}", ttl, fn)
 
+
+BACKGROUND = [EBAY.fill]          # the daily eBay snapshot (the server runs it at start and every 6 hours; it does nothing until the keys are set)
 
 ENDPOINTS = {"overview": _cached_ep("overview", _overview_now), "watches": _cached_ep("watches", lambda: _cat_now("watch")), "bags": _cached_ep("bags", lambda: _cat_now("bag")),
              "roi": _cached_ep("roi", _roi_now), "heat": _cached_ep("heat", _heat_now), "liquidity": _cached_ep("liquidity", _liquidity_now), "fees": _cached_ep("fees", _fees_now, 600), "items": _cached_ep("items", _items_now, 600)}
@@ -861,6 +871,12 @@ def readings(got) -> list[dict]:
     for cat, name in CATEGORIES:
         z = (A.get(cat) or {}).get("z12")
         add("liquidity", f"attention_{cat}", f"{name}: Wikipedia attention, 12-month z (demand proxy)", z, lean(z, 1.0), "last full month against the 12 before; +1 at +1 sd or above, -1 at -1 sd or below")
+    EB = (got("liquidity").get("ebay") or {}).get("categories") or {}
+    for cat, name in CATEGORIES:
+        c = (EB.get(cat) or {})
+        if c.get("latest") and c.get("count") and len(c["count"]) >= 2:
+            v = c["latest"]["count"]
+            add("liquidity", f"ebay_listings_{cat}", f"{name}: active eBay UK listings (basket)", v, 0, "a supply count; neutral until a year of history gives a z-score")
     ST = (got("liquidity").get("auctions") or {}).get("sell_through") or {}
     for cat, name in CATEGORIES:
         v = (ST.get(cat) or {}).get("latest")

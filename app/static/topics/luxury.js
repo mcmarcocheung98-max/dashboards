@@ -207,7 +207,15 @@ const VIEWS = {
       (Au.lots || []).slice(0, 80).map(l => el("tr", {}, el("td", {}, dateOf(l.date)), el("td", {}, l.house), el("td", { class: "wrap" }, l.sale + (l.lot ? " · lot " + l.lot : "")), el("td", {}, l.name), el("td", {}, l.price == null ? "–" : gbp(l.price) + " (" + l.orig + ")"), el("td", {}, l.basis || "–"),
         el("td", {}, l.est_low == null ? "–" : gbp(l.est_low) + "–" + gbp(l.est_high)), el("td", { class: cls(l.vs_estimate) }, pct(l.vs_estimate, 0)), el("td", {}, l.sold ? "yes" : "no"), srcCell(l.source, (l.verify ? "verify" : "") + (l.note ? (l.verify ? " · " : "") + l.note : ""))))),
       note("One row per lot, newest first (the first 80). Add lots in data/luxury/auctions.csv; a lot with no price is bought in."), cite(Au.cited));
-    return [head, bk, per, tbl, ve, st, lots, changesCard("liquidity")];
+    // ---- eBay UK active listings (daily snapshots once the keys are set)
+    const Eb = d.ebay || {}, EC = Eb.categories || {}, EI = Eb.items || {};
+    const eb = !Eb.set_up ? card("eBay UK listings: not set up yet (EBAY_APP_ID)", el("div", { class: "muted" }, (Eb.message || "Add EBAY_APP_ID and EBAY_CERT_ID on Railway (a free eBay developer key; client-credentials token) and the dashboard snapshots each item's active eBay UK listings once a day: count, median and lowest asking price in GBP. History builds from that day. Sold prices need eBay's restricted Marketplace Insights API (see the README).")))
+      : card("eBay UK active listings per basket (daily snapshots since " + (Eb.first || "–") + ")",
+        el("div", { class: "kpis" }, ...Object.values(EC).filter(c => c.latest).map(c => kpi(c.name + ": listings (" + dateOf(c.latest.date) + ")", num(c.latest.count)))),
+        ...linesChart([...Object.values(EC).filter(c => c.count && c.count.length).map(c => ({ name: c.name + ": listings", points: c.count })), ...Object.values(EC).filter(c => c.median && c.median.length).map(c => ({ name: c.name + ": median ask", points: c.median, axis: "left", dashed: true }))], v => num(v, 0), { small: true }),
+        table(["Item", "Query", "Date", "Listings", "Median ask", "Lowest ask", "Listings on a year"], Object.values(EI).map(i => el("tr", {}, el("td", {}, i.name), el("td", { class: "wrap" }, i.query || "–"), el("td", {}, i.latest ? dateOf(i.latest.date) : "–"), el("td", {}, i.latest ? num(i.latest.count) : "–"), el("td", {}, i.latest ? gbp(i.latest.median) : "–"), el("td", {}, i.latest ? gbp(i.latest.low) : "–"), el("td", { class: cls(i.count_1y) }, pct(i.count_1y, 0))))),
+        note((Eb.note || "") + ". " + (Eb.days || 0) + " days of snapshots. More listings against a falling premium means sellers are stuck (the liquidity signal watches this once a year of history exists)."));
+    return [head, bk, per, tbl, eb, ve, st, lots, changesCard("liquidity")];
   },
 
   async fees() {
