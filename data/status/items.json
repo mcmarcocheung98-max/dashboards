@@ -238,9 +238,10 @@
    "id": "luxury-liquidity",
    "title": "Liquidity tab and feeds for the Luxury Tracker",
    "owner": "session:luxury",
-   "status": "in_progress",
+   "status": "done",
    "since": "2026-11-07",
-   "detail": "Five steps, pushed one by one: Wikipedia attention, auction results, eBay Browse API (keyed), the weekly manual log, the Liquidity tab with its score and signal. Step 1 done (ae24707): Wikipedia attention per item since 2015, on a new Liquidity tab. Step 2 done (b52ca39): auctions.csv and auction_sales.csv. Step 3 done (5ddc59d): the eBay feed, waiting on the owner's keys. Step 4 done (422bd5a): liquidity.csv seeded."
+   "detail": "Five steps, pushed one by one: Wikipedia attention, auction results, eBay Browse API (keyed), the weekly manual log, the Liquidity tab with its score and signal. Step 1 done (ae24707): Wikipedia attention per item since 2015, on a new Liquidity tab. Step 2 done (b52ca39): auctions.csv and auction_sales.csv. Step 3 done (5ddc59d): the eBay feed, waiting on the owner's keys. Step 4 done (422bd5a): liquidity.csv seeded. Step 5 done (61ce5f2): liquidity score per market and the sixth signal. Watches read +1.32 'tight'; bags need more data.",
+   "done": "2026-11-07"
   }
  ],
  "roadmap": [
@@ -444,12 +445,13 @@
   {
    "id": "r-luxury-liquidity",
    "title": "Luxury Tracker: resale liquidity with a long history",
-   "horizon": "now",
-   "status": "in_progress",
+   "horizon": "done",
+   "status": "done",
    "area": "Luxury Tracker",
    "by": "session:luxury",
    "approved": "2026-11-07",
-   "detail": "The owner chose the free route on 7 Nov: Wikipedia attention since 2015, auction results from Phillips, Christie's, Sotheby's and Bonhams, eBay daily listings behind a free developer key, and a weekly hand log of Chrono24 counts and StockX bid-ask. A Liquidity tab, a liquidity score per market, and a sixth signal."
+   "detail": "The owner chose the free route on 7 Nov: Wikipedia attention since 2015, auction results from Phillips, Christie's, Sotheby's and Bonhams, eBay daily listings behind a free developer key, and a weekly hand log of Chrono24 counts and StockX bid-ask. A Liquidity tab, a liquidity score per market, and a sixth signal.",
+   "done": "2026-11-07"
   }
  ],
  "log": [
@@ -888,7 +890,7 @@
   {
    "date": "2026-11-07",
    "title": "AI stocks in a bear market; Luxury Tracker launched; Debt & Rates reviewed",
-   "summary": "The 5 November sell-off reached the data: the AI basket is 20.7% below its high, past the -20% bear-market watch point, with only 15% of its stocks above their 50-day average. Reviewed Debt & Rates: the Hong Kong chart on Interest cost is broken and the FOMC tab is far too long; both went to its session. The Luxury Tracker went live the same afternoon: Rolex steel sports trade 17.6% above retail at the median, led by the Pepsi GMT at +69%, while the owner's three bags resell below retail except the Alma BB.",
+   "summary": "The 5 November sell-off reached the data: the AI basket is 20.7% below its high, past the -20% bear-market watch point, with only 15% of its stocks above their 50-day average. Reviewed Debt & Rates: the Hong Kong chart on Interest cost is broken and the FOMC tab is far too long; both went to its session. The Luxury Tracker went live the same afternoon: Rolex steel sports trade 17.6% above retail at the median, led by the Pepsi GMT at +69%, while the owner's three bags resell below retail except the Alma BB. By evening the Luxury Tracker also had a Liquidity tab: attention since 2015, auction results, an eBay feed waiting on the owner's key, a weekly hand log, and a liquidity score that reads 'tight' for Rolex.",
    "changes": [
     {
      "dashboard": "AI: Compute, Power & Chips",
@@ -963,6 +965,14 @@
      "tab": "liquidity",
      "what": "Liquidity step 4: the weekly hand log, seeded with 17 readings. Chrono24 lists 700 to 950 pieces per steel Rolex reference; typical days to sell 12 (Daytona) to 20 (Batman)",
      "commit": "422bd5a",
+     "by": "session:luxury"
+    },
+    {
+     "dashboard": "Luxury Tracker",
+     "slug": "luxury",
+     "tab": "liquidity",
+     "what": "Liquidity step 5: a liquidity score per market and a sixth signal. Watches +1.32 'tight' on sell-through and days to sell; bags not enough data yet",
+     "commit": "61ce5f2",
      "by": "session:luxury"
     }
    ],
