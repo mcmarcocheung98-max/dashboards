@@ -651,7 +651,9 @@ def _hand_spending() -> dict:
     billions per fiscal year."""
     out = {}
     for k, s in hand("spending").items():
-        country, _, item = k.partition(" ")
+        # country names can contain a space ("Hong Kong education"): match the known ones, else the first word
+        country = next((c for c in COUNTRIES.values() if k.startswith(c + " ")), k.partition(" ")[0])
+        item = k[len(country):].strip()
         out.setdefault(country, {})[item] = _pts(s, 1)
     return out
 

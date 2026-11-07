@@ -101,9 +101,14 @@ const VIEWS = {
       note("Rating agencies watch this ratio: above about 10% of revenue, interest starts to crowd out other spending. China's figure covers the official budget only."),
       ask("5 years: who crosses 10%, and in which year? 10 and 20 years: who has the most room before markets push back? A low-tax country (US) reaches a given share sooner than a high-tax one (UK) carrying the same debt."));
     const H = d.hand || {}, unit = { UK: "£bn", "Hong Kong": "HK$bn", China: "CN¥bn" };
+    // a country with only a year or two entered (Hong Kong) reads better as a table than as a near-empty chart
+    const handBody = (c, items) => Math.max(...Object.values(items).map(p => p.length)) >= 3
+      ? linesChart(Object.entries(items).map(([k, pts]) => ({ name: k, points: pts, dashed: k.includes("forecast"), color: k.startsWith("interest") ? css("--down") : k === "defence" ? col(c) : css("--hold") })),
+        v => num(v, 0), { small: true })
+      : [el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Item", "Fiscal year ending", unit[c] || "bn"].map(x => el("th", {}, x))),
+          ...Object.entries(items).flatMap(([k, pts]) => pts.map(p => el("tr", {}, el("td", {}, k), el("td", {}, dayOf(p[0])), el("td", {}, num(p[1], 0)))))))];
     const handCards = Object.entries(H).map(([c, items]) => card(c + ": interest vs defence vs education (" + (unit[c] || "bn") + ", fiscal years)",
-      ...linesChart(Object.entries(items).map(([k, pts]) => ({ name: k, points: pts, dashed: k.includes("forecast"), color: k.startsWith("interest") ? css("--down") : k === "defence" ? col(c) : css("--hold") })),
-        v => num(v, 0), { small: true }),
+      ...handBody(c, items),
       note({ UK: "HM Treasury PESA outturns by function; the forecast is the OBR's debt interest. UK interest passed defence after 2021 and is now near the education budget.",
              "Hong Kong": "Hong Kong has no defence budget (the garrison is paid for by Beijing) and its bond interest is small next to education and next to the income on its reserves.",
              China: "Ministry of Finance general budget only. Interest on local special bonds and on financing-vehicle debt is outside it, so this understates the true interest bill." }[c] || ""),
@@ -221,11 +226,19 @@ const VIEWS = {
       note("A cycle is a run of moves in one direction; a pause of more than 18 months starts a new one. '10y during' is the change in the 10-year Treasury yield from the day before the first move to the last; '10y a year on' is a year after the first move."),
       ask("5 years: is the 2026 hike the start of a new hiking cycle or a one-off? 10 years: the 2019 'insurance' cuts were small and short; the 2020 cuts were crisis cuts. 20 years: every cutting cycle since 2007 began with an outside shock. What would the next one be?")) : null;
     const dec = F.decisions || [];
-    const decCard = dec.length ? card("Every FOMC decision of the last 20 years, and what was happening", el("div", { class: "scroll" }, el("table", {},
-      el("tr", {}, ...["Effective", "Move", "Target (top)", "10y yield", "US CPI", "Context"].map(x => el("th", {}, x))),
-      ...dec.map(r => el("tr", {}, el("td", {}, r.date + (r.emergency ? " ⚡" : "")), el("td", { class: cls(-r.bp) }, (r.bp > 0 ? "+" : "") + r.bp + " bp"), el("td", {}, pc(r.to, 2)),
-        el("td", {}, pc(r.y10, 2)), el("td", {}, pc(r.cpi, 1)),
-        el("td", { class: "wrap" }, ...(r.events || []).flatMap((e, i) => [i ? " " : "", link(e.event, e.source), e.note ? el("span", { class: "muted" }, " (" + e.note + ")") : null])))))),
+    // the latest ten decisions show; the rest of the 20 years fold under "Show all" (the page was ~12,000 px tall otherwise)
+    const decRow = r => el("tr", {}, el("td", {}, r.date + (r.emergency ? " ⚡" : "")), el("td", { class: cls(-r.bp) }, (r.bp > 0 ? "+" : "") + r.bp + " bp"), el("td", {}, pc(r.to, 2)),
+      el("td", {}, pc(r.y10, 2)), el("td", {}, pc(r.cpi, 1)),
+      el("td", { class: "wrap" }, ...(r.events || []).flatMap((e, i) => [i ? " " : "", link(e.event, e.source), e.note ? el("span", { class: "muted" }, " (" + e.note + ")") : null])));
+    const decHead = () => el("tr", {}, ...["Effective", "Move", "Target (top)", "10y yield", "US CPI", "Context"].map(x => el("th", {}, x)));
+    const SHOWN = 10;
+    const decCsv = () => csvText(["effective", "move_bp", "target_top_pct", "us_10y_pct", "us_cpi_pct", "off_meeting", "context"],
+      dec.map(r => [r.date, r.bp, r.to, r.y10, r.cpi, r.emergency ? "yes" : "", (r.events || []).map(e => e.event).join(" | ")]));
+    const decCard = dec.length ? card("Every FOMC decision of the last 20 years, and what was happening",
+      el("div", { class: "legend" }, el("span", { class: "muted" }, dec.length + " decisions, newest first"), csvButton(csvName("fomc-decisions"), decCsv)),
+      el("div", { class: "scroll" }, el("table", {}, decHead(), ...dec.slice(0, SHOWN).map(decRow))),
+      dec.length > SHOWN ? el("details", { style: "margin-top:8px" }, el("summary", { style: "cursor:pointer;color:var(--ink2)" }, "Show all " + dec.length + " decisions (" + (dec.length - SHOWN) + " more, back to " + dec[dec.length - 1].date.slice(0, 4) + ")"),
+        el("div", { class: "scroll" }, el("table", {}, decHead(), ...dec.slice(SHOWN).map(decRow)))) : null,
       note("⚡ = moved between scheduled meetings. Dates are when the new rate took effect. The 10-year yield and US CPI are the latest readings on that date (CPI from 2009). Context comes from data/debt-rates/fomc_events.csv: events up to 45 days before each decision, each linked to its source."),
       ...handNote({ fomc_events: (d.cites || {}).fomc_events })) : null;
     return [head, cmp, hist, ...kCards, kNone, ...evCards, evNone, meet, insCard, cycCard, decCard].filter(Boolean);

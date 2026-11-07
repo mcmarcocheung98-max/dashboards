@@ -479,6 +479,12 @@ def test_signals_cover_the_approved_watchlist(fixtures):
     B.json_safe(list(rows.values()))
 
 
+def test_hand_spending_keeps_two_word_countries(fixtures):
+    h = D.ENDPOINTS["interest"]()["hand"]
+    assert "Hong Kong" in h and "Hong" not in h and set(h["Hong Kong"]) >= {"education", "interest"}
+    assert set(h["UK"]) >= {"interest", "defence", "education"}
+
+
 def test_a_dead_source_blanks_one_chart(fixtures, monkeypatch):
     def no_penny(url, ttl=0, **k):
         if "debt_to_penny" in url:
