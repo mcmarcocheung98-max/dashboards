@@ -932,6 +932,14 @@
      "what": "The 12-month retail rise counts only brands with a price dated a year earlier; longer rises show as 'since <date>'. The false Saint Laurent flag is gone",
      "commit": "a1eacc0",
      "by": "session:luxury"
+    },
+    {
+     "dashboard": "Luxury Tracker",
+     "slug": "luxury",
+     "tab": "liquidity",
+     "what": "Liquidity tab, step 1: Wikipedia attention per item since 2015. Live: attention is down on a year for every item, Birkin -52%, Datejust -56%; two Rolex articles still to map",
+     "commit": "ae24707",
+     "by": "session:luxury"
     }
    ],
    "review": "debt-rates",
