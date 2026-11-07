@@ -896,6 +896,14 @@
      "what": "New dashboard: eight Rolex references and five bags, retail vs resale, ROI after platform fees, market heat, fee table; 192 hand-entered price points, 100 to verify; five approved signals",
      "commit": "4f7c014",
      "by": "session:luxury"
+    },
+    {
+     "dashboard": "Luxury Tracker",
+     "slug": "luxury",
+     "tab": "bags",
+     "what": "The 12-month retail rise counts only brands with a price dated a year earlier; longer rises show as 'since <date>'. The false Saint Laurent flag is gone",
+     "commit": "a1eacc0",
+     "by": "session:luxury"
     }
    ],
    "review": "debt-rates",
