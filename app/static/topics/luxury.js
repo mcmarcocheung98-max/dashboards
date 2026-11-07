@@ -198,9 +198,9 @@ const VIEWS = {
     const bk = card("Basket attention, month by month", ...linesChart(Object.values(B).map(b => ({ name: b.name, points: b.points })), v => num(v, 0), { small: true }));
     const per = card("Each article, monthly views (log scale)", ...linesChart(Object.values(arts).map(a => ({ name: a.title, points: a.points })), v => big(v), { log: true }));
     const tbl = card("Items: attention now", table(["Item", "Article", "Last full month", "Views", "On a year", "12-month z"],
-      (A.items || []).map(i => el("tr", {}, el("td", {}, i.name), el("td", {}, i.url ? link(i.title, i.url) : i.title || "–"), el("td", {}, i.last ? i.last.month.slice(0, 7) : "–"), el("td", {}, i.last ? num(i.last.views) : "–"),
+      (A.items || []).map(i => el("tr", {}, el("td", {}, i.name), el("td", {}, i.url ? link(i.title, i.url) : i.title || "–", i.fallback ? el("span", { class: "muted" }, " (fallback: the item's own article is a recent stub)") : null), el("td", {}, i.last ? i.last.month.slice(0, 7) : "–"), el("td", {}, i.last ? num(i.last.views) : "–"),
         el("td", { class: cls(i.change_1y) }, pct(i.change_1y, 0)), el("td", { class: zc(i.z12) }, z(i.z12))))),
-      note("Two GMT-Master II references share one article; the Alma BB has none, so Louis Vuitton's article stands for it; the Le 5 à 7 and the Ava use their brands' articles. Listings, spreads and sell-through join this tab in the next steps."));
+      note("Two GMT-Master II references share one article; the Alma BB has none, so Louis Vuitton's article stands for it; the Le 5 à 7 and the Ava use their brands' articles. The Explorer's and Oyster Perpetual's own articles are recent stubs with months of history, so they fall back to the Explorer II family article and the Rolex brand article (items.csv lists the titles in order; the first with two years of pageviews is used)."));
     // ---- auction results
     const Au = d.auctions || {}, VE = Au.vs_estimate || {}, ST = Au.sell_through || {};
     const ve = card("Auction results: price against the estimate midpoint",

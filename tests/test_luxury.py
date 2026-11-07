@@ -29,6 +29,8 @@ def wiki_json(url: str) -> str:
     title = m.group(1)
     level = 20000 + sum(ord(c) for c in title) % 9000
     months = pd.date_range(pd.Timestamp(m.group(2)), pd.Timestamp(m.group(3)), freq="MS")
+    if title in ("Rolex_Explorer", "Rolex_Oyster_Perpetual"):                          # recent stubs on the live wiki: a handful of months
+        months = months[-5:]
     items = []
     for i, d in enumerate(months):
         v = level * (1 + 0.15 * ((i % 12) / 11)) * (1.6 if d.year == 2022 else 1) * (0.8 if title.startswith("Rolex") and d.year == 2026 else 1)
@@ -172,7 +174,11 @@ def test_payloads_readings_and_signals(mocked):
         B.json_safe(d)
     O, W, G, R, H, F, L = (M.ENDPOINTS[k]() for k in ("overview", "watches", "bags", "roi", "heat", "fees", "liquidity"))
     A = L["attention"]
-    assert len(A["articles"]) == 12 and len(A["items"]) == 13 and set(A["baskets"]) == {"watch", "bag"} and not L["attention_errors"]
+    assert len(A["articles"]) == 12 and len(A["items"]) == 13 and set(A["baskets"]) == {"watch", "bag"}
+    assert set(L["attention_errors"]) == {"Rolex Explorer", "Rolex Oyster Perpetual"} and all("used" in v for v in L["attention_errors"].values())
+    by = {i["id"]: i for i in A["items"]}
+    assert by["explorer-124270"]["title"] == "Rolex Explorer II" and by["explorer-124270"]["fallback"] and by["op41-124300"]["title"] == "Rolex" and not by["sub-126610ln"]["fallback"]
+    assert "Rolex Explorer II" in A["baskets"]["watch"]["titles"] and "Rolex Explorer" not in A["articles"]
     assert A["baskets"]["watch"]["z12"] < 0 < A["baskets"]["bag"]["z12"] or A["baskets"]["watch"]["z12"] < A["baskets"]["bag"]["z12"]   # the fixture fades the Rolex articles in 2026
     assert len(A["baskets"]["watch"]["points"]) > 120 and A["last_full_month"] == "2026-10-01"
     assert L["ebay"]["set_up"] is False and "EBAY_APP_ID" in L["ebay"]["message"] and len(L["ebay"]["items"]) == 13 and M.BACKGROUND == [M.EBAY.fill]
@@ -256,6 +262,11 @@ def test_wiki_attention_helpers(mocked):
     z = M.z12(pd.Series([100.0, 110.0] * 6 + [160.0, 105.0], index=pd.date_range("2025-01-01", periods=14, freq="MS")))
     assert len(z) == 2 and z.iloc[0] == 3.0 and abs(z.iloc[1]) < 0.5      # (160 - 105) / 5 clips to +3; a flat history (sd 0) gives no z
     assert len(M.z12(pd.Series([100.0] * 13, index=pd.date_range("2025-01-01", periods=13, freq="MS")))) == 0
+    with pytest.raises(ValueError):
+        M.wiki_views("Rolex Explorer")                                          # 5 months: a stub
+    title, series, tried = M.wiki_pick("Rolex Explorer|Rolex Explorer II|Rolex")
+    assert title == "Rolex Explorer II" and len(series) > 100 and list(tried) == ["Rolex Explorer"] and M.wiki_titles(" A | B ") == ["A", "B"] and M.wiki_titles("") == []
+    assert M.wiki_pick("Rolex Explorer")[0] is None
     a = M.attention({"Rolex Submariner": s, "Birkin bag": M.wiki_views("Birkin bag")}, [{"id": "a", "name": "A", "category": "watch", "wiki": "Rolex Submariner"}, {"id": "b", "name": "B", "category": "bag", "wiki": "Birkin bag"}, {"id": "c", "name": "C", "category": "bag", "wiki": "Missing"}])
     assert a["items"][2]["last"] is None and a["items"][0]["last"]["month"] == "2026-10-01" and a["baskets"]["watch"]["titles"] == ["Rolex Submariner"]
     assert abs(sum(p[1] for p in a["baskets"]["bag"]["points"]) / len(a["baskets"]["bag"]["points"]) - 100) < 1

@@ -558,14 +558,34 @@ def wiki_key(title: str) -> str:
     return WIKI_MONTHLY.format(title=quote(title.replace(" ", "_"), safe=""), b="now")
 
 
+MIN_WIKI_MONTHS = 24           # an article with less history than this is a recent stub or redirect: the next title in the item's list is tried
+
+
+def wiki_titles(spec: str) -> list[str]:
+    """An item's `wiki` cell: one title, or several separated by | in order of preference (the first with enough history is used)."""
+    return [t.strip() for t in (spec or "").split("|") if t.strip()]
+
+
 def wiki_views(title: str) -> pd.Series:
-    """Monthly pageviews of an English Wikipedia article (users, all access) since July 2015, indexed by month start."""
+    """Monthly pageviews of an English Wikipedia article (users, all access) since July 2015, indexed by month start. Raises when the
+    article has fewer than MIN_WIKI_MONTHS months (a recent stub), so the caller can try the next title."""
     j = __import__("json").loads(fetch(wiki_url(title), DAY, headers=WIKI_BOT, timeout=30, min_bytes=40, key=wiki_key(title)))
     d = parse_wiki(j)
     s = pd.Series({pd.Timestamp(k): v for k, v in d.items()}, dtype=float).sort_index()
-    if len(s) < 12:
-        raise ValueError(f"Wikimedia: {len(s)} months for {title}")
+    if len(s) < MIN_WIKI_MONTHS:
+        raise ValueError(f"Wikimedia: only {len(s)} months for {title} (a recent article)")
     return s
+
+
+def wiki_pick(spec: str) -> tuple[str | None, pd.Series | None, dict[str, str]]:
+    """The first title of an item's list with enough history: (title, series, {title: error} for those tried and skipped)."""
+    errs = {}
+    for t in wiki_titles(spec):
+        try:
+            return t, wiki_views(t), errs
+        except Exception as e:
+            errs[t] = f"{type(e).__name__}: {str(e)[:120]}"
+    return None, None, errs
 
 
 def z12(s: pd.Series) -> pd.Series:
@@ -588,10 +608,13 @@ def attention(views: dict[str, pd.Series], its: list[dict] | None = None) -> dic
         z = z12(s)
         per_title[title] = {"title": title, "url": "https://en.wikipedia.org/wiki/" + quote(title.replace(" ", "_")), "points": _pts(s, 0), "last": {"month": str(s.index[-1].date()), "views": _r(float(s.iloc[-1]), 0)},
                             "z12": _r(float(z.iloc[-1]), 2) if len(z) else None, "z_points": _pts(z, 2), "change_1y": _r(float(s.iloc[-1] / s.iloc[-13] - 1), 4) if len(s) > 13 and s.iloc[-13] else None}
-    per_item = [{"id": i["id"], "name": i["name"], "category": i["category"], "title": i.get("wiki") or "", **({k: per_title[i["wiki"]][k] for k in ("last", "z12", "change_1y", "url")} if i.get("wiki") in per_title else {"last": None, "z12": None, "change_1y": None, "url": None})} for i in its]
+    used = {i["id"]: next((t for t in wiki_titles(i.get("wiki")) if t in views), None) for i in its}      # the title that answered for each item
+    per_item = [{"id": i["id"], "name": i["name"], "category": i["category"], "title": used[i["id"]] or (wiki_titles(i.get("wiki")) or [""])[0],
+                 "fallback": bool(used[i["id"]] and used[i["id"]] != wiki_titles(i.get("wiki"))[0]),
+                 **({k: per_title[used[i["id"]]][k] for k in ("last", "z12", "change_1y", "url")} if used[i["id"]] in per_title else {"last": None, "z12": None, "change_1y": None, "url": None})} for i in its]
     baskets = {}
     for cat, name in CATEGORIES:
-        titles = sorted({i["wiki"] for i in its if i["category"] == cat and i.get("wiki") in views})
+        titles = sorted({used[i["id"]] for i in its if i["category"] == cat and used[i["id"]] in views})
         norm = [views[t][views[t].index <= last_full] / views[t][views[t].index <= last_full].mean() for t in titles]
         if not norm:
             continue
@@ -603,13 +626,19 @@ def attention(views: dict[str, pd.Series], its: list[dict] | None = None) -> dic
 
 
 def _wiki_all(its: list[dict]) -> tuple[dict[str, pd.Series], dict[str, str]]:
-    """Every distinct article's series, each failing on its own: ({title: series}, {title: error})."""
+    """Every item's article series, each item failing on its own: ({title: series}, {title: error}). An item lists its titles in order
+    of preference (wiki = "A|B"); the first with enough history is used, the stubs before it are reported, not errors."""
     out, errs = {}, {}
-    for title in sorted({i["wiki"] for i in its if i.get("wiki")}):
-        try:
-            out[title] = wiki_views(title)
-        except Exception as e:
-            errs[title] = f"{type(e).__name__}: {str(e)[:120]}"
+    for spec in sorted({i["wiki"] for i in its if i.get("wiki")}):
+        if any(t in out for t in wiki_titles(spec)):
+            continue
+        title, s, tried = wiki_pick(spec)
+        if title:
+            out[title] = s
+            for t, e in tried.items():
+                errs[t] = e + "; used " + title + " instead"
+        else:
+            errs.update(tried)
     return out, errs
 
 
@@ -939,7 +968,7 @@ def _liquidity_now() -> dict:
     scores["bands"] = [["+1 or more", "tight: few listings, narrow spreads, everything sells"], ["+0.5 to +1", "liquid"], ["-0.5 to +0.5", "normal"], ["-1 to -0.5", "loosening"], ["-1 or less", "stuck: listings pile up, spreads widen, lots bought in"]]
     return {"attention": att, "attention_errors": errs, "auctions": auc, "ebay": ebay, "log": log, "liquidity": scores, "fx_fallback": FX["fallback"],
             "as_of": max([d for d in (att.get("last_full_month"), lots[-1]["date"] if lots else None) if d], default=None),
-            "stale": B.stale_info([wiki_key(t) for t in sorted({i["wiki"] for i in its if i.get("wiki")})]), "updated": int(time.time())}
+            "stale": B.stale_info([wiki_key(t) for i in its for t in wiki_titles(i.get("wiki"))]), "updated": int(time.time())}
 
 
 def _fees_now() -> dict:
