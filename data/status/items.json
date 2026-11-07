@@ -939,7 +939,7 @@
      "dashboard": "Luxury Tracker",
      "slug": "luxury",
      "tab": "liquidity",
-     "what": "Liquidity tab, step 1: Wikipedia attention per item since 2015. Live: attention is down on a year for every item, Birkin -52%, Datejust -56%; two Rolex articles still to map",
+     "what": "Liquidity tab, step 1: Wikipedia attention per item since 2015. Live: attention is down on a year for every item, Birkin -52%, Datejust -56%; the Explorer and Oyster Perpetual fall back to the Explorer II and Rolex articles (c6fdc6b)",
      "commit": "ae24707",
      "by": "session:luxury"
     },
