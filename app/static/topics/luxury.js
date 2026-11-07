@@ -64,10 +64,12 @@ function catView(d, cat) {
   const out = [head, bk, pc, charts, tbl];
   if (isBag && d.calendar) {
     const years = Object.keys((d.calendar[0] || {}).years || {});
+    const sinceOf = r => r.since ? pct(r.since.value, 0) + " since " + dateOf(r.since.date) : "–";
     out.push(card("Retail price increases per brand per year (the price-increase calendar)",
-      table(["Brand", ...years], d.calendar.map(r => el("tr", {}, el("td", {}, r.brand), ...years.map(y => el("td", { style: tint(r.years[y], 0.15) }, pct(r.years[y], 0)))))),
-      note("List price at the end of each year against the end of the year before, mean across the brand's items here (a partial current year to today). Largest rise over the last 12 months: " +
-        (d.retail_rise && d.retail_rise.brand ? d.retail_rise.brand + " " + pct(d.retail_rise.value, 0) : "–") + ".")));
+      table(["Brand", ...years, "Last 12 months", "Longer view"], d.calendar.map(r => el("tr", {}, el("td", {}, r.brand), ...years.map(y => el("td", { style: tint(r.years[y], 0.15) }, pct(r.years[y], 0))),
+        el("td", { style: tint(r.rise_12m, 0.15) }, r.rise_12m == null ? "no price a year ago" : pct(r.rise_12m, 0)), el("td", { class: "wrap" }, sinceOf(r))))),
+      note("List price at the end of each year against the end of the year before, mean across the brand's items here (a partial current year to today). 'Last 12 months' compares the latest list price only with a price dated 9 to 15 months ago; a brand with no such row gets no figure and cannot cross the signal. 'Longer view' is the latest price against the price in force a year ago, dated by the row that set it. Largest rise over the last 12 months: " +
+        (d.retail_rise && d.retail_rise.brand ? d.retail_rise.brand + " " + pct(d.retail_rise.value, 0) : "none (" + ((d.retail_rise && d.retail_rise.note) || "no brand has a price a year ago") + ")") + ".")));
   }
   return out;
 }

@@ -160,7 +160,7 @@ def test_payloads_readings_and_signals(mocked):
     assert sig["rolex_premium"]["crossed"] == (p < 0 or p > 50)
     assert sig["rolex_1y"]["crossed"] == (abs(sig["rolex_1y"]["value"]) >= 15)
     assert sig["bags_ratio"]["crossed"] == (sig["bags_ratio"]["value"] < 0.5 or sig["bags_ratio"]["value"] > 1.0)
-    assert sig["retail_rise"]["crossed"] == (sig["retail_rise"]["value"] > 10)
+    assert sig["retail_rise"]["crossed"] == (sig["retail_rise"]["value"] is not None and sig["retail_rise"]["value"] > 10)
     assert sig["heat"]["crossed"] == (sig["heat"]["value"] > 1.5 or sig["heat"]["value"] < -1)
 
 
@@ -190,3 +190,24 @@ def test_routes(mocked):
     ps, js, fs, plat, ms, method = asyncio.run(go())
     assert ps == 200 and js == 200 and fs == 200 and plat and ms == 200
     assert any("method" in s["title"].lower() or "calculat" in s["title"].lower() for s in method["sections"]), "the README's Method section feeds the Method tab"
+
+
+def test_retail_rise_needs_a_price_dated_a_year_ago(monkeypatch):
+    monkeypatch.setattr(M, "_now", lambda: TODAY)
+    ts = lambda d: int(pd.Timestamp(d).timestamp())
+    views = [{"id": "sparse", "name": "Sparse", "brand": "Sparse", "category": "bag", "retail_points": [[ts("2021-11-01"), 1410], [ts("2026-08-01"), 1755]]},
+             {"id": "fresh", "name": "Fresh", "brand": "Fresh", "category": "bag", "retail_points": [[ts("2025-10-01"), 1000], [ts("2026-04-01"), 1120]]},
+             {"id": "held", "name": "Held", "brand": "Held", "category": "bag", "retail_points": [[ts("2024-01-01"), 500], [ts("2026-01-01"), 520]]}]
+    cal, rr = M.retail_calendar(views)
+    by = rr["by_brand"]
+    assert by["Sparse"]["rise_12m"] is None and by["Sparse"]["since"] == {"value": round(1755 / 1410 - 1, 4), "date": "2021-11-01"}   # +24% over 4.75 years, not "12 months"
+    assert by["Fresh"]["rise_12m"] == 0.12 and by["Fresh"]["since"]["date"] == "2025-10-01"
+    assert by["Held"]["rise_12m"] == 0.0 and by["Held"]["since"] == {"value": 0.04, "date": "2024-01-01"}       # the Jan 2026 row is 10 months old: no rise in the window
+    assert rr["brand"] == "Fresh" and rr["value"] == 0.12 and rr["note"] is None
+    row = next(c for c in cal if c["brand"] == "Sparse")
+    assert row["rise_12m"] is None and row["n_12m"] == 0 and row["years"]["2026"] == round(1755 / 1410 - 1, 4)
+    cal, rr = M.retail_calendar(views[:1])
+    assert rr["brand"] is None and rr["value"] is None and "no brand" in rr["note"]
+    monkeypatch.setattr(M, "_cached_payload", lambda n: {"bags": {"retail_rise": rr}}.get(n, {}))
+    sig = {s["key"]: s for s in M.SIGNALS()}
+    assert sig["retail_rise"]["value"] is None and sig["retail_rise"]["crossed"] is False and "no" in sig["retail_rise"]["note"]

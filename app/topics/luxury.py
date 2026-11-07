@@ -580,16 +580,21 @@ def _cat_now(cat: str) -> dict:
     return out
 
 
+YEAR_AGO_WINDOW = (274, 457)      # a list price counts as "a year ago" only if a row is dated 9 to 15 months before today
+
+
 def retail_calendar(views: list[dict]) -> tuple[list[dict], dict]:
-    """Per brand per year: list price at year end vs the year before (mean across the brand's items), and the largest rise over the
-    last 12 months (per brand, mean across its items)."""
+    """Per brand per year: list price at year end vs the year before (mean across the brand's items). And the 12-month rise, kept
+    honest: the latest list price against a price dated 9 to 15 months earlier (the row nearest to a year ago); a brand with no row
+    in that window gets no 12-month figure ("no price a year ago") and cannot cross the signal. The longer rise stays visible as
+    'since <date>': the latest price against the price in force a year ago, dated by the row that set it."""
     now = _now()
     by_brand: dict[str, list] = {}
     for v in views:
         by_brand.setdefault(v["brand"] or v["name"], []).append(pd.Series({pd.Timestamp(t, unit="s"): p for t, p in v["retail_points"]}, dtype=float))
     years = list(range(2020, now.year + 1))
-    cal = []
-    rise = {}
+    cal, rise = [], {}
+    lo, hi = now - pd.Timedelta(days=YEAR_AGO_WINDOW[1]), now - pd.Timedelta(days=YEAR_AGO_WINDOW[0])
     for brand, steps_list in sorted(by_brand.items()):
         row = {"brand": brand, "years": {}}
         for y in years:
@@ -600,12 +605,28 @@ def retail_calendar(views: list[dict]) -> tuple[list[dict], dict]:
                     chs.append(b / a - 1)
             row["years"][str(y)] = _r(float(np.mean(chs)), 4) if chs else None
         row["changes"] = sum(1 for st in steps_list for t in st.index if t >= pd.Timestamp("2020-01-01"))
+        m12, since, since_dates = [], [], []
+        for st in steps_list:
+            cur = retail_at(st, now)
+            if not cur:
+                continue
+            w = st[(st.index >= lo) & (st.index <= hi)]
+            if len(w):
+                near = w.index[int(np.argmin(np.abs((w.index - (now - pd.Timedelta(days=365))).days)))]
+                m12.append(cur / float(w[near]) - 1)
+            past = st[st.index <= now - pd.Timedelta(days=365)]
+            if len(past):
+                since.append(cur / float(past.iloc[-1]) - 1)
+                since_dates.append(past.index[-1])
+        r = {"rise_12m": _r(float(np.mean(m12)), 4) if m12 else None, "n_12m": len(m12), "n_items": len(steps_list),
+             "since": {"value": _r(float(np.mean(since)), 4), "date": str(min(since_dates).date())} if since else None}
+        row.update(r)
+        rise[brand] = r
         cal.append(row)
-        chs = [retail_at(st, now) / retail_at(st, now - pd.Timedelta(days=365)) - 1 for st in steps_list if retail_at(st, now) and retail_at(st, now - pd.Timedelta(days=365))]
-        if chs:
-            rise[brand] = _r(float(np.mean(chs)), 4)
-    top = max(rise.items(), key=lambda kv: kv[1]) if rise else (None, None)
-    return cal, {"by_brand": rise, "brand": top[0], "value": top[1]}
+    with_12m = {b: r["rise_12m"] for b, r in rise.items() if r["rise_12m"] is not None}
+    top = max(with_12m.items(), key=lambda kv: kv[1]) if with_12m else (None, None)
+    return cal, {"by_brand": rise, "brand": top[0], "value": top[1], "window_months": [9, 15],
+                 "note": None if with_12m else "no brand has a list price dated 9 to 15 months ago"}
 
 
 def _roi_now() -> dict:
@@ -680,6 +701,22 @@ def readings(got) -> list[dict]:
     return out
 
 
+def merged_rise(parts: list) -> dict:
+    """The retail_rise of the watches and bags payloads as one: the brand with the largest 12-month rise across both (None when no brand
+    has a list price dated 9-15 months ago); a payload without by_brand (an older cache) counts by its value alone."""
+    parts = [x for x in parts if x]
+    if not parts:
+        return {}
+    best = (None, None)
+    for x in parts:
+        cands = {b: r["rise_12m"] for b, r in (x.get("by_brand") or {}).items() if isinstance(r, dict) and r.get("rise_12m") is not None} or \
+                ({x["brand"]: x["value"]} if x.get("value") is not None and x.get("brand") else {})
+        for b, v in cands.items():
+            if best[1] is None or v > best[1]:
+                best = (b, v)
+    return {"brand": best[0], "value": best[1], "note": None if best[1] is not None else "no brand has a list price dated 9 to 15 months ago"}
+
+
 def READINGS() -> list[dict]:
     return readings(_cached_payload)
 
@@ -702,9 +739,11 @@ def SIGNALS() -> list[dict]:
     r = K.get("bags_ratio")
     if r is not None:
         add("bags_ratio", "overview", "Bag basket: resale / retail", r, "x", 1 if r >= 1 else -1 if r < 0.7 else 0, "below 0.5 or above 1.0", r < 0.5 or r > 1.0)
-    rr = (Bg.get("retail_rise") or {}) if Bg else {}
-    if rr.get("value") is not None:
-        add("retail_rise", "bags", "Largest brand retail increase, last 12 months", _r(100 * rr["value"], 1), "%", 0, "any brand above 10%", rr["value"] > 0.10, rr.get("brand"))
+    rr = merged_rise([(Bg or {}).get("retail_rise"), (_cached_payload("watches") or {}).get("retail_rise")])
+    if rr:                                          # every brand, Rolex included; a brand needs a list price dated 9-15 months ago to have a 12-month figure
+        v = rr.get("value")
+        add("retail_rise", "bags", "Largest brand retail increase, last 12 months", _r(100 * v, 1) if v is not None else None, "%", 0, "any brand above 10%",
+            v is not None and v > 0.10, rr.get("brand") if v is not None else (rr.get("note") or "no price a year ago"))
     s = H.get("score")
     if s is not None:
         add("heat", "heat", "Luxury market heat score (watches and bags)", s, "", lean(s), "above +1.5 or below -1", s > 1.5 or s < -1, verdict(s))
