@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-06",
+ "updated": "2026-11-07",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -491,6 +491,16 @@
    "handed": [
     "ai-stocks"
    ]
+  },
+  {
+   "date": "2026-11-07",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Email built, not sent (no Gmail secrets). Signals 50 of 67 wired, 16 crossed: the AI basket passed -20% (bear market). Reviewed Debt & Rates: Hong Kong chart broken, FOMC list too long; handed over. Live check still running at the time of this entry.",
+   "fixed": [],
+   "handed": [
+    "debt-rates"
+   ]
   }
  ],
  "notes": [
@@ -816,6 +826,51 @@
     "Add the Gmail secrets"
    ],
    "review": "ai-stocks"
+  },
+  {
+   "date": "2026-11-07",
+   "title": "AI stocks cross into a bear market; Debt & Rates reviewed",
+   "summary": "The 5 November sell-off reached the data: the AI basket is 20.7% below its high, past the -20% bear-market watch point, with only 15% of its stocks above their 50-day average. Reviewed Debt & Rates: the Hong Kong chart on Interest cost is broken and the FOMC tab is far too long; both went to its session.",
+   "changes": [
+    {
+     "dashboard": "AI: Compute, Power & Chips",
+     "slug": "compute-chips",
+     "what": "Data-centre power rows checked against LBNL and DESNZ; US 2014 is 58 TWh, UK replaced by the GB estimate",
+     "commit": "72325a4",
+     "by": "session:compute-chips"
+    },
+    {
+     "dashboard": "Climate Signals",
+     "slug": "climate",
+     "what": "Insured losses checked against each year's Swiss Re sigma; 2024 added",
+     "commit": "03b7d6e",
+     "by": "session:climate"
+    },
+    {
+     "dashboard": "Site",
+     "what": "Live check: a load failure is now the shell's error card, not the words anywhere on a page (yesterday's false alarm on Dev notes)",
+     "commit": "a58d3ca",
+     "by": "agent"
+    },
+    {
+     "dashboard": "Graphify Map",
+     "slug": "graphify",
+     "tab": "usage",
+     "what": "Session totals now collected when three or more sessions ran, or weekly; nothing is lost between collections",
+     "commit": "a582360",
+     "by": "agent"
+    }
+   ],
+   "review": "debt-rates",
+   "next": [
+    "Debt & Rates: fix the Hong Kong chart and shorten the FOMC list (handed over)",
+    "Pokémon cards, Longevity, Compute & chips: still waiting for the owner's reply in their sessions"
+   ],
+   "asks": [
+    "Reply in the Pokémon cards, Longevity, Compute & chips and Debt & rates sessions",
+    "Approve or skip r-watch-recalibrate and r-private-signals",
+    "Add the Gmail secrets"
+   ]
   }
  ]
 }
