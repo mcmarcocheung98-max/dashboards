@@ -75,6 +75,8 @@ signals not wired, numbers without a date or source, unclear copy, a mobile layo
   models (inputTokens, cacheCreationInputTokens, cacheReadInputTokens, outputTokens, costUSD) and its created_at. It writes
   `{"collected_at", "sessions": {slug: {"id", "as_of", "input", "cache_write", "cache_read", "output", "cost_usd"}}}` to the
   scratchpad and replies in one line per session. Then `python scripts/graphify_usage.py --totals <that file>`.
+- Collect the other sessions only when three or more have run since their snapshot, or once a week (Mondays). Totals are
+  running counts, so a skipped day loses nothing: the next collection carries it, put on that day.
 - Commit `data/graphify/usage.json` with the day's status commit. Keep this cheap: never read whole transcripts of other sessions.
 
 ## 6. Write the note and update the page
