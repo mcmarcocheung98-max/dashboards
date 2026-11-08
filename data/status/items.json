@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-07",
+ "updated": "2026-11-08",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -572,6 +572,14 @@
    "handed": [
     "debt-rates"
    ]
+  },
+  {
+   "date": "2026-11-08",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Email built, not sent (no Gmail secrets). Signals 56 of 73 wired, 16 crossed, unchanged. Reviewed Climate: all tabs OK; the disasters watch point is dead (NOAA ended the series), proposed a replacement. Live check still running at the time of this entry.",
+   "fixed": [],
+   "handed": []
   }
  ],
  "notes": [
@@ -998,6 +1006,29 @@
     "Reply in the Pokémon cards, Longevity, Compute & chips and Debt & rates sessions",
     "Approve or skip r-watch-recalibrate and r-private-signals",
     "Add the Gmail secrets"
+   ]
+  },
+  {
+   "date": "2026-11-08",
+   "title": "Quiet Sunday: Climate reviewed, one dead watch point found",
+   "summary": "Nothing changed overnight. The signals board now covers 15 dashboards with 56 of 73 signals wired and 16 crossed, unchanged on Friday's close since markets were shut. Reviewed Climate: every tab is sound, but its US billion-dollar-disasters watch point can never cross again because NOAA ended the count after 2024; a replacement is proposed.",
+   "changes": [
+    {
+     "dashboard": "Dev Agent & Roadmap",
+     "slug": "status",
+     "what": "Proposal r-climate-disasters: swap the ended NOAA count for Climate Central's continuation or Swiss Re's insured losses",
+     "by": "agent"
+    }
+   ],
+   "review": "climate",
+   "next": [
+    "Monday: the first weekly luxury liquidity log, and the sessions' token totals",
+    "Pokémon cards, Longevity, Compute & chips: still waiting for the owner's reply in their sessions"
+   ],
+   "asks": [
+    "Approve or skip r-climate-disasters, r-watch-recalibrate and r-private-signals",
+    "Add the eBay keys and the Gmail secrets; confirm the three bags' prices",
+    "Reply in the Pokémon cards, Longevity, Compute & chips and Debt & rates sessions"
    ]
   }
  ]
