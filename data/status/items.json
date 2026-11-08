@@ -1105,6 +1105,14 @@
      "what": "The owner asked for photos, retail availability and second-hand stock on each item card: Wikipedia lead images, a dated stock.csv (the steel Pepsi reads discontinued April 2026; Saint Laurent and Louis Vuitton unknown until their pages are read), Chrono24 and eBay counts with links",
      "commit": "c1379c9",
      "by": "session:luxury"
+    },
+    {
+     "dashboard": "AI Stocks",
+     "slug": "ai-stocks",
+     "tab": "setup",
+     "what": "The owner asked for VIX on the dashboard: a VIX chip joins the index strip (level, day change in points, linked to its chart); VIX was already in the top card, the Setup Score and the Fear & relative tab",
+     "commit": "a3624c9",
+     "by": "session:ai-stocks"
     }
    ],
    "review": "climate",
