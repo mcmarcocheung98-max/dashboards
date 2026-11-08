@@ -17,9 +17,19 @@ const words = { watch: "Watches", bag: "Bags" };
 const monthsWs = () => { const out = []; const end = Date.now(); for (let y = 2019, m = 11; ; m++) { if (m === 12) { m = 0; y++; } const t = Date.UTC(y, m + 1, 0); if (t > end) break; out.push(Math.floor(t / 1000)); } return out; };
 
 function itemCard(it) {
-  const L = it.latest;
+  const L = it.latest, S = it.stock, P = it.photo;
+  const stockCls = s => !s ? "" : /out of stock|discontinued/i.test(s) ? "down" : /in stock|available/i.test(s) ? "up" : "";
+  const img = P ? el("a", { href: P.page || P.src, target: "_blank", rel: "noopener", title: P.credit || "" },
+    el("img", { src: P.src, alt: it.name, loading: "lazy", style: "width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:var(--chip)" })) :
+    el("div", { class: "muted", style: "width:96px;height:96px;display:flex;align-items:center;justify-content:center;border:1px dashed var(--line);border-radius:8px;font-size:11px;text-align:center" }, "no free photo; see the brand page");
+  const stockLine = el("div", { style: "margin-top:6px" }, el("b", {}, "Brand site: "), el("span", { class: stockCls(S && S.status) }, S ? S.status : "not checked"), S ? el("span", { class: "muted" }, " (" + dateOf(S.date) + (S.verify ? ", verify" : "") + ")") : null,
+    it.retail_url ? [" · ", link("retail page", it.retail_url)] : null, S && S.note ? el("div", { class: "muted", style: "font-size:12px" }, S.note) : null);
+  const rs = it.resale_stock || [];
+  const resaleLine = el("div", { style: "margin-top:4px" }, el("b", {}, "Second-hand stock: "), rs.length ? rs.flatMap((r, i) => [i ? " · " : "", link(num(r.count) + " on " + r.platform, r.url), el("span", { class: "muted" }, " (" + dateOf(r.date) + (r.verify ? ", verify" : "") + ")")]) : el("span", { class: "muted" }, "no count logged yet"),
+    it.resale_url ? [" · ", link("resale listings", it.resale_url)] : null);
   return card(it.name + (it.reference ? " · " + it.reference : ""),
-    el("div", { class: "kpis" },
+    el("div", { style: "display:flex;gap:12px;align-items:flex-start" }, img, el("div", { style: "flex:1;min-width:0" }, stockLine, resaleLine, P && !P.exact ? el("div", { class: "muted", style: "font-size:11px;margin-top:4px" }, "Photo: " + P.credit) : null)),
+    el("div", { class: "kpis", style: "margin-top:8px" },
       kpi("Retail now" + (it.retail_date ? " (since " + dateOf(it.retail_date) + ")" : ""), gbp(it.retail_now)),
       kpi(L ? "Latest resale, " + L.kind + (L.condition ? ", " + L.condition : "") + " (" + dateOf(L.date) + ")" : "Latest resale", L ? gbp(L.price) : "–"),
       kpi("Premium to retail", prem(it.premium), premCls(it.premium)),
@@ -92,7 +102,7 @@ const VIEWS = {
       note("Median across each basket's items of the last resale point (within 18 months) against the list price then in force. Above zero: second-hand costs more than new."));
     const w = (d.items || []).filter(i => i.category === "watch"), b = (d.items || []).filter(i => i.category === "bag");
     return [head, bk, changesCard("overview", true), card("Watches"), el("div", { class: "grid2" }, ...w.map(itemCard)), card("Bags"), el("div", { class: "grid2" }, ...b.map(itemCard)),
-      card("Read this first", el("div", { class: "muted" }, "Not investment advice. Every price here is a dated, cited hand-entered point: a premium is one resale point against the list price in force that day, not a daily market. Asking prices run above sold prices; condition, box and papers, VAT and import duty on cross-border sales, and the platform's fee all change what a seller nets (see ROI and Fees)."),
+      card("Read this first", el("div", { class: "muted" }, "Not investment advice. Every price here is a dated, cited hand-entered point: a premium is one resale point against the list price in force that day, not a daily market. Asking prices run above sold prices; condition, box and papers, VAT and import duty on cross-border sales, and the platform's fee all change what a seller nets (see ROI and Fees). 'Brand site' is the availability read by hand on the brand's page on the date shown (the brand sites refuse servers; Rolex sells only through retailers, Hermès and Chanel only in boutiques). 'Second-hand stock' is the listing count on Chrono24 from the weekly log and on eBay UK from the daily feed once its keys are set. Photos are the Wikipedia article's lead image unless the owner adds an image link in items.csv; the retail page shows the exact reference."),
         cite(d.cited))];
   },
 

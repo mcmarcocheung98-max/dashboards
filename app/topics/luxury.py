@@ -4,7 +4,9 @@ The question: for each item, what does it cost new today, what does it sell for 
 at retail see after platform fees, over time. Not investment advice: no buy or sell calls.
 
 overview   the Rolex basket's resale premium or discount to retail (median across the starter references), the bag basket's
-           resale-to-retail ratio, one line on where the market is, and a card per item (retail, latest resale, premium, 1-year change)
+           resale-to-retail ratio, one line on where the market is, and a card per item (retail, latest resale, premium, 1-year change,
+           a photo, whether the brand site has it in stock (stock.csv, hand-entered and dated: the brand sites refuse servers), how many
+           are listed second-hand (Chrono24 from the weekly log, eBay UK from the daily feed), and links to the retail and resale pages)
 watches    retail vs resale over time per reference, the premium-to-retail line, a table (retail, resale, premium, 1y and 3y change)
 bags       the same for bags, plus retail price inflation per brand per year (the price-increase calendar)
 roi        for a buyer at retail on a chosen date, what they would net today after the selling platform's fee, by platform; a
@@ -60,6 +62,7 @@ PLAIN_UA = {"User-Agent": "dashboards/1.0 (+https://github.com/mcmarcocheung98-m
 NASDAQ_HEADERS = {"Accept": "application/json, text/plain, */*", "Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"}
 WIKI_MONTHLY = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/{title}/monthly/2015070100/{b}"
 WIKI_HEALTH = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia"
+WIKI_SUMMARY = "https://en.wikipedia.org/api/rest_v1/page/summary/{title}"     # the article's lead image (freely licensed), for the item cards
 FX_FALLBACK = {"USD": 0.78, "CHF": 0.88, "EUR": 0.86, "HKD": 0.10}        # GBP per unit, rough 2020-2026 averages, only when FRED has never answered
 CATEGORIES = (("watch", "Watches"), ("bag", "Bags"))
 DEFAULT_PLATFORM = {"watch": "Chrono24", "bag": "Vestiaire Collective"}
@@ -74,6 +77,8 @@ SOURCES = [{"name": "Hand-entered, cited per row: brand list prices (Rolex, Herm
            {"name": "Chrono24 ChronoPulse and WatchCharts market indices (headline figures, hand-entered)", "url": "https://watchcharts.com/watches/market_index", "cadence": "monthly"},
            {"name": "Rebag Clair report, The RealReal resale report, Knight Frank Luxury Investment Index (hand-entered)", "url": "https://www.knightfrank.com/wealthreport", "cadence": "yearly"},
            {"name": "Wikimedia REST API: monthly pageviews of each item's English Wikipedia article since July 2015 (attention, a demand proxy)", "url": "https://wikimedia.org/api/rest_v1/", "cadence": "daily"},
+           {"name": "Wikipedia page summaries: each article's lead image for the item cards (an owner-supplied image URL in items.csv takes precedence)", "url": "https://en.wikipedia.org/api/rest_v1/", "cadence": "daily"},
+           {"name": "Hand-entered, dated: whether the brand site has each item in stock (stock.csv), read by hand because the brand sites refuse servers", "url": "https://github.com/mcmarcocheung98-max/dashboards/tree/main/data/luxury", "cadence": "weekly"},
            {"name": "eBay Browse API (eBay UK): active fixed-price listings per item, count and asking prices, one snapshot a day once EBAY_APP_ID and EBAY_CERT_ID are set", "url": "https://developer.ebay.com/api-docs/buy/browse/overview.html", "cadence": "daily"},
            {"name": "FRED: US CPI (CPIAUCSL), UK CPI (GBRCPIALLMINMEI; ONS D7BT when it answers), USD, CHF and EUR to GBP (DEXUSUK, DEXSZUS, DEXUSEU), S&P 500 (SP500)",
             "url": "https://fred.stlouisfed.org/", "cadence": "daily"}]
@@ -547,6 +552,58 @@ def roi_rows(views: list[dict], fee_list: list[dict], spx: pd.Series | None, cpi
     return out
 
 
+# ------------------------------------------------------------------ item cards: photo, stock on the brand site, resale stock, links
+def parse_summary(j: dict) -> dict | None:
+    """Wikipedia page summary -> {src, width, height, page} from its thumbnail (the article's lead image), None when the article has none."""
+    th = (j or {}).get("thumbnail") or {}
+    if not th.get("source"):
+        return None
+    return {"src": th["source"], "width": th.get("width"), "height": th.get("height"), "page": ((j.get("content_urls") or {}).get("desktop") or {}).get("page") or ("https://en.wikipedia.org/wiki/" + quote(str(j.get("title") or "").replace(" ", "_")))}
+
+
+def wiki_image(title: str) -> dict | None:
+    """The article's lead image, cached a day with a snapshot (None when the article has none)."""
+    j = __import__("json").loads(fetch(WIKI_SUMMARY.format(title=quote(title.replace(" ", "_"), safe="")), DAY, headers=WIKI_BOT, timeout=20, min_bytes=40))
+    return parse_summary(j)
+
+
+def photo(item: dict, used_title: str | None = None) -> dict | None:
+    """An owner-supplied image URL (items.csv `image`) first; else the lead image of the item's Wikipedia article (the title that answered for
+    attention, else the first listed), credited and linked to the article. Not the exact reference: the brand page link is."""
+    if (item.get("image") or "").strip():
+        return {"src": item["image"].strip(), "credit": "the owner's image link", "page": item.get("source"), "exact": True}
+    for t in ([used_title] if used_title else []) + wiki_titles(item.get("wiki")):
+        try:
+            im = wiki_image(t)
+        except Exception:
+            im = None
+        if im:
+            return {**im, "credit": f"Wikipedia: {t} (free licence; the article's lead image, not this exact reference)", "exact": False, "title": t}
+    return None
+
+
+def stock_status(item_id: str) -> dict | None:
+    """The latest hand-entered availability on the brand site (stock.csv, channel retail): status, date, source, note."""
+    rs = [r for r in rows("stock") if r.get("item") == item_id and (r.get("channel") or "retail") == "retail" and r.get("status")]
+    if not rs:
+        return None
+    r = rs[-1]
+    return {"status": r["status"], "date": r["date"], "quantity": _f(r.get("quantity")), "source": r.get("source"), "note": r.get("note") or "", "verify": _verify(r)}
+
+
+def resale_stock(item_id: str, log: dict | None, ebay: dict | None) -> list[dict]:
+    """How many are listed second-hand: Chrono24's count from the weekly log, eBay UK's from the daily feed (when set up)."""
+    out = []
+    for x in (log or {}).get("latest") or []:
+        if x["item"] == item_id and x["metric"] in ("chrono24_listings", "watchcharts_listings", "fashionphile_listings", "watchfinder_stock") and x["value"] is not None:
+            out.append({"platform": {"chrono24_listings": "Chrono24", "watchcharts_listings": "WatchCharts", "fashionphile_listings": "Fashionphile", "watchfinder_stock": "Watchfinder"}[x["metric"]],
+                        "count": int(x["value"]), "date": x["date"], "url": x.get("source"), "verify": x.get("verify", False)})
+    e = ((ebay or {}).get("items") or {}).get(item_id) or {}
+    if e.get("latest"):
+        out.append({"platform": "eBay UK", "count": e["latest"]["count"], "date": e["latest"]["date"], "url": "https://www.ebay.co.uk/sch/i.html?_nkw=" + quote(e.get("query") or ""), "verify": False})
+    return out
+
+
 # ------------------------------------------------------------------ attention: Wikipedia pageviews (a demand proxy)
 def wiki_url(title: str, end: pd.Timestamp | None = None) -> str:
     end = end or _now()
@@ -835,6 +892,23 @@ def _context() -> dict:
     return out
 
 
+def card_extras(item_id: str) -> dict:
+    """What an item card shows beyond prices: the photo, the brand-site stock status, the resale stock counts, the links. Reads the
+    liquidity payload if cached (never computes it here, so the overview stays quick)."""
+    it = next((i for i in items(with_watchlist=True) if i["id"] == item_id), None)
+    if not it:
+        return {}
+    L = _cached_payload("liquidity")
+    used = next((x.get("title") for x in ((L.get("attention") or {}).get("items") or []) if x.get("id") == item_id and x.get("last")), None)
+    log = L.get("log") or liquidity_log(_fx_cached())                  # cheap local reads, so the cards never wait for the liquidity tab
+    try:
+        ebay = L.get("ebay") or EBAY.payload()
+    except Exception:
+        ebay = None
+    return {"photo": photo(it, used), "stock": stock_status(item_id), "resale_stock": resale_stock(item_id, log, ebay),
+            "retail_url": it.get("source"), "resale_url": it.get("resale_url") or None}
+
+
 def _overview_now() -> dict:
     views = _views()
     FX = _fx_cached()
@@ -848,7 +922,8 @@ def _overview_now() -> dict:
                     "rolex_1y": _r(float(W["index"].iloc[-1] / W["index"].iloc[-13] - 1), 4) if len(W["index"]) > 13 else None,
                     "bags_1y": _r(float(G["index"].iloc[-1] / G["index"].iloc[-13] - 1), 4) if len(G["index"]) > 13 else None,
                     "heat_watches": hw["score"], "heat_bags": hb["score"], "heat": score, "n_watches": len(W["items"]), "n_bags": len(G["items"])},
-            "where": line, "items": [{k: v[k] for k in ("id", "name", "brand", "reference", "category", "url", "retail_now", "retail_date", "latest", "premium", "change_1y", "change_3y", "n_points", "n_verify", "note")} for v in views],
+            "where": line, "items": [{**{k: v[k] for k in ("id", "name", "brand", "reference", "category", "url", "retail_now", "retail_date", "latest", "premium", "change_1y", "change_3y", "n_points", "n_verify", "note")},
+                                      **card_extras(v["id"])} for v in views],
             "counts": {"points": sum(v["n_points"] for v in views), "verify": sum(v["n_verify"] for v in views)},
             "fx_fallback": FX["fallback"], "as_of": max((v["latest"]["date"] for v in views if v["latest"]), default=None),
             "stale": B.stale_info([FRED.format(id=i) for i in FRED_IDS.values()]), "cited": cited("resale", "retail"), "updated": int(time.time())}

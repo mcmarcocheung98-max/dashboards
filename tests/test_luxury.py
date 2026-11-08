@@ -44,6 +44,12 @@ def fake_fetch(url, ttl=0, **k):
             return text
     if "/metrics/pageviews/" in url:
         return wiki_json(url)
+    if "/page/summary/" in url:
+        title = url.rsplit("/", 1)[1]
+        if title == "Rolex_Explorer":
+            return json.dumps({"title": "Rolex Explorer", "extract": "stub"})                      # no lead image
+        return json.dumps({"title": title.replace("_", " "), "thumbnail": {"source": f"https://upload.wikimedia.org/x/{title}.jpg", "width": 320, "height": 240},
+                           "content_urls": {"desktop": {"page": "https://en.wikipedia.org/wiki/" + title}}})
     raise ConnectionError("fixture: no such source " + url)
 
 
@@ -186,6 +192,12 @@ def test_payloads_readings_and_signals(mocked):
     assert LG["n_rows"] >= 15 and {x["metric"] for x in LG["latest"]} >= {"chrono24_listings", "stockx_last_sale", "watchcharts_days_to_sell"} and LG["chrono24_total"][0][1] > 3000
     assert all(x["source"].startswith("http") and x["metric"] in M.LOG_METRICS for x in LG["latest"])
     assert O["kpi"]["n_watches"] == 8 and O["kpi"]["n_bags"] == 5 and len(O["items"]) == 13 and O["where"]
+    by = {i["id"]: i for i in O["items"]}
+    assert all(i["retail_url"].startswith("http") and i["resale_url"].startswith("http") and i["stock"] and i["stock"]["status"] for i in O["items"])
+    assert by["sub-126610ln"]["photo"]["src"].endswith("Rolex_Submariner.jpg") and not by["sub-126610ln"]["photo"]["exact"] and "Wikipedia" in by["sub-126610ln"]["photo"]["credit"]
+    assert by["explorer-124270"]["photo"]["title"] == "Rolex Explorer II"                   # the stub has no image: the next title's
+    assert by["sub-126610ln"]["stock"]["status"] == "retailer only (waitlist)" and by["celine-ava-triomphe"]["stock"]["status"] == "out of stock online" and by["celine-ava-triomphe"]["stock"]["verify"]
+    assert {r["platform"] for r in by["sub-126610ln"]["resale_stock"]} == {"Chrono24"} and by["sub-126610ln"]["resale_stock"][0]["count"] == 859
     assert len(W["items"]) == 8 and len(G["items"]) == 5 and "calendar" in G and G["retail_rise"]["brand"]
     assert len(O["rolex_premium"]) > 24 and len(G["ratio"]) >= 3, "the committed points must give both baskets a monthly history (the bag basket starts in 2026: three of its five bags have no earlier resale record)"
     assert R["sp500_source"] == "FRED" and R["cpi_uk_source"] == "FRED" and R["rows"] and all(r["net"] <= r["gross"] for r in R["rows"])
@@ -355,3 +367,20 @@ def test_liquidity_score_and_signal(monkeypatch):
     w["listings_1y"] = 0.2
     sig = {x["key"]: x for x in M.SIGNALS()}
     assert not sig["liquidity"]["crossed"]
+
+
+def test_card_extras_photo_stock_and_resale_stock(mocked, monkeypatch):
+    assert M.parse_summary({"title": "A", "thumbnail": {"source": "https://u/a.jpg", "width": 1, "height": 2}, "content_urls": {"desktop": {"page": "https://en.wikipedia.org/wiki/A"}}}) == {"src": "https://u/a.jpg", "width": 1, "height": 2, "page": "https://en.wikipedia.org/wiki/A"}
+    assert M.parse_summary({"title": "A"}) is None and M.parse_summary({}) is None
+    it = {"id": "x", "name": "X", "image": " https://owner/x.png ", "source": "https://brand/x", "wiki": "Rolex Submariner"}
+    assert M.photo(it) == {"src": "https://owner/x.png", "credit": "the owner's image link", "page": "https://brand/x", "exact": True}
+    it["image"] = ""
+    assert M.photo(it)["title"] == "Rolex Submariner" and M.photo({"id": "y", "wiki": "Rolex Explorer"}) is None and M.photo({"id": "z", "wiki": ""}) is None
+    monkeypatch.setattr(M, "fetch", lambda url, ttl=0, **k: (_ for _ in ()).throw(ConnectionError("down")))
+    assert M.photo(it) is None                                                   # a failed summary call is no photo, not an error
+    assert M.stock_status("nope") is None and M.stock_status("daytona-126500ln")["status"].startswith("retailer only")
+    log = {"latest": [{"item": "a", "metric": "chrono24_listings", "value": 12.0, "date": "2026-11-07", "source": "https://c/a", "verify": True}, {"item": "a", "metric": "stockx_ask", "value": 5.0, "date": "2026-11-07", "source": "https://s/a"}]}
+    ebay = {"items": {"a": {"query": "Rolex a", "latest": {"count": 7, "date": "2026-11-08"}}}}
+    rs = M.resale_stock("a", log, ebay)
+    assert [(r["platform"], r["count"]) for r in rs] == [("Chrono24", 12), ("eBay UK", 7)] and rs[0]["verify"] and "ebay.co.uk" in rs[1]["url"]
+    assert M.resale_stock("b", log, ebay) == [] and M.resale_stock("a", None, None) == []
