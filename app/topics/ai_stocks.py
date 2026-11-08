@@ -193,9 +193,16 @@ def stock_card(sym: str, s: pd.Series) -> dict:
             "high52": _r(hi.iloc[-1], 2), "high52_date": str(s[s.index >= s.index[-1] - pd.Timedelta(days=366)].idxmax().date())}
 
 
-def strip(px: dict[str, pd.Series]) -> list[dict]:
-    """The row at the top of Setup: SPY, QQQ and SMH, then every stock of both groups, with the last close and the day's move."""
+def strip(px: dict[str, pd.Series], vix: pd.Series | None = None) -> list[dict]:
+    """The row at the top of Setup: SPY, QQQ, SMH and VIX, then every stock of both groups, with the last close and the day's move
+    (VIX's in points: it is a level, not a price)."""
     out = []
+    v = vix.dropna() if vix is not None else None
+    if v is not None and len(v) >= 2:
+        vix_row = {"sym": "VIX", "name": "Cboe Volatility Index", "group": "index", "kind": "vix", "price": _r(v.iloc[-1], 2),
+                   "day": _r(v.iloc[-1] - v.iloc[-2], 2), "day_pct": _r(v.iloc[-1] / v.iloc[-2] - 1, 4), "date": str(v.index[-1].date())}
+    else:
+        vix_row = None
     for sym, group in [(e, "index") for e in ("SPY", "QQQ", "SMH")] + [(s, "core") for s in BASKET] + [(s, "picks") for s in PICKS if s not in BASKET]:
         s = px.get(sym)
         if s is None or len(s.dropna()) < 2:
@@ -204,6 +211,10 @@ def strip(px: dict[str, pd.Series]) -> list[dict]:
         out.append({"sym": sym, "name": NAMES.get(sym, sym), "group": group, "both": sym in BASKET and sym in PICKS, "price": _r(s.iloc[-1], 2),
                     "day": _r(s.iloc[-1] / s.iloc[-2] - 1, 4), "date": str(s.index[-1].date()),
                     **({"form4": FORM4_LIST.format(cik=CIKS[sym])} if sym in CIKS else {})})
+        if sym == "SMH" and vix_row:
+            out.append(vix_row)
+    if vix_row and vix_row not in out:
+        out.insert(min(3, len(out)), vix_row)
     return out
 
 
@@ -479,7 +490,7 @@ def _setup_now() -> dict:
                   sources=M["sources"] + [FRED_VIX, CBOE_VIX])
     out["cards"] = cards
     out["pick_cards"] = pick_cards
-    out["strip"] = strip(px)
+    out["strip"] = strip(px, V)
     out["picks_dd"] = _pts(M["pdd"], 4) if M["pdd"] is not None else None
     out["picks_now"] = {"dd": last(M["pdd"]) if M["pdd"] is not None else None, "breadth50": last(M["pb50"]) if M["pb50"] is not None else None,
                         "above200": sum(1 for c in pick_cards if (c["vs200"] or 0) > 0), "n": len(pick_cards),

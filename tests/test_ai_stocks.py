@@ -484,7 +484,9 @@ def test_setup(mocked):
     assert p["picks_now"]["since"]["SNDK"] == "2025-03-03" and p["picks_now"]["since"]["NBIS"] == "2024-11-01"
     assert p["picks_dd"][-1][1] <= 0 and p["picks_now"]["n"] == 10
     st = p["strip"]
-    assert [x["sym"] for x in st[:3]] == ["SPY", "QQQ", "SMH"] and {x["sym"] for x in st} == set(M.STOCKS) | {"SPY", "QQQ", "SMH"}
+    assert [x["sym"] for x in st[:4]] == ["SPY", "QQQ", "SMH", "VIX"] and {x["sym"] for x in st} == set(M.STOCKS) | {"SPY", "QQQ", "SMH", "VIX"}
+    vx = st[3]
+    assert vx["kind"] == "vix" and vx["price"] == p["vix"][-1][1] and vx["day"] == pytest.approx(p["vix"][-1][1] - p["vix"][-2][1], abs=0.02)
     assert all("form4" in x and f"CIK={M.CIKS[x['sym']]:010d}" in x["form4"] for x in st if x["group"] != "index")
     assert next(x for x in st if x["sym"] == "NVDA")["both"] and abs(st[0]["day"]) < 0.2
     S = p["score_now"]

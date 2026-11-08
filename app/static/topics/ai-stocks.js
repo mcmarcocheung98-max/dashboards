@@ -204,20 +204,23 @@ window.openStock = sym => {
   panelBody(sym).then(kids => body.replaceChildren(...kids)).catch(e => body.replaceChildren(el("div", { class: "muted" }, "Not available right now (" + e.message + ").")));
 };
 
-// the strip at the top of Setup: SPY, QQQ, SMH, then every stock; a stock opens its panel (openStock), else its EDGAR Form 4 list
+// the strip at the top of Setup: SPY, QQQ, SMH and VIX, then every stock; a stock opens its panel (openStock), else its EDGAR Form 4 list
 function stripCard(d) {
   const S = d.strip || [];
   if (!S.length) return null;
   const chip = x => {
-    const body = [el("b", {}, x.sym), " ", el("span", {}, usd(x.price, 2)), " ", el("span", { class: cls(x.day) }, pct(x.day, 1))];
+    const vixChip = x.kind === "vix";            // a level, not a price: points on the day, red when it rises (more fear)
+    const body = vixChip ? [el("b", {}, "VIX"), " ", el("span", {}, num(x.price, 1)), " ", el("span", { class: cls(-x.day) }, (x.day > 0 ? "+" : x.day < 0 ? "−" : "") + num(Math.abs(x.day), 1))]
+      : [el("b", {}, x.sym), " ", el("span", {}, usd(x.price, 2)), " ", el("span", { class: cls(x.day) }, pct(x.day, 1))];
     const st = "display:inline-flex;gap:4px;align-items:baseline;border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:13px;white-space:nowrap;text-decoration:none;color:inherit;background:var(--surface,transparent)" + (x.group === "index" ? ";font-weight:600" : "");
+    if (vixChip) return el("a", { href: "#fear", style: st, title: "Cboe Volatility Index, " + dateOf(x.date) + " (" + pct(x.day_pct, 1) + " on the day). Click for the VIX chart on Fear & relative." }, ...body);
     if (x.group === "index") return el("span", { style: st, title: x.name }, ...body);
     if (window.openStock) return el("button", { type: "button", style: st + ";cursor:pointer;font:inherit;font-size:13px", title: x.name + ": insiders, institutions, fundamentals", onclick: () => window.openStock(x.sym) }, ...body);
     return el("a", { href: x.form4, target: "_blank", rel: "noopener", style: st, title: x.name + ": Form 4 insider filings on EDGAR" }, ...body);
   };
   const row = (lab, xs) => xs.length ? el("div", { style: "display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px" }, el("span", { class: "muted", style: "min-width:96px" }, lab), ...xs.map(chip)) : null;
   return card(null, row("Indexes", S.filter(x => x.group === "index")), row("AI basket", S.filter(x => x.group === "core")), row("Owner's picks", (d.pick_cards || []).map(c => S.find(x => x.sym === c.sym)).filter(Boolean)),
-    note("Last close and the move on the day" + (S[0] ? ", " + dateOf(S[0].date) : "") + ". " + (window.openStock ? "Click a stock for its insiders, institutions and fundamentals." : "Click a stock for its Form 4 insider filings on EDGAR.") + " " + SMALL));
+    note("Last close and the move on the day" + (S[0] ? ", " + dateOf(S[0].date) : "") + "; VIX in points, its own latest day" + ((S.find(x => x.kind === "vix") || {}).date ? " (" + dateOf(S.find(x => x.kind === "vix").date) + ")" : "") + ", red when it rises. " + (window.openStock ? "Click a stock for its insiders, institutions and fundamentals." : "Click a stock for its Form 4 insider filings on EDGAR.") + " " + SMALL));
 }
 
 function stockCard(c) {
