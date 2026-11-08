@@ -74,6 +74,8 @@ each: `chrono24_listings` per Rolex reference (the count on Chrono24's public se
   Columns: date, item, platform, metric, value, currency, source, note; mark `verify` when the excerpt carries no page date.
 Also enter any new auction results (Phillips, Christie's, Sotheby's, Bonhams) for the tracked items in `auctions.csv`. Commit
 with the day's status commit.
+- Refresh `data/luxury/stock.csv` too: one dated row per item for the brand site's availability (in stock, waitlist, out of stock
+  online, boutique only, discontinued), from search excerpts, marked `verify` where the page itself could not be read.
 
 ## 5b. Token usage for the Graphify Map (Daily tokens tab)
 
