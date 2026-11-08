@@ -1089,6 +1089,14 @@
      "what": "Yesterday's review fixed: the Hong Kong spending card shows its name, note and questions again (as a table, since it has one year per item); the Fed decisions list folds past the latest 10, with a CSV of the full list",
      "commit": "58f4cfe",
      "by": "session:debt-rates"
+    },
+    {
+     "dashboard": "AI Stocks",
+     "slug": "ai-stocks",
+     "tab": "dips",
+     "what": "The owner asked for a combined index: the core 13 against all 20 stocks (core plus picks), with the dip study and the Setup Score backtest rerun on each; the core basket and the signals are unchanged",
+     "commit": "20a8841",
+     "by": "session:ai-stocks"
     }
    ],
    "review": "climate",
