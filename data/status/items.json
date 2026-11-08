@@ -576,10 +576,11 @@
   {
    "date": "2026-11-08",
    "run": "scheduled",
-   "result": "problems",
-   "summary": "Email built, not sent (no Gmail secrets). Signals 56 of 73 wired, 16 crossed, unchanged. Reviewed Climate: all tabs OK; the disasters watch point is dead (NOAA ended the series), proposed a replacement. Live check aborted at Trends: the retry step crashed on a reload during the agent's own push at 07:43 (fixed in smoke.py, re-run started). Tabs checked before that were all OK except Luxury Watches, whose charts sit a month apart on the shared axis (fixed by the luxury session in b6f5225 within the hour).",
+   "result": "ok",
+   "summary": "Email built, not sent (no Gmail secrets). Signals 56 of 73 wired, 16 crossed, unchanged. Reviewed Climate: all tabs OK; its disasters watch point is dead (NOAA ended the series), replacement proposed. Live check: two runs aborted when deploys landed mid-check (the smoke script's retry and shell checks now absorb that, b936ee0 and aca1a59); the third run passed every tab of every dashboard. Luxury Watches' shared-axis mismatch was fixed by its session (b6f5225).",
    "fixed": [
-    "smoke retry"
+    "b936ee0",
+    "aca1a59"
    ],
    "handed": [
     "luxury"
