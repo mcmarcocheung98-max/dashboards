@@ -206,6 +206,10 @@ def test_capex_one_filer_down(mocked, monkeypatch):
     assert c["errors"] == {"Oracle": "ConnectionError"} and c["total"] is None and c["total_error"] == "LookupError" and len(c["companies"]) == 4
 
 
+def test_parse_epoch_exposes_the_extra_columns_for_other_dashboards():
+    assert {"params", "hardware", "hw_qty", "cost", "open", "base"} <= set(M.parse_epoch(epoch_csv()).columns)     # AI Model Iteration reads them
+
+
 def test_compute(mocked):
     k = B.json_safe(M._compute_now())
     e = k["epoch"]

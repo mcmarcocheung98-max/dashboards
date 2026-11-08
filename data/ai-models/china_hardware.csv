@@ -1,0 +1,11 @@
+date,lab,country,model,hardware,count,gpu_hours,source,note
+2024-12-26,DeepSeek,China,DeepSeek-V3,Nvidia H800,2048,2788000,https://arxiv.org/abs/2412.19437,"technical report: 2.788M H800 GPU-hours, $5.576M at $2 per GPU-hour, for the final training run only (excludes prior research and ablation experiments)"
+2025-01-20,DeepSeek,China,DeepSeek-R1,Nvidia H800 (the V3 cluster),2048,,https://arxiv.org/abs/2501.12948,no cost or GPU-hours disclosed; verify
+2025-07-11,Moonshot AI,China,Kimi K2,"Nvidia H800 with InfiniBand (8 GPUs a node, NVLink, 8x400 Gbps RoCE)",,,https://www.infoq.com/news/2025/11/kimi-k2-open-source-moe-ai,"hardware per Moonshot (Yang Zhilin); the $4.6M cost reported by CNBC is ""not an official number"" (CEO); checked 2026-11-08"
+2025-11-06,Moonshot AI,China,Kimi K2 Thinking,Nvidia H800,,,https://www2.yicaiglobal.com/news/kimi-k2-thinkings-reported-usd46-million-training-cost-isnt-official-moonshot-ceo-says,confirmed by a Moonshot executive; checked 2026-11-08
+2026-04-24,DeepSeek,China,DeepSeek V4,"reported: Huawei Ascend 950PR (Reuters, Apr 2026); other reports say Nvidia Hopper did most of the training; DeepSeek has not disclosed it",,,https://www.buildfastwithai.com/blogs/deepseek-v4-pro-review-2026,conflicting secondary reports; verify
+2026-07-16,Moonshot AI,China,Kimi K3,"not disclosed; Moonshot says it builds models with fewer high-end chips than US rivals (SCMP)",,,https://www.scmp.com/tech/tech-trends/article/3332364/chinas-moonshot-claims-build-models-fewer-high-end-ai-chips-us-rivals-use,verify
+2025-04-29,Alibaba,China,Qwen3,not disclosed,,,https://qwenlm.github.io/blog/qwen3/,"no hardware disclosure found; Alibaba's T-Head announced its own Zhenwu accelerators in 2026 and says Qwen 4 is in training"
+2026-02-11,Zhipu AI (Z.ai),China,GLM-5,not disclosed,,,https://huggingface.co/blog/mlabonne/glm-5,no hardware disclosure found; verify
+2024-07-23,Meta,US,Llama 3.1 405B (for scale),Nvidia H100,16384,30840000,https://ai.meta.com/blog/meta-llama-3-1/,"30.84M GPU-hours (model card); 16,384 H100s; a US lab for comparison"
+2025-02-17,xAI,US,Grok 3 (for scale),Nvidia H100/H200 (Colossus),200000,,https://x.ai/news/grok-3,"xAI said Colossus had about 200,000 GPUs by early 2025; a US lab for comparison; verify"

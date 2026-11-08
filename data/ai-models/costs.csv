@@ -1,0 +1,9 @@
+date,model,family,developer,country,value,basis,source,note
+2020-05-28,GPT-3,GPT,OpenAI,US,4.6,estimated,https://lambdalabs.com/blog/demystifying-gpt-3,Lambda Labs estimate at cloud prices; verify
+2023-03-14,GPT-4,GPT,OpenAI,US,78,estimated,https://aiindex.stanford.edu/report/,Stanford AI Index 2024 (Epoch AI estimate of compute cost); verify
+2023-12-06,Gemini 1.0 Ultra,Gemini,Google DeepMind,US,191,estimated,https://aiindex.stanford.edu/report/,Stanford AI Index 2024 (Epoch AI estimate); verify
+2024-06-20,Claude 3.5 Sonnet,Claude,Anthropic,US,30,reported,https://www.anthropic.com/news/claude-3-5-sonnet,"Dario Amodei said training cost ""a few tens of millions of dollars""; 30 is a midpoint, not a figure; verify"
+2024-07-23,Llama 3.1 405B,Llama/Muse,Meta,US,62,derived,https://ai.meta.com/blog/meta-llama-3-1/,"30.84M H100 GPU-hours disclosed; dollars derived here at $2 per GPU-hour (the DeepSeek-V3 rental rate), so compare with caution"
+2024-12-26,DeepSeek-V3,DeepSeek,DeepSeek,China,5.576,disclosed,https://arxiv.org/abs/2412.19437,"final training run only at $2 per H800 GPU-hour; excludes prior research, ablations, data and staff; the lab owns the GPUs"
+2025-07-11,Kimi K2,Kimi,Moonshot AI,China,4.6,reported,https://www2.yicaiglobal.com/news/kimi-k2-thinkings-reported-usd46-million-training-cost-isnt-official-moonshot-ceo-says,"reported by CNBC from a source; Moonshot's CEO says it is ""not an official number""; checked 2026-11-08"
+2026-04-24,DeepSeek V4,DeepSeek,DeepSeek,China,5.6,reported,https://www.buildfastwithai.com/blogs/deepseek-v4-pro-review-2026,"secondary reports give $5.2M, $5.6M and about $10M; no DeepSeek figure found; verify"

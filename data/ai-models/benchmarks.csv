@@ -1,0 +1,21 @@
+date,model,family,benchmark,value,source,note
+2023-03-14,GPT-4,GPT,GPQA Diamond,35.7,https://arxiv.org/abs/2311.12022,GPQA paper baseline; verify
+2024-06-20,Claude 3.5 Sonnet,Claude,GPQA Diamond,59.4,https://www.anthropic.com/news/claude-3-5-sonnet,0-shot CoT; verify
+2024-12-05,o1,GPT,GPQA Diamond,78.0,https://openai.com/index/openai-o1-system-card/,verify
+2025-04-16,o3,GPT,GPQA Diamond,83.3,https://openai.com/index/introducing-o3-and-o4-mini/,verify
+2025-03-25,Gemini 2.5 Pro,Gemini,GPQA Diamond,84.0,https://blog.google/technology/google-deepmind/gemini-model-thinking-updates-march-2025/,verify
+2025-07-09,Grok 4,Grok,GPQA Diamond,87.5,https://x.ai/news/grok-4,heavy variant 88.9; verify
+2025-08-07,GPT-5,GPT,GPQA Diamond,88.4,https://openai.com/index/introducing-gpt-5/,pro with tools 89.4; verify
+2025-01-20,DeepSeek-R1,DeepSeek,GPQA Diamond,71.5,https://github.com/deepseek-ai/DeepSeek-R1,verify
+2024-10-22,Claude 3.5 Sonnet (new),Claude,SWE-bench Verified,49.0,https://www.anthropic.com/news/3-5-models-and-computer-use,verify
+2025-02-24,Claude 3.7 Sonnet,Claude,SWE-bench Verified,62.3,https://www.anthropic.com/news/claude-3-7-sonnet,70.3 with scaffold; verify
+2025-05-22,Claude Opus 4,Claude,SWE-bench Verified,72.5,https://www.anthropic.com/news/claude-4,verify
+2025-08-07,GPT-5,GPT,SWE-bench Verified,74.9,https://openai.com/index/introducing-gpt-5/,verify
+2025-09-29,Claude Sonnet 4.5,Claude,SWE-bench Verified,77.2,https://www.anthropic.com/news/claude-sonnet-4-5,verify
+2025-01-20,DeepSeek-R1,DeepSeek,SWE-bench Verified,49.2,https://github.com/deepseek-ai/DeepSeek-R1,verify
+2025-07-11,Kimi K2,Kimi,SWE-bench Verified,65.8,https://moonshotai.github.io/Kimi-K2/,verify
+2026-04-24,DeepSeek V4 Pro,DeepSeek,SWE-bench Verified,81.0,https://www.nxcode.io/resources/news/deepseek-v4-release-specs-benchmarks-2026,secondary report; verify
+2024-12-20,o3 (preview),GPT,FrontierMath,25.2,https://openai.com/index/deliberative-alignment/,OpenAI's December 2024 claim with high compute; Epoch's later independent run was lower; verify
+2025-08-07,GPT-5,GPT,FrontierMath,24.8,https://epoch.ai/frontiermath,tiers 1-3; Epoch's run; verify
+2025-07-09,Grok 4,Grok,FrontierMath,12.0,https://epoch.ai/frontiermath,tiers 1-3; Epoch's run; verify
+2025-03-25,Gemini 2.5 Pro,Gemini,FrontierMath,12.0,https://epoch.ai/frontiermath,tiers 1-3; Epoch's run; verify

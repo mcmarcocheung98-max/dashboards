@@ -213,6 +213,8 @@ def _country(s: str) -> str:
 
 
 def parse_epoch(text: str) -> pd.DataFrame:
+    """One row per model with training compute: model, date, flop, country (first listed), org, and where Epoch has them params,
+    hardware, hw_qty, cost (training compute cost, USD), open (open weights) and base (the base model of a fine-tune)."""
     d = pd.read_csv(StringIO(text), dtype=str)
     name, date, flop = _col(d, "model") or d.columns[0], _col(d, "publication date"), _col(d, "training compute", "flop")
     ctry, org = _col(d, "country"), _col(d, "organization")
@@ -220,7 +222,24 @@ def parse_epoch(text: str) -> pd.DataFrame:
         raise ValueError("Epoch layout changed")
     x = pd.DataFrame({"model": d[name], "date": pd.to_datetime(d[date], errors="coerce"), "flop": pd.to_numeric(d[flop], errors="coerce"),
                       "country": d[ctry].fillna("").map(_country) if ctry else "Unknown", "org": d[org].fillna("") if org else ""})
+    extra = {"params": _col(d, "parameters"), "hardware": _col(d, "training hardware"), "hw_qty": _col(d, "hardware quantity"),
+             "cost": _col(d, "training", "cost"), "open": _col(d, "accessibility"), "base": _col(d, "base model")}
+    for k, c in extra.items():
+        if c is None:
+            x[k] = np.nan if k in ("params", "hw_qty", "cost") else ("" if k != "open" else False)
+        elif k in ("params", "hw_qty", "cost"):
+            x[k] = pd.to_numeric(d[c].str.replace(",", ""), errors="coerce")
+        elif k == "open":
+            x[k] = d[c].fillna("").str.lower().str.contains("open weights")
+        else:
+            x[k] = d[c].fillna("")
     return x.dropna(subset=["date", "flop"]).query("flop > 0").sort_values("date").reset_index(drop=True)
+
+
+def epoch_models() -> pd.DataFrame:
+    """Epoch AI's notable models with training compute (parse_epoch), downloaded once a day under this module's key, so another
+    dashboard (AI Model Iteration) reads the same copy instead of fetching the file again."""
+    return parse_epoch(fetch(EPOCH, DAY, min_bytes=1000))
 
 
 def _compute_now() -> dict:

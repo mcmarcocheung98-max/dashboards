@@ -1,0 +1,7 @@
+date,model,family,developer,country,tokens_t,share,source,note
+2026-10-30,DeepSeek V4.1 Flash 1017,DeepSeek,DeepSeek,China,45.5,29.4,https://www.teamday.ai/blog/top-ai-models-openrouter-2026,week 24-30 Oct 2026; share = % of the top 20's tokens; verify
+2026-11-06,DeepSeek V4.1 Flash 1017,DeepSeek,DeepSeek,China,56.2,,https://openrouter.ai/rankings,OpenRouter top models by tokens (week to about 6 Nov 2026); +23% on the week; verify
+2026-11-06,DeepSeek V4.1 Flash,DeepSeek,DeepSeek,China,17.2,,https://openrouter.ai/rankings,verify
+2026-11-06,GLM 5.3 Flash,GLM,Zhipu AI (Z.ai),China,14.1,,https://openrouter.ai/rankings,verify
+2026-11-06,GPT-6 Luna,GPT,OpenAI,US,7.22,,https://openrouter.ai/rankings,verify
+2026-11-06,Hy4,Other,Tencent,China,7.05,,https://openrouter.ai/rankings,new entry; verify

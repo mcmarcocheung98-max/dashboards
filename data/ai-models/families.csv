@@ -1,0 +1,11 @@
+date,family,developer,country,wiki,openrouter,epoch_org,source,note
+2022-11-30,GPT,OpenAI,US,ChatGPT,openai,OpenAI,https://openai.com/index/chatgpt/,date = first release in releases.csv; wiki = the English Wikipedia article whose pageviews stand for attention to the family
+2023-03-14,Claude,Anthropic,US,Claude (language model),anthropic,Anthropic,https://www.anthropic.com/news/introducing-claude,
+2023-12-06,Gemini,Google DeepMind,US,Gemini (chatbot),google,Google|DeepMind,https://blog.google/technology/ai/google-gemini-ai/,
+2023-02-24,Llama/Muse,Meta,US,Llama (language model),meta-llama,Meta|Facebook,https://ai.meta.com/blog/large-language-model-llama-meta-ai/,Meta's Llama (open weights) and from April 2026 its closed Muse models
+2023-11-04,Grok,xAI,US,Grok (chatbot),x-ai,xAI,https://x.ai/news/grok,
+2023-11-29,DeepSeek,DeepSeek,China,DeepSeek,deepseek,DeepSeek,https://github.com/deepseek-ai/DeepSeek-LLM,
+2023-08-03,Qwen,Alibaba,China,Qwen,qwen,Alibaba,https://github.com/QwenLM/Qwen,
+2025-01-20,Kimi,Moonshot AI,China,Kimi (chatbot),moonshotai,Moonshot,https://github.com/MoonshotAI/Kimi-k1.5,
+2023-09-27,Mistral,Mistral AI,France,Mistral AI,mistralai,Mistral,https://mistral.ai/news/announcing-mistral-7b,
+2024-01-16,GLM,Zhipu AI (Z.ai),China,Zhipu AI,z-ai,Zhipu|Z\.ai,https://github.com/THUDM/GLM-4,

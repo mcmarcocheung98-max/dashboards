@@ -151,6 +151,10 @@ def test_owid_parser_rejects_a_changed_layout():
         M.parse_owid("Country,Value\nChina,1")
 
 
+def test_shared_rows_for_other_dashboards():
+    assert [r["date"] for r in M.controls_rows()] == sorted(r["date"] for r in M.controls_rows()) and M.leaderboard_rows()[-1]["series"] == "China best"
+
+
 def test_chips_node_gap_and_controls():
     from app import cache
     cache._cache.clear()

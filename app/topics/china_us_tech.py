@@ -112,6 +112,16 @@ def parse_epoch(text: str) -> pd.DataFrame:
     return x.sort_values("date").reset_index(drop=True)
 
 
+def controls_rows() -> list[dict]:
+    """The export-control timeline (data/china-us-tech/controls.csv), oldest first; shared with the AI Model Iteration dashboard."""
+    return sorted(manual_rows(SLUG, "controls"), key=lambda r: r["date"])
+
+
+def leaderboard_rows() -> list[dict]:
+    """The dated LMArena copies (data/china-us-tech/leaderboard.csv: best US and best Chinese model per snapshot), oldest first."""
+    return sorted(manual_rows(SLUG, "leaderboard"), key=lambda r: r["date"])
+
+
 def _models_now() -> dict:
     def epoch():
         x = parse_epoch(fetch(EPOCH, DAY, min_bytes=1000))

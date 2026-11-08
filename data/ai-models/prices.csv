@@ -1,0 +1,71 @@
+date,model,family,developer,country,input,output,context,source,note
+2023-03-14,GPT-4 (8k),GPT,OpenAI,US,30,60,8192,https://openai.com/index/gpt-4-research/,
+2023-11-06,GPT-4 Turbo,GPT,OpenAI,US,10,30,128000,https://openai.com/index/new-models-and-developer-products-announced-at-devday/,
+2024-05-13,GPT-4o,GPT,OpenAI,US,5,15,128000,https://openai.com/index/hello-gpt-4o/,cut to $2.50/$10 in Aug 2024
+2024-07-18,GPT-4o mini,GPT,OpenAI,US,0.15,0.6,128000,https://openai.com/index/gpt-4o-mini-advancing-cost-efficient-intelligence/,
+2024-12-05,o1,GPT,OpenAI,US,15,60,200000,https://openai.com/api/pricing/,
+2025-04-14,GPT-4.1,GPT,OpenAI,US,2,8,1047576,https://openai.com/index/gpt-4-1/,
+2025-04-16,o3,GPT,OpenAI,US,10,40,200000,https://openai.com/index/introducing-o3-and-o4-mini/,cut to $2/$8 in June 2025
+2025-08-07,GPT-5,GPT,OpenAI,US,1.25,10,400000,https://openai.com/index/introducing-gpt-5/,
+2026-04-23,GPT-5.5,GPT,OpenAI,US,5,30,400000,https://ofox.ai/blog/ai-api-pricing-comparison-2026/,aggregator table (May 2026); verify
+2026-07-09,GPT-5.6 Sol,GPT,OpenAI,US,5,30,400000,https://www.cometapi.com/gpt-6-revealed-when-will-it-be-released/,secondary; another source lists $4/$20 before a cut; verify
+2026-09-03,GPT-6 Astra,GPT,OpenAI,US,10,50,1050000,https://www.yottalabs.ai/post/gpt-6-astra-pricing-api-cost-2026,"verified against OpenAI's pricing page by that guide on 5 Sep 2026; prompts over 272k tokens billed at $20/$75; checked 2026-11-08 (secondary)"
+2026-09-22,GPT-6 Sol,GPT,OpenAI,US,2,10,1050000,https://runtimewire.com/article/openai-gpt-6-sol-luna-launch,down from $4/$20; secondary; verify
+2026-09-22,GPT-6 Luna,GPT,OpenAI,US,0.1,0.5,1050000,https://runtimewire.com/article/openai-gpt-6-sol-luna-launch,secondary; verify
+2023-03-14,Claude 1,Claude,Anthropic,US,11.02,32.68,9000,https://www.anthropic.com/news/introducing-claude,launch prices per million tokens (quoted then per million characters); verify
+2023-07-11,Claude 2,Claude,Anthropic,US,11.02,32.68,100000,https://www.anthropic.com/news/claude-2,verify
+2024-03-04,Claude 3 Opus,Claude,Anthropic,US,15,75,200000,https://www.anthropic.com/news/claude-3-family,
+2024-03-04,Claude 3 Sonnet,Claude,Anthropic,US,3,15,200000,https://www.anthropic.com/news/claude-3-family,
+2024-06-20,Claude 3.5 Sonnet,Claude,Anthropic,US,3,15,200000,https://www.anthropic.com/news/claude-3-5-sonnet,
+2025-02-24,Claude 3.7 Sonnet,Claude,Anthropic,US,3,15,200000,https://www.anthropic.com/news/claude-3-7-sonnet,
+2025-05-22,Claude Opus 4,Claude,Anthropic,US,15,75,200000,https://www.anthropic.com/news/claude-4,
+2025-09-29,Claude Sonnet 4.5,Claude,Anthropic,US,3,15,200000,https://www.anthropic.com/news/claude-sonnet-4-5,
+2025-11-24,Claude Opus 4.5,Claude,Anthropic,US,5,25,200000,https://www.anthropic.com/news/claude-opus-4-5,verify
+2026-04-16,Claude Opus 4.7,Claude,Anthropic,US,5,25,1000000,https://thekodelab.com/en/posts/claude-opus-4-7/,verify
+2026-06-09,Claude Fable 5,Claude,Anthropic,US,10,50,1000000,https://platform.claude.com/docs/ja/models/mythos-5/overview,same price as Mythos 5; checked 2026-11-08 (secondary)
+2026-07-24,Claude Opus 5,Claude,Anthropic,US,5,25,1000000,https://www.axios.com/2026/07/24/anthropic-releases-new-model-opus-5,checked 2026-11-08
+2026-09-01,Claude Fable 5.1,Claude,Anthropic,US,10,50,1000000,https://claude.com/pricing,checked 2026-11-08 on Anthropic's pricing page
+2026-09-22,Claude Opus 5.5,Claude,Anthropic,US,4,20,1000000,https://claude.com/pricing,checked 2026-11-08 on Anthropic's pricing page
+2026-10-15,Claude Sonnet 5.5,Claude,Anthropic,US,2,10,1000000,https://claude.com/pricing,checked 2026-11-08 on Anthropic's pricing page; release date approximate
+2026-10-15,Claude Haiku 5.5,Claude,Anthropic,US,0.1,0.5,1000000,https://claude.com/pricing,prompts up to 100k tokens; checked 2026-11-08; release date approximate
+2024-05-14,Gemini 1.5 Pro,Gemini,Google DeepMind,US,3.5,10.5,1000000,https://ai.google.dev/gemini-api/docs/pricing,cut to $1.25/$5 in Oct 2024
+2024-05-14,Gemini 1.5 Flash,Gemini,Google DeepMind,US,0.35,1.05,1000000,https://ai.google.dev/gemini-api/docs/pricing,cut to $0.075/$0.30 in Aug 2024
+2025-04-04,Gemini 2.5 Pro,Gemini,Google DeepMind,US,1.25,10,1048576,https://ai.google.dev/gemini-api/docs/pricing,prompts up to 200k tokens
+2025-06-17,Gemini 2.5 Flash,Gemini,Google DeepMind,US,0.3,2.5,1048576,https://ai.google.dev/gemini-api/docs/pricing,
+2025-11-18,Gemini 3 Pro,Gemini,Google DeepMind,US,2,12,1048576,https://ai.google.dev/gemini-api/docs/pricing,prompts up to 200k tokens; verify
+2026-02-19,Gemini 3.1 Pro,Gemini,Google DeepMind,US,2,12,1048576,https://www.aimagicx.com/blog/llm-api-pricing-comparison-2026,$4/$18 above 200k tokens; checked 2026-11-08 (secondary)
+2026-10-13,Gemini 4 Argon,Gemini,Google DeepMind,US,2,10,1048576,https://letsdatascience.com/news/gemini-4-argon-undercuts-claude-on-price-73027210,introductory price to 30 Nov 2026 then $4/$20; checked 2026-11-08 (secondary)
+2024-07-23,Llama 3.1 405B,Llama/Muse,Meta,US,3,3,128000,https://www.together.ai/pricing,open weights: price of a hosted provider (Together AI at launch); verify
+2025-04-05,Llama 4 Maverick,Llama/Muse,Meta,US,0.27,0.85,1000000,https://openrouter.ai/meta-llama/llama-4-maverick,open weights: typical hosted price; verify
+2024-10-21,Grok-2,Grok,xAI,US,2,10,131072,https://docs.x.ai/docs/models,API beta price; verify
+2025-02-17,Grok 3,Grok,xAI,US,3,15,131072,https://docs.x.ai/docs/models,
+2025-07-09,Grok 4,Grok,xAI,US,3,15,256000,https://docs.x.ai/docs/models,
+2025-09-19,Grok 4 Fast,Grok,xAI,US,0.2,0.5,2000000,https://x.ai/news/grok-4-fast,
+2026-07-16,Grok 4.5,Grok,xAI,US,2,6,,https://intuitionlabs.ai/articles/llm-api-pricing-comparison-2025,short-context rate; checked 2026-11-08 (secondary)
+2026-09-21,Grok 4.7,Grok,xAI,US,2,6,,https://intuitionlabs.ai/articles/llm-api-pricing-comparison-2025,short-context rate ($4/$12 long context); checked 2026-11-08 (secondary)
+2024-05-06,DeepSeek-V2,DeepSeek,DeepSeek,China,0.14,0.28,32000,https://api-docs.deepseek.com/quick_start/pricing,1 and 2 yuan per million tokens; verify
+2024-12-26,DeepSeek-V3,DeepSeek,DeepSeek,China,0.27,1.1,64000,https://api-docs.deepseek.com/quick_start/pricing,standard price after the launch promotion
+2025-01-20,DeepSeek-R1,DeepSeek,DeepSeek,China,0.55,2.19,64000,https://api-docs.deepseek.com/quick_start/pricing,
+2025-08-21,DeepSeek-V3.1,DeepSeek,DeepSeek,China,0.56,1.68,128000,https://api-docs.deepseek.com/quick_start/pricing,verify
+2025-09-29,DeepSeek-V3.2-Exp,DeepSeek,DeepSeek,China,0.28,0.42,128000,https://api-docs.deepseek.com/quick_start/pricing,verify
+2026-04-24,DeepSeek V4 Pro,DeepSeek,DeepSeek,China,1.74,3.48,1000000,https://simonwillison.net/2026/apr/24/deepseek-v4,cache miss; checked 2026-11-08 (secondary)
+2026-04-24,DeepSeek V4 Flash,DeepSeek,DeepSeek,China,0.14,0.28,1000000,https://simonwillison.net/2026/apr/24/deepseek-v4,checked 2026-11-08 (secondary)
+2026-10-17,DeepSeek V4.1 Flash,DeepSeek,DeepSeek,China,0.3,1.2,1000000,https://anotherwrapper.com/llm-pricing/deepseek-v4.1-flash,peak rate; off-peak $0.15/$0.60; another aggregator shows $0.07/$0.18; verify
+2025-01-28,Qwen2.5-Max,Qwen,Alibaba,China,1.6,6.4,32768,https://www.alibabacloud.com/help/en/model-studio/models,international Model Studio price; verify
+2025-04-29,Qwen3-235B-A22B,Qwen,Alibaba,China,0.7,2.8,131072,https://www.alibabacloud.com/help/en/model-studio/models,non-thinking output; verify
+2025-09-24,Qwen3-Max,Qwen,Alibaba,China,1.2,6,262144,https://www.alibabacloud.com/help/en/model-studio/models,prompts up to 32k tokens; verify
+2026-02-16,Qwen3.5-Plus,Qwen,Alibaba,China,0.4,2.4,262144,https://www.eweek.com/news/alibaba-qwen35-ai-model-launch/,"""60% lower costs"" than Qwen3-Max per eWeek; figures verify"
+2025-07-11,Kimi K2,Kimi,Moonshot AI,China,0.6,2.5,128000,https://platform.moonshot.ai/docs/pricing,
+2025-11-06,Kimi K2 Thinking,Kimi,Moonshot AI,China,0.6,2.5,256000,https://platform.moonshot.ai/docs/pricing,verify
+2026-01-27,Kimi K2.5,Kimi,Moonshot AI,China,0.6,3,256000,https://platform.moonshot.ai/docs/pricing,verify
+2026-07-16,Kimi K3,Kimi,Moonshot AI,China,3,15,1000000,https://intl.cloud.tencent.com/document/product/1300/78937,Moonshot and Tencent Cloud agree; checked 2026-11-08 (secondary)
+2026-10-23,Kimi K3.1 Pro,Kimi,Moonshot AI,China,2,10,1000000,https://devtk.ai/en/price-changes/,checked 2026-11-08 (secondary)
+2024-02-26,Mistral Large,Mistral,Mistral AI,France,8,24,32768,https://mistral.ai/news/mistral-large,verify
+2024-07-24,Mistral Large 2,Mistral,Mistral AI,France,3,9,128000,https://mistral.ai/news/mistral-large-2407,later $2/$6; verify
+2025-05-07,Mistral Medium 3,Mistral,Mistral AI,France,0.4,2,128000,https://mistral.ai/news/mistral-medium-3,
+2025-12-02,Mistral Large 3,Mistral,Mistral AI,France,0.5,1.5,256000,https://mistral.ai/news/mistral-3,verify
+2026-10-06,Mistral Large 4,Mistral,Mistral AI,France,1.36,4.18,,https://benchmarklist.com/models/mistralai-mistral-large-4/,aggregator; no official list found; verify
+2025-07-28,GLM-4.5,GLM,Zhipu AI (Z.ai),China,0.6,2.2,128000,https://docs.z.ai/guides/overview/pricing,verify
+2026-02-11,GLM-5,GLM,Zhipu AI (Z.ai),China,1,3.2,200000,https://cloudprice.net/models/zai/glm-5,checked 2026-11-08 (secondary)
+2026-06-18,GLM-5.2,GLM,Zhipu AI (Z.ai),China,1.4,4.4,200000,https://venturebeat.com/technology/z-ais-open-weights-glm-5-2-beats-gpt-5-5-on-multiple-long-horizon-coding-benchmarks-for-1-6th-the-cost,checked 2026-11-08 (secondary)
+2026-08-14,GLM-5.3,GLM,Zhipu AI (Z.ai),China,1.4,4.4,200000,https://www.qubrid.com/blog-news/glm-53-is-here-full-benchmark-breakdown-architecture-pricing,checked 2026-11-08 (secondary)

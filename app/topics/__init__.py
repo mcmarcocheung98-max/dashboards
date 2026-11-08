@@ -155,7 +155,7 @@ def changes(slug: str) -> dict:
 CATEGORIES = (
     ("Signals", "The one thing to watch on each dashboard, and today's email.", ("signals",)),
     ("Money & markets", "Prices, rates and where capital is flowing.", ("btc-cycles", "altcoins", "ai-stocks", "debt-rates", "housing", "pokemon-cards", "luxury")),
-    ("AI & technology", "How fast AI, chips and machines are arriving, and who leads.", ("ai", "compute-chips", "china-us-tech", "robotaxi", "space")),
+    ("AI & technology", "How fast AI, chips and machines are arriving, and who leads.", ("ai", "ai-models", "compute-chips", "china-us-tech", "robotaxi", "space")),
     ("People & planet", "The slow forces: population, health and climate.", ("demographics", "longevity", "climate")),
     ("Sentiment & attention", "What people are betting on and paying attention to.", ("prediction-markets", "trends")),
     ("About this site", "How the dashboards are built, mapped and kept honest, and what is still to do.", ("status", "graphify")),

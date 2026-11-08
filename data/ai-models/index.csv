@@ -1,0 +1,9 @@
+date,model,family,developer,country,value,version,open,source,note
+2026-09-30,Claude Opus 5.5 (Max),Claude,Anthropic,US,58,v5,no,https://artificialanalysis.ai/articles/artificial-analysis-intelligence-index-v5,at the v5 launch (late Sep 2026) per Crypto Briefing's summary; verify
+2026-09-30,GPT-6 Astra,GPT,OpenAI,US,57,v5,no,https://cryptobriefing.com/artificial-analysis-intelligence-index-google-anthropic-openai/,verify
+2026-09-30,GPT-6.1 Sol,GPT,OpenAI,US,55,v5,no,https://cryptobriefing.com/artificial-analysis-intelligence-index-google-anthropic-openai/,verify
+2026-11-07,Gemini 4 Carbon (High),Gemini,Google DeepMind,US,60,v5,no,https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index,leaderboard as read on 7-8 Nov 2026 via search; 59 when first posted on 28 Oct 2026; verify
+2026-11-07,Claude Opus 5.5 (Max),Claude,Anthropic,US,59,v5,no,https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index,verify
+2026-11-07,Gemini 4 Carbon (Medium),Gemini,Google DeepMind,US,58,v5,no,https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index,verify
+2026-11-07,GPT-5.6 Sol,GPT,OpenAI,US,58.9,v5,no,https://benchlm.ai/benchmarks/artificialanalysis,BenchLM compiles provider self-reports; verify against artificialanalysis.ai
+2026-11-07,Kimi K3.1 Pro,Kimi,Moonshot AI,China,46,v5,yes,https://artificialanalysis.ai/leaderboards/models,best open-weights model on the index; verify

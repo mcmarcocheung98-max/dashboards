@@ -8,6 +8,7 @@ One folder per dashboard: its CSVs (points with no free API, one cited row each)
 | Autonomous Car Adoption | `/robotaxi` | [robotaxi/README.md](robotaxi/README.md) |
 | AI: Jobs & Adoption | `/ai` | [ai/README.md](ai/README.md) |
 | BTC Cycles & Sector Rotation | `/btc-cycles` | [btc-cycles/README.md](btc-cycles/README.md) |
+| AI Model Iteration | `/ai-models` | [ai-models/README.md](ai-models/README.md) |
 
 `/` is the index. Each page's data is at `/api/<slug>/<name>` (JSON).
 
