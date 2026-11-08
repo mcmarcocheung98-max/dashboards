@@ -1097,6 +1097,14 @@
      "what": "The owner asked for a combined index: the core 13 against all 20 stocks (core plus picks), with the dip study and the Setup Score backtest rerun on each; the core basket and the signals are unchanged",
      "commit": "20a8841",
      "by": "session:ai-stocks"
+    },
+    {
+     "dashboard": "Luxury Tracker",
+     "slug": "luxury",
+     "tab": "overview",
+     "what": "The owner asked for photos, retail availability and second-hand stock on each item card: Wikipedia lead images, a dated stock.csv (the steel Pepsi reads discontinued April 2026; Saint Laurent and Louis Vuitton unknown until their pages are read), Chrono24 and eBay counts with links",
+     "commit": "c1379c9",
+     "by": "session:luxury"
     }
    ],
    "review": "climate",
