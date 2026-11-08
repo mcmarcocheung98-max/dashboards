@@ -577,7 +577,7 @@
    "date": "2026-11-08",
    "run": "scheduled",
    "result": "problems",
-   "summary": "Email built, not sent (no Gmail secrets). Signals 56 of 73 wired, 16 crossed, unchanged. Reviewed Climate: all tabs OK; the disasters watch point is dead (NOAA ended the series), proposed a replacement. Live check aborted at Trends: the retry step crashed on a reload during the agent's own push at 07:43 (fixed in smoke.py, re-run started). Tabs checked before that were all OK except Luxury Watches, whose charts sit a month apart on the shared axis (handed to the luxury session).",
+   "summary": "Email built, not sent (no Gmail secrets). Signals 56 of 73 wired, 16 crossed, unchanged. Reviewed Climate: all tabs OK; the disasters watch point is dead (NOAA ended the series), proposed a replacement. Live check aborted at Trends: the retry step crashed on a reload during the agent's own push at 07:43 (fixed in smoke.py, re-run started). Tabs checked before that were all OK except Luxury Watches, whose charts sit a month apart on the shared axis (fixed by the luxury session in b6f5225 within the hour).",
    "fixed": [
     "smoke retry"
    ],
@@ -1022,6 +1022,20 @@
      "slug": "status",
      "what": "Proposal r-climate-disasters: swap the ended NOAA count for Climate Central's continuation or Swiss Re's insured losses",
      "by": "agent"
+    },
+    {
+     "dashboard": "Site",
+     "what": "Live check: a retry whose reload fails counts as 'failed twice' instead of aborting the whole run (this morning's check died on the agent's own push)",
+     "commit": "b936ee0",
+     "by": "agent"
+    },
+    {
+     "dashboard": "Luxury Tracker",
+     "slug": "luxury",
+     "tab": "watches",
+     "what": "Charts on Watches, Bags and Liquidity now share the same month-end grid, so a dragged date lands on the same month everywhere",
+     "commit": "b6f5225",
+     "by": "session:luxury"
     }
    ],
    "review": "climate",
