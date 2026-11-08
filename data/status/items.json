@@ -1037,6 +1037,13 @@
      "what": "Charts on Watches, Bags and Liquidity now share the same month-end grid, so a dragged date lands on the same month everywhere",
      "commit": "b6f5225",
      "by": "session:luxury"
+    },
+    {
+     "dashboard": "Global Debt & Rates",
+     "slug": "debt-rates",
+     "what": "Yesterday's review fixed: the Hong Kong spending card shows its name, note and questions again (as a table, since it has one year per item); the Fed decisions list folds past the latest 10, with a CSV of the full list",
+     "commit": "58f4cfe",
+     "by": "session:debt-rates"
     }
    ],
    "review": "climate",
