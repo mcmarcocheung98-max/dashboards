@@ -242,6 +242,14 @@
    "since": "2026-11-07",
    "detail": "Five steps, pushed one by one: Wikipedia attention, auction results, eBay Browse API (keyed), the weekly manual log, the Liquidity tab with its score and signal. Step 1 done (ae24707): Wikipedia attention per item since 2015, on a new Liquidity tab. Step 2 done (b52ca39): auctions.csv and auction_sales.csv. Step 3 done (5ddc59d): the eBay feed, waiting on the owner's keys. Step 4 done (422bd5a): liquidity.csv seeded. Step 5 done (61ce5f2): liquidity score per market and the sixth signal. Watches read +1.32 'tight'; bags need more data.",
    "done": "2026-11-07"
+  },
+  {
+   "id": "ai-models-build",
+   "title": "Build the AI Model Iteration dashboard",
+   "owner": "session:ai-models",
+   "status": "in_progress",
+   "since": "2026-11-08",
+   "detail": "Session session_01Hguru1tHBCffh5BwqSs3mk started from the dev agent's brief; it reuses compute_chips and china_us_tech data rather than re-downloading, and reports back to the parent when pushed."
   }
  ],
  "roadmap": [
@@ -463,6 +471,16 @@
    "size": "small",
    "detail": "NOAA ended its billion-dollar disaster count after 2024, so the signal 'above 25 by September' can never cross again. Replace it with a live series: Climate Central now continues the same count (events of $1bn+, CPI-adjusted), watch 'above 25 by September' as before; if that source is not server-reachable, use Swiss Re's insured natural-catastrophe losses, watch 'above $150bn in a year'. An edit to data/signals/watchlist.json, the Climate module's SIGNALS() and its tests, by the Climate session.",
    "why": "Found in the dev agent's review of Climate on 8 Nov: the signal reads the 2024 figure (17) for ever and is marked as ended on the page."
+  },
+  {
+   "id": "r-ai-models",
+   "title": "AI Model Iteration: compute, utility, sanctions and cost across the top models",
+   "horizon": "now",
+   "status": "in_progress",
+   "area": "Dashboards",
+   "by": "session:ai-models",
+   "approved": "2026-11-08",
+   "detail": "Asked by the owner on 8 Nov. Release cadence per family, training compute (Epoch, via the Compute & chips module), arena and benchmark utility, export-control rules against Chinese frontier compute (via the China vs US tech module), training-cost estimates, and deployment prices per million tokens from OpenRouter's public list plus hand-entered launch prices. Five signals proposed."
   }
  ],
  "log": [
@@ -1048,6 +1066,7 @@
    ],
    "review": "climate",
    "next": [
+    "AI Model Iteration dashboard being built in its own session",
     "Monday: the first weekly luxury liquidity log, and the sessions' token totals",
     "Pokémon cards, Longevity, Compute & chips: still waiting for the owner's reply in their sessions"
    ],
