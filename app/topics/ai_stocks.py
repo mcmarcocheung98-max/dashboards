@@ -572,10 +572,11 @@ def _summary(vals: list) -> dict:
             "up": sum(1 for x in v if x > 0)}
 
 
-def _study(M: dict) -> dict:
-    idx = M["idx"]
+def _study(M: dict, idx: pd.Series | None = None, eps: list | None = None) -> dict:
+    """The 15% dip study on the core basket, or on another index (idx) with its own episodes."""
+    idx = M["idx"] if idx is None else idx
     rows = []
-    for e in M["episodes"]:
+    for e in (M["episodes"] if eps is None else eps):
         if e["depth"] is None or e["depth"] > DD_STUDY or not e["cross15"]:
             continue
         lvl15 = idx.loc[pd.Timestamp(e["cross15"])]
@@ -588,11 +589,52 @@ def _study(M: dict) -> dict:
             "bottom": {h: _summary([r["bottom"][h] for r in past]) for h in HORIZONS}}
 
 
+def combined_index(M: dict) -> pd.Series:
+    """Core basket and the owner's picks as one equal-weight index (20 stocks, ORCL, AMD and NVDA once), each stock from its first
+    full month of trading, the picks' rule; the core basket itself keeps its own (a member joins the day after its first close)."""
+    both = {**M["members"], **M["picks"]}
+    if not both:
+        raise LookupError("no prices")
+    return basket_index({k: full_months(v) for k, v in both.items()})
+
+
+def backtest_of(idx: pd.Series, b50: pd.Series, V: pd.Series | None, qqq: pd.Series | None) -> dict:
+    """Both backtests on one index: the 15% dip study, and the Setup Score's bands and episodes (the score built from this index's own
+    drawdown, breadth, RSI and relative return, with the shared VIX)."""
+    dd = drawdown(idx)
+    st = _study({}, idx, episodes(idx))
+    out = {"dd_now": _r(dd.iloc[-1], 4), "dd": _pts(dd, 4), "n": st["n"], "cross": st["cross"], "bottom": st["bottom"],
+           "rows": sorted(st["rows"], key=lambda r: r["peak"], reverse=True),
+           "total": _r(idx.iloc[-1] / idx[idx.index >= INDEX_START].iloc[0] - 1, 4), "worst": _r(dd.min(), 4)}
+    try:
+        sc = setup_score(score_parts(idx, b50, rsi(idx), V, qqq))
+        stats = band_stats(sc, idx)
+        out |= {"score_now": _r(sc.iloc[-1], 1), "band_now": band_of(sc.iloc[-1]), "band_stats": stats, "score_episodes": score_episodes(sc, idx),
+                "score": _pts(sc, 1), "sentence": band_sentence(stats, band_of(sc.iloc[-1]))}
+    except Exception as e:
+        out["score_error"] = type(e).__name__
+    return out
+
+
+def _compare(M: dict) -> dict:
+    """Core basket against core + picks combined, on the same two backtests."""
+    try:
+        V = vix()[0]
+    except Exception:
+        V = None
+    q = M["px"].get("QQQ")
+    both = {**M["members"], **M["picks"]}
+    cidx = combined_index(M)
+    return {"core": backtest_of(M["idx"], M["b50"], V, q), "combined": backtest_of(cidx, breadth(both, 50, STOCKS), V, q),
+            "combined_members": sorted(both), "combined_since": {s: str(full_months(v).index[min(1, len(full_months(v)) - 1)].date())
+                                                                 for s, v in both.items() if full_months(v).index[0] > INDEX_START}}
+
+
 def _dips_now() -> dict:
     M = _model()
     st = _study(M)
     dd = M["dd"]
-    out = payload({"dd": lambda: _pts(dd, 4)}, sources=M["sources"])
+    out = payload({"dd": lambda: _pts(dd, 4), "compare": lambda: _compare(M)}, sources=M["sources"] + [FRED_VIX, CBOE_VIX])
     out |= {"rows": sorted(st["rows"], key=lambda r: r["peak"], reverse=True), "n": st["n"], "cross": st["cross"], "bottom": st["bottom"],
             "now": {"dd": _r(dd.iloc[-1], 4)}, "horizons": HORIZONS, "threshold": DD_STUDY}
     out["errors"] = M["errors"]

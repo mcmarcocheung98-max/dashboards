@@ -65,6 +65,7 @@ Yahoo is not used: it answers Railway with 429.
   bottom. Forward returns are over 21, 63 and 126 trading days (1, 3 and 6 months) from that close. The current drawdown, when it is
   15% or deeper, is shown in the table but left out of the median and range (its future is not known). "Further fall" is how much
   lower the bottom was than the 15% point.
+- **Core against combined (After past dips tab):** the owner asked on 8 Nov 2026 to combine the basket and their picks and rerun the backtests. The combined index holds all 20 stocks of both groups (Oracle, AMD and Nvidia once), equal weight, rebalanced daily, each stock from its first full month of trading (the picks' rule), so the late listings (SanDisk, Nebius, Arm, IREN, AppLovin, Rocket Lab) join only when they trade and the early years are mostly the core basket. Both backtests are rerun on it: the 15% dip study, and the Setup Score rebuilt from the combined index's own drawdown, breadth (all 20), RSI and 3-month return against QQQ, with the same VIX, ranked against its own history since 2020. The core basket, its score and the signals are unchanged.
 - **Relative returns:** 3 months = 63 trading days, 12 months = 252. AI vs QQQ is the basket's return minus QQQ's, in percentage
   points; the ratio charts divide one by the other and rebase to 100 in January 2020.
 - **Revenue growth:** quarterly revenue from 10-Q and 10-K facts (`Revenues`, `RevenueFromContractWithCustomerExcludingAssessedTax`,

@@ -621,3 +621,18 @@ def test_live_sources():
     for s in M.PICKS:
         assert len(M.nasdaq(s)) > 100, s
     assert len(M.vix()[0]) > 1000
+
+
+def test_combined_backtest_on_dips(mocked):
+    """Core basket and core + picks as one index, both backtests rerun on each."""
+    p = M.ENDPOINTS["dips"]()
+    X = p["compare"]
+    assert set(X["combined_members"]) == set(M.STOCKS) and len(X["combined_members"]) == 20
+    for k in ("core", "combined"):
+        g = X[k]
+        assert g["dd"] and g["worst"] <= g["dd_now"] <= 0 and g["band_stats"] and "score_episodes" in g
+        assert all(r["depth"] <= -0.15 for r in g["rows"]) and g["cross"]["3m"]["n"] == g["n"]
+    assert X["core"]["n"] == p["n"] and X["core"]["cross"] == p["cross"]           # the core rerun matches the tab's own study
+    assert X["combined"]["dd"] != X["core"]["dd"]
+    assert "SNDK" in X["combined_since"] and "MSFT" not in X["combined_since"]
+    B.json_safe(p)

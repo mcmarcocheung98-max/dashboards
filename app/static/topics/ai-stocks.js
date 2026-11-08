@@ -95,6 +95,39 @@ function scoreCards(d) {
   return [G, BT, GT, RT, ST];
 }
 
+// ---------- After past dips: the core basket against core + the owner's picks as one index, on both backtests
+function compareCards(X, H, HL) {
+  if (!X || !X.core || !X.combined) return [];
+  const K = [["core", "AI basket (13)"], ["combined", "Combined (" + (X.combined_members || []).length + ")"]];
+  const med = (S, h) => { const s = (S || {})[h] || {}; return s.median == null ? "–" : pct(s.median, 0) + " (" + s.up + "/" + s.n + " up)"; };
+  const band = k => el("span", {}, swatch(BAND_COL[X[k].band_now] || "var(--muted)", ""), X[k].score_now == null ? "–" : num(X[k].score_now, 0));
+  const head = card("Core basket against core + your picks combined",
+    table(["", "Return since Jan 2020", "Worst drawdown", "Now below its high", "Setup Score now", "Past 15% dips", ...H.map(h => HL[h] + " after the 15% point"), ...H.map(h => HL[h] + " after the bottom")],
+      K.map(([k, lab]) => el("tr", {}, td(lab), td(pct(X[k].total, 0), cls(X[k].total)), td(ddf(X[k].worst), "down"), td(ddf(X[k].dd_now), X[k].dd_now < -0.15 ? "down" : ""), td(band(k)),
+        td(num(X[k].n)), ...H.map(h => td(med(X[k].cross, h), cls(((X[k].cross || {})[h] || {}).median))), ...H.map(h => td(med(X[k].bottom, h), cls(((X[k].bottom || {})[h] || {}).median)))))),
+    note("Combined: all " + (X.combined_members || []).length + " stocks of both groups (Oracle, AMD and Nvidia once) in one equal-weight index, rebalanced daily, each stock from its first full month of trading" +
+      (Object.keys(X.combined_since || {}).length ? " (" + Object.entries(X.combined_since).map(([s, t]) => s + " from " + dateOf(t)).join(", ") + ")" : "") +
+      ". The picks that listed late join the combined index only when they start trading, so its early years are mostly the core basket. Both backtests are rerun on each index: the 15% dip study (median return, episodes up of episodes) and the Setup Score, rebuilt from each index's own drawdown, breadth, RSI and return against QQQ. Small samples, history and not a forecast."));
+  const dd = card("Drawdown: core basket and combined", ...linesChart([{ name: "AI basket (13)", points: X.core.dd, color: css("--s1") }, { name: "Combined", points: X.combined.dd, color: css("--s2") }], ddf, { hlines: [-0.15] }));
+  const C = X.combined, rows = C.rows || [];
+  const T = card("Combined index: each drawdown of 15% or more", table(["Peak", "15% point", "Bottom", "Depth", ...H.map(h => HL[h] + " after 15%"), ...H.map(h => HL[h] + " after bottom")],
+    rows.map(r => el("tr", {}, td(dateOf(r.peak) + (r.ongoing ? " (now)" : "")), td(dateOf(r.cross15)), td(dateOf(r.trough)), td(ddf(r.depth), "down"),
+      ...H.map(h => td(r.cross[h] == null ? "–" : pct(r.cross[h], 0), cls(r.cross[h]))), ...H.map(h => td(r.bottom[h] == null ? "–" : pct(r.bottom[h], 0), cls(r.bottom[h])))))));
+  const st = k => (X[k].band_stats || []);
+  const S = card("Setup Score bands, core against combined: median return 3 months later, and how often it was higher",
+    table(["Band", "Core: days", "Core: 3 months", "Combined: days", "Combined: 3 months"],
+      st("core").map((r, i) => { const c = st("combined")[i] || { "3m": {} }; const f = x => x.median == null ? "–" : pct(x.median, 1) + " · " + share(x.hit) + " higher";
+        return el("tr", {}, td([swatch(BAND_COL[r.band], r.lo + "–" + r.hi + " " + r.label)]), td(num(r.days)), td(f(r["3m"]), cls(r["3m"].median)), td(num(c.days)), td(f(c["3m"]), cls(c["3m"].median))); })),
+    C.sentence ? note("Combined, today's band: " + C.sentence) : null,
+    note("Each index gets its own score, ranked against its own history since 2020, so a day can sit in different bands for the two."));
+  const E = C.score_episodes || {}, part = (v, p) => v == null ? "–" : pct(v, 0) + (p ? " so far" : "");
+  const GE = card("Combined index: washout (<10) and stretched (90+) episodes", table(["Started", "Band", "Score", "Level", "Best gain, 6 months", "Best gain, 12 months", "Worst fall, 90 days"],
+    [...(E.green || []).map(e => el("tr", {}, td(dateOf(e.date)), td("washout"), td(num(e.score, 1)), td(num(e.level, 0)), td(part(e.best6m, e.partial6m), "up"), td(part(e.best12m, e.partial12m), "up"), td("–"))),
+     ...(E.red || []).map(e => el("tr", {}, td(dateOf(e.date)), td("stretched"), td(num(e.score, 1)), td(num(e.level, 0)), td("–"), td("–"), td(part(e.worst90d, e.partial), "down")))]),
+    note("Same rules as the Setup tab's episode tables, on the combined index. Small sample, not a forecast."));
+  return [head, dd, T, S, GE];
+}
+
 // ---------- the stock panel (from the strip): insiders (Form 4), institutions (13F consensus) and fundamentals (companyfacts)
 const ONCE = {};
 const once = name => ONCE[name] || (ONCE[name] = api(name).catch(e => { delete ONCE[name]; return { error: e.message }; }));
@@ -300,7 +333,7 @@ const VIEWS = {
       note("The current dip, when it is 15% or deeper, is listed but not in the medians: its returns are not known yet (–). Its \"bottom\" is the lowest close so far."));
     const C = d.dd ? card("Basket drawdown with the 15% line", ...linesChart([{ name: "AI basket", points: d.dd, color: css("--s1") }, { name: "Current dip", points: currentDip(d.dd), color: css("--down") }], ddf, { hlines: [-0.15] }))
       : unavailable("Drawdown", d, "dd");
-    return [head, sum, B, T, C];
+    return [head, sum, B, T, C, ...compareCards(d.compare, H, HL)];
   },
 
   async fear() {
