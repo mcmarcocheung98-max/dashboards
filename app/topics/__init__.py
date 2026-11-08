@@ -154,7 +154,7 @@ def changes(slug: str) -> dict:
 # The index page groups dashboards under these headings, in this order. A dashboard not listed here goes under "More".
 CATEGORIES = (
     ("Signals", "The one thing to watch on each dashboard, and today's email.", ("signals",)),
-    ("Money & markets", "Prices, rates and where capital is flowing.", ("btc-cycles", "altcoins", "ai-stocks", "debt-rates", "housing", "pokemon-cards", "luxury")),
+    ("Money & markets", "Prices, rates and where capital is flowing.", ("btc-cycles", "altcoins", "ai-stocks", "options", "debt-rates", "housing", "pokemon-cards", "luxury")),
     ("AI & technology", "How fast AI, chips and machines are arriving, and who leads.", ("ai", "ai-models", "compute-chips", "china-us-tech", "robotaxi", "space")),
     ("People & planet", "The slow forces: population, health and climate.", ("demographics", "longevity", "climate")),
     ("Sentiment & attention", "What people are betting on and paying attention to.", ("prediction-markets", "trends")),

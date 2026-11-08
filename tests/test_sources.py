@@ -154,3 +154,16 @@ def test_housing_new_sources():
 def test_tsla_price():
     from app.topics import robotaxi as R
     assert len(R.yahoo("TSLA", "2024-01-01")) > 300
+
+
+def test_cboe_option_chain_and_index_histories():
+    """Options Setup: Cboe's delayed chain for SPY (quote, options with IV and Greeks, OCC symbols) and the VIX, VIX3M, VVIX and SKEW histories."""
+    from app.topics import options as O
+    ch = O.parse_chain(O.chain_text("SPY"), "SPY")
+    assert ch["spot"] > 100 and ch["trade_date"] and len(ch["options"]) > 1000 and (ch["options"]["iv"] > 0).all()
+    rows = O.expiry_table(ch)
+    front = O.front_expiry(rows)
+    assert front and front["atm_iv"] and front["put25"] and front["call25"] and front["em_iv"]
+    for name, lo, hi in (("VIX", 8, 90), ("VIX3M", 8, 90), ("VVIX", 50, 250), ("SKEW", 100, 200)):
+        s = O.index_history(name)
+        assert lo < s.iloc[-1] < hi and s.index[-1] > pd.Timestamp.now() - pd.Timedelta(days=7), name

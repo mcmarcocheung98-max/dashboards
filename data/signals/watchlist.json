@@ -465,5 +465,12 @@
    "watch": "under 60 days",
    "proposed": true
   }
+ ],
+ "options": [
+  {"key": "vix_term", "signal": "VIX term structure: VIX3M minus VIX", "watch": "below 0 (inverted) or above +5", "proposed": true},
+  {"key": "ai_iv_rank", "signal": "AI basket median IV rank", "watch": "above 80 or below 20", "proposed": true},
+  {"key": "skew_ai", "signal": "AI basket median 25-delta skew (put IV minus call IV)", "watch": "above the 90th or below the 10th percentile of its history (SKEW index fallback until 60 days)", "proposed": true},
+  {"key": "vrp", "signal": "Share of symbols with front-month IV above 30-day realised", "watch": "below 30% (options cheap vs movement) or above 90%", "proposed": true},
+  {"key": "pc_oi", "signal": "SPY put/call open-interest ratio", "watch": "above 2.0 or below 1.0", "proposed": true}
  ]
 }

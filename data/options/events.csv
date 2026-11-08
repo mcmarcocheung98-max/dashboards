@@ -1,0 +1,38 @@
+date,symbol,kind,label,source,note,verify
+# The event calendar the expected moves are read against. kind: earnings (symbol set), fomc (decision day, the second day of the meeting), opex,,,,,,
+# (standard monthly expiration, the third Friday). verify=yes marks a date entered from the company's usual cadence and not yet confirmed on its,,,,,,
+# investor-relations page: confirm and clear the mark when the company announces. source is the page the date came from or will be confirmed on.,,,,,,
+2026-11-10,RKLB,earnings,Rocket Lab Q3 2026 results,https://investors.rocketlabusa.com/,usual cadence: second week of November after the close,yes
+2026-11-11,NBIS,earnings,Nebius Q3 2026 results,https://group.nebius.com/investor-relations,usual cadence: second week of November,yes
+2026-11-12,IREN,earnings,IREN Q1 FY27 results,https://iren.com/investors,usual cadence: mid November,yes
+2026-11-19,NVDA,earnings,Nvidia Q3 FY27 results,https://investor.nvidia.com/,usual cadence: the Wednesday after the November OPEX week opens; after the close,yes
+2026-11-20,,opex,Monthly expiration (November),https://www.cboe.com/about/hours/us-options/,third Friday,
+2026-12-02,MRVL,earnings,Marvell Q3 FY27 results,https://investor.marvell.com/,usual cadence: first week of December after the close,yes
+2026-12-09,,fomc,FOMC decision,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,meeting 8-9 December 2026; statement 14:00 ET,
+2026-12-09,ORCL,earnings,Oracle Q2 FY27 results,https://investor.oracle.com/,usual cadence: second week of December after the close,yes
+2026-12-10,AVGO,earnings,Broadcom Q4 FY26 results,https://investors.broadcom.com/,usual cadence: second Thursday of December after the close,yes
+2026-12-17,MU,earnings,Micron Q1 FY27 results,https://investors.micron.com/,usual cadence: third week of December after the close,yes
+2026-12-18,,opex,Monthly expiration (December),https://www.cboe.com/about/hours/us-options/,third Friday; quarterly,
+2027-01-14,TSM,earnings,TSMC Q4 2026 results,https://investor.tsmc.com/,usual cadence: mid January before the US open,yes
+2027-01-15,,opex,Monthly expiration (January),https://www.cboe.com/about/hours/us-options/,third Friday,
+2027-01-27,,fomc,FOMC decision,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,meeting 26-27 January 2027; statement 14:00 ET,yes
+2027-01-27,ASML,earnings,ASML Q4 2026 results,https://www.asml.com/en/investors,usual cadence: late January before the US open,yes
+2027-01-27,MSFT,earnings,Microsoft Q2 FY27 results,https://www.microsoft.com/en-us/investor,usual cadence: last week of January after the close,yes
+2027-01-27,META,earnings,Meta Q4 2026 results,https://investor.atmeta.com/,usual cadence: last week of January after the close,yes
+2027-02-02,GOOGL,earnings,Alphabet Q4 2026 results,https://abc.xyz/investor/,usual cadence: first week of February after the close,yes
+2027-02-02,AMD,earnings,AMD Q4 2026 results,https://ir.amd.com/,usual cadence: first week of February after the close,yes
+2027-02-02,PLTR,earnings,Palantir Q4 2026 results,https://investors.palantir.com/,usual cadence: first Monday or Tuesday of February after the close,yes
+2027-02-04,AMZN,earnings,Amazon Q4 2026 results,https://ir.aboutamazon.com/,usual cadence: first week of February after the close,yes
+2027-02-04,ARM,earnings,Arm Q3 FY27 results,https://investors.arm.com/,usual cadence: first or second week of February after the close,yes
+2027-02-04,SNDK,earnings,SanDisk Q2 FY27 results,https://investor.sandisk.com/,usual cadence: late January or early February after the close,yes
+2027-02-10,APP,earnings,AppLovin Q4 2026 results,https://investors.applovin.com/,usual cadence: second week of February after the close,yes
+2027-02-11,BE,earnings,Bloom Energy Q4 2026 results,https://investor.bloomenergy.com/,usual cadence: second week of February after the close,yes
+2027-02-19,,opex,Monthly expiration (February),https://www.cboe.com/about/hours/us-options/,third Friday,
+2027-02-25,NVDA,earnings,Nvidia Q4 FY27 results,https://investor.nvidia.com/,usual cadence: last Wednesday of February after the close,yes
+2027-03-17,,fomc,FOMC decision,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,meeting 16-17 March 2027; statement 14:00 ET,yes
+2027-03-19,,opex,Monthly expiration (March),https://www.cboe.com/about/hours/us-options/,third Friday; quarterly,
+2027-04-16,,opex,Monthly expiration (April),https://www.cboe.com/about/hours/us-options/,third Friday,
+2027-04-28,,fomc,FOMC decision,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,meeting 27-28 April 2027; statement 14:00 ET,yes
+2027-05-21,,opex,Monthly expiration (May),https://www.cboe.com/about/hours/us-options/,third Friday,
+2027-06-16,,fomc,FOMC decision,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,meeting 15-16 June 2027; statement 14:00 ET,yes
+2027-06-18,,opex,Monthly expiration (June),https://www.cboe.com/about/hours/us-options/,third Friday; quarterly,
