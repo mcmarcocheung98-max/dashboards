@@ -12,8 +12,9 @@ const verifyNote = (n, total) => n ? el("div", { class: "muted", style: "margin-
 const step = (pts, end) => { const out = []; pts.forEach((p, i) => { out.push(p); const nx = pts[i + 1]; out.push([(nx ? nx[0] : end) - 86400, p[1]]); }); return out; };
 const today = () => Math.floor(Date.now() / 86400000) * 86400;
 const words = { watch: "Watches", bag: "Bags" };
-// a bar per month from Dec 2019 to today on the sparse hand-entered charts, so the shared date axis lands where it is set
-const monthsWs = () => { const out = []; const d = new Date(Date.UTC(2019, 11, 1)); const end = Date.now(); while (d.getTime() <= end) { out.push(Math.floor(d.getTime() / 1000)); d.setUTCMonth(d.getUTCMonth() + 1); } return out; };
+// a bar per month end from Dec 2019 to today on the sparse hand-entered charts, the same grid as the monthly basket series (month ends),
+// so every chart in the tab maps a dragged date to the same bar and the shared date axis lands where it is set
+const monthsWs = () => { const out = []; const end = Date.now(); for (let y = 2019, m = 11; ; m++) { if (m === 12) { m = 0; y++; } const t = Date.UTC(y, m + 1, 0); if (t > end) break; out.push(Math.floor(t / 1000)); } return out; };
 
 function itemCard(it) {
   const L = it.latest;
