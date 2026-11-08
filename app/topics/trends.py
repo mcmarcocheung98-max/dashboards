@@ -80,7 +80,8 @@ _REFUSED = re.compile(r"\b(401|403)\b")
 
 PACE = {"wiki": 0.3, "hn": 0.4, "bsky": 1.0, "reddit": 3.0, "github": 1.5, "site": 0.5, "arxiv": 3.1}   # arXiv asks for 3 s between calls
 # AI practice (data/trends/ai_practice.csv): how people use LLMs and agents, by thread
-ARXIV = "https://export.arxiv.org/api/query?search_query={q}&max_results=0"
+# max_results=0 drew a 500 with an error feed from Railway (8 Nov 2026); one result is the smallest page arXiv takes
+ARXIV = "https://export.arxiv.org/api/query?search_query={q}&max_results=1"
 HN_TOP = "https://hn.algolia.com/api/v1/search?query={q}&tags=story&numericFilters=created_at_i%3E%3D{a}&hitsPerPage=5"
 ARXIV_WEEKS = 13                # papers per week for the last quarter; complete weeks are not asked again
 PRACTICE_GROUPS = {"efficiency": "Cost, speed & tokens", "agents": "Agents", "knowledge": "Knowledge & context", "quality": "Quality & safety"}
@@ -265,6 +266,8 @@ def parse_hn_front(j: dict) -> list:
 
 def parse_arxiv(text: str) -> int:
     """arXiv's Atom answer: the opensearch:totalResults count."""
+    if "arxiv.org/api/errors" in (text or ""):         # an error feed also carries totalResults (1): never read it as a count
+        raise ValueError("arXiv: " + (re.search(r"<summary>([^<]*)", text) or re.search(r"(.{0,80})", text)).group(1)[:100])
     m = re.search(r"<opensearch:totalResults[^>]*>(\d+)<", text or "")
     if not m:
         raise ValueError("arXiv: no totalResults")
@@ -1109,6 +1112,7 @@ def _layout_now() -> dict:
             "wiki titles zh": WIKI_TITLES.format(lang="zh", titles=quote("比特币|深度求索|宝可梦|宝可梦集换式卡牌游戏|特斯拉公司|英伟达|恒生指数", safe="")),
             "hn front page (100+ points)": HN_FRONT.format(a=int(wk.timestamp()), b=int((wk + pd.Timedelta(weeks=1)).timestamp())),
             "arxiv": arxiv_url('all:"prompt caching"', wk, wk + pd.Timedelta(weeks=1)),
+            "arxiv no date range": ARXIV.format(q=quote('all:"prompt caching"', safe="")),
             "hn top stories": HN_TOP.format(q="prompt%20caching", a=int(wk.timestamp())),
             "hn algolia": HN.format(q="bitcoin", tag="story", a=int(wk.timestamp()), b=int((wk + pd.Timedelta(weeks=1)).timestamp())),
             "bluesky": BSKY.format(q="bitcoin", a=(now - pd.Timedelta(days=1)).strftime("%Y-%m-%dT00:00:00Z"), b=now.strftime("%Y-%m-%dT00:00:00Z")),

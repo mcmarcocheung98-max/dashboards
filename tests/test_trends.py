@@ -584,6 +584,10 @@ def test_parse_arxiv_and_hn_top():
     assert M.parse_arxiv(arxiv_atom(M.arxiv_url('all:"prompt caching"', TODAY - pd.Timedelta(days=7), TODAY))) == 20 + _seed('(all:"prompt caching")') % 30 + 80
     with pytest.raises(ValueError):
         M.parse_arxiv("<html>Rate exceeded</html>")
+    err = ('<feed xmlns="http://www.w3.org/2005/Atom"><opensearch:totalResults>1</opensearch:totalResults><entry><id>http://arxiv.org/api/errors#'
+           'incorrect_id_format</id><summary>Error: max_results must be greater than 0</summary></entry></feed>')
+    with pytest.raises(ValueError, match="max_results"):
+        M.parse_arxiv(err)                                  # the error feed's own count of 1 is not a result
     top = M.parse_hn_top(hn_top_json(M.HN_TOP.format(q="vLLM", a=0)))
     assert len(top) == 6 and top[-1]["url"] == top[-1]["hn"] == "https://news.ycombinator.com/item?id=999" and top[0]["date"]
     assert "submittedDate%3A%5B202610190000%20TO%20202610260000%5D" in M.arxiv_url("all:RAG", pd.Timestamp("2026-10-19"), TODAY)
