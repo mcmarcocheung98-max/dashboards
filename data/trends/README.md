@@ -25,6 +25,32 @@ Not investment advice.
 Hover a chart to see that date's figures in the top card, click to keep the date, "Back to latest" to return. Every figure in the top
 card is the same series a chart on that tab draws.
 
+## AI practice tab: what's hot in how people use AI
+
+27 threads in `ai_practice.csv` (one line each, `key,label,group,query,arxiv,article,note`), in four areas:
+
+- **Cost, speed & tokens:** prompt caching, KV cache, speculative decoding, token cost and context compression, model routing, quantization, distillation, inference serving, running models locally.
+- **Agents:** multi-agent orchestration, scheduling and background agents, tool use, MCP, computer and browser use, agent memory, coding agents, vibe coding.
+- **Knowledge & context:** RAG, embeddings and vector databases, long context, context engineering.
+- **Quality & safety:** evals, prompt injection and guardrails, fine-tuning and LoRA, reasoning and test-time compute, structured outputs, prompt engineering.
+
+For each thread:
+
+- **Hacker News stories and comments a week:** `query`, the same Algolia counts as the topics, stored under `aip_<key>` in `hn.json`.
+- **arXiv papers a week:** `arxiv` is an arXiv `search_query`, combined with a `submittedDate` range; 13 weeks are kept, 3 s between requests as arXiv asks.
+- **Wikipedia views:** `article`, where the thread has one.
+- **This week's five best-ranked HN stories:** HN search ranks by relevance and points; fetched once a day.
+
+**Heat** is the mean of the available z-scores, each this week against the thread's own recent weeks on a log scale. HN and arXiv
+use the last 12 weeks, with the standard deviation floored at 0.25, so a quiet thread going from 1 to 3 stories is not a breakout.
+Wikipedia uses its last year. The tab ranks the threads by heat, charts the hottest six and each area, and lists the 20
+most-pointed stories of the week across threads, each once.
+
+READINGS add one per thread, `heat_<key>` on this tab: +1 at heat ≥ 1, −1 at ≤ −1.
+
+Adding a thread is one line in `ai_practice.csv`: the next background run backfills its 26 weeks of HN counts and 13 weeks of arXiv
+papers. Keep `query` distinctive. "LoRA" alone also finds the radio protocol, so the fine-tuning thread searches HN for "fine-tuning".
+
 ## The measures
 
 - **Weekly views:** daily Wikipedia pageviews (users only: Wikimedia excludes bots and crawlers) summed Monday to Sunday; a week counts once all seven days are in.
@@ -66,6 +92,8 @@ weekly gain needs two weeks of the daily star log (from 26 Oct 2026), so it read
 | Bluesky posts per keyword per day | `api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=…&since=…&until=…` (up to 5 pages of 100) | yes, logged once a day, topics with `social=y` | daily, 1 s apart |
 | Reddit subscribers and active users | `www.reddit.com`, then `old.reddit.com`, then `api.reddit.com` `/r/<sub>/about.json` | yes, logged once a day; **hand-entered** in `reddit.csv` when the server is refused | daily, 3 s apart |
 | GitHub stars and forks | `api.github.com/repos/<repo>` (60 requests an hour unauthenticated; 10 a day used) | yes, logged once a day | daily |
+| AI-practice papers per thread per week | arXiv API `export.arxiv.org/api/query?search_query=(…) AND submittedDate:[…]&max_results=0` (opensearch totalResults) | yes; the last 13 weeks, complete weeks kept | daily, 3 s apart |
+| AI-practice top stories per thread | HN Algolia `search?query=…&tags=story&numericFilters=created_at_i>=<7 days ago>&hitsPerPage=5` | yes | daily |
 | Google Trends | trends.google.com | **hand-entered**: `gtrends.csv` | monthly |
 | The other dashboards' headline series | this site's `/api/<slug>/<endpoint>` (the server itself; set `TRENDS_SITE` to read another copy of the site) | yes, through `fetch` with a snapshot | twice a day |
 

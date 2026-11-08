@@ -37,10 +37,11 @@ from ._base import DAY, MANUAL_DIR, _pts, _r, cached_only, fetch, manual, manual
 SLUG = "trends"
 TOPIC = Topic(SLUG, "Search & Social Trends",
               "What people are reading, searching and posting about: Wikipedia pageviews, Hacker News, Bluesky, Reddit and GitHub for about 40 topics, "
-              "which are rising or fading this week, the US, UK and Chinese-language views, and attention set against each dashboard's own numbers.",
+              "which are rising or fading this week, the US, UK and Chinese-language views, attention set against each dashboard's own numbers, "
+              "and what is hot in how people use AI (caching, tokens, agents, RAG, evals and more).",
               "trends", (("overview", "Overview"), ("search", "Search"), ("social", "Social"), ("rising", "Rising & fading"), ("regions", "US / UK / HK"),
-                         ("reality", "Attention vs reality")),
-              ("overview", "search", "social", "rising", "regions", "reality"), icon="trend", order=60)
+                         ("reality", "Attention vs reality"), ("practice", "AI practice")),
+              ("overview", "search", "social", "rising", "regions", "reality", "practice"), icon="trend", order=60)
 
 WIKI = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/{lang}.wikipedia/all-access/user/{title}/daily/{a}/{b}"
 WIKI_TITLES = "https://{lang}.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&redirects=1&converttitles=1&titles={titles}"
@@ -67,7 +68,7 @@ HEALTH_KEYS = {"wiki_en": "https://wikimedia.org/api/rest_v1/metrics/pageviews/p
                "wiki_zh": "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/zh.wikipedia",
                "titles": "https://en.wikipedia.org/w/api.php?action=query", "hn": "https://hn.algolia.com/api/v1/search_by_date",
                "bsky": "https://api.bsky.app/xrpc/app.bsky.feed.searchPosts", "reddit": "https://www.reddit.com/r/<sub>/about.json",
-               "github": "https://api.github.com/repos/<repo>"}
+               "github": "https://api.github.com/repos/<repo>", "arxiv": "https://export.arxiv.org/api/query"}
 
 # Sources that refuse this server outright (401/403) rather than failing for a while: no keyless way round, so the card falls back to
 # what was logged before (or hand-entered rows) and /api/health files them as handled instead of raising an alert every day.
@@ -77,7 +78,12 @@ CLOSED = {"bsky": "Bluesky's search refuses this server (403; it needs a logged-
           "reddit": "Reddit blocks cloud servers (403): counts come from data/trends/reddit.csv when hand-entered, else 'not available'"}
 _REFUSED = re.compile(r"\b(401|403)\b")
 
-PACE = {"wiki": 0.3, "hn": 0.4, "bsky": 1.0, "reddit": 3.0, "github": 1.5, "site": 0.5}
+PACE = {"wiki": 0.3, "hn": 0.4, "bsky": 1.0, "reddit": 3.0, "github": 1.5, "site": 0.5, "arxiv": 3.1}   # arXiv asks for 3 s between calls
+# AI practice (data/trends/ai_practice.csv): how people use LLMs and agents, by thread
+ARXIV = "https://export.arxiv.org/api/query?search_query={q}&max_results=0"
+HN_TOP = "https://hn.algolia.com/api/v1/search?query={q}&tags=story&numericFilters=created_at_i%3E%3D{a}&hitsPerPage=5"
+ARXIV_WEEKS = 13                # papers per week for the last quarter; complete weeks are not asked again
+PRACTICE_GROUPS = {"efficiency": "Cost, speed & tokens", "agents": "Agents", "knowledge": "Knowledge & context", "quality": "Quality & safety"}
 WIKI_START = pd.Timestamp("2016-01-01")
 WIKI_REFETCH_DAYS = 14          # Wikimedia revises the last few days; download again from two weeks before the last stored day
 HN_WEEKS = 26                   # weekly HN counts kept for the last half year; complete weeks are not downloaded again
@@ -124,6 +130,16 @@ def repos() -> list[dict]:
 
 def subreddits() -> list[dict]:
     return [r for r in _csv("subreddits") if r.get("subreddit")]
+
+
+def practice_list() -> list[dict]:
+    """The AI-practice threads: key, label, group, query (HN), arxiv (an arXiv search_query), article (Wikipedia, optional)."""
+    return [r for r in _csv("ai_practice") if r.get("key") and r.get("query") and r.get("group") in PRACTICE_GROUPS]
+
+
+def _practice_items() -> list[dict]:
+    """The threads as the Wikipedia and HN fills take them (stored under aip_<key>, apart from the topics)."""
+    return [{**r, "key": "aip_" + r["key"], "lang": "en"} for r in practice_list()]
 
 
 def reality_rows() -> list[dict]:
@@ -245,6 +261,29 @@ def parse_hn_front(j: dict) -> list:
     n = int(j["nbHits"])
     ok = len(titles) >= FRONT_MIN and len(titles) >= 0.9 * n
     return [n, sum(bool(AI_TITLE.search(t)) for t in titles) if ok else None, len(titles)]
+
+
+def parse_arxiv(text: str) -> int:
+    """arXiv's Atom answer: the opensearch:totalResults count."""
+    m = re.search(r"<opensearch:totalResults[^>]*>(\d+)<", text or "")
+    if not m:
+        raise ValueError("arXiv: no totalResults")
+    return int(m.group(1))
+
+
+def parse_hn_top(j: dict) -> list[dict]:
+    """HN search (relevance and points): the stories, with their HN discussion link."""
+    if (j or {}).get("hits") is None:
+        raise ValueError("HN: no hits")
+    return [{"title": h.get("title"), "url": h.get("url") or f"https://news.ycombinator.com/item?id={h.get('objectID')}",
+             "hn": f"https://news.ycombinator.com/item?id={h.get('objectID')}", "points": h.get("points") or 0, "comments": h.get("num_comments") or 0,
+             "date": str(pd.to_datetime(h["created_at_i"], unit="s").date()) if h.get("created_at_i") else None}
+            for h in j["hits"] if h.get("title")]
+
+
+def arxiv_url(q: str, a: pd.Timestamp, b: pd.Timestamp) -> str:
+    sq = f"({q}) AND submittedDate:[{a.strftime('%Y%m%d%H%M')} TO {b.strftime('%Y%m%d%H%M')}]"
+    return ARXIV.format(q=quote(sq, safe=""))
 
 
 def parse_reddit(j: dict) -> dict:
@@ -474,6 +513,47 @@ def fill_reality(done: dict) -> None:
             done[f"site {u.split('/api/')[1]}"] = f"{type(e).__name__}: {str(e)[:100]}"
 
 
+def fill_practice(out: dict, done: dict) -> None:
+    """This week's top HN stories per AI-practice thread (once a day), then arXiv papers per week (last ARXIV_WEEKS, complete weeks kept)."""
+    threads, now = practice_list(), _now()
+    top = load("practice_top")
+    since = int((now - pd.Timedelta(days=7)).timestamp())
+    for t in threads:
+        if time.time() - (top.get(t["key"]) or {}).get("at", 0) < 20 * 3600:
+            continue
+        try:
+            top[t["key"]] = {"at": time.time(), "hits": parse_hn_top(json.loads(download(HN_TOP.format(q=quote(t["query"]), a=since), "hn")))}
+            out["hn"].append(True)
+        except Exception as e:
+            out["hn"].append(f"{type(e).__name__}: {str(e)[:100]}")
+            done[f"hn top {t['key']}"] = out["hn"][-1]
+    save("practice_top", top)
+    store = load("arxiv")
+    weeks = _weeks(ARXIV_WEEKS, now)
+    keep = {str(w.date()) for w in weeks}
+    for t in [t for t in threads if t.get("arxiv")]:
+        rec = store.setdefault(t["key"], {})
+        if rec.get("_q") != t["arxiv"]:
+            rec.clear()
+            rec["_q"] = t["arxiv"]
+        for w in weeks:
+            k = str(w.date())
+            if k in rec and w < weeks[-2]:
+                continue
+            try:
+                rec[k] = parse_arxiv(download(arxiv_url(t["arxiv"], w, w + pd.Timedelta(weeks=1)), "arxiv", BOT, timeout=60))
+                out["arxiv"].append(True)
+            except Exception as e:
+                out["arxiv"].append(f"{type(e).__name__}: {str(e)[:100]}")
+                done[f"arxiv {t['key']}"] = out["arxiv"][-1]
+                break
+        for k in [k for k in rec if k != "_q" and k not in keep]:
+            rec.pop(k)
+        save("arxiv", store)
+        if len(out["arxiv"]) >= 3 and not any(o is True for o in out["arxiv"]):
+            break                       # refused three times: closed to this server for now
+
+
 def fill() -> dict:
     """Background job: Wikipedia titles and pageviews, HN weekly counts, Bluesky, Reddit and GitHub (logged once a day), the other
     dashboards' series. Returns {what: 'ok' | error}."""
@@ -483,13 +563,14 @@ def fill() -> dict:
         fill_social(items, out, log, done)
         done["log"] = f"{log_today(log)} rows"
     # quick steps first and each one saved as it ends: every push to main redeploys, and the HN backfill is the slow one
-    for name, fn in (("wiki", lambda: fill_wiki(items, out, done)), ("reality", lambda: fill_reality(done)), ("social", social),
-                     ("hn", lambda: fill_hn(items, out, done))):
+    practice = _practice_items()
+    for name, fn in (("wiki", lambda: fill_wiki(items + [i for i in practice if i.get("article")], out, done)), ("reality", lambda: fill_reality(done)),
+                     ("social", social), ("hn", lambda: fill_hn(items + practice, out, done)), ("practice", lambda: fill_practice(out, done))):
         try:
             fn()
         except Exception as e:
             done[name] = f"{type(e).__name__}: {str(e)[:100]}"
-        if name != "hn":
+        if name not in ("hn", "practice"):
             _health({k: v for k, v in out.items() if v})
             _uncache()
     _health(out)
@@ -802,6 +883,62 @@ def gain(s: pd.Series, days: int):
     return _r(s.iloc[-1] - prev.iloc[-1], 0) if len(prev) else None
 
 
+def recent_z(w: pd.Series, n: int = 12, min_n: int = 6):
+    """The last week's log count against the n weeks before it (sd floored at 0.25, so a quiet thread going from 1 to 3 stories is
+    not a z of 10). None with fewer than min_n earlier weeks."""
+    w = w.dropna()
+    if len(w) < min_n + 1:
+        return None
+    x = np.log1p(w.astype(float))
+    prev = x.iloc[-n - 1:-1]
+    return _r((x.iloc[-1] - prev.mean()) / max(prev.std(), 0.25), 2)
+
+
+def _weekly_store(rec: dict) -> pd.Series:
+    """{monday: n or [stories, comments]} -> weekly series dated at the week's Sunday."""
+    d = {pd.Timestamp(k) + pd.Timedelta(days=6): (v[0] if isinstance(v, list) else v) for k, v in (rec or {}).items() if not k.startswith("_")}
+    return pd.Series(d, dtype=float).sort_index() if d else _empty()
+
+
+def _practice_now() -> dict:
+    """Each AI-practice thread: HN stories and comments a week, arXiv papers a week, Wikipedia views where there is an article, a heat
+    score (the mean of those z-scores against the thread's own recent weeks) and this week's top HN stories."""
+    threads, hn, arx, wiki, top = practice_list(), load("hn"), load("arxiv"), load("wiki"), load("practice_top")
+    rows, st_all, ar_all = [], {}, {}
+    for t in threads:
+        k = "aip_" + t["key"]
+        st = _weekly_store(hn.get(k))
+        cm = pd.Series({pd.Timestamp(d) + pd.Timedelta(days=6): v[1] for d, v in (hn.get(k) or {}).items() if not d.startswith("_")}, dtype=float).sort_index()
+        ar = _weekly_store(arx.get(t["key"]))
+        wv = weekly_full(daily(k, wiki))
+        wz = rolling_z(wv)
+        parts = {"hn": recent_z(st), "arxiv": recent_z(ar), "wiki": _r(wz.iloc[-1], 2) if len(wz) else None}
+        known = [v for v in parts.values() if v is not None]
+        st_all[t["key"]], ar_all[t["key"]] = st, ar
+        rows.append({"key": t["key"], "label": t["label"], "group": t["group"], "group_label": PRACTICE_GROUPS[t["group"]], "note": t.get("note") or "",
+                     "heat": _r(float(np.mean(known)), 2) if known else None, **{f"z_{a}": b for a, b in parts.items()},
+                     "stories": int(st.iloc[-1]) if len(st) else None, "comments": int(cm.iloc[-1]) if len(cm) else None,
+                     "stories_13": _r(st.iloc[-14:-1].mean(), 1) if len(st) > 2 else None, "papers": int(ar.iloc[-1]) if len(ar) else None,
+                     "papers_13": _r(ar.iloc[-14:-1].mean(), 1) if len(ar) > 2 else None, "views": int(wv.iloc[-1]) if len(wv) else None,
+                     "week": str(st.index[-1].date()) if len(st) else None, "top": ((top.get(t["key"]) or {}).get("hits") or [])[:3]})
+    rows.sort(key=lambda r: -(r["heat"] if r["heat"] is not None else -99))
+    hot = [r["key"] for r in rows if r["heat"] is not None][:6]
+    lab = {r["key"]: r["label"] for r in rows}
+    groups = {g: total([st_all[t["key"]] for t in threads if t["group"] == g]) for g in PRACTICE_GROUPS}
+    reading = sorted([{**h, "thread": r["label"], "key": r["key"]} for r in rows for h in (top.get(r["key"]) or {}).get("hits") or []],
+                     key=lambda h: -h["points"])
+    seen, read = set(), []
+    for h in reading:                    # one story can match several threads: list it once, under its best-scoring thread
+        if h["hn"] not in seen:
+            seen.add(h["hn"])
+            read.append(h)
+    return {"rows": rows, "hot": [{"key": k, "name": lab[k], "points": _pts(st_all[k], 0)} for k in hot],
+            "groups": [{"key": g, "name": PRACTICE_GROUPS[g], "points": _pts(v, 0)} for g, v in groups.items() if len(v)],
+            "arxiv": [{"key": g, "name": PRACTICE_GROUPS[g], "points": _pts(total([ar_all[t["key"]] for t in threads if t["group"] == g]), 0)} for g in PRACTICE_GROUPS
+                      if any(len(ar_all[t["key"]]) for t in threads if t["group"] == g)],
+            "reading": read[:20], "as_of": max([r["week"] for r in rows if r["week"]], default=None), "stale": _stale(), "updated": int(time.time())}
+
+
 def _rising_now() -> dict:
     items, store = topics_list(), load("wiki")
     stats = topic_stats(items, store)
@@ -883,6 +1020,10 @@ def readings(got) -> list[dict]:
             continue
         out.append({"tab": "overview" if s["region"] == "global" else "regions", "key": f"z_{s['key']}", "label": f"{s['label']}: attention z-score",
                     "value": s["z"], "lean": _lean(s["z"]), "note": f"week to {s['week']}, {s['views']:,} views; +1 at z >= {Z_LEAN}, -1 at z <= -{Z_LEAN}"})
+    for r in got("practice").get("rows") or []:
+        if r.get("heat") is not None:
+            out.append({"tab": "practice", "key": f"heat_{r['key']}", "label": f"{r['label']}: heat", "value": r["heat"], "lean": _lean(r["heat"]),
+                        "note": f"mean z of HN stories, arXiv papers and Wikipedia views against the thread's own recent weeks; +1 at {Z_LEAN} or above"})
     return out
 
 
@@ -967,6 +1108,8 @@ def _layout_now() -> dict:
             "wiki titles en": WIKI_TITLES.format(lang="en", titles=quote("AI agent|Solana (blockchain platform)|Zoox (company)|Housing crisis in the United Kingdom", safe="")),
             "wiki titles zh": WIKI_TITLES.format(lang="zh", titles=quote("比特币|深度求索|宝可梦|宝可梦集换式卡牌游戏|特斯拉公司|英伟达|恒生指数", safe="")),
             "hn front page (100+ points)": HN_FRONT.format(a=int(wk.timestamp()), b=int((wk + pd.Timedelta(weeks=1)).timestamp())),
+            "arxiv": arxiv_url('all:"prompt caching"', wk, wk + pd.Timedelta(weeks=1)),
+            "hn top stories": HN_TOP.format(q="prompt%20caching", a=int(wk.timestamp())),
             "hn algolia": HN.format(q="bitcoin", tag="story", a=int(wk.timestamp()), b=int((wk + pd.Timedelta(weeks=1)).timestamp())),
             "bluesky": BSKY.format(q="bitcoin", a=(now - pd.Timedelta(days=1)).strftime("%Y-%m-%dT00:00:00Z"), b=now.strftime("%Y-%m-%dT00:00:00Z")),
             "bluesky public host": "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=bitcoin&limit=1",
@@ -1006,4 +1149,5 @@ def _cached_ep(name, fn, ttl=3600):
 
 ENDPOINTS = {"overview": _cached_ep("overview", _overview_now), "search": _cached_ep("search", _search_now), "social": _cached_ep("social", _social_now),
              "rising": _cached_ep("rising", _rising_now), "regions": _cached_ep("regions", _regions_now), "reality": _cached_ep("reality", _reality_now),
+             "practice": _cached_ep("practice", _practice_now),
              "layout": _cached_ep("layout", _layout_now, 1800)}

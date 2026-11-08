@@ -80,7 +80,7 @@ def hn_json(url: str) -> dict:
     q = unquote(re.search(r"query=([^&]+)", url).group(1))
     a = int(re.search(r"created_at_i%3E%3D(\d+)", url).group(1))
     wk = (a - int(pd.Timestamp("2026-01-05").timestamp())) // (7 * 86400)
-    n = 5 + _seed(q) % 40 + (wk % 4) + (12 if q in ("polymarket", "waymo") and wk > 38 else 0)
+    n = 5 + _seed(q) % 40 + (wk % 4) + (12 if q in ("polymarket", "waymo") and wk > 38 else 0) + (60 if q == "prompt caching" and wk > 39 else 0)
     return {"hits": [{"title": "x"}], "nbHits": n * (9 if "tags=comment" in url else 1), "page": 0, "hitsPerPage": 1}
 
 
@@ -96,6 +96,24 @@ def hn_front_json(url: str) -> dict:
     n_ai = 30 if weeks_left <= 1 else 100                         # the last full week: 15%
     hits = [{"title": "AI weekly #%d" % k} for k in range(n_ai)] + [{"title": "Rust and bicycles %d" % k} for k in range(200 - n_ai)]
     return {"hits": hits, "nbHits": 200, "page": 0, "hitsPerPage": 1000}
+
+
+def arxiv_atom(url: str) -> str:
+    """arXiv's Atom answer with only the count: prompt caching papers jump in the last two weeks."""
+    q = unquote(re.search(r"search_query=([^&]+)", url).group(1))
+    a = pd.Timestamp(re.search(r"submittedDate:\[(\d{8})", q).group(1))
+    n = 20 + _seed(q.split(" AND submittedDate")[0]) % 30 + (80 if "prompt caching" in q and (TODAY - a).days <= 14 else 0)
+    return ('<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">'
+            f'<title>arXiv Query</title><opensearch:totalResults xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">{n}</opensearch:totalResults>'
+            '<opensearch:startIndex>0</opensearch:startIndex></feed>')
+
+
+def hn_top_json(url: str) -> dict:
+    q = unquote(re.search(r"query=([^&]+)", url).group(1))
+    hits = [{"objectID": str(_seed(q) * 10 + k), "title": f"{q.title()}: what we learned #{k}", "url": f"https://example.com/{_seed(q)}/{k}",
+             "points": 50 + _seed(q) % 400 - 10 * k, "num_comments": 20 + k, "created_at_i": int(TODAY.timestamp()) - 86400 * (k + 1)} for k in range(5)]
+    hits.append({"objectID": "999", "title": "Shared story about agents and caching", "url": None, "points": 900, "num_comments": 300, "created_at_i": int(TODAY.timestamp())})
+    return {"hits": hits, "nbHits": 6}
 
 
 def bsky_json(url: str) -> dict:
@@ -143,6 +161,10 @@ def fake_download(url, site_=None, headers=None, timeout=30):
         return wiki_text(url)
     if "/w/api.php" in url:
         return json.dumps(titles_json(url))
+    if "export.arxiv.org" in url:
+        return arxiv_atom(url)
+    if "hn.algolia.com/api/v1/search?" in url:
+        return json.dumps(hn_top_json(url))
     if "points%3E%3D100" in url:
         return json.dumps(hn_front_json(url))
     if "hn.algolia.com" in url:
@@ -334,7 +356,10 @@ def test_fill_again_only_downloads_what_is_new(filled, monkeypatch):
     M.fill()
     assert not [u for u in calls if "/pageviews/" in u]                       # every article downloaded less than 20 hours ago
     hn = [u for u in calls if "algolia" in u]
-    assert 0 < len(hn) <= 2 * 2 * len([i for i in M.topics_list() if i.get("query")]) + 2     # only the last two weeks again (and two front-page weeks)
+    assert 0 < len(hn) <= 2 * 2 * (len([i for i in M.topics_list() if i.get("query")]) + len(M.practice_list())) + 2     # only the last two weeks again
+    assert not [u for u in calls if "/api/v1/search?" in u]                    # top stories: once a day
+    arx = [u for u in calls if "arxiv" in u]
+    assert 0 < len(arx) <= 2 * len([t for t in M.practice_list() if t["arxiv"]])
     store = M.load("wiki")
     rec = store["bitcoin"]
     rec["at"] = rec["tried"] = 0
@@ -555,6 +580,39 @@ def test_signals_watch_points():
     assert len(empty) == 4 and not any(r["crossed"] for r in empty) and all(r["value"] is None for r in empty)
 
 
+def test_parse_arxiv_and_hn_top():
+    assert M.parse_arxiv(arxiv_atom(M.arxiv_url('all:"prompt caching"', TODAY - pd.Timedelta(days=7), TODAY))) == 20 + _seed('(all:"prompt caching")') % 30 + 80
+    with pytest.raises(ValueError):
+        M.parse_arxiv("<html>Rate exceeded</html>")
+    top = M.parse_hn_top(hn_top_json(M.HN_TOP.format(q="vLLM", a=0)))
+    assert len(top) == 6 and top[-1]["url"] == top[-1]["hn"] == "https://news.ycombinator.com/item?id=999" and top[0]["date"]
+    assert "submittedDate%3A%5B202610190000%20TO%20202610260000%5D" in M.arxiv_url("all:RAG", pd.Timestamp("2026-10-19"), TODAY)
+
+
+def test_practice(filled):
+    d = M.ENDPOINTS["practice"]()
+    B.json_safe(d)
+    rows = {r["key"]: r for r in d["rows"]}
+    assert len(rows) == len(M.practice_list()) == 27
+    assert d["rows"][0]["key"] == "prompt_caching" and d["rows"][0]["heat"] > 2               # the spike, in HN and on arXiv
+    pc = rows["prompt_caching"]
+    assert pc["z_hn"] > 2 and pc["z_arxiv"] > 2 and pc["z_wiki"] is None and pc["papers"] > pc["papers_13"]
+    assert rows["rag"]["z_wiki"] is not None and rows["local_llm"]["papers"] is None         # Wikipedia where there is an article; no arXiv search
+    assert {g["key"] for g in d["groups"]} == set(M.PRACTICE_GROUPS) and len(d["hot"]) == 6
+    links = [h["hn"] for h in d["reading"]]
+    assert len(links) == len(set(links)) and d["reading"][0]["points"] == 900 and len(d["reading"]) == 20
+    assert "aip_prompt_caching" not in {r["key"] for r in M.ENDPOINTS["social"]()["hn"]["rows"]}    # threads stay off the Social tab
+    M.ENDPOINTS["overview"]()
+    r = [x for x in M.READINGS() if x["tab"] == "practice"]
+    assert len(r) == 27 and next(x for x in r if x["key"] == "heat_prompt_caching")["lean"] == 1
+
+
+def test_recent_z():
+    w = pd.Series([5.0, 6, 5, 7, 5, 6, 5, 6, 30], index=pd.date_range("2026-08-30", periods=9, freq="W-SUN"))
+    assert M.recent_z(w) > 3 and M.recent_z(w.iloc[:5]) is None
+    assert abs(M.recent_z(pd.Series([1.0, 2, 1, 2, 1, 2, 1, 3], index=w.index[:8]))) < 3      # a quiet thread is not a breakout
+
+
 # ------------------------------------------------------------------ the seed files and registration
 def test_seed_files():
     items = M.topics_list()
@@ -574,7 +632,7 @@ def test_seed_files():
 
 def test_registered():
     t = topics.REGISTRY["trends"]
-    assert t.module == "trends" and [k for k, _ in t.tabs] == ["overview", "search", "social", "rising", "regions", "reality"]
+    assert t.module == "trends" and [k for k, _ in t.tabs] == ["overview", "search", "social", "rising", "regions", "reality", "practice"]
     assert set(t.slow) <= set(M.ENDPOINTS)
     m = topics.meta("trends")
     assert m["sources"] and m["notes"]

@@ -1,0 +1,28 @@
+key,label,group,query,arxiv,article,note
+prompt_caching,Prompt caching,efficiency,prompt caching,"all:""prompt caching"" OR all:""context caching""",,reusing a long prompt prefix across calls for lower cost and latency
+kv_cache,KV cache,efficiency,KV cache,"all:""KV cache""",,keeping attention keys and values between tokens and requests; paging and compression
+spec_decoding,Speculative decoding,efficiency,speculative decoding,"all:""speculative decoding""",,a small draft model proposes tokens that the large model checks in one pass
+token_cost,Token cost & context compression,efficiency,token cost,"all:""prompt compression"" OR all:""token efficiency""",,saving tokens: shorter prompts and summaries; cheaper models for easy steps
+model_routing,Model routing & cascades,efficiency,LLM router,"all:""LLM routing"" OR all:""model cascade""",,sending each request to the cheapest model that can answer it
+quantization,Quantization,efficiency,quantization,"all:quantization AND all:""large language model""",Quantization (signal processing),4-bit and 8-bit weights; GGUF and AWQ formats
+distillation,Distillation & small models,efficiency,distillation,"all:distillation AND all:""language model""",Knowledge distillation,teaching a small model from a large one
+inference_serving,Inference serving & batching,efficiency,vLLM,"all:""LLM serving"" OR all:""LLM inference"" AND all:batching",,vLLM and SGLang; continuous batching; GPU throughput
+local_llm,Running models locally,efficiency,local LLM,,,Ollama and llama.cpp on a laptop or phone
+multi_agent,Multi-agent orchestration,agents,multi-agent,"all:""multi-agent"" AND all:LLM",,several agents splitting a task; planner and worker roles
+agent_scheduling,Scheduling & background agents,agents,background agents,"all:""agent scheduling"" OR all:""LLM scheduling""",,agents that run on a timer or in the background: queues and long-running jobs
+tool_use,Tool use & function calling,agents,function calling,"all:""tool use"" AND all:LLM OR all:""function calling""",,letting a model call APIs and code
+mcp,Model Context Protocol (MCP),agents,Model Context Protocol,"all:""model context protocol""",Model Context Protocol,the open standard for connecting models to tools and data
+computer_use,Computer & browser use,agents,computer use,"all:""computer use"" OR all:""GUI agent"" OR all:""web agent""",,agents that click and type in a desktop or browser
+agent_memory,Agent memory,agents,agent memory,"all:""agent memory"" OR all:""memory"" AND all:""LLM agent""",,what an agent remembers between steps and sessions
+coding_agents,Coding agents,agents,coding agent,"all:""coding agent"" OR all:""software engineering agent""",,"agents that write, test and fix code"
+vibe_coding,Vibe coding,agents,vibe coding,,Vibe coding,building software by describing it to an AI
+rag,Retrieval-augmented generation (RAG),knowledge,RAG,"all:""retrieval-augmented generation""",Retrieval-augmented generation,answering from documents fetched at question time
+vector_db,Embeddings & vector databases,knowledge,vector database,"all:""vector database"" OR all:""embedding model""",Vector database,
+long_context,Long context,knowledge,long context,"all:""long context"" AND all:LLM",,million-token windows and how well models use them
+context_eng,Context engineering,knowledge,context engineering,"all:""context engineering""",,deciding what goes into the context window and in what order
+evals,Evals & benchmarks,quality,LLM evals,"all:""LLM evaluation"" OR all:""LLM-as-a-judge""",,measuring whether a model or agent does the job
+prompt_injection,Prompt injection & guardrails,quality,prompt injection,"all:""prompt injection"" OR all:jailbreak AND all:LLM",Prompt injection,"attacks through text the model reads, and the defences"
+fine_tuning,Fine-tuning & LoRA,quality,fine-tuning,"all:LoRA AND all:""language model"" OR all:""fine-tuning"" AND all:LLM",Fine-tuning (deep learning),
+reasoning,Reasoning & test-time compute,quality,reasoning model,"all:""test-time compute"" OR all:""reasoning model""",,models that think longer before answering
+structured_output,Structured outputs,quality,structured output,"all:""structured output"" AND all:LLM OR all:""constrained decoding""",,JSON and schemas a program can rely on
+prompt_eng,Prompt engineering,quality,prompt engineering,"all:""prompt engineering""",Prompt engineering,

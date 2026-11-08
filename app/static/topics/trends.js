@@ -161,6 +161,30 @@ const VIEWS = {
     });
     return [head, ...cards, card(null, note("The other series are read from this site's own API (" + d.site + ") by the background job twice a day; data/trends/reality.csv says which endpoint and which series. Nothing here imports the other dashboards."))];
   },
+  async practice() {
+    const d = await api("practice"), R = d.rows || [], H = d.hot || [];
+    const head = card(null, followHead(H.slice(0, 4).map(t => ({ label: t.name + ": HN stories a week", points: t.points, fmt: f0, delta: { lag: "3m" } }))),
+      note("How people are using AI right now: the threads heating up fastest against their own recent weeks, in Hacker News discussion, new arXiv papers and Wikipedia lookups."), asOf(d), stale(d));
+    const sub = (v, avg) => v == null ? "–" : f0(v) + (avg != null ? " (" + num(avg, 1) + ")" : "");
+    const hot = R.length ? card("What's hot in using AI this week", table(["#", "Thread", "Area", "Heat", "HN stories (13-wk avg)", "arXiv papers (13-wk avg)", "Top story this week"],
+      R.map((r, i) => el("tr", {}, el("td", {}, i + 1), el("td", { class: "wrap" }, el("b", {}, r.label), r.note ? el("div", { class: "muted" }, r.note) : null), el("td", {}, r.group_label),
+        el("td", {}, zpill(r.heat)), el("td", {}, sub(r.stories, r.stories_13)), el("td", {}, sub(r.papers, r.papers_13)),
+        el("td", { class: "wrap" }, r.top && r.top[0] ? [link(r.top[0].title, r.top[0].url), el("span", { class: "muted" }, " · " + r.top[0].points + " points, ", link(r.top[0].comments + " comments", r.top[0].hn))] : "–")))),
+      note("Heat is the mean of up to three z-scores, each this week against the thread's own last 12 weeks (Wikipedia: its last year), on a log scale: HN stories matching the thread, arXiv papers matching it, and Wikipedia views where it has an article. " +
+        "+1 is a busy week for that thread, +2 a breakout. Threads live in data/trends/ai_practice.csv: one line adds one.")) : card("AI practice", empty("thread counts"));
+    const lines = H.length ? card("The hottest threads: Hacker News stories a week", ...linesChart(H.map((t, i) => line(t, i)), f0),
+      note("Stories whose title or text matches each thread's query, Monday to Sunday.")) : null;
+    const groups = (d.groups || []).length ? card("By area: Hacker News stories a week", ...linesChart(d.groups.map((t, i) => line(t, i)), f0, { small: true }),
+      note("Cost, speed & tokens: caching, KV cache, speculative decoding, routing, quantization, serving. Agents: orchestration, scheduling, tools, MCP, computer use, memory, coding. Knowledge & context: RAG, vector search, long context, context engineering. Quality & safety: evals, prompt injection, fine-tuning, reasoning, structured output.")) : null;
+    const arx = (d.arxiv || []).length ? card("By area: new arXiv papers a week", ...linesChart(d.arxiv.map((t, i) => line(t, i)), f0, { small: true }),
+      note("Papers submitted each week whose text matches each thread's arXiv search (export.arxiv.org). Research leads practice by months.")) : null;
+    const RD = d.reading || [];
+    const read = card("Read this week: the top Hacker News stories across the threads", RD.length ? table(["Story", "Thread", "Points", "Discussion", "Date"], RD.map(h => el("tr", {},
+      el("td", { class: "wrap" }, link(h.title, h.url)), el("td", {}, h.thread), el("td", {}, f0(h.points)), el("td", {}, link(f0(h.comments) + " comments", h.hn)), el("td", {}, h.date || "–"))))
+      : el("div", { class: "muted" }, "No stories yet: the background download fetches each thread's top stories once a day."),
+      note("Each thread's five best-ranked stories from the last 7 days (HN search ranks by relevance and points), the 20 with the most points shown once each."));
+    return [head, hot, el("div", { class: "grid2" }, lines, groups), arx, read];
+  },
 };
 const THEMES_LABEL = { ai: "AI", bitcoin: "Bitcoin & crypto", pokemon: "Pokémon cards", robotaxi: "Robotaxis", housing: "Housing", climate: "Climate", prediction: "Prediction markets", space: "Space",
   chips: "Chips & compute", china: "China tech", longevity: "Longevity & GLP-1", rates: "Rates & economy", demographics: "Demographics" };
