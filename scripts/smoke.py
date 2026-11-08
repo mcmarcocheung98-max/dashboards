@@ -248,9 +248,16 @@ def main() -> int:
                             text, cnl = pg.locator("#view").inner_text(), pg.evaluate(CNL)
                         except Exception as e:
                             text, cnl = f"Could not load (retry: {type(e).__name__})", True
-                    sync = pg.evaluate(SYNC_CHECK) if theme == "light" else {"n": "-", "ok": None}
-                    follow = follow_check(pg) if theme == "light" else None
-                    askp = ask_check(pg, ask_first, drag=(i == 0 and theme == "light"))
+                    if cnl:                                   # the tab never rendered: the shell's checks would only throw (SYNC is not defined)
+                        sync, follow, askp = {"n": "-", "ok": None}, None, {"ok": True, "skipped": "tab did not load"}
+                    else:
+                        try:
+                            sync = pg.evaluate(SYNC_CHECK) if theme == "light" else {"n": "-", "ok": None}
+                            follow = follow_check(pg) if theme == "light" else None
+                            askp = ask_check(pg, ask_first, drag=(i == 0 and theme == "light"))
+                        except Exception as e:                # a page that lost its shell mid-check (a deploy) reads as a failed tab, not a crash
+                            cnl, text = True, f"Could not load (check: {type(e).__name__})"
+                            sync, follow, askp = {"n": "-", "ok": None}, None, {"ok": True, "skipped": "check failed"}
                     ask_first = ask_first or askp
                     line = (f"{theme:5} {slug:12} {key:11} cards={pg.locator('#view .card').count():3} charts={pg.locator('#view .chart').count():3} "
                             f"unavailable={text.count('not available'):2} could-not-load={cnl} sync={sync}" + (f" follow={follow}" if follow else "") + ("" if askp["ok"] else f" ask={askp}")
