@@ -240,10 +240,14 @@ def main() -> int:
                     cnl, retried = pg.evaluate(CNL), False
                     if cnl:            # once more after a pause: a deploy restarting the server fails every request for a minute
                         time.sleep(RETRY_S)
-                        pg.goto(f"{base}/{slug}#{key}"); pg.reload(); pg.wait_for_selector("nav button", timeout=30000)   # same URL + hash: reload for real
-                        pg.wait_for_function("document.getElementById('stamp').textContent.startsWith('Updated')", timeout=180000)
-                        time.sleep(1.2)
-                        text, cnl, retried = pg.locator("#view").inner_text(), pg.evaluate(CNL), True
+                        retried = True
+                        try:           # a reload that itself fails (the server still restarting) is "failed twice", not a crash of the whole run
+                            pg.goto(f"{base}/{slug}#{key}"); pg.reload(); pg.wait_for_selector("nav button", timeout=30000)   # same URL + hash: reload for real
+                            pg.wait_for_function("document.getElementById('stamp').textContent.startsWith('Updated')", timeout=180000)
+                            time.sleep(1.2)
+                            text, cnl = pg.locator("#view").inner_text(), pg.evaluate(CNL)
+                        except Exception as e:
+                            text, cnl = f"Could not load (retry: {type(e).__name__})", True
                     sync = pg.evaluate(SYNC_CHECK) if theme == "light" else {"n": "-", "ok": None}
                     follow = follow_check(pg) if theme == "light" else None
                     askp = ask_check(pg, ask_first, drag=(i == 0 and theme == "light"))
