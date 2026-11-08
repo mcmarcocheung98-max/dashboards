@@ -130,5 +130,6 @@ pokemon-cards `session_01E2rgzyuaUHsMjB6PAC9UoM` · prediction-markets `session_
 trends `session_01DDQTR7e3Cpv1twBcXdfFFq` · nba-odds `session_01HgurtzQez3NndAMfZFsyAp` ·
 luxury `session_01Hguru15vQ5yfAZ9A1uCCyE` ·
 ai-models `session_01Hguru1tHBCffh5BwqSs3mk` ·
+options `session_01Hguru26F1zDdmAxFa5sdbA` ·
 ai-stocks `session_01Hguru3NTcATdNFZJk1KsMC` (phase 2; the first build session_01Hguru33HhMq9DoqY2C26R6 stood down) ·
 the former daily-check session `session_01Hguru4ZnmwKFghzbQZHzmL` (retired; its scheduled task is paused).

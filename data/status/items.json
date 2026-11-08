@@ -250,6 +250,14 @@
    "status": "in_progress",
    "since": "2026-11-08",
    "detail": "Session session_01Hguru1tHBCffh5BwqSs3mk started from the dev agent's brief; it reuses compute_chips and china_us_tech data rather than re-downloading, and reports back to the parent when pushed."
+  },
+  {
+   "id": "options-build",
+   "title": "Build the Options Setup dashboard",
+   "owner": "session:options",
+   "status": "in_progress",
+   "since": "2026-11-08",
+   "detail": "Session session_01Hguru26F1zDdmAxFa5sdbA started from the dev agent's brief; reports back to the parent when pushed."
   }
  ],
  "roadmap": [
@@ -481,6 +489,25 @@
    "by": "session:ai-models",
    "approved": "2026-11-08",
    "detail": "Asked by the owner on 8 Nov. Release cadence per family, training compute (Epoch, via the Compute & chips module), arena and benchmark utility, export-control rules against Chinese frontier compute (via the China vs US tech module), training-cost estimates, and deployment prices per million tokens from OpenRouter's public list plus hand-entered launch prices. Five signals proposed."
+  },
+  {
+   "id": "r-options",
+   "title": "Options Setup dashboard: chains, implied vol, skew, expected moves, strategy calculator",
+   "horizon": "now",
+   "status": "in_progress",
+   "area": "Dashboards",
+   "by": "session:options",
+   "approved": "2026-11-08",
+   "detail": "Asked by the owner on 8 Nov. Cboe delayed option chains (free) for SPY, QQQ, IWM, SMH and the AI Stocks universe; VIX, VIX3M and SKEW history; IV rank, term structure, expected move, 25-delta skew, put/call, max pain, gamma exposure, realised vs implied; a payoff calculator. Read-only. Five signals proposed."
+  },
+  {
+   "id": "r-options-portal",
+   "title": "Options trading portal: place and manage orders through a broker API, private",
+   "horizon": "next",
+   "status": "planned",
+   "area": "Trading",
+   "by": "agent",
+   "detail": "Asked by the owner on 8 Nov. Waits on the owner's choice of broker (Interactive Brokers, Tastytrade, Alpaca, Saxo) and paper-first or live. Design: behind the passcode plus a separate trading passcode, broker keys as Railway variables, a confirmation step on every order, per-order and daily loss limits, a kill switch, an order and fill log on the volume, paper account until the owner flips a setting."
   }
  ],
  "log": [
