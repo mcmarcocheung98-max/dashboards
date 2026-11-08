@@ -1,5 +1,5 @@
 date,series,value,source,note
-# quarterly revenue in billions, dated at the quarter end; TSMC and SMIC in US dollars, ASML in euros (net sales). All from memory: verify against the IR page
+# quarterly revenue in billions, dated at the quarter end; TSMC and SMIC in US dollars, ASML in euros (net sales). Seeded from memory; ASML checked 2026-11-08 against its quarterly results releases (SEC 6-K), TSMC partly, SMIC still to verify
 2023-03-31,TSMC,16.72,https://investor.tsmc.com/english/quarterly-results,verify
 2023-06-30,TSMC,15.68,https://investor.tsmc.com/english/quarterly-results,verify
 2023-09-30,TSMC,17.28,https://investor.tsmc.com/english/quarterly-results,verify
@@ -11,17 +11,17 @@ date,series,value,source,note
 2025-03-31,TSMC,25.53,https://investor.tsmc.com/english/quarterly-results/2025/q1,"TSMC 1Q25 results page, guidance table Actual column: US$25.53bn; checked 2026-11-07"
 2025-06-30,TSMC,30.07,https://investor.tsmc.com/english/quarterly-results,"matches 33.10 / 1.101 (3Q25 release, +10.1% QoQ); 2Q25 page could not be opened; checked 2026-11-07; verify"
 2025-09-30,TSMC,33.10,https://pr.tsmc.com/english/news/3264,"3Q25 earnings release: 'third quarter revenue was $33.10 billion', +40.8% YoY, +10.1% QoQ; checked 2026-11-07"
-2023-03-31,ASML (EUR),6.75,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
-2023-06-30,ASML (EUR),6.90,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
-2023-09-30,ASML (EUR),6.67,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
-2023-12-31,ASML (EUR),7.24,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
-2024-03-31,ASML (EUR),5.29,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
-2024-06-30,ASML (EUR),6.24,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
-2024-09-30,ASML (EUR),7.47,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
-2024-12-31,ASML (EUR),9.26,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
-2025-03-31,ASML (EUR),7.74,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
-2025-06-30,ASML (EUR),7.69,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
-2025-09-30,ASML (EUR),7.52,https://www.asml.com/en/investors/financial-results,net sales in EUR bn; verify
+2023-03-31,ASML (EUR),6.75,https://www.sec.gov/Archives/edgar/data/937966/000093796623000026/pressreleasequarterlyresul.htm,"net sales in EUR bn; ASML Q2 2023 release (19 Jul 2023), 6-K: Q1 2023 net sales €6,746m; checked 2026-11-08"
+2023-06-30,ASML (EUR),6.90,https://www.sec.gov/Archives/edgar/data/937966/000093796623000026/pressreleasequarterlyresul.htm,"net sales in EUR bn; ASML Q2 2023 release (19 Jul 2023), 6-K: Q2 2023 net sales €6,902m; checked 2026-11-08"
+2023-09-30,ASML (EUR),6.67,https://www.sec.gov/Archives/edgar/data/937966/000093796624000003/pressreleasequarterlyresul.htm,"net sales in EUR bn; ASML Q4 2023 release (24 Jan 2024), 6-K: Q3 2023 net sales €6,673m; checked 2026-11-08"
+2023-12-31,ASML (EUR),7.24,https://www.sec.gov/Archives/edgar/data/937966/000093796624000003/pressreleasequarterlyresul.htm,"net sales in EUR bn; ASML Q4 2023 release (24 Jan 2024), 6-K: Q4 2023 net sales €7,237m; checked 2026-11-08"
+2024-03-31,ASML (EUR),5.29,https://www.sec.gov/Archives/edgar/data/937966/000093796624000019/pressreleasequarterlyresul.htm,"net sales in EUR bn; ASML Q2 2024 release (17 Jul 2024), 6-K: Q1 2024 total net sales €5,290m; checked 2026-11-08"
+2024-06-30,ASML (EUR),6.24,https://www.sec.gov/Archives/edgar/data/937966/000093796624000019/pressreleasequarterlyresul.htm,"net sales in EUR bn; ASML Q2 2024 release (17 Jul 2024), 6-K: Q2 2024 total net sales €6,243m; checked 2026-11-08"
+2024-09-30,ASML (EUR),7.47,https://www.sec.gov/Archives/edgar/data/937966/000093796625000003/pressreleasequarterlyresul.htm,"net sales in EUR bn; ASML Q4 2024 release (29 Jan 2025), 6-K: Q3 2024 total net sales €7,467m; checked 2026-11-08"
+2024-12-31,ASML (EUR),9.26,https://www.sec.gov/Archives/edgar/data/937966/000093796625000003/pressreleasequarterlyresul.htm,"net sales in EUR bn; ASML Q4 2024 release (29 Jan 2025), 6-K: Q4 2024 total net sales €9,263m; checked 2026-11-08"
+2025-03-31,ASML (EUR),7.74,https://www.sec.gov/Archives/edgar/data/937966/000162828025034992/pressreleasequarterlyresul.htm,"net sales in EUR bn; ASML Q2 2025 release (16 Jul 2025), 6-K: Q1 2025 total net sales €7,742m; checked 2026-11-08"
+2025-06-30,ASML (EUR),7.69,https://www.sec.gov/Archives/edgar/data/937966/000162828025034992/pressreleasequarterlyresul.htm,"net sales in EUR bn; ASML Q2 2025 release (16 Jul 2025), 6-K: Q2 2025 total net sales €7,692m; same in the Q3 2025 release; checked 2026-11-08"
+2025-09-30,ASML (EUR),7.52,https://www.sec.gov/Archives/edgar/data/937966/000162828025045043/pressreleasequarterlyresul.htm,"net sales in EUR bn; ASML Q3 2025 release (15 Oct 2025), 6-K: Q3 2025 total net sales €7,516m; checked 2026-11-08"
 2023-03-31,SMIC,1.46,https://www.smics.com/en/site/company_financialSummary,verify
 2023-06-30,SMIC,1.56,https://www.smics.com/en/site/company_financialSummary,verify
 2023-09-30,SMIC,1.62,https://www.smics.com/en/site/company_financialSummary,verify
