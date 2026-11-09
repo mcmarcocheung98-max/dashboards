@@ -266,9 +266,10 @@
    "id": "options-build",
    "title": "Build the Options Setup dashboard",
    "owner": "session:options",
-   "status": "blocked",
+   "status": "done",
    "since": "2026-11-08",
-   "detail": "Session session_01Hguru26F1zDdmAxFa5sdbA started from the dev agent's brief; reports back to the parent when pushed. The session stopped at 14:46 UTC on 8 Nov when the account hit its 5-hour usage limit mid-build; asked to resume on 9 Nov."
+   "detail": "Session session_01Hguru26F1zDdmAxFa5sdbA started from the dev agent's brief; reports back to the parent when pushed. Pushed as d47b5dc on 8 Nov; the session hit the account's usage limit right after and its report did not arrive, so the live check and signals are being read by the parent.",
+   "done": "2026-11-08"
   }
  ],
  "roadmap": [
@@ -505,12 +506,13 @@
   {
    "id": "r-options",
    "title": "Options Setup dashboard: chains, implied vol, skew, expected moves, strategy calculator",
-   "horizon": "now",
-   "status": "in_progress",
+   "horizon": "done",
+   "status": "done",
    "area": "Dashboards",
    "by": "session:options",
    "approved": "2026-11-08",
-   "detail": "Asked by the owner on 8 Nov. Cboe delayed option chains (free) for SPY, QQQ, IWM, SMH and the AI Stocks universe; VIX, VIX3M and SKEW history; IV rank, term structure, expected move, 25-delta skew, put/call, max pain, gamma exposure, realised vs implied; a payoff calculator. Read-only. Five signals proposed."
+   "detail": "Asked by the owner on 8 Nov. Cboe delayed option chains (free) for SPY, QQQ, IWM, SMH and the AI Stocks universe; VIX, VIX3M and SKEW history; IV rank, term structure, expected move, 25-delta skew, put/call, max pain, gamma exposure, realised vs implied; a payoff calculator. Read-only. Five signals proposed.",
+   "done": "2026-11-08"
   },
   {
    "id": "r-options-portal",
@@ -647,12 +649,11 @@
    "date": "2026-11-09",
    "run": "scheduled",
    "result": "ok",
-   "summary": "Email built, not sent (no Gmail secrets). Signals 61 of 78 wired, 16 crossed. AI Models live feeds confirmed from the server. Reviewed Space: milestones end Dec 2024, handed over. Three sessions hit the account's 5-hour limit on Sunday; Options build paused. Live check still running at the time of this entry.",
+   "summary": "Email built, not sent (no Gmail secrets). Signals 61 of 78 wired, 16 crossed. AI Models live feeds confirmed from the server. Reviewed Space: milestones end Dec 2024, handed over. Three sessions hit the account's 5-hour limit on Sunday; the Options dashboard had already been pushed. Live check still running at the time of this entry.",
    "fixed": [],
    "handed": [
     "space",
-    "ai-models",
-    "options"
+    "ai-models"
    ]
   }
  ],
@@ -1154,7 +1155,7 @@
   {
    "date": "2026-11-09",
    "title": "AI Model Iteration live; the account hit its usage limit on Sunday afternoon",
-   "summary": "The AI Model Iteration dashboard went live on Sunday afternoon with six tabs and five proposed signals; from the server its three live feeds answer. Three builder sessions then stopped at once when the account hit its 5-hour usage limit at about 14:40 UTC: the Options Setup build is unfinished and has been asked to resume. Signals: 61 of 78 wired, 16 crossed. Reviewed Space: its milestones end in Dec 2024, handed to its session.",
+   "summary": "The AI Model Iteration dashboard went live on Sunday afternoon with six tabs and five proposed signals; from the server its three live feeds answer. Three builder sessions then stopped at once when the account hit its 5-hour usage limit at about 14:40 UTC: the Options Setup dashboard had already been pushed, so nothing was lost. Signals: 61 of 78 wired, 16 crossed. Reviewed Space: its milestones end in Dec 2024, handed to its session.",
    "changes": [
     {
      "dashboard": "AI Model Iteration",
@@ -1164,18 +1165,30 @@
      "by": "session:ai-models"
     },
     {
+     "dashboard": "Options Setup",
+     "slug": "options",
+     "what": "New dashboard on Cboe's free delayed chains: IV rank and term structure, expected moves, skew, put/call, max pain, gamma exposure, realised vs implied, a payoff calculator; five proposed signals",
+     "commit": "d47b5dc",
+     "by": "session:options"
+    },
+    {
      "dashboard": "Graphify Map",
      "slug": "graphify",
      "tab": "usage",
      "what": "Monday token totals collected for six active sessions; Sunday's building across three dashboards used about 69m tokens",
      "by": "agent"
+    },
+    {
+     "dashboard": "Luxury Tracker",
+     "slug": "luxury",
+     "tab": "liquidity",
+     "what": "Weekly log: 25 readings (all eight Rolex references on Chrono24, 9,895 listings in total; days to sell for all eight; StockX bid and ask for the Celine Ava), 13 availability rows",
+     "by": "agent"
     }
    ],
    "review": "space",
    "next": [
-    "Options Setup: resume the build",
     "AI Models: complete the Nov 2026 Arena snapshot so price_per_point compares like with like",
-    "Weekly luxury log and stock refresh (today)",
     "Space: milestones since Dec 2024 and the verify marks (handed over)"
    ],
    "asks": [
