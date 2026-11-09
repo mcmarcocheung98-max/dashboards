@@ -163,6 +163,17 @@
   },
   {
    "date": "2026-11-06",
+   "session": "ai-stocks-2",
+   "input": 517,
+   "cache_write": 295299,
+   "cache_read": 2184266,
+   "output": 2894,
+   "cost_usd": 2.86,
+   "source": "totals",
+   "since": "2026-11-06T02:13"
+  },
+  {
+   "date": "2026-11-06",
    "session": "dev-agent",
    "input": 228,
    "cache_write": 721345,
@@ -183,11 +194,43 @@
   },
   {
    "date": "2026-11-08",
+   "session": "ai-stocks",
+   "input": 1189,
+   "cache_write": 264382,
+   "cache_read": 10132942,
+   "output": 19793,
+   "cost_usd": 4.54,
+   "source": "totals",
+   "since": "2026-11-06T00:42"
+  },
+  {
+   "date": "2026-11-08",
+   "session": "debt-rates",
+   "input": 529,
+   "cache_write": 1505332,
+   "cache_read": 8507577,
+   "output": 6483,
+   "cost_usd": 13.88,
+   "source": "totals",
+   "since": "2026-11-03T19:21"
+  },
+  {
+   "date": "2026-11-08",
+   "session": "dev-agent",
+   "input": 1540,
+   "cache_write": 1499335,
+   "cache_read": 47305294,
+   "output": 45260,
+   "lookups": 0,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-11-09",
    "session": "dev-agent",
    "input": 34,
-   "cache_write": 658025,
-   "cache_read": 759542,
-   "output": 979,
+   "cache_write": 795832,
+   "cache_read": 894421,
+   "output": 1476,
    "lookups": 0,
    "source": "transcript"
   }
@@ -249,12 +292,12 @@
   },
   "debt-rates": {
    "id": "session_01DjiLHK9jLscwzRAtBrW7hR",
-   "as_of": "2026-11-03T19:21:30.034810Z",
-   "input": 99262,
-   "cache_write": 3059296,
-   "cache_read": 135233904,
-   "output": 273735,
-   "cost_usd": 56.9715
+   "as_of": "2026-11-08T12:55:39.295271Z",
+   "input": 99791,
+   "cache_write": 4564628,
+   "cache_read": 143741481,
+   "output": 280218,
+   "cost_usd": 70.847429
   },
   "climate": {
    "id": "session_016qhyE8K2Ta61cxezGrnnSf",
@@ -330,12 +373,12 @@
   },
   "ai-stocks": {
    "id": "session_01Hguru33HhMq9DoqY2C26R6",
-   "as_of": "2026-11-06T00:42:57.116292Z",
-   "input": 631,
-   "cache_write": 205974,
-   "cache_read": 12235740,
-   "output": 61552,
-   "cost_usd": 5.328503999999999
+   "as_of": "2026-11-08T14:40:09.703198Z",
+   "input": 1820,
+   "cache_write": 470356,
+   "cache_read": 22368682,
+   "output": 81345,
+   "cost_usd": 9.870764
   },
   "daily-check": {
    "id": "session_01Hguru4ZnmwKFghzbQZHzmL",
@@ -348,15 +391,42 @@
   },
   "ai-stocks-2": {
    "id": "session_01Hguru3NTcATdNFZJk1KsMC",
-   "as_of": "2026-11-06T02:13:02.307860Z",
-   "input": 237,
-   "cache_write": 282791,
-   "cache_read": 28327149,
-   "output": 131374,
-   "cost_usd": 10.556185800000002
+   "as_of": "2026-11-06T07:51:49.056749Z",
+   "input": 754,
+   "cache_write": 578090,
+   "cache_read": 30511415,
+   "output": 134268,
+   "cost_usd": 13.415379
+  },
+  "luxury": {
+   "id": "session_01Hguru15vQ5yfAZ9A1uCCyE",
+   "as_of": "2026-11-08T13:28:33.385828Z",
+   "input": 3782164,
+   "cache_write": 2282072,
+   "cache_read": 73195570,
+   "output": 658037,
+   "cost_usd": 81.98421
+  },
+  "ai-models": {
+   "id": "session_01Hguru1tHBCffh5BwqSs3mk",
+   "as_of": "2026-11-08T14:40:00.288024Z",
+   "input": 558200,
+   "cache_write": 830327,
+   "cache_read": 13907093,
+   "output": 191832,
+   "cost_usd": 26.596006
+  },
+  "options": {
+   "id": "session_01Hguru26F1zDdmAxFa5sdbA",
+   "as_of": "2026-11-08T14:46:12.736817Z",
+   "input": 2120,
+   "cache_write": 261969,
+   "cache_read": 15978085,
+   "output": 109891,
+   "cost_usd": 14.749651
   }
  },
  "saving_per_lookup": 112958,
  "saving_measured": "2026-10-31",
- "updated": "2026-11-08 07:40 UTC"
+ "updated": "2026-11-09 07:43 UTC"
 }
