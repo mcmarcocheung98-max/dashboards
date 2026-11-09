@@ -23,5 +23,5 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -r requirements.txt pytest-xdist
-      - run: pytest -m "not network" -q -n 4
+      - run: pip install -r requirements.txt
+      - run: pytest -m "not network" -q
