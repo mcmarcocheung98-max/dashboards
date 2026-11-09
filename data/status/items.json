@@ -122,6 +122,13 @@
    "status": "open",
    "detail": "The AI Model Iteration dashboard shows the Artificial Analysis Intelligence Index from hand-entered points. Their V2 data API has a free tier; a key as AA_API_KEY on Railway would refresh the index automatically. Not required.",
    "link": "https://artificialanalysis.ai/"
+  },
+  {
+   "id": "arena-ranks",
+   "status": "open",
+   "opened": "2026-11-09",
+   "title": "AI Models: copy ranks 8-17 of the Nov 2026 Arena text board into data/ai-models/arena.csv",
+   "detail": "arena.ai is Cloudflare-blocked from the build machines. A manual copy from a browser completes the 20-row snapshot and lifts the partial guard on the price_per_point and china_share signals."
   }
  ],
  "pending": [
@@ -1157,7 +1164,7 @@
   {
    "date": "2026-11-09",
    "title": "AI Model Iteration live; the account hit its usage limit on Sunday afternoon",
-   "summary": "The AI Model Iteration dashboard went live on Sunday afternoon with six tabs and five proposed signals; from the server its three live feeds answer. Three builder sessions then stopped at once when the account hit its 5-hour usage limit at about 14:40 UTC: the Options Setup dashboard had already been pushed, so nothing was lost. Signals: 61 of 78 wired, 16 crossed. Reviewed Space: its milestones end in Dec 2024, handed to its session. Options: on Friday's close the VIX term structure was inverted and SKEW sat at its 90th percentile; two of its proposed signals would be crossed.",
+   "summary": "The AI Model Iteration dashboard went live on Sunday afternoon with six tabs and five proposed signals; from the server its three live feeds answer. Three builder sessions then stopped at once when the account hit its 5-hour usage limit at about 14:40 UTC: the Options Setup dashboard had already been pushed, so nothing was lost. Signals: 61 of 78 wired, 16 crossed. Reviewed Space: its milestones end in Dec 2024, handed to its session. Options: on Friday's close the VIX term structure was inverted and SKEW sat at its 90th percentile; two of its proposed signals would be crossed. The AI Models session closed its follow-ups: the $10 price-per-point artefact is gone, a partial Arena snapshot no longer counts as crossed.",
    "changes": [
     {
      "dashboard": "AI Model Iteration",
@@ -1194,6 +1201,14 @@
      "what": "smoke.py survives a dashboard shell that does not load (retry, record, continue) instead of aborting the live check",
      "commit": "bdbeb60",
      "by": "agent"
+    },
+    {
+     "dashboard": "AI Models",
+     "slug": "ai-models",
+     "tab": "utility",
+     "what": "Nov 2026 Arena snapshot widened to 10 sourced top-20 rows with a price row for every model within 50 points of the top; a partial snapshot (fewer than 20 rows) can no longer cross price_per_point or china_share; the Artificial Analysis probe now points at the live V2 free-tier endpoint",
+     "commit": "4d3bcec",
+     "by": "session:ai-models"
     }
    ],
    "review": "space",
