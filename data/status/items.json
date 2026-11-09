@@ -268,7 +268,7 @@
    "owner": "session:options",
    "status": "done",
    "since": "2026-11-08",
-   "detail": "Session session_01Hguru26F1zDdmAxFa5sdbA started from the dev agent's brief; reports back to the parent when pushed. Pushed as d47b5dc on 8 Nov; the session hit the account's usage limit right after and its report did not arrive, so the live check and signals are being read by the parent.",
+   "detail": "Session session_01Hguru26F1zDdmAxFa5sdbA started from the dev agent's brief; reports back to the parent when pushed. Pushed as d47b5dc on 8 Nov; the session hit the account's usage limit right after and its report did not arrive, so the live check and signals are being read by the parent. Its report arrived on 9 Nov: 447 tests, all 24 Cboe chains answer live, full model run 98 s. Friday close: VIX 25.6 above VIX3M 24.6 (inverted), SKEW at its 90th percentile, NVDA expected move ±10.9% into its 19 Nov earnings. Two proposed signals read crossed (vix_term, skew_ai).",
    "done": "2026-11-08"
   }
  ],
@@ -1155,7 +1155,7 @@
   {
    "date": "2026-11-09",
    "title": "AI Model Iteration live; the account hit its usage limit on Sunday afternoon",
-   "summary": "The AI Model Iteration dashboard went live on Sunday afternoon with six tabs and five proposed signals; from the server its three live feeds answer. Three builder sessions then stopped at once when the account hit its 5-hour usage limit at about 14:40 UTC: the Options Setup dashboard had already been pushed, so nothing was lost. Signals: 61 of 78 wired, 16 crossed. Reviewed Space: its milestones end in Dec 2024, handed to its session.",
+   "summary": "The AI Model Iteration dashboard went live on Sunday afternoon with six tabs and five proposed signals; from the server its three live feeds answer. Three builder sessions then stopped at once when the account hit its 5-hour usage limit at about 14:40 UTC: the Options Setup dashboard had already been pushed, so nothing was lost. Signals: 61 of 78 wired, 16 crossed. Reviewed Space: its milestones end in Dec 2024, handed to its session. Options: on Friday's close the VIX term structure was inverted and SKEW sat at its 90th percentile; two of its proposed signals would be crossed.",
    "changes": [
     {
      "dashboard": "AI Model Iteration",
