@@ -649,8 +649,10 @@
    "date": "2026-11-09",
    "run": "scheduled",
    "result": "ok",
-   "summary": "Email built, not sent (no Gmail secrets). Signals 61 of 78 wired, 16 crossed. AI Models live feeds confirmed from the server. Reviewed Space: milestones end Dec 2024, handed over. Three sessions hit the account's 5-hour limit on Sunday; the Options dashboard had already been pushed. Live check still running at the time of this entry.",
-   "fixed": [],
+   "summary": "Email built, not sent (no Gmail secrets). Signals 61 of 78 wired, 16 crossed. AI Models live feeds confirmed from the server. Reviewed Space: milestones end Dec 2024, handed over. Three sessions hit the account's 5-hour limit on Sunday; the Options dashboard had already been pushed. Live check: 85 tabs loaded; the three could-not-load lines (Climate heat, the Longevity-to-Housing hand-over, Options setup 502) all fell inside the four status pushes the agent made during the run, and both endpoints answered within 30 s on re-fetch. Lesson re-learned: no pushes while live-check runs.",
+   "fixed": [
+    "smoke.py no longer crashes the whole run when a dashboard shell fails to load: one retry, then the dashboard is marked could-not-load and the run goes on"
+   ],
    "handed": [
     "space",
     "ai-models"
@@ -1183,6 +1185,14 @@
      "slug": "luxury",
      "tab": "liquidity",
      "what": "Weekly log: 25 readings (all eight Rolex references on Chrono24, 9,895 listings in total; days to sell for all eight; StockX bid and ask for the Celine Ava), 13 availability rows",
+     "by": "agent"
+    },
+    {
+     "dashboard": "shared",
+     "slug": "status",
+     "tab": "log",
+     "what": "smoke.py survives a dashboard shell that does not load (retry, record, continue) instead of aborting the live check",
+     "commit": "",
      "by": "agent"
     }
    ],
