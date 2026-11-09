@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-08",
+ "updated": "2026-11-09",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -112,6 +112,16 @@
    "status": "open",
    "detail": "The Luxury Tracker's daily listing counts and asking prices per item come from eBay's Browse API, which needs an app key. Sign in at developer.ebay.com with your eBay account, create an application keyset (production), and add EBAY_APP_ID and EBAY_CERT_ID as variables on the dashboards service on Railway. Until then the Liquidity tab's eBay card says not set up yet. eBay's sold-price data (Marketplace Insights) is a separate, restricted programme; ask the dev agent to draft the application if you want it.",
    "link": "https://developer.ebay.com/"
+  },
+  {
+   "id": "aa-api-key",
+   "title": "Optional: a free Artificial Analysis API key for the AI Models dashboard",
+   "area": "AI Models",
+   "priority": "low",
+   "since": "2026-11-09",
+   "status": "open",
+   "detail": "The AI Model Iteration dashboard shows the Artificial Analysis Intelligence Index from hand-entered points. Their V2 data API has a free tier; a key as AA_API_KEY on Railway would refresh the index automatically. Not required.",
+   "link": "https://artificialanalysis.ai/"
   }
  ],
  "pending": [
@@ -247,17 +257,18 @@
    "id": "ai-models-build",
    "title": "Build the AI Model Iteration dashboard",
    "owner": "session:ai-models",
-   "status": "in_progress",
+   "status": "done",
    "since": "2026-11-08",
-   "detail": "Session session_01Hguru1tHBCffh5BwqSs3mk started from the dev agent's brief; it reuses compute_chips and china_us_tech data rather than re-downloading, and reports back to the parent when pushed."
+   "detail": "Session session_01Hguru1tHBCffh5BwqSs3mk started from the dev agent's brief; it reuses compute_chips and china_us_tech data rather than re-downloading, and reports back to the parent when pushed. Pushed as 601bb27: six tabs, 273 hand-entered rows (115 verify), five proposed signals; OpenRouter, Wikimedia and Epoch answer from the server.",
+   "done": "2026-11-08"
   },
   {
    "id": "options-build",
    "title": "Build the Options Setup dashboard",
    "owner": "session:options",
-   "status": "in_progress",
+   "status": "blocked",
    "since": "2026-11-08",
-   "detail": "Session session_01Hguru26F1zDdmAxFa5sdbA started from the dev agent's brief; reports back to the parent when pushed."
+   "detail": "Session session_01Hguru26F1zDdmAxFa5sdbA started from the dev agent's brief; reports back to the parent when pushed. The session stopped at 14:46 UTC on 8 Nov when the account hit its 5-hour usage limit mid-build; asked to resume on 9 Nov."
   }
  ],
  "roadmap": [
@@ -483,12 +494,13 @@
   {
    "id": "r-ai-models",
    "title": "AI Model Iteration: compute, utility, sanctions and cost across the top models",
-   "horizon": "now",
-   "status": "in_progress",
+   "horizon": "done",
+   "status": "done",
    "area": "Dashboards",
    "by": "session:ai-models",
    "approved": "2026-11-08",
-   "detail": "Asked by the owner on 8 Nov. Release cadence per family, training compute (Epoch, via the Compute & chips module), arena and benchmark utility, export-control rules against Chinese frontier compute (via the China vs US tech module), training-cost estimates, and deployment prices per million tokens from OpenRouter's public list plus hand-entered launch prices. Five signals proposed."
+   "detail": "Asked by the owner on 8 Nov. Release cadence per family, training compute (Epoch, via the Compute & chips module), arena and benchmark utility, export-control rules against Chinese frontier compute (via the China vs US tech module), training-cost estimates, and deployment prices per million tokens from OpenRouter's public list plus hand-entered launch prices. Five signals proposed.",
+   "done": "2026-11-08"
   },
   {
    "id": "r-options",
@@ -629,6 +641,18 @@
    ],
    "handed": [
     "luxury"
+   ]
+  },
+  {
+   "date": "2026-11-09",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Email built, not sent (no Gmail secrets). Signals 61 of 78 wired, 16 crossed. AI Models live feeds confirmed from the server. Reviewed Space: milestones end Dec 2024, handed over. Three sessions hit the account's 5-hour limit on Sunday; Options build paused. Live check still running at the time of this entry.",
+   "fixed": [],
+   "handed": [
+    "space",
+    "ai-models",
+    "options"
    ]
   }
  ],
@@ -1125,6 +1149,39 @@
     "Approve or skip r-climate-disasters, r-watch-recalibrate and r-private-signals",
     "Add the eBay keys and the Gmail secrets; confirm the three bags' prices",
     "Reply in the Pokémon cards, Longevity, Compute & chips and Debt & rates sessions"
+   ]
+  },
+  {
+   "date": "2026-11-09",
+   "title": "AI Model Iteration live; the account hit its usage limit on Sunday afternoon",
+   "summary": "The AI Model Iteration dashboard went live on Sunday afternoon with six tabs and five proposed signals; from the server its three live feeds answer. Three builder sessions then stopped at once when the account hit its 5-hour usage limit at about 14:40 UTC: the Options Setup build is unfinished and has been asked to resume. Signals: 61 of 78 wired, 16 crossed. Reviewed Space: its milestones end in Dec 2024, handed to its session.",
+   "changes": [
+    {
+     "dashboard": "AI Model Iteration",
+     "slug": "ai-models",
+     "what": "New dashboard: release cadence, Epoch training compute, Arena and benchmarks, export controls against Chinese frontier compute, training-cost estimates, OpenRouter prices logged daily, a monthly-bill calculator",
+     "commit": "601bb27",
+     "by": "session:ai-models"
+    },
+    {
+     "dashboard": "Graphify Map",
+     "slug": "graphify",
+     "tab": "usage",
+     "what": "Monday token totals collected for six active sessions; Sunday's building across three dashboards used about 69m tokens",
+     "by": "agent"
+    }
+   ],
+   "review": "space",
+   "next": [
+    "Options Setup: resume the build",
+    "AI Models: complete the Nov 2026 Arena snapshot so price_per_point compares like with like",
+    "Weekly luxury log and stock refresh (today)",
+    "Space: milestones since Dec 2024 and the verify marks (handed over)"
+   ],
+   "asks": [
+    "Approve or skip: r-climate-disasters, r-watch-recalibrate, r-private-signals, and the AI Models and Options signals once built",
+    "Pick the broker for the options trading portal",
+    "Add the eBay keys and the Gmail secrets; confirm the three bags' prices"
    ]
   }
  ]
