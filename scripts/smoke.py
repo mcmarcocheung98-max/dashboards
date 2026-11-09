@@ -229,7 +229,16 @@ def main() -> int:
                 if not r.ok:
                     bad.append(f"{theme}: unlock failed ({r.status})")
             for slug in slugs:
-                pg.goto(f"{base}/{slug}"); pg.wait_for_selector("nav button", timeout=30000)
+                try:
+                    pg.goto(f"{base}/{slug}"); pg.wait_for_selector("nav button", timeout=30000)
+                except Exception as e:   # the shell itself did not come up (server restarting): one retry, then record it and go on
+                    time.sleep(RETRY_S)
+                    try:
+                        pg.goto(f"{base}/{slug}"); pg.wait_for_selector("nav button", timeout=30000)
+                    except Exception as e2:
+                        print(f"{theme:5} {slug:12} (shell)      could-not-load=True ({type(e2).__name__}, failed twice)")
+                        bad.append(f"{theme} {slug}: page did not load ({type(e2).__name__})")
+                        continue
                 ask_first = None
                 for i in range(pg.locator("nav button").count()):
                     pg.locator("nav button").nth(i).click()
