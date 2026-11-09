@@ -1,5 +1,5 @@
 date,series,value,source,note
-# quarterly revenue in billions, dated at the quarter end; TSMC and SMIC in US dollars, ASML in euros (net sales). Seeded from memory; ASML and TSMC checked against their quarterly results releases (TSMC 7-8 Nov 2026, ASML 8 Nov 2026), SMIC 3Q23, 4Q23, 1Q24, 4Q24 and 1Q25 checked against its HKEX results announcements 9 Nov 2026, the other six SMIC quarters still to verify
+# quarterly revenue in billions, dated at the quarter end; TSMC and SMIC in US dollars, ASML in euros (net sales). Seeded from memory; ASML and TSMC checked against their quarterly results releases (TSMC 7-8 Nov 2026, ASML 8 Nov 2026), SMIC 1Q23 to 1Q25 checked against its results announcements 9 Nov 2026, 2Q25 and 3Q25 still to verify (press figures agree)
 2023-03-31,TSMC,16.72,https://www.sec.gov/Archives/edgar/data/1046179/000162828023012121/a1q23e_withguidancexfinal.htm,"1Q23 earnings release (SEC 6-K): 'first quarter revenue was $16.72 billion'; checked 2026-11-08"
 2023-06-30,TSMC,15.68,https://www.sec.gov/Archives/edgar/data/1046179/000162828023025146/a2q23e_withguidancexfinalx.htm,"2Q23 earnings release (SEC 6-K): 'second quarter revenue was $15.68 billion'; checked 2026-11-08"
 2023-09-30,TSMC,17.28,https://www.sec.gov/Archives/edgar/data/1046179/000104617923000014/a3q23e_withguidancexfinal.htm,"3Q23 earnings release (SEC 6-K): 'third quarter revenue was $17.28 billion'; checked 2026-11-08"
@@ -22,14 +22,14 @@ date,series,value,source,note
 2025-03-31,ASML (EUR),7.74,https://www.sec.gov/Archives/edgar/data/937966/000162828025034992/pressreleasequarterlyresul.htm,"net sales in EUR bn; ASML Q2 2025 release (16 Jul 2025), 6-K: Q1 2025 total net sales €7,742m; checked 2026-11-08"
 2025-06-30,ASML (EUR),7.69,https://www.sec.gov/Archives/edgar/data/937966/000162828025034992/pressreleasequarterlyresul.htm,"net sales in EUR bn; ASML Q2 2025 release (16 Jul 2025), 6-K: Q2 2025 total net sales €7,692m; same in the Q3 2025 release; checked 2026-11-08"
 2025-09-30,ASML (EUR),7.52,https://www.sec.gov/Archives/edgar/data/937966/000162828025045043/pressreleasequarterlyresul.htm,"net sales in EUR bn; ASML Q3 2025 release (15 Oct 2025), 6-K: Q3 2025 total net sales €7,516m; checked 2026-11-08"
-2023-03-31,SMIC,1.46,https://www.smics.com/en/site/company_financialSummary,verify
-2023-06-30,SMIC,1.56,https://www.smics.com/en/site/company_financialSummary,verify
+2023-03-31,SMIC,1.46,https://www1.hkexnews.hk/listedco/listconews/sehk/2023/0511/2023051100987.pdf,"1Q23 results announcement (HKEX): 'Revenue was $1,462.3 million in 1Q23'; checked 2026-11-09"
+2023-06-30,SMIC,1.56,https://www1.hkexnews.hk/listedco/listconews/sehk/2023/0810/2023081000548.pdf,"2Q23 results announcement (HKEX): 'Revenue was $1,560.4 million in 2Q23'; checked 2026-11-09"
 2023-09-30,SMIC,1.62,https://www1.hkexnews.hk/listedco/listconews/sehk/2024/0206/2024020601352.pdf,"4Q23 results announcement (HKEX), 3Q23 column: revenue US$1,620,577 thousand; checked 2026-11-09"
 2023-12-31,SMIC,1.68,https://www1.hkexnews.hk/listedco/listconews/sehk/2024/0206/2024020601352.pdf,"4Q23 results announcement (HKEX): revenue US$1,678,299 thousand; checked 2026-11-09"
 2024-03-31,SMIC,1.75,https://www1.hkexnews.hk/listedco/listconews/sehk/2025/0508/2025050801531.pdf,"1Q25 results announcement (HKEX), 1Q24 column: revenue US$1,750,176 thousand; checked 2026-11-09"
-2024-06-30,SMIC,1.90,https://www.smics.com/en/site/company_financialSummary,verify
-2024-09-30,SMIC,2.17,https://www.smics.com/en/site/company_financialSummary,verify
+2024-06-30,SMIC,1.90,https://www1.hkexnews.hk/listedco/listconews/sehk/2024/0808/2024080800616.pdf,"2Q24 results announcement (HKEX): 'Revenue was $1,901.3 million in 2Q24'; checked 2026-11-09"
+2024-09-30,SMIC,2.17,https://techpowerup.com/328590/smic-reports-2024-third-quarter-results,"SMIC's 3Q24 results release, reproduced in full ('Source: SMIC'): 'Revenue was $2,171.2 million in 3Q24'; checked 2026-11-09"
 2024-12-31,SMIC,2.21,https://www1.hkexnews.hk/listedco/listconews/sehk/2025/0508/2025050801531.pdf,"1Q25 results announcement (HKEX), 4Q24 column: revenue US$2,207,281 thousand; checked 2026-11-09"
 2025-03-31,SMIC,2.25,https://www1.hkexnews.hk/listedco/listconews/sehk/2025/0508/2025050801531.pdf,"1Q25 results announcement (HKEX): revenue US$2,247,201 thousand; checked 2026-11-09"
-2025-06-30,SMIC,2.21,https://www.smics.com/en/site/company_financialSummary,verify
-2025-09-30,SMIC,2.38,https://www.smics.com/en/site/company_financialSummary,verify
+2025-06-30,SMIC,2.21,https://www.smics.com/en/site/company_financialSummary,"press reports of the 2Q25 results give $2,209 million (TipRanks, 8 Aug 2025), consistent; SMIC's own announcement not yet read, verify"
+2025-09-30,SMIC,2.38,https://www.smics.com/en/site/news_read/7932,"press reports of the 3Q25 results give $2.38 billion (TrendForce citing WSJ), consistent; SMIC's own release (this link) not yet read, verify"
