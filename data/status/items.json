@@ -126,9 +126,13 @@
   {
    "id": "arena-ranks",
    "status": "open",
-   "opened": "2026-11-09",
    "title": "AI Models: copy ranks 8-17 of the Nov 2026 Arena text board into data/ai-models/arena.csv",
-   "detail": "arena.ai is Cloudflare-blocked from the build machines. A manual copy from a browser completes the 20-row snapshot and lifts the partial guard on the price_per_point and china_share signals."
+   "detail": "arena.ai is Cloudflare-blocked from the build machines. A manual copy from a browser completes the 20-row snapshot and lifts the partial guard on the price_per_point and china_share signals.",
+   "priority": "low",
+   "since": "2026-11-09",
+   "area": "ai-models",
+   "done": null,
+   "link": "/ai-models#utility"
   }
  ],
  "pending": [
