@@ -1,15 +1,27 @@
 name: tests
+# Runs on every push to main, except pushes that only touch the dev agent's own status and token files or notes (validated locally
+# before they are pushed) and the graph. A burst of pushes runs the tests once, on the newest commit (earlier runs are cancelled).
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "data/status/**"
+      - "data/graphify/**"
+      - "graphify-out/**"
+      - "**/*.md"
   pull_request:
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   pytest:
     runs-on: ubuntu-latest
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r requirements.txt
-      - run: pytest -m "not network" -q
+          cache: pip
+      - run: pip install -r requirements.txt pytest-xdist
+      - run: pytest -m "not network" -q -n 4

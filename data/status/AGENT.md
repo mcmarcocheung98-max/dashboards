@@ -115,6 +115,16 @@ First line: "All dashboards OK" or "N problems". Then: what shipped (with commit
 dashboard reviewed and what it found, watch points crossed, whether the email went, proposals waiting for an answer, and what
 only the owner can do. Post nothing on GitHub.
 
+## GitHub Actions budget
+
+The repo is private, so every runner minute and every stored artifact counts against the account's free allowance. Keep it low:
+- **One status push per run.** Collect the note, log, pending, actions, usage.json and luxury CSVs and push them together at the
+  end (section 6), not commit by commit. Pushes that touch only `data/status/**`, `data/graphify/**` or Markdown skip the tests
+  workflow (they are validated locally); anything else runs the suite, so a stray extra push costs about two minutes.
+- Never push while `live-check` runs (a restart fails its tabs and the re-run costs ten minutes).
+- `show-json` is cheap (seconds); `live-check` is not (about ten minutes): once a day, never for a single endpoint.
+- Screenshot artifacts are kept three days and pruned by the live-check run itself; do not raise the retention.
+
 ## Limits
 
 Never touch secrets, Railway variables or workflow permissions. Never commit `graphify-out/`. Never push a change that fails the
