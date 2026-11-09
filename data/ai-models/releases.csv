@@ -55,7 +55,7 @@ date,family,model,developer,country,open,context,modalities,flagship,source,note
 2024-12-06,Llama/Muse,Llama 3.3 70B,Meta,US,yes,128000,text,no,https://ai.meta.com/blog/future-of-ai-built-with-llama/,
 2025-04-05,Llama/Muse,Llama 4 Maverick,Meta,US,yes,1000000,text+image in,yes,https://ai.meta.com/blog/llama-4-multimodal-intelligence/,with Scout (10M context claimed); Behemoth previewed and never released
 2026-04-08,Llama/Muse,Muse Spark,Meta,US,no,,text+image in,yes,https://thenextweb.com/news/meta-muse-spark-msl-first-model,Meta's first closed frontier model (Superintelligence Labs); checked 2026-11-08
-2026-10-15,Llama/Muse,Muse Wonder,Meta,US,no,,text+image in,yes,https://www.developersdigest.tech/benchmarks/lmarena,"on the Arena text board (""Muse Wonder (Max)"") by 17 Oct 2026; release date not found; verify"
+2026-10-12,Llama/Muse,Muse Wonder,Meta,US,no,,text+image in,yes,https://www.deeplearning.ai/the-batch/meta-releases-wonder-opens-spark/,Meta Model API muse-wonder-1.0 at $4/$20; Muse Wonder Full only inside Muse Code; checked 2026-11-09 (secondary)
 2023-11-04,Grok,Grok-1,xAI,US,no,8192,text,yes,https://x.ai/news/grok,weights released March 2024 (Apache 2.0)
 2024-03-28,Grok,Grok-1.5,xAI,US,no,128000,text,no,https://x.ai/news/grok-1.5,
 2024-08-13,Grok,Grok-2,xAI,US,no,128000,text+image in,yes,https://x.ai/news/grok-2,
@@ -107,3 +107,4 @@ date,family,model,developer,country,open,context,modalities,flagship,source,note
 2026-02-11,GLM,GLM-5,Zhipu AI (Z.ai),China,yes,200000,text,yes,https://huggingface.co/blog/mlabonne/glm-5,checked 2026-11-08; 744B; MIT
 2026-06-18,GLM,GLM-5.2,Zhipu AI (Z.ai),China,yes,200000,text,no,https://venturebeat.com/technology/z-ais-open-weights-glm-5-2-beats-gpt-5-5-on-multiple-long-horizon-coding-benchmarks-for-1-6th-the-cost,753B; June 2026 (exact day verify)
 2026-08-14,GLM,GLM-5.3,Zhipu AI (Z.ai),China,yes,200000,text,yes,https://technode.com/2026/08/17/z-ai-launches-glm-5-3-with-claimed-50-gain-on-coding-benchmark/,checked 2026-11-08; weights promised two weeks after launch (open status verify)
+2026-08-05,Llama/Muse,Muse Spark 1.2,Meta,US,no,1000000,text+image in,no,https://datanorth.ai/news/meta-releases-muse-spark-1-2-and-muse-code,"coding checkpoint with Muse Code; Meta's first paid API ($1.25/$4.25); checked 2026-11-09 (secondary)"

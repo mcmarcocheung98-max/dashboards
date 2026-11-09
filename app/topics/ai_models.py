@@ -47,6 +47,7 @@ WIKI = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikip
 WIKI_KEY = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/{title}/monthly"
 WIKI_START = "20221101"
 BOT = {"User-Agent": "dashboards-ai-models/1.0 (https://github.com/mcmarcocheung98-max/dashboards)", "Accept": "application/json"}
+AA_FREE = "https://artificialanalysis.ai/api/v2/language/models/free"    # the V2 API; the legacy /api/v2/data/llms/models answered 410 from 4 Nov 2026
 NEAR_TOP = 50                   # "frontier tier": within this many Arena points of the top model
 MIN_FLOP = 1e22                 # models drawn on the compute chart
 COUNTRIES = ("US", "China")
@@ -447,13 +448,14 @@ def frontier_prices(snaps: dict[str, list[dict]], launch: list[dict], current: l
     for d in dates:
         pt = price_table(launch, current if d == dates[-1] else None)
         top = max(r["score"] for r in snaps[d])
+        n20 = sum(1 for r in snaps[d] if 0 < r["rank"] <= 20)
         tier = [r for r in snaps[d] if r["score"] >= top - NEAR_TOP]
         priced = [(pt[norm(r["model"])]["output"], r, pt[norm(r["model"])]) for r in tier if norm(r["model"]) in pt]
         if priced:
             p, r, info = min(priced, key=lambda x: x[0])
-            out.append({"t": _t(d), "date": d, "price": p, "model": r["model"], "score": r["score"], "top": top, "n_tier": len(tier), "n_priced": len(priced), "source": info["source"]})
+            out.append({"t": _t(d), "date": d, "price": p, "model": r["model"], "score": r["score"], "top": top, "n_tier": len(tier), "n_priced": len(priced), "n_top20": n20, "source": info["source"]})
         else:
-            out.append({"t": _t(d), "date": d, "price": None, "model": None, "score": None, "top": top, "n_tier": len(tier), "n_priced": 0, "source": None})
+            out.append({"t": _t(d), "date": d, "price": None, "model": None, "score": None, "top": top, "n_tier": len(tier), "n_priced": 0, "n_top20": n20, "source": None})
     return out
 
 
@@ -592,11 +594,13 @@ def SIGNALS() -> list[dict]:
     fp = [x for x in (_cached_payload("cost").get("frontier_price") or []) if x.get("price") is not None]
     if fp:
         now = fp[-1]
+        partial = (now.get("n_top20") or 0) < 20
         ago = [x for x in fp if x["t"] <= now["t"] - 300 * 86400]
         chg = now["price"] / ago[-1]["price"] - 1 if ago and ago[-1]["price"] else None
         add("price_per_point", "cost", f"Cheapest model within {NEAR_TOP} Arena points of the top, $ per million output tokens", now["price"], "",
-            0 if chg is None else 1 if chg < 0 else -1, "falls by half on a year, or rises", chg is not None and (chg <= -0.5 or chg > 0),
-            f"{now['model']} ({now['source']} price) on {now['date']}" + (f"; {chg:+.0%} against the snapshot a year or more before" if chg is not None else "; no snapshot a year earlier yet"))
+            0 if chg is None else 1 if chg < 0 else -1, "falls by half on a year, or rises", not partial and chg is not None and (chg <= -0.5 or chg > 0),
+            (f"partial snapshot ({now.get('n_top20') or 0} of 20 entered), not counted as crossed; " if partial else "")
+            + f"{now['model']} ({now['source']} price) on {now['date']}" + (f"; {chg:+.0%} against the snapshot a year or more before" if chg is not None else "; no snapshot a year earlier yet"))
     st = (_cached_payload("utility").get("arena") or {}).get("stats") or {}
     if st:
         d = list(st)[-1]
@@ -606,9 +610,9 @@ def SIGNALS() -> list[dict]:
             add("open_gap", "utility", "Best open-weights model's Arena gap to the top", g, " pts", 1 if g < 30 else -1 if g > 80 else 0, "under 20 points, or over 100",
                 g < 20 or g > 100, f"{s['best_open']} vs {s['top_model']} on {d}")
         if s.get("china_share") is not None:
-            sh = s["china_share"]
+            sh, partial = s["china_share"], (s.get("n_top20") or 0) < 20
             add("china_share_top20", "utility", "Chinese developers' share of the Arena top 20", _r(100 * sh, 1), "%", 1 if sh > 0.25 else -1 if sh < 0.15 else 0, "above 40% or below 10%",
-                sh > 0.4 or sh < 0.1, f"{s['china_top20']} of the {s['n_top20']} top-20 rows entered for {d}")
+                not partial and (sh > 0.4 or sh < 0.1), ("partial snapshot, not counted as crossed; " if partial else "") + f"{s['china_top20']} of the {s['n_top20']} top-20 rows entered for {d}")
     cad = _cached_payload("iteration").get("cadence_12m")
     if cad is not None:
         add("release_cadence", "iteration", "Median days between a family's releases, trailing 12 months", cad, " days", 1 if cad < 60 else -1 if cad > 120 else 0, "under 60 days", cad < 60,
@@ -623,9 +627,9 @@ def _layout_now() -> dict:
     import requests
     wiki, _ = wiki_url("DeepSeek")
     urls = {"openrouter models": OPENROUTER, "wikimedia monthly": wiki, "epoch notable": CC.EPOCH,
-            "epoch benchmark hub (candidate)": "https://epoch.ai/data/benchmark_data/benchmark_runs.csv",
-            "epoch benchmarks use-this-data": "https://epoch.ai/benchmarks/use-this-data",
-            "artificial analysis api (needs a key)": "https://artificialanalysis.ai/api/v2/data/llms/models",
+            "epoch benchmarks use-this-data (find the CSV link)": "https://epoch.ai/benchmarks/use-this-data",
+            "artificial analysis v2 free tier (needs x-api-key: AA_API_KEY proposed)": AA_FREE,
+            "artificial analysis v2 openapi": "https://artificialanalysis.ai/api/v2/openapi",
             "openrouter rankings page": "https://openrouter.ai/rankings", "arena leaderboard page": "https://arena.ai/leaderboard/text"}
 
     def one(item):

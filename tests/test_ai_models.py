@@ -187,9 +187,9 @@ def test_wiki_parser():
 def test_utility_payload(mocked):
     p = B.json_safe(M._utility_now())
     A = p["arena"]
-    assert A["dates"] == ["2024-06-10", "2025-07-17", "2026-11-02"] and A["latest"][0]["score"] >= A["latest"][-1]["score"]
-    s = A["stats"]["2026-11-02"]
-    assert s["top_model"].startswith("Gemini 4") and s["china_share"] is not None and s["open_gap"] > 0 and s["best_open"] == "Kimi K3"
+    assert A["dates"] == ["2024-06-10", "2025-07-17", "2026-11-04"] and A["latest"][0]["rank"] == 1
+    s = A["stats"]["2026-11-04"]
+    assert s["top_model"].startswith("Gemini 4") and s["china_share"] is not None and s["open_gap"] > 0 and s["best_open"] == "Kimi K3 (Max)" and s["n_top20"] == 10
     assert A["by_family"]["Gemini"] and A["us_cn"] and p["index"]["by_family"]["Gemini"] and p["benchmarks"]["names"] == ["FrontierMath", "GPQA Diamond", "SWE-bench Verified"]
     assert set(p["wiki"]) >= {"GPT", "DeepSeek"} and p["wiki"]["DeepSeek"][-1][1] > p["wiki"]["GPT"][-1][1]
     assert p["openrouter"]["latest"] and p["openrouter"]["china_share"][-1][1] > 0.5
@@ -214,7 +214,7 @@ def test_cost_payload_prices_and_calculator(mocked):
     p = B.json_safe(M._cost_now())
     assert p["current"] and p["current_error"] is None and p["epoch_cost"]["models"] and p["epoch_cost"]["models"][0]["per_eflop"] > 0
     fp = p["frontier_price"]
-    assert [x["date"] for x in fp] == ["2024-06-10", "2025-07-17", "2026-11-02"]
+    assert [x["date"] for x in fp] == ["2024-06-10", "2025-07-17", "2026-11-04"] and fp[-1]["n_top20"] == 10
     assert fp[0]["price"] == 15 and fp[0]["model"].startswith("GPT-4o")                   # GPT-4o launch price, within 50 points of the top
     assert fp[-1]["source"] == "openrouter" and fp[-1]["price"] == 3 and fp[-1]["model"] == "Muse Spark"   # OpenRouter's current list (fixture: Muse Spark $3) wins
     pp = {x["model"]: x for x in p["per_point"]}
@@ -229,7 +229,7 @@ def test_cost_without_openrouter_uses_launch_prices_and_marks_handled(mocked, mo
     B.HEALTH.setdefault(M.OPENROUTER, {"module": "ai_models", "ok": None, "fail": 1.0, "error": "x"})
     p = M._cost_now()
     assert p["current"] is None and p["current_error"] == "ConnectionError"
-    assert p["frontier_price"][-1]["source"] == "launch" and p["frontier_price"][-1]["price"] == 10   # Gemini 4 Argon launch price
+    assert p["frontier_price"][-1]["source"] == "launch" and p["frontier_price"][-1]["price"] == 4.25   # Muse Spark launch price (Meta Model API)
     assert B.HEALTH[M.OPENROUTER].get("handled_how")
 
 
@@ -245,7 +245,8 @@ def test_overview_readings_and_signals(mocked):
     sig = {x["key"]: x for x in M.SIGNALS()}
     assert list(sig) == keys == ["frontier_record_age", "price_per_point", "open_gap", "china_share_top20", "release_cadence"]
     assert all(isinstance(x["crossed"], bool) and x["lean"] in (-1, 0, 1) and x["watch"] for x in sig.values())
-    assert sig["price_per_point"]["crossed"] is True and sig["price_per_point"]["lean"] == -1   # $3 now against $2.19 (DeepSeek-R1-0528 launch price) at the 2025 snapshot: it rose
+    assert sig["price_per_point"]["crossed"] is False and sig["price_per_point"]["lean"] == -1 and sig["price_per_point"]["note"].startswith("partial snapshot (10 of 20")   # rose, but a partial snapshot never counts
+    assert sig["china_share_top20"]["crossed"] is False and "partial" in sig["china_share_top20"]["note"]
     B.json_safe(M.SIGNALS())
 
 
