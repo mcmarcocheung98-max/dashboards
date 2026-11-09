@@ -1192,7 +1192,7 @@
      "slug": "status",
      "tab": "log",
      "what": "smoke.py survives a dashboard shell that does not load (retry, record, continue) instead of aborting the live check",
-     "commit": "",
+     "commit": "bdbeb60",
      "by": "agent"
     }
    ],
