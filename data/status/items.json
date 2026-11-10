@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-09",
+ "updated": "2026-11-10",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -209,7 +209,7 @@
    "owner": "session:housing",
    "status": "waiting",
    "since": "2026-11-03",
-   "detail": "api.hkma.gov.hk answers 405 with an Alibaba Cloud WAF block page for the server's IP, for every header variant, so it is an IP block, not an API change. HIBOR is served from its snapshot and housing › global keeps the UK and US rates and names HIBOR as missing. If it still fails at 3 days, the housing session will put the options to the owner: a hand-entered monthly HIBOR CSV, or another source. On 4 Nov the error changed to 502 Bad Gateway (since 3 Nov 18:31)."
+   "detail": "api.hkma.gov.hk answers 405 with an Alibaba Cloud WAF block page for the server's IP, for every header variant, so it is an IP block, not an API change. HIBOR is served from its snapshot and housing › global keeps the UK and US rates and names HIBOR as missing. If it still fails at 3 days, the housing session will put the options to the owner: a hand-entered monthly HIBOR CSV, or another source. On 4 Nov the error changed to 502 Bad Gateway (since 3 Nov 18:31). Reminded 10 Nov."
   },
   {
    "id": "p-signals-wiring",
@@ -281,6 +281,38 @@
    "since": "2026-11-08",
    "detail": "Session session_01Hguru26F1zDdmAxFa5sdbA started from the dev agent's brief; reports back to the parent when pushed. Pushed as d47b5dc on 8 Nov; the session hit the account's usage limit right after and its report did not arrive, so the live check and signals are being read by the parent. Its report arrived on 9 Nov: 447 tests, all 24 Cboe chains answer live, full model run 98 s. Friday close: VIX 25.6 above VIX3M 24.6 (inverted), SKEW at its 90th percentile, NVDA expected move ±10.9% into its 19 Nov earnings. Two proposed signals read crossed (vix_term, skew_ai).",
    "done": "2026-11-08"
+  },
+  {
+   "id": "ai-review-1110",
+   "owner": "session:ai",
+   "status": "waiting",
+   "since": "2026-11-10",
+   "title": "AI: refresh users.csv and agent_milestones.csv; launch markers not zeros; Users chart axis vs the shared window",
+   "detail": "From the 10 Nov review. One push to main, reply to the dev agent."
+  },
+  {
+   "id": "slow-tests-altcoins",
+   "owner": "session:btc-cycles",
+   "status": "done",
+   "since": "2026-11-10",
+   "title": "Altcoins tests under 3 s each (three at 17 s now)",
+   "detail": "Saves about a fifth of every tests run; owner's Actions budget. Done the same morning (e3929fc): 110 s to 36 s."
+  },
+  {
+   "id": "slow-tests-pokemon",
+   "owner": "session:pokemon-cards",
+   "status": "waiting",
+   "since": "2026-11-10",
+   "title": "Pokémon tests under 3 s each (six between 4 and 15 s now)",
+   "detail": "Saves about a sixth of every tests run; owner's Actions budget."
+  },
+  {
+   "id": "options-thin-guard",
+   "owner": "session:options",
+   "status": "waiting",
+   "since": "2026-11-10",
+   "title": "Options: ai_iv_rank and vrp not crossed on a thin IV history",
+   "detail": "Board read IV rank 0.0 and VRP 29.2% crossed on one day of history (10 Nov)."
   }
  ],
  "roadmap": [
@@ -354,7 +386,7 @@
    "horizon": "next",
    "status": "in_progress",
    "area": "Data",
-   "detail": "Roadmap phase 0 step 4: every hand-entered row either cites its source or goes. The sessions clear their own; the routine counts what is left."
+   "detail": "Roadmap phase 0 step 4: every hand-entered row either cites its source or goes. The sessions clear their own; the routine counts what is left. Count on 10 Nov: 417 rows (debt-rates 292, demographics 56, ai-models 32, compute-chips 25, trends 10, climate 1, options 1)."
   },
   {
    "id": "r-phase1",
@@ -667,6 +699,21 @@
    "handed": [
     "space",
     "ai-models"
+   ]
+  },
+  {
+   "date": "2026-11-10",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Live check: all 154 light tabs loaded; in the dark pass AI Models' iteration tab failed twice at 07:51 and the run stopped there (smoke bug, fixed), the endpoint answered at once on re-fetch. Health: known failures only (Bluesky and Reddit 403 on Trends, Yahoo 429 on BTC Cycles, HKMA 405 on Housing, FRED on AI Stocks and Luxury); Pokémon shows no sources since the 21:00 restart because nothing had fetched them yet. Signals 66 of 83 wired, 18 crossed; the Options IV-rank and VRP crossings come from a one-day history and were sent back. Newsletter built, not sent (no Gmail secrets). The prune step deleted 47 old screenshot bundles.",
+   "fixed": [
+    "smoke.py no longer crashes when a tab fails and the shell is lost (85bedd9)"
+   ],
+   "handed": [
+    "session:ai (review)",
+    "session:btc-cycles and session:pokemon-cards (slow tests)",
+    "session:options (thin-history guard)",
+    "session:housing (hkma-405 reminder)"
    ]
   }
  ],
@@ -1224,6 +1271,83 @@
     "Approve or skip: r-climate-disasters, r-watch-recalibrate, r-private-signals, and the AI Models and Options signals once built",
     "Pick the broker for the options trading portal",
     "Add the eBay keys and the Gmail secrets; confirm the three bags' prices"
+   ]
+  },
+  {
+   "date": "2026-11-10",
+   "title": "Actions budget cut; AI dashboard reviewed; four hand-offs",
+   "summary": "The owner was at 90% of the GitHub Actions allowance, and the tests workflow was 89% of the minutes (one six-minute run per push). It now skips status-only pushes, cancels superseded runs and caches pip; screenshot bundles are kept three days and pruned by the live check itself. The review of AI: Jobs & Adoption found its two hand-kept lists stopped in 2025 (users 6 Oct 2025, agents 17 Jul 2025) and a zero shown as a user count; handed to its session. The signals board reads 66 of 83 wired and 18 crossed, but two of the crossed Options readings (IV rank 0.0, VRP 29%) come from a one-day history and were sent back as a guard to add. The Altcoins session answered within the hour: its test file runs in 36 s instead of 110 s.",
+   "changes": [
+    {
+     "dashboard": "shared",
+     "slug": "status",
+     "tab": "log",
+     "what": "smoke.py recovers the page after a failed tab instead of crashing the live check on the next click",
+     "commit": "85bedd9",
+     "by": "agent"
+    },
+    {
+     "dashboard": "shared",
+     "slug": "status",
+     "tab": "log",
+     "what": "tests workflow: path filter for status-only pushes, cancel-in-progress, pip cache; live-check keeps screenshots three days and prunes older bundles; playbook gains an Actions budget section",
+     "commit": "5f7b687",
+     "by": "agent"
+    },
+    {
+     "dashboard": "shared",
+     "slug": "status",
+     "tab": "log",
+     "what": "tests back to serial pytest: four workers did not finish on the runner",
+     "commit": "63fcdba",
+     "by": "agent"
+    },
+    {
+     "dashboard": "Compute & Chips",
+     "slug": "compute-chips",
+     "tab": "foundries",
+     "what": "SMIC 1Q23, 2Q23, 2Q24 and 3Q24 checked against SMIC's results announcements, verify cleared",
+     "commit": "67c04ee",
+     "by": "session:compute-chips"
+    },
+    {
+     "dashboard": "Altcoins",
+     "slug": "altcoins",
+     "tab": "about",
+     "what": "tests compute the fill once per module: the file runs in 36 s instead of 110 s",
+     "commit": "e3929fc",
+     "by": "session:btc-cycles"
+    },
+    {
+     "dashboard": "Compute & Chips",
+     "slug": "compute-chips",
+     "tab": "foundries",
+     "what": "SMIC 2Q25 and 3Q25 checked against the 2025 annual report, no chip_revenue row left to verify",
+     "commit": "7d579ae",
+     "by": "session:compute-chips"
+    }
+   ],
+   "review": "ai",
+   "verify_rows": {
+    "debt-rates": 292,
+    "demographics": 56,
+    "ai-models": 32,
+    "compute-chips": 25,
+    "trends": 10,
+    "climate": 1,
+    "options": 1,
+    "total": 417
+   },
+   "next": [
+    "Read the sessions' replies on the slow tests (Altcoins, Pokémon) and the Options thin-history guard; record the before/after seconds",
+    "AI session's refresh of users.csv and agent_milestones.csv",
+    "Wednesday: no luxury log; token totals only if three or more sessions ran"
+   ],
+   "asks": [
+    "Approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals; the AI Models and Options signals are still proposed",
+    "Broker for the options trading portal (Alpaca paper first is the recommendation)",
+    "Gmail newsletter secrets (the email was built again today and not sent), eBay keys, the three bag retail prices, Arena ranks 8-17",
+    "Replies owed in the Pokémon, Longevity and Compute-chips sessions"
    ]
   }
  ]
