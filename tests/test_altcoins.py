@@ -91,22 +91,55 @@ def fake_download(charts):
     return dl
 
 
-@pytest.fixture()
-def filled(tmp_path, monkeypatch):
-    monkeypatch.setattr(B, "SNAP_DIR", tmp_path / "snaps")
-    monkeypatch.setattr(C, "FUND_DIR", tmp_path / "snaps" / "btc_fundamentals")
-    monkeypatch.setattr(M, "SHARE_LOG", tmp_path / "share.csv")
-    monkeypatch.setattr(C, "PACE", 0)
+def _patch_fill(mp, snaps):
+    """Every patch the filled tests run under: snapshots in a temp folder, no pacing, the fake downloads."""
     from app.topics import _narrative as NR
-    monkeypatch.setattr(NR, "FUNDING_PACE", 0)                     # the funding pacing slept ~48 s per test on the fake candles
-    monkeypatch.setattr(NR, "FUNDING_RETRY_WAIT", 0)
-    B.STALE.clear()
+    mp.setattr(B, "SNAP_DIR", snaps)
+    mp.setattr(C, "FUND_DIR", snaps / "btc_fundamentals")
+    mp.setattr(M, "SHARE_LOG", snaps.parent / "share.csv")
+    mp.setattr(C, "PACE", 0)
+    mp.setattr(NR, "FUNDING_PACE", 0)                     # the funding pacing slept ~48 s per test on the fake candles
+    mp.setattr(NR, "FUNDING_RETRY_WAIT", 0)
+    mp.setattr(B, "_download", fake_download(_chart(mult=1.5)))
+
+
+# the endpoints the filled tests read: computed once per module (the boards and signals fit walk-forward on every coin, ~20 s), then each
+# test starts from a copy of that warm cache, so no test pays for the fit again and none sees another test's cache changes
+WARM = ("zones", "boards", "volume", "signals", "unlocks", "hype", "ena", "sol", "near", "basket", "season")
+
+
+@pytest.fixture(scope="module")
+def _warm(tmp_path_factory):
     from app import cache
+    snaps = tmp_path_factory.mktemp("altcoins") / "snaps"
+    mp = pytest.MonkeyPatch()
+    try:
+        _patch_fill(mp, snaps)
+        B.STALE.clear()
+        cache._cache.clear()
+        C.fill_coins()
+        M.fill()
+        cache._cache.clear()
+        for k in WARM:
+            A.ENDPOINTS[k]()
+        A.READINGS()
+        warm = dict(cache._cache), dict(B.STALE)
+    finally:
+        mp.undo()
+        cache._cache.clear()
+        B.STALE.clear()
+    return snaps, warm
+
+
+@pytest.fixture()
+def filled(_warm, monkeypatch):
+    from app import cache
+    snaps, (warm_cache, warm_stale) = _warm
+    _patch_fill(monkeypatch, snaps)
     cache._cache.clear()
-    monkeypatch.setattr(B, "_download", fake_download(_chart(mult=1.5)))
-    C.fill_coins()
-    M.fill()
-    cache._cache.clear()
+    cache._cache.update(warm_cache)
+    B.STALE.clear()
+    B.STALE.update(warm_stale)
     yield
     cache._cache.clear()
     B.STALE.clear()

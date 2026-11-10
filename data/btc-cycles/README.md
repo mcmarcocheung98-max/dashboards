@@ -141,3 +141,6 @@ Local preview: `python -m app.server`, then open `/btc-cycles`.
   Coins tab.
 - Still open: Yahoo URLs show as failing in `/api/health` even where a fallback (CNBC) answers; a `fold` helper (a card that folds away)
   is now copied in both `btc-cycles.js` and `altcoins.js` and would sit better in `topic.html`.
+- 10 Nov 2026: `_caller_module` in `app/topics/_base.py` calls `inspect.stack()`, which reads the source lines of every frame on the stack
+  (about 4 ms a call, 700+ calls in one Altcoin Study fill, ~3 s). `inspect.stack(0)` or walking `sys._getframe()` gives the same module
+  names without the source lookups; it would speed up the server's fills and every test that fills.
