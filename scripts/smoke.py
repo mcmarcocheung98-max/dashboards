@@ -241,6 +241,13 @@ def main() -> int:
                         continue
                 ask_first = None
                 for i in range(pg.locator("nav button").count()):
+                    if pg.locator("nav button").count() <= i:      # the shell was lost on a failed tab: bring the page back before the next tab
+                        try:
+                            pg.goto(f"{base}/{slug}"); pg.wait_for_selector("nav button", timeout=30000)
+                        except Exception as e:
+                            print(f"{theme:5} {slug:12} (rest)       could-not-load=True ({type(e).__name__}; tabs {i + 1}+ not checked)")
+                            bad.append(f"{theme} {slug}: shell gone after a failed tab, tabs {i + 1}+ not checked")
+                            break
                     pg.locator("nav button").nth(i).click()
                     pg.wait_for_function("document.getElementById('stamp').textContent.startsWith('Updated')", timeout=180000)
                     time.sleep(1.2)
