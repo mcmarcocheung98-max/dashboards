@@ -269,8 +269,8 @@ def test_realised_vol_rank_and_percentile():
     r = M.rank_pct(pd.Series([0.3, 0.4, 0.5, 0.6]), 0.55)
     assert r == {"rank": 83.3, "pct": 75.0, "days": 4}
     assert M.rank_pct(pd.Series([0.3]), 0.3)["rank"] is None and M.rank_pct(pd.Series([0.3, 0.3]), 0.3)["rank"] == 50.0
-    h = M._rank_hist([[1, 0.2], [2, 0.4], [3, 0.3], [4, 0.5]])
-    assert h == [[2, 100.0], [3, 50.0], [4, 100.0]]
+    pts = [[i, 0.3] for i in range(9)] + [[9, 0.2], [10, 0.4], [11, 0.3], [12, 0.5]]
+    assert M._rank_hist(pts) == [[9, 0.0], [10, 100.0], [11, 50.0], [12, 100.0]]                 # starts at the tenth point
 
 
 # ------------------------------------------------------------------ the store and the model
@@ -370,6 +370,18 @@ def test_readings_and_signals_from_cached_payloads(mocked, frozen):
     assert s["pc_oi"]["crossed"] == (s["pc_oi"]["value"] > 2 or s["pc_oi"]["value"] < 1)
     assert "fallback" in s["skew_ai"]["note"]                                            # 16 days of own history: the SKEW index stands in
     assert all(w.get("proposed") for w in json.loads((B.MANUAL_DIR / "signals" / "watchlist.json").read_text())["options"])
+
+
+def test_rank_needs_ten_days_and_the_signal_says_so(mocked, frozen):
+    seed_history(5, ["NVDA", "AMD", "MSFT"])                                             # 5 + today = 6 days: under MIN_RANK_DAYS
+    d = M.ENDPOINTS["setup"]()
+    nv = next(r for r in d["table"] if r["sym"] == "NVDA")
+    assert nv["rank"] is None and nv["pct"] is None and nv["rank_days"] == 6 and d["head"]["ai_iv_rank"] is None and d["ai_rank_hist"] == []
+    s = {x["key"]: x for x in M.SIGNALS()}
+    assert s["ai_iv_rank"]["value"] is None and s["ai_iv_rank"]["crossed"] is False and s["ai_iv_rank"]["note"].startswith("needs 10 days of IV history (6 so far)")
+    assert "ai_iv_rank" not in {x["key"] for x in M.READINGS()}
+    assert "fallback" in s["skew_ai"]["note"] and "not the accrued history" in s["vrp"]["note"]      # the SKEW percentile comes from Setup when Skew is not cached
+    assert M._rank_hist([[i, 0.3 + i / 100] for i in range(9)]) == [] and len(M._rank_hist([[i, 0.3 + i / 100] for i in range(12)])) == 3
 
 
 def test_setup_without_history_still_answers_and_handles_a_dead_source(mocked, frozen, monkeypatch):

@@ -56,6 +56,7 @@ CBOE_HIST = "https://cdn.cboe.com/api/global/us_indices/daily_prices/{name}_Hist
 VIX_URL, VIX3M_URL, VVIX_URL, SKEW_URL = (CBOE_HIST.format(name=n) for n in ("VIX", "VIX3M", "VVIX", "SKEW"))
 INDEXES = ("SPY", "QQQ", "IWM", "SMH")           # the index proxies: their IV rank falls back to the VIX percentile until history accrues
 MIN_HISTORY = 60                                  # days of accrued history before IV rank and skew percentiles stand on their own
+MIN_RANK_DAYS = 10                                # days of a symbol's own IV history before its rank and percentile are shown or signalled at all
 MAX_DTE = 400                                     # expiries kept
 KEEP_LO, KEEP_HI = 0.6, 1.5                       # strikes kept, as a share of spot
 UNUSUAL_RATIO, UNUSUAL_VOLUME = 5.0, 1000         # volume / OI and volume for the unusual-activity table
@@ -489,6 +490,8 @@ def symbol_model(u: dict, evs: list[dict], today: date | None = None) -> dict:
     hist = load_daily(sym)
     ivs = pd.Series({pd.Timestamp(k): v["atm_iv"] for k, v in hist.items() if v.get("atm_iv")}, dtype=float).sort_index()
     rank = rank_pct(ivs.tail(252), entry["atm_iv"])
+    if rank["days"] < MIN_RANK_DAYS:                        # a rank over one or two days is 0 or 100 by construction: not a reading
+        rank.update(rank=None, pct=None)
     rank["basis"] = "history"
     earn = next_earnings(sym, evs, today)
     return {"sym": sym, "name": u["name"], "group": u["group"], "both": u.get("both", False), "spot": _r(spot, 2), "iv30": chain["iv30"], "trade_date": chain["trade_date"],
@@ -573,7 +576,7 @@ def basket_now(M: dict) -> dict:
     thin = [s["sym"] for s in core if s["rank"].get("basis") != "history"]
     return {"iv_rank": _median(ranks), "iv_rank_n": len([r for r in ranks if r is not None]), "skew": _median(skews), "skew_n": len(skews),
             "vrp_share": _r(100 * sum(vrp) / len(vrp), 1) if vrp else None, "vrp_n": len(vrp), "vrp_above": int(sum(vrp)),
-            "thin": thin, "history_days": max([s["history_days"] for s in S.values()] or [0]), "min_history": MIN_HISTORY, "vix_rank": vix_rank}
+            "thin": thin, "history_days": max([s["history_days"] for s in S.values()] or [0]), "min_history": MIN_HISTORY, "min_rank_days": MIN_RANK_DAYS, "vix_rank": vix_rank}
 
 
 def where_line(h: dict) -> str:
@@ -686,7 +689,7 @@ def _rank_hist(iv_pts: list) -> list:
     out = []
     for i, (t, v) in enumerate(iv_pts):
         prior = [x for _, x in iv_pts[max(0, i - 252):i + 1]]
-        if len(prior) >= 2:
+        if len(prior) >= MIN_RANK_DAYS:
             lo, hi = min(prior), max(prior)
             out.append([t, _r(100 * (v - lo) / (hi - lo), 1) if hi > lo else 50.0])
     return out
@@ -826,10 +829,16 @@ def SIGNALS() -> list[dict]:
         v = h["ai_iv_rank"]
         add("ai_iv_rank", "setup", "AI basket median IV rank", v, "", -1 if v > 80 else 1 if v < 20 else 0, "above 80 or below 20", v > 80 or v < 20,
             (f"thin history ({bk.get('history_days', 0)} of {MIN_HISTORY} days): " if h.get("thin") else "") + f"median of {bk.get('iv_rank_n', 0)} core stocks")
+    elif bk.get("history_days"):
+        add("ai_iv_rank", "setup", "AI basket median IV rank", None, "", 0, "above 80 or below 20", False,
+            f"needs {MIN_RANK_DAYS} days of IV history ({bk['history_days']} so far): a rank over a day or two is 0 or 100 by construction")
     sk = _cached_payload("skew").get("basket") or {}
     if h.get("ai_skew") is not None:
         v = _r(100 * h["ai_skew"], 1)
         own, idx = sk.get("skew_pct_own") or {}, sk.get("skew_index_rank") or {}
+        if not idx and s.get("skew_index"):                 # the Skew tab not computed yet: the SKEW index's year from the Setup payload
+            vals = [v for _, v in s["skew_index"][-252:]]
+            idx = rank_pct(vals, vals[-1]) if len(vals) > 20 else {}
         if own.get("days", 0) >= MIN_HISTORY and own.get("pct") is not None:
             crossed, basis = own["pct"] > 90 or own["pct"] < 10, f"own history {own['days']} days, percentile {own['pct']}"
         elif idx.get("pct") is not None:
@@ -841,7 +850,7 @@ def SIGNALS() -> list[dict]:
     if h.get("vrp_share") is not None:
         v = h["vrp_share"]
         add("vrp", "vol", "Share of symbols with front-month IV above 30-day realised", v, "%", -1 if v < 30 else 1 if v > 70 else 0, "below 30% or above 90%", v < 30 or v > 90,
-            f"{bk.get('vrp_above', 0)} of {bk.get('vrp_n', 0)} symbols")
+            f"{bk.get('vrp_above', 0)} of {bk.get('vrp_n', 0)} symbols; today's chain IV against the trailing 30-day realised from closes, not the accrued history")
     if h.get("spy_pc_oi") is not None:
         v = h["spy_pc_oi"]
         add("pc_oi", "chains", "SPY put/call open-interest ratio", v, "", -1 if v > 2 else 1 if v < 1.2 else 0, "above 2.0 or below 1.0", v > 2 or v < 1,
