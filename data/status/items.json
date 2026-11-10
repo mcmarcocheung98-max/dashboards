@@ -309,10 +309,10 @@
   {
    "id": "options-thin-guard",
    "owner": "session:options",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-10",
    "title": "Options: ai_iv_rank and vrp not crossed on a thin IV history",
-   "detail": "Board read IV rank 0.0 and VRP 29.2% crossed on one day of history (10 Nov)."
+   "detail": "Board read IV rank 0.0 and VRP 29.2% crossed on one day of history (10 Nov). Done the same morning (f4b025c)."
   }
  ],
  "roadmap": [
@@ -1276,7 +1276,7 @@
   {
    "date": "2026-11-10",
    "title": "Actions budget cut; AI dashboard reviewed; four hand-offs",
-   "summary": "The owner was at 90% of the GitHub Actions allowance, and the tests workflow was 89% of the minutes (one six-minute run per push). It now skips status-only pushes, cancels superseded runs and caches pip; screenshot bundles are kept three days and pruned by the live check itself. The review of AI: Jobs & Adoption found its two hand-kept lists stopped in 2025 (users 6 Oct 2025, agents 17 Jul 2025) and a zero shown as a user count; handed to its session. The signals board reads 66 of 83 wired and 18 crossed, but two of the crossed Options readings (IV rank 0.0, VRP 29%) come from a one-day history and were sent back as a guard to add. The Altcoins session answered within the hour: its test file runs in 36 s instead of 110 s.",
+   "summary": "The owner was at 90% of the GitHub Actions allowance, and the tests workflow was 89% of the minutes (one six-minute run per push). It now skips status-only pushes, cancels superseded runs and caches pip; screenshot bundles are kept three days and pruned by the live check itself. The review of AI: Jobs & Adoption found its two hand-kept lists stopped in 2025 (users 6 Oct 2025, agents 17 Jul 2025) and a zero shown as a user count; handed to its session. The signals board reads 66 of 83 wired and 18 crossed, but two of the crossed Options readings (IV rank 0.0, VRP 29%) come from a one-day history and were sent back as a guard to add. The Altcoins session answered within the hour: its test file runs in 36 s instead of 110 s. The Options session added the IV-rank guard the same morning and showed the VRP reading was real.",
    "changes": [
     {
      "dashboard": "shared",
@@ -1325,6 +1325,14 @@
      "what": "SMIC 2Q25 and 3Q25 checked against the 2025 annual report, no chip_revenue row left to verify",
      "commit": "7d579ae",
      "by": "session:compute-chips"
+    },
+    {
+     "dashboard": "Options Setup",
+     "slug": "options",
+     "tab": "setup",
+     "what": "IV rank and percentile need 10 days of a symbol's own history; ai_iv_rank reads none until then. VRP needs no guard: Monday's 29% is a true reading, realised volatility jumped above implied on 17 of 24 names while VIX fell from 25.6 to 19.9",
+     "commit": "f4b025c",
+     "by": "session:options"
     }
    ],
    "review": "ai",
