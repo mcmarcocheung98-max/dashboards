@@ -159,9 +159,9 @@ const VIEWS = {
   },
   async users() {
     const d = await api("users"), s = Object.entries(d.series || {}).filter(([, p]) => p.some(x => x[1] > 0));
-    const chart = card("Reported users", ...linesChart(s.map(([k, pts]) => ({ name: k, points: pts.filter(p => p[1] > 0) })), v => big(v)), asOf(d),
-      note("Each point is a company announcement; lines join announcements and say nothing about the months between."));
-    const rows = (d.rows || []).map(r => el("tr", {}, el("td", {}, dateOf(r.date)), el("td", { class: "wrap" }, r.series), el("td", {}, big(+r.value)), el("td", { class: "wrap" }, link(host(r.source), r.source), r.note ? " · " + r.note : "")));
+    const chart = card("Reported users", ...linesChart(s.map(([k, pts]) => ({ name: k, points: pts.filter(p => p[1] > 0) })), v => big(v), { sync: false }), asOf(d),
+      note("Each point is a company announcement; lines join announcements and say nothing about the months between. This chart always shows every announcement: the date buttons above do not narrow it."));
+    const rows = (d.rows || []).map(r => el("tr", {}, el("td", {}, dateOf(r.date)), el("td", { class: "wrap" }, r.series), el("td", {}, +r.value > 0 ? big(+r.value) : "launch"), el("td", { class: "wrap" }, link(host(r.source), r.source), r.note ? " · " + r.note.replace(/\s*\(0 = launch marker\)/, "") : "")));
     const table = card("Announcements", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Date", "What", "Users", "Source"].map(h => el("th", h === "What" || h === "Source" ? { style: "text-align:left" } : {}, h))), ...rows)));
     return [chart, table];
   },
