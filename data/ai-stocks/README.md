@@ -159,6 +159,11 @@ stock on each cycle". Tab `midterms`, endpoint `/api/ai-stocks/midterms`.
   completed cycles and the current cycle so far.
 - **Reading (what changed):** the current cycle's Nasdaq-100 level against the median path at the same trading day; +1 when it is
   more than 3 points ahead, -1 when more than 3 behind.
+- **Downloads:** a page view never downloads. The background job `fill_midterms` (with the other BACKGROUND jobs, and started by a
+  view that finds no copy) fetches the four FRED series in parallel through curl over HTTP/1.1, 30 s each, cut to the windows the
+  study reads (10 days before to 380 days after each midterm; the monthly series whole). The page reads the last copy (memory, then the
+  snapshot), else the committed seed in `data/ai-stocks/fred/` (FRED to 10 Nov 2026, the same cut), marked as an older copy. Only the
+  current cycle needs fresh data, so the tab stays complete if FRED is unreachable from the server.
 - **Caveats:** 17 completed midterms, 13 with a tech proxy: a small sample, each cycle with its own rates, recessions and wars. The
   Nasdaq-100 is reshuffled each year towards its winners (survivorship). Prices without dividends. History, not a forecast.
 

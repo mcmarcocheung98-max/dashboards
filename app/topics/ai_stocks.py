@@ -24,6 +24,7 @@ first full month of trading (full_months). Leans: +1 = the setup reads healthier
 from __future__ import annotations
 
 import json
+import threading
 import time
 from io import StringIO
 
@@ -1232,9 +1233,28 @@ def proxy_for(y: int) -> str | None:
     return "NASDAQ100" if y >= 1986 else "NASDAQCOM" if y >= 1974 else None
 
 
-def fred_series(sid: str) -> pd.Series:
-    """A FRED series by id (curl, HTTP/1.1: see _base._download), '.' gaps dropped."""
-    d = pd.read_csv(StringIO(fetch(FRED_CSV.format(sid=sid), DAY, curl=True, timeout=40, min_bytes=500)), dtype=str)
+FRED_SEED = B.MANUAL_DIR / SLUG / "fred"     # committed copies (cut to the midterm windows) for when FRED has never answered this server
+FRED_TIMEOUT = 30
+_MT_RUNNING = threading.Lock()
+
+
+def midterm_windows(text: str) -> str:
+    """fetch(reduce=...): a FRED CSV cut to what the study reads, so memory, snapshot and seed stay small: a monthly series whole, a
+    daily one only from 10 days before each midterm to 380 days after it (the current cycle included)."""
+    lines = text.strip().splitlines()
+    if len(lines) < 3:
+        return text
+    days = [ln.split(",", 1)[0] for ln in lines[1:]]
+    if len(days) < 2000:                                                  # monthly (or short): keep it all
+        return text
+    wins = [(str((election_day(y) - pd.Timedelta(days=10)).date()), str((election_day(y) + pd.Timedelta(days=380)).date()))
+            for y in range(MIDTERM_FIRST, pd.Timestamp.now().year + 1, 4)]
+    keep = [ln for ln, d in zip(lines[1:], days) if any(a <= d <= b for a, b in wins)]
+    return "\n".join([lines[0], *keep])
+
+
+def parse_fred(text: str, sid: str) -> pd.Series:
+    d = pd.read_csv(StringIO(text), dtype=str)
     if len(d.columns) < 2:
         raise ValueError(f"FRED {sid}: layout changed")
     s = pd.Series(pd.to_numeric(d.iloc[:, 1], errors="coerce").values, index=pd.to_datetime(d.iloc[:, 0], errors="coerce"))
@@ -1242,6 +1262,53 @@ def fred_series(sid: str) -> pd.Series:
     if len(s) < 20:
         raise ValueError(f"FRED {sid}: {len(s)} rows")
     return s
+
+
+def fred_series(sid: str) -> pd.Series:
+    """BACKGROUND / tests: download a FRED series (curl, HTTP/1.1: see _base._download), cut to the midterm windows."""
+    return parse_fred(fetch(FRED_CSV.format(sid=sid), DAY, curl=True, timeout=FRED_TIMEOUT, min_bytes=500, reduce=midterm_windows), sid)
+
+
+def fred_kept(sid: str) -> tuple[pd.Series, str | None]:
+    """For page views, never a download: the copy fetched last (memory, then the snapshot on the volume), else the committed seed.
+    Returns the series and, when it is the seed, the seed's last date (shown as a stale source)."""
+    url = FRED_CSV.format(sid=sid)
+    try:
+        return parse_fred(B.cached_only(url), sid), None
+    except LookupError:
+        pass
+    f = FRED_SEED / f"{sid}.csv"
+    if not f.exists():
+        raise LookupError("not fetched yet")
+    s = parse_fred(f.read_text(encoding="utf-8"), sid)
+    return s, str(s.index[-1].date())
+
+
+def fill_midterms() -> dict:
+    """BACKGROUND job: the four FRED series, in parallel, each at most FRED_TIMEOUT seconds (curl retries twice); then the Midterms
+    payload is dropped from the cache so the next view reads the fresh copies. Also started by a page view that finds no copy."""
+    from concurrent.futures import ThreadPoolExecutor
+    from ..cache import _cache
+    if not _MT_RUNNING.acquire(blocking=False):
+        return {"midterms": "already running"}
+    try:
+        def one(sid):
+            try:
+                fred_series(sid)
+                return sid, "ok"
+            except Exception as e:
+                return sid, type(e).__name__
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            res = dict(ex.map(one, (MARKET_SERIES, SP500_SERIES, *PROXY_SERIES)))
+        _cache.pop(f"topic:{SLUG}:midterms", None)
+        return res
+    finally:
+        _MT_RUNNING.release()
+
+
+def _kick_midterms() -> None:
+    if not _MT_RUNNING.locked():
+        threading.Thread(target=fill_midterms, daemon=True, name="fill_midterms").start()
 
 
 def fwd_daily(s: pd.Series, t: pd.Timestamp, days: int = 365) -> tuple[float | None, bool]:
@@ -1280,16 +1347,27 @@ def path(s: pd.Series, t: pd.Timestamp, n: int = YEAR_DAYS) -> list[list]:
 
 
 def _midterms_now() -> dict:
-    errors, ser = {}, {}
+    """Reads kept copies only (fred_kept) and answers at once; fill_midterms downloads. A series never fetched and not seeded starts
+    the download and shows as pending."""
+    from ..cache import _cache
+    errors, ser, seeded = {}, {}, {}
     for sid in (MARKET_SERIES, SP500_SERIES, *PROXY_SERIES):
         try:
-            ser[sid] = fred_series(sid)
+            ser[sid], seed = fred_kept(sid)
+            if seed:
+                seeded[sid] = seed
         except Exception as e:
-            errors[sid] = type(e).__name__
-    try:
-        ai = _model()["idx"]
-    except Exception as e:
-        ai, errors["AI basket"] = None, type(e).__name__
+            errors[sid] = "downloading" if isinstance(e, LookupError) else type(e).__name__
+    if errors or seeded:
+        _kick_midterms()
+    ai = None
+    if _cache.get(f"topic:{SLUG}:prices"):                               # the AI basket only from prices already cached: never a download here
+        try:
+            ai = _model()["idx"]
+        except Exception as e:
+            errors["AI basket"] = type(e).__name__
+    else:
+        errors["AI basket"] = "prices not cached yet"
     mkt, sp = ser.get(MARKET_SERIES), ser.get(SP500_SERIES)
     rows, paths = [], {}
     for y in midterm_years():
@@ -1326,7 +1404,8 @@ def _midterms_now() -> dict:
     out = {"rows": rows[::-1], "summary": {"market": summ([r["market"] for r in done]), "proxy": summ(proxy_done),
                                            "sp500": summ([r.get("sp500") for r in done])},
            "paths": paths, "median_path": med_path, "current": cur, "errors": errors, "proxies": PROXY_SERIES,
-           "stale": stale_info_fred(), "updated": int(time.time())}
+           "stale": {**stale_info_fred(), **{FRED_CSV.format(sid=k): v for k, v in seeded.items()}}, "seeded": seeded,
+           "pending": any(v == "downloading" for v in errors.values()), "updated": int(time.time())}
     out["as_of"] = B.latest_date(*[s for s in ser.values()]) if ser else None
     return out
 
@@ -1469,6 +1548,6 @@ ENDPOINTS = {"setup": _cached_ep("setup", _setup_now), "drawdown": _cached_ep("d
              "dips": _cached_ep("dips", _dips_now), "fear": _cached_ep("fear", _fear_now), "fundamentals": _cached_ep("fundamentals", _fundamentals_now),
              "institutions": _cached_ep("institutions", _institutions_now, 1800), "insiders": _cached_ep("insiders", _insiders_now, 1800),
              "companies": _cached_ep("companies", _companies_now, 1800),
-             "midterms": _cached_ep("midterms", _midterms_now),
+             "midterms": _cached_ep("midterms", _midterms_now, 600),
              "layout": _cached_ep("layout", _layout_now, 1800)}
-BACKGROUND = [fill_13f, fill_insiders]             # slow, paced EDGAR downloads the server runs outside page requests (app/server.py _warm)
+BACKGROUND = [fill_midterms, fill_13f, fill_insiders]             # slow, paced EDGAR downloads the server runs outside page requests (app/server.py _warm)

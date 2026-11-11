@@ -445,6 +445,8 @@ const VIEWS = {
       ...(C ? [kpi(C.year + " midterm (" + dateOf(C.date) + "): S&P 500 so far", so(C.sp500, true), cls(C.sp500)),
                kpi("Nasdaq-100 so far, " + days + " days in", so((C.proxy || {}).r12, true), cls((C.proxy || {}).r12)),
                ...(C.ai ? [kpi("AI basket so far", so(C.ai.r12, true), cls(C.ai.r12))] : [])] : [])),
+      d.pending ? el("div", { class: "warn", style: "margin-top:8px" }, "Downloading the FRED histories in the background: reload in a minute or two.") : null,
+      d.seeded && Object.keys(d.seeded).length ? note("Showing the copy of the FRED series kept with the dashboard (to " + dateOf(Object.values(d.seeded).sort().pop()) + ") while the server fetches fresh ones.") : null,
       el("div", { class: "warn", style: "margin-top:8px" }, (S.market || {}).n + " midterms is a small sample, and each cycle had its own rates, recessions and wars. History, not a forecast, and not investment advice."),
       errs(d, "Some series are"), asOf(d), stale(d));
     const full = Object.entries(d.paths || {}).filter(([k, p]) => !/AI/.test(k) && p.length > 250);

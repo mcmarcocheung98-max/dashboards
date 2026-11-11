@@ -2,6 +2,7 @@
 smoke_patch() points the module's fetchers at the same fixtures for scripts/smoke.py."""
 import asyncio
 import json
+import time
 
 import numpy as np
 import pandas as pd
@@ -180,7 +181,13 @@ def is_edgar(url: str) -> bool:
 def patch_download(set_attr=setattr):
     """EDGAR answers from the fixtures at the download level, so the real fetch keeps memory and disk copies as on the server."""
     real = B._download
-    set_attr(B, "_download", lambda url, *a, **k: edgar_fixture(url) if is_edgar(url) else real(url, *a, **k))
+    def dl(url, *a, **k):
+        if is_edgar(url):
+            return edgar_fixture(url)
+        if "fredgraph" in url and "VIXCLS" not in url:                     # the midterm series: through the real fetch, as on the server
+            return fred_csv(url.split("id=")[1])
+        return real(url, *a, **k)
+    set_attr(B, "_download", dl)
 
 
 def fred_csv(sid: str) -> str:
@@ -200,7 +207,7 @@ def fake_fetch(url, ttl=0, **k):
     if is_edgar(url) and ("/companyfacts/" not in url or k.get("key", "").endswith("#panel")):
         return B.fetch(url, ttl, **k)
     if "fredgraph" in url:
-        return vix_csv() if "VIXCLS" in url else fred_csv(url.split("id=")[1])
+        return vix_csv() if "VIXCLS" in url else B.fetch(url, ttl, **k)
     if "cboe" in url:
         return vix_csv(cboe=True)
     if "companyfacts" in url:
@@ -676,8 +683,12 @@ def test_forward_returns():
     assert p[0] == [0, 100.0] and len(p) == M.YEAR_DAYS + 1
 
 
-def test_midterms_tab(mocked):
+def test_midterms_tab(mocked, monkeypatch):
+    monkeypatch.setattr(M, "_kick_midterms", lambda: None)
+    assert M.fill_midterms() == {s: "ok" for s in (M.MARKET_SERIES, M.SP500_SERIES, *M.PROXY_SERIES)}
+    M.ENDPOINTS["setup"]()                                                  # prices cached, as the warmer keeps them
     d = M.ENDPOINTS["midterms"]()
+    assert not d["seeded"] and not d["pending"]
     years = [r["year"] for r in d["rows"]]
     assert years[0] == 2026 and years[-1] == 1958 and len(years) == 18 and not d["errors"]
     r = {x["year"]: x for x in d["rows"]}
@@ -688,3 +699,32 @@ def test_midterms_tab(mocked):
     assert d["summary"]["market"]["n"] == 17 and d["summary"]["proxy"]["n"] == 13
     assert len(d["median_path"]) == M.YEAR_DAYS + 1 and "2022 AI basket" in d["paths"] and "1970" not in d["paths"]
     B.json_safe(d)
+
+
+def test_midterms_answers_at_once_from_the_seed_and_starts_the_download(mocked, monkeypatch):
+    kicked = []
+    monkeypatch.setattr(M, "_kick_midterms", lambda: kicked.append(1))
+    monkeypatch.setattr(M, "fetch", lambda *a, **k: (_ for _ in ()).throw(AssertionError("a page view must not download")))
+    t0 = time.time()
+    d = M._midterms_now()
+    assert time.time() - t0 < 5 and kicked and set(d["seeded"]) == {M.MARKET_SERIES, M.SP500_SERIES, *M.PROXY_SERIES}
+    assert d["errors"] == {"AI basket": "prices not cached yet"} and d["stale"] and not d["pending"]
+    r = {x["year"]: x for x in d["rows"]}                                  # the committed seed is real FRED data to 10 Nov 2026
+    assert r[1998]["proxy"]["r12"] == pytest.approx(0.9067, abs=1e-3) and r[2014]["market"] == pytest.approx(-0.045, abs=1e-3)
+    assert d["summary"]["market"]["n"] == 17 and d["summary"]["market"]["up"] == 14
+    monkeypatch.setattr(M, "FRED_SEED", B.SNAP_DIR / "no-seed")              # nothing kept, no seed: pending, not a wait
+    d = M._midterms_now()
+    assert d["pending"] and d["errors"]["NASDAQ100"] == "downloading" and not d["summary"]["market"]["n"]
+
+
+def test_midterm_windows_keep_only_what_the_study_reads():
+    full = fred_csv("NASDAQCOM")
+    cut = M.midterm_windows(full)
+    s, c = M.parse_fred(full, "NASDAQCOM"), M.parse_fred(cut, "NASDAQCOM")
+    assert len(cut) < len(full) / 2 and c.index.isin(s.index).all()
+    for y in (1974, 2022, 2026):
+        t = M.election_day(y)
+        win = s[(s.index >= t - pd.Timedelta(days=10)) & (s.index <= t + pd.Timedelta(days=380))]
+        assert win.index.isin(c.index).all()
+    monthly = fred_csv("SPASTT01USM661N")
+    assert M.midterm_windows(monthly) == monthly
