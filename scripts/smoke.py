@@ -248,12 +248,19 @@ def main() -> int:
                             print(f"{theme:5} {slug:12} (rest)       could-not-load=True ({type(e).__name__}; tabs {i + 1}+ not checked)")
                             bad.append(f"{theme} {slug}: shell gone after a failed tab, tabs {i + 1}+ not checked")
                             break
-                    pg.locator("nav button").nth(i).click()
-                    pg.wait_for_function("document.getElementById('stamp').textContent.startsWith('Updated')", timeout=180000)
-                    time.sleep(1.2)
-                    key = pg.evaluate("location.hash.slice(1)")
-                    text = pg.locator("#view").inner_text()
-                    cnl, retried = pg.evaluate(CNL), False
+                    try:
+                        pg.locator("nav button").nth(i).click()
+                        pg.wait_for_function("document.getElementById('stamp').textContent.startsWith('Updated')", timeout=180000)
+                        time.sleep(1.2)
+                        key = pg.evaluate("location.hash.slice(1)")
+                        text = pg.locator("#view").inner_text()
+                        cnl, retried = pg.evaluate(CNL), False
+                    except Exception as e:     # the tab never finished loading (a slow endpoint or a deploy): a failed tab that gets the usual retry, not a crash
+                        try:
+                            key = pg.evaluate("location.hash.slice(1)") or f"tab{i + 1}"
+                        except Exception:
+                            key = f"tab{i + 1}"
+                        text, cnl, retried = f"Could not load ({type(e).__name__})", True, False
                     if cnl:            # once more after a pause: a deploy restarting the server fails every request for a minute
                         time.sleep(RETRY_S)
                         retried = True
