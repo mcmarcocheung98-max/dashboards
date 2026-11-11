@@ -1536,6 +1536,22 @@
      "what": "the owner made the repository public: Actions minutes and storage are free. Repo and history scanned for secrets (none found); smoke takes no screenshots of private dashboards; playbook rules for a public repo",
      "commit": "56744ff",
      "by": "agent"
+    },
+    {
+     "dashboard": "AI",
+     "slug": "ai",
+     "tab": "users",
+     "what": "the Users chart always fits every announcement (no more line off the top); launch markers read launch, not 0. Six of the new rows carry verify (press reports or secondary dates)",
+     "commit": "c443476",
+     "by": "session:ai"
+    },
+    {
+     "dashboard": "shared",
+     "slug": "status",
+     "tab": "log",
+     "what": "the live check prints Actions minutes per day and workflow for the last week; reported in each morning's run",
+     "commit": "74831e7",
+     "by": "agent"
     }
    ],
    "review": "trends",
