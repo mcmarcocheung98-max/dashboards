@@ -369,7 +369,7 @@ def test_readings_and_signals_from_cached_payloads(mocked, frozen):
     assert s["vrp"]["crossed"] == (s["vrp"]["value"] < 30 or s["vrp"]["value"] > 90)
     assert s["pc_oi"]["crossed"] == (s["pc_oi"]["value"] > 2 or s["pc_oi"]["value"] < 1)
     assert "fallback" in s["skew_ai"]["note"]                                            # 16 days of own history: the SKEW index stands in
-    assert all(w.get("proposed") for w in json.loads((B.MANUAL_DIR / "signals" / "watchlist.json").read_text())["options"])
+    assert all(w.get("approved") and not w.get("proposed") for w in json.loads((B.MANUAL_DIR / "signals" / "watchlist.json").read_text())["options"])   # approved by the owner 11 Nov 2026
 
 
 def test_rank_needs_ten_days_and_the_signal_says_so(mocked, frozen):

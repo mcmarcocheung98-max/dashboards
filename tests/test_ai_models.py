@@ -250,9 +250,9 @@ def test_overview_readings_and_signals(mocked):
     B.json_safe(M.SIGNALS())
 
 
-def test_watchlist_rows_are_proposed_not_approved():
+def test_watchlist_rows_are_approved():
     wl = json.loads((B.MANUAL_DIR / "signals" / "watchlist.json").read_text())["ai-models"]
-    assert len(wl) == 5 and all(r.get("proposed") is True and r["signal"] and r["watch"] for r in wl)
+    assert len(wl) == 5 and all(not r.get("proposed") and r.get("approved") and r["signal"] and r["watch"] for r in wl)   # approved by the owner 11 Nov 2026
 
 
 def test_every_endpoint_through_the_server(mocked):
