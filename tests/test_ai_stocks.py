@@ -696,6 +696,11 @@ def test_midterms_tab(mocked, monkeypatch):
     assert r[1986]["proxy"]["sid"] == "NASDAQ100" and r[1986]["proxy"]["r12"] < r[1990]["proxy"]["r12"]       # the fixture's 1987 dip
     assert "sp500" in r[2018] and "sp500" not in r[2014] and r[2022]["ai"]["r12"] is not None and "ai" not in r[2018]
     assert d["current"]["year"] == 2026 and d["current"]["proxy"]["partial"] and r[2026]["market"] is None
+    c = d["current"]                                                        # the cycle under way from SPY and QQQ, not FRED
+    assert c["sp500_source"] == "SPY" and c["proxy"]["sid"] == "QQQ" and d["paths"]["2026"][0] == [0, 100.0]
+    spy = M._model()["px"]["SPY"]
+    assert c["sp500"] == pytest.approx(spy.iloc[-1] / spy[:"2026-11-03"].iloc[-1] - 1, abs=1e-4)
+    assert r[2022]["proxy"]["sid"] == "NASDAQ100"                           # finished cycles stay on FRED
     assert d["summary"]["market"]["n"] == 17 and d["summary"]["proxy"]["n"] == 13
     assert len(d["median_path"]) == M.YEAR_DAYS + 1 and "2022 AI basket" in d["paths"] and "1970" not in d["paths"]
     B.json_safe(d)
@@ -728,3 +733,18 @@ def test_midterm_windows_keep_only_what_the_study_reads():
         assert win.index.isin(c.index).all()
     monthly = fred_csv("SPASTT01USM661N")
     assert M.midterm_windows(monthly) == monthly
+
+
+def test_fred_is_tried_once_a_day_and_its_failure_is_handled(mocked, monkeypatch):
+    def down(url, ttl=0, **k):
+        if "fredgraph" in url and "VIXCLS" not in url:
+            B.HEALTH[url] = {"module": "ai_stocks", "ok": None, "fail": time.time(), "error": "RuntimeError: curl exit 28"}
+            raise RuntimeError("curl exit 28, HTTP 000")
+        return fake_fetch(url, ttl, **k)
+    monkeypatch.setattr(M, "fetch", down)
+    res = M.fill_midterms()
+    assert set(res.values()) == {"RuntimeError"}
+    assert all(B.HEALTH[M.FRED_CSV.format(sid=s)].get("handled_how") for s in (M.MARKET_SERIES, M.SP500_SERIES, *M.PROXY_SERIES))
+    assert M.fill_midterms() == {"midterms": "FRED tried less than a day ago"}          # a page view's kick does not retry either
+    (B.SNAP_DIR / "ai-stocks-midterms-fred-try.txt").write_text(str(time.time() - 2 * 86400))
+    assert set(M.fill_midterms().values()) == {"RuntimeError"}                          # a day later it tries again

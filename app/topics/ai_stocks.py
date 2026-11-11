@@ -1235,6 +1235,7 @@ def proxy_for(y: int) -> str | None:
 
 FRED_SEED = B.MANUAL_DIR / SLUG / "fred"     # committed copies (cut to the midterm windows) for when FRED has never answered this server
 FRED_TIMEOUT = 30
+FRED_RETRY_S = DAY                 # FRED is tried at most once a day (it times out from Railway: /api/health would fill with it)
 _MT_RUNNING = threading.Lock()
 
 
@@ -1292,11 +1293,23 @@ def fill_midterms() -> dict:
     if not _MT_RUNNING.acquire(blocking=False):
         return {"midterms": "already running"}
     try:
+        mark = B.SNAP_DIR / "ai-stocks-midterms-fred-try.txt"           # on the volume: a restart does not reset the once-a-day rule
+        try:
+            last = float(mark.read_text())
+        except (OSError, ValueError):
+            last = 0.0
+        if time.time() - last < FRED_RETRY_S:
+            return {"midterms": "FRED tried less than a day ago"}
+        B.SNAP_DIR.mkdir(parents=True, exist_ok=True)
+        mark.write_text(str(time.time()))
+
         def one(sid):
             try:
                 fred_series(sid)
                 return sid, "ok"
             except Exception as e:
+                if (FRED_SEED / f"{sid}.csv").exists():                 # the page reads the seed and the ETFs: no alert for this
+                    handled(FRED_CSV.format(sid=sid), "FRED does not answer the server; history from the committed copy, the current cycle from SPY and QQQ")
                 return sid, type(e).__name__
         with ThreadPoolExecutor(max_workers=4) as ex:
             res = dict(ex.map(one, (MARKET_SERIES, SP500_SERIES, *PROXY_SERIES)))
@@ -1359,11 +1372,12 @@ def _midterms_now() -> dict:
         except Exception as e:
             errors[sid] = "downloading" if isinstance(e, LookupError) else type(e).__name__
     if errors or seeded:
-        _kick_midterms()
-    ai = None
+        _kick_midterms()                                                # returns at once; fill_midterms tries FRED at most once a day
+    ai, etf = None, {}
     if _cache.get(f"topic:{SLUG}:prices"):                               # the AI basket only from prices already cached: never a download here
         try:
-            ai = _model()["idx"]
+            m = _model()
+            ai, etf = m["idx"], {k: m["px"][k] for k in ("SPY", "QQQ") if k in m["px"]}
         except Exception as e:
             errors["AI basket"] = type(e).__name__
     else:
@@ -1388,6 +1402,15 @@ def _midterms_now() -> dict:
             row["ai"] = {"r12": r, "partial": p, "r6": fwd_daily(ai, t, 182)[0], "worst": worst_daily(ai, t)}
             paths[f"{y} AI basket"] = path(ai, t)
         row["complete"] = pd.Timestamp.now().normalize() >= t + pd.Timedelta(days=365)
+        if not row["complete"]:                                         # the cycle under way: Nasdaq's SPY and QQQ closes (fresh), not FRED
+            if "SPY" in etf and etf["SPY"].index[0] <= t:
+                row["sp500"], row["sp500_partial"] = fwd_daily(etf["SPY"], t)
+                row["sp500_worst"], row["sp500_source"] = worst_daily(etf["SPY"], t), "SPY"
+            if "QQQ" in etf and etf["QQQ"].index[0] <= t and proxy_for(y) == "NASDAQ100":
+                r, p = fwd_daily(etf["QQQ"], t)
+                row["proxy"] = {"sid": "QQQ", "name": "Nasdaq-100 (QQQ)", "r12": r, "partial": p, "r6": fwd_daily(etf["QQQ"], t, 182)[0],
+                                "worst": worst_daily(etf["QQQ"], t)}
+                paths[str(y)] = path(etf["QQQ"], t)
         rows.append(row)
     done = [r for r in rows if r["complete"]]
 

@@ -442,11 +442,11 @@ const VIEWS = {
       kpi("Higher 12 months later", (S.market || {}).up + " of " + (S.market || {}).n),
       kpi("Tech proxy, median 12 months after (" + (S.proxy || {}).n + " since 1974)", med(S.proxy), cls((S.proxy || {}).median)),
       kpi("Tech proxy higher 12 months later", (S.proxy || {}).up + " of " + (S.proxy || {}).n),
-      ...(C ? [kpi(C.year + " midterm (" + dateOf(C.date) + "): S&P 500 so far", so(C.sp500, true), cls(C.sp500)),
-               kpi("Nasdaq-100 so far, " + days + " days in", so((C.proxy || {}).r12, true), cls((C.proxy || {}).r12)),
+      ...(C ? [kpi(C.year + " midterm (" + dateOf(C.date) + "): S&P 500" + (C.sp500_source ? " (SPY)" : "") + " so far", so(C.sp500, true), cls(C.sp500)),
+               kpi("Nasdaq-100" + ((C.proxy || {}).sid === "QQQ" ? " (QQQ)" : "") + " so far, " + days + " days in", so((C.proxy || {}).r12, true), cls((C.proxy || {}).r12)),
                ...(C.ai ? [kpi("AI basket so far", so(C.ai.r12, true), cls(C.ai.r12))] : [])] : [])),
       d.pending ? el("div", { class: "warn", style: "margin-top:8px" }, "Downloading the FRED histories in the background: reload in a minute or two.") : null,
-      d.seeded && Object.keys(d.seeded).length ? note("Showing the copy of the FRED series kept with the dashboard (to " + dateOf(Object.values(d.seeded).sort().pop()) + ") while the server fetches fresh ones.") : null,
+      d.seeded && Object.keys(d.seeded).length ? note("History from the copy of the FRED series kept with the dashboard (to " + dateOf(Object.values(d.seeded).sort().pop()) + "): FRED does not answer this server. The current cycle comes from the SPY and QQQ closes, which stand in for the S&P 500 and the Nasdaq-100.") : null,
       el("div", { class: "warn", style: "margin-top:8px" }, (S.market || {}).n + " midterms is a small sample, and each cycle had its own rates, recessions and wars. History, not a forecast, and not investment advice."),
       errs(d, "Some series are"), asOf(d), stale(d));
     const full = Object.entries(d.paths || {}).filter(([k, p]) => !/AI/.test(k) && p.length > 250);
