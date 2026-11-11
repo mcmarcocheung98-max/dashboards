@@ -355,10 +355,10 @@
   {
    "id": "verify-demographics",
    "owner": "session:demographics",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-11",
    "title": "Demographics: clear 56 verify rows (births 29, tfr 19, migration 7, pensions 1)",
-   "detail": "Roadmap r-verify-rows."
+   "detail": "Roadmap r-verify-rows. Done 11 Nov (e9639d2): 58 rows, 48 cleared, 10 removed."
   },
   {
    "id": "altcoins-date-test",
@@ -1552,6 +1552,14 @@
      "what": "the live check prints Actions minutes per day and workflow for the last week; reported in each morning's run",
      "commit": "74831e7",
      "by": "agent"
+    },
+    {
+     "dashboard": "Demographics",
+     "slug": "demographics",
+     "tab": "births",
+     "what": "all 58 verify rows resolved: 48 cite their official release (8 corrected, among them UK net migration to Dec 2024 431k to 345k and HK net movement mid-2022 -113,200 to -95,000), 10 removed for lack of an official source; China's births rest on NBS figures as reported by the press",
+     "commit": "e9639d2",
+     "by": "session:demographics"
     }
    ],
    "review": "trends",
