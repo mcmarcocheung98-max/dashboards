@@ -118,7 +118,7 @@ const VIEWS = {
     const ser = Object.entries(d.series || {}).filter(([, p]) => p.length);
     const sp = ser.length ? card("Public pension spending, % of GDP: actual and projected",
       ...svgLines(ser.map(([k, p], i) => ({ name: k, points: p.map(x => [yr(x[0]), x[1]]), color: css(SERIES[i % SERIES.length]) })), { yFmt: v => num(v, 1) + "%", xFmt: v => String(Math.round(v)), vlines: [{ x: 2045, label: "2045" }] }),
-      note("Lines join the published points only. UK: OBR Fiscal risks and sustainability (state pension). US: CBO Long-Term Budget Outlook (Social Security; assumes benefits are paid in full after the trust funds run out). China: basic pension insurance funds (verify). " +
+      note("Lines join the published points only. UK: OBR Fiscal risks and sustainability (state pension). US: CBO Long-Term Budget Outlook (Social Security; assumes benefits are paid in full after the trust funds run out). " +
         "5 years: the UK triple lock and the US trust-fund date (2034) decide the near term. 10 years: whether the pension age rises in step. 20 years: the share of GDP each country's workers must hand over in 2045."), cite(d.cited))
       : card("Pension spending", el("div", { class: "muted" }, "Add rows to data/demographics/pensions.csv."));
     const rows = card("Published figures", rowsTable(d.rows || [], v => num(+v, 1) + "%"), note("Kept in data/demographics/pensions.csv."));

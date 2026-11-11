@@ -1,37 +1,35 @@
 date,series,value,source,note
 # Live births in the calendar year, dated 1 July of that year. UK = England and Wales (ONS). China = mainland (NBS).
-2007-07-01,US,4316233,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory; NCHS final births 2007 (NVSR Births: Final Data for 2007)
-2010-07-01,US,3999386,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory; NCHS final births 2010
-2015-07-01,US,3978497,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory; NCHS final births 2015
-2019-07-01,US,3747540,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory; NCHS final births 2019
-2020-07-01,US,3613647,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory; NCHS final births 2020
-2021-07-01,US,3664292,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory; NCHS final births 2021
-2022-07-01,US,3667758,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory; NCHS final births 2022
+2007-07-01,US,4316233,https://www.cdc.gov/nchs/data/nvsr/nvsr58/nvsr58_24.pdf,NCHS Births: Final Data for 2007 (NVSR 58-24)
+2010-07-01,US,3999386,https://www.cdc.gov/nchs/data/hestat/births_fertility_2010/births_fertility_2010.htm,NCHS Recent Trends in Births and Fertility Rates Through 2010 (final 2010 data)
+2015-07-01,US,3978497,https://stacks.cdc.gov/view/cdc/43595/cdc_43595_DS1.pdf,NCHS Births: Final Data for 2015 (NVSR 66-1)
+2019-07-01,US,3747540,https://www.cdc.gov/nchs/data/nvsr/nvsr70/nvsr70-02-508.pdf,NCHS Births: Final Data for 2019 (NVSR 70-2)
+2020-07-01,US,3613647,https://www.cdc.gov/nchs/products/databriefs/db442.htm,NCHS Data Brief 442 (Births in the United States 2021): 2020 comparison figure
+2021-07-01,US,3664292,https://www.cdc.gov/nchs/products/databriefs/db442.htm,NCHS Data Brief 442 (Births in the United States 2021)
+2022-07-01,US,3667758,https://www.cdc.gov/nchs/data/nvsr/nvsr73/nvsr73-02.pdf,NCHS Births: Final Data for 2022 (NVSR 73-2)
+2012-07-01,UK,729674,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2013-07-10,ONS Births in England and Wales: 2012
+2015-07-01,UK,697852,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2015,ONS Births in England and Wales: 2015
+2019-07-01,UK,640370,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2019,ONS Births in England and Wales: 2019
+2020-07-01,UK,613936,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2020,ONS Births in England and Wales: 2020
+2021-07-01,UK,624828,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2021,ONS Births in England and Wales: 2021
+2022-07-01,UK,605479,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2022refreshedpopulations,ONS Births in England and Wales: 2022 (refreshed populations)
+2019-07-01,Hong Kong,52900,https://www.info.gov.hk/gia/general/202302/16/P2023021600304.htm,C&SD year-end 2022 population release: births 52 900 in 2019 (rounded to the hundred)
+2020-07-01,Hong Kong,43100,https://www.info.gov.hk/gia/general/202102/18/P2021021800322.htm,C&SD year-end 2020 population release: births end-2019 to end-2020 (rounded); provisional
+2021-07-01,Hong Kong,37000,https://www.news.gov.hk/eng/2022/02/20220228/20220228_180811_947.html,C&SD year-end 2021 population figures (news.gov.hk): about 37 000 births in 2021 (rounded)
+2022-07-01,Hong Kong,32500,https://www.info.gov.hk/gia/general/202302/16/P2023021600304.htm,C&SD year-end 2022 population release: births 32 500 in 2022 (rounded)
+2023-07-01,Hong Kong,33200,https://www.info.gov.hk/gia/general/202402/20/P2024022000223.htm,C&SD year-end 2023 population release: births end-2022 to end-2023 (rounded); provisional
+2024-07-01,Hong Kong,36700,https://www.info.gov.hk/gia/general/202502/18/P2025021800248.htm,C&SD year-end 2024 population release: births end-2023 to end-2024 (rounded); provisional
+2016-07-01,China,17860000,https://en.nhc.gov.cn/2018-01/19/c_72955.htm,NBS figure as reported by Xinhua on the National Health Commission site (19 Jan 2018)
+2017-07-01,China,17230000,https://en.nhc.gov.cn/2018-01/19/c_72955.htm,NBS figure as reported by Xinhua on the National Health Commission site (19 Jan 2018)
+2018-07-01,China,15230000,https://www.caixinglobal.com/2019-01-22/chinas-total-number-of-births-dropped-over-10-last-year-101373054.html,NBS figure as reported by Caixin (22 Jan 2019)
+2019-07-01,China,14650000,https://govt.chinadaily.com.cn/s/202001/19/WS5e23c351498e1ed196a6bede/birthrate-on-mainland-hits-record-low-last-year.html,NBS figure as reported by China Daily (19 Jan 2020)
+2020-07-01,China,12020000,https://www.aljazeera.com/news/2022/1/17/chinas-birth-rate-drops-to-record-low,NBS: 12.02 million as the 2020 comparison in the January 2022 release (Al Jazeera reports it as about 12 million)
+2021-07-01,China,10620000,https://www.aljazeera.com/news/2022/1/17/chinas-birth-rate-drops-to-record-low,NBS figure as reported by Al Jazeera (17 Jan 2022): birth rate 7.52 per 1000
+2022-07-01,China,9560000,https://abc17news.com/?p=1270583,NBS figure as reported by AP (Jan 2024): 2022 comparison
+2023-07-01,China,9020000,https://abc17news.com/?p=1270583,NBS figure as reported by AP (Jan 2024): birth rate 6.39 per 1000
 2023-07-01,US,3596017,https://www.cdc.gov/nchs/products/databriefs/db535.htm,NCHS Data Brief 535 (2023 comparison figure)
 2024-07-01,US,3628934,https://www.cdc.gov/nchs/products/databriefs/db535.htm,NCHS Data Brief 535: final 2024 births
-2012-07-01,UK,729674,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths,verify: written from memory; England and Wales
-2015-07-01,UK,697852,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths,verify: written from memory; England and Wales
-2019-07-01,UK,640370,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths,verify: written from memory; England and Wales
-2020-07-01,UK,613936,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths,verify: written from memory; England and Wales
-2021-07-01,UK,624828,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths,verify: written from memory; England and Wales
-2022-07-01,UK,605479,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths,verify: written from memory; England and Wales
 2023-07-01,UK,591072,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2024refreshedpopulations,England and Wales; 2023 comparison figure in the 2024 bulletin
 2024-07-01,UK,594677,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2024refreshedpopulations,England and Wales
-2012-07-01,Hong Kong,91558,https://www.censtatd.gov.hk/en/,verify: written from memory; includes births to mainland mothers before the 2013 zero-quota policy
-2015-07-01,Hong Kong,59878,https://www.censtatd.gov.hk/en/,verify: written from memory
-2019-07-01,Hong Kong,52856,https://www.censtatd.gov.hk/en/,verify: written from memory
-2020-07-01,Hong Kong,43031,https://www.censtatd.gov.hk/en/,verify: written from memory
-2021-07-01,Hong Kong,37955,https://www.censtatd.gov.hk/en/,verify: written from memory
-2022-07-01,Hong Kong,32950,https://www.censtatd.gov.hk/en/,verify: written from memory
-2023-07-01,Hong Kong,33288,https://www.censtatd.gov.hk/en/,verify: written from memory
-2024-07-01,Hong Kong,36700,https://www.scmp.com/news/hong-kong/education/article/3299155/number-babies-born-hong-kong-rises-11-36700-last-year,verify: rounded figure as reported by SCMP; replace with the C&SD table value
-2016-07-01,China,17860000,https://www.stats.gov.cn/english/,verify: written from memory; NBS statistical communiqué
-2017-07-01,China,17230000,https://www.stats.gov.cn/english/,verify: written from memory
-2018-07-01,China,15230000,https://www.stats.gov.cn/english/,verify: written from memory
-2019-07-01,China,14650000,https://www.stats.gov.cn/english/,verify: written from memory
-2020-07-01,China,12020000,https://www.stats.gov.cn/english/,verify: written from memory
-2021-07-01,China,10620000,https://www.stats.gov.cn/english/,verify: written from memory
-2022-07-01,China,9560000,https://www.stats.gov.cn/english/,verify: written from memory
-2023-07-01,China,9020000,https://www.stats.gov.cn/english/,verify: written from memory
-2024-07-01,China,9540000,https://www.caixinglobal.com/2026-01-19/chinas-population-decline-accelerates-as-births-hit-modern-era-low-in-2025-102405520.html,NBS figure as reported by Caixin (19 Jan 2026); verify against the NBS communiqué
-2025-07-01,China,7920000,https://www.caixinglobal.com/2026-01-19/chinas-population-decline-accelerates-as-births-hit-modern-era-low-in-2025-102405520.html,NBS figure as reported by Caixin (19 Jan 2026); birth rate 5.63 per 1000; verify against the NBS communiqué
+2024-07-01,China,9540000,https://www.caixinglobal.com/2026-01-19/chinas-population-decline-accelerates-as-births-hit-modern-era-low-in-2025-102405520.html,NBS figure as reported by Caixin (19 Jan 2026): 2024 comparison
+2025-07-01,China,7920000,https://www.caixinglobal.com/2026-01-19/chinas-population-decline-accelerates-as-births-hit-modern-era-low-in-2025-102405520.html,NBS figure as reported by Caixin (19 Jan 2026): birth rate 5.63 per 1000; lowest since 1949

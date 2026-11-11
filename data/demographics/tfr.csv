@@ -1,25 +1,22 @@
 date,series,value,source,note
 # Total fertility rate (children per woman) as each agency publishes it. UK = England and Wales. China has no official annual TFR.
-2007-07-01,US,2.12,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory
-2015-07-01,US,1.8435,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory
-2019-07-01,US,1.706,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory
-2020-07-01,US,1.6415,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory
-2021-07-01,US,1.664,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory
-2022-07-01,US,1.6565,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory
-2023-07-01,US,1.621,https://www.cdc.gov/nchs/products/databriefs/db535.htm,verify: written from memory
+2007-07-01,US,2.122,https://www.cdc.gov/nchs/data/nvsr/nvsr58/nvsr58_24.pdf,NCHS Births: Final Data for 2007: 2122.0 per 1000 women (the preliminary report had 2122.5)
+2015-07-01,US,1.8435,https://stacks.cdc.gov/view/cdc/43595/cdc_43595_DS1.pdf,NCHS Births: Final Data for 2015: 1843.5 per 1000 women
+2019-07-01,US,1.706,https://www.cdc.gov/nchs/data/nvsr/nvsr70/nvsr70-02-508.pdf,NCHS Births: Final Data for 2019: 1706.0 per 1000 women
+2022-07-01,US,1.6565,https://www.cdc.gov/nchs/data/nvsr/nvsr73/nvsr73-02.pdf,NCHS Births: Final Data for 2022: 1656.5 per 1000 women
+2023-07-01,US,1.621,https://www.cdc.gov/nchs/data/nvsr/nvsr74/nvsr74-1.pdf,NCHS Births: Final Data for 2023: 1621.0 per 1000 women
+2010-07-01,UK,1.94,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2013-07-10,England and Wales; ONS Births in England and Wales: 2012 (2002-2010 rates recalculated on post-2011-Census populations; first published as 2.00)
+2015-07-01,UK,1.82,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2015,England and Wales; ONS Births in England and Wales: 2015
+2019-07-01,UK,1.65,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2021,England and Wales; ONS Births in England and Wales: 2021 (2019 comparison)
+2020-07-01,UK,1.58,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2020,England and Wales; ONS Births in England and Wales: 2020
+2021-07-01,UK,1.55,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2022refreshedpopulations,England and Wales; ONS 2022 (refreshed populations): 2021 rate on revised populations (first published as 1.61)
+2022-07-01,UK,1.49,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2022refreshedpopulations,England and Wales; ONS Births in England and Wales: 2022 (refreshed populations)
+2019-07-01,Hong Kong,1.064,https://www.info.gov.hk/gia/general/202302/17/P2023021700264.htm,C&SD feature article Fertility Trend in Hong Kong 1991 to 2021 (Monthly Digest Feb 2023): 1 064 per 1 000 women
+2021-07-01,Hong Kong,0.772,https://www.info.gov.hk/gia/general/202302/17/P2023021700264.htm,C&SD feature article Fertility Trend in Hong Kong 1991 to 2021 (Monthly Digest Feb 2023): 772 per 1 000 women
+2022-07-01,Hong Kong,0.70,https://www.healthbureau.gov.hk/statistics/en/health_statistics.htm,Health Bureau health statistics table (C&SD figures; two decimals)
+2023-07-01,Hong Kong,0.75,https://www.healthbureau.gov.hk/statistics/en/health_statistics.htm,Health Bureau health statistics table (C&SD figures; two decimals)
+2020-07-01,China,1.3,https://www.caixinglobal.com/2021-05-11/census-shows-chinas-population-grew-above-14-billion-last-decade-101709470.html,2020 census figure announced by NBS (11 May 2021) as reported by Caixin; NBS publishes no annual TFR
 2024-07-01,US,1.5995,https://www.cdc.gov/nchs/data/nvsr/nvsr75/nvsr75-02.pdf,NVSR vol 75 no 2: 1599.5 births per 1000 women; record low
-2010-07-01,UK,1.94,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths,verify: written from memory; England and Wales
-2015-07-01,UK,1.82,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths,verify: written from memory; England and Wales
-2019-07-01,UK,1.65,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths,verify: written from memory; England and Wales
-2020-07-01,UK,1.58,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths,verify: written from memory; England and Wales
-2021-07-01,UK,1.61,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths,verify: written from memory; England and Wales
-2022-07-01,UK,1.49,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths,verify: written from memory; England and Wales
 2023-07-01,UK,1.42,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2024refreshedpopulations,England and Wales; revised on the refreshed populations
 2024-07-01,UK,1.41,https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2024refreshedpopulations,England and Wales; lowest on record for the third year
-2019-07-01,Hong Kong,1.059,https://www.censtatd.gov.hk/en/,verify: written from memory
-2020-07-01,Hong Kong,0.868,https://www.censtatd.gov.hk/en/,verify: written from memory
-2021-07-01,Hong Kong,0.772,https://www.censtatd.gov.hk/en/,verify: written from memory
-2022-07-01,Hong Kong,0.701,https://www.censtatd.gov.hk/en/,verify: written from memory
-2023-07-01,Hong Kong,0.751,https://www.censtatd.gov.hk/en/,verify: written from memory
 2024-07-01,Hong Kong,0.841,https://www.info.gov.hk/gia/general/202507/16/P2025071600324.htm,C&SD figure quoted in a LegCo written reply (16 Jul 2025)
-2020-07-01,China,1.3,https://www.stats.gov.cn/english/,verify: 2020 census figure as widely reported; NBS publishes no annual TFR

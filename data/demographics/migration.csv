@@ -1,14 +1,10 @@
 date,series,value,source,note
 # Net migration in the 12 months to the date given (people). Different definitions: read each line on its own, not against the others.
-2023-06-30,UK net migration (ONS LTIM),906000,https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/internationalmigration/bulletins/longterminternationalmigrationprovisional/latest,verify: written from memory; the revised peak
 2024-06-30,UK net migration (ONS LTIM),649000,https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/internationalmigration/bulletins/longterminternationalmigrationprovisional/yearendingjune2025,updated estimate quoted in the YE June 2025 release
-2024-12-31,UK net migration (ONS LTIM),431000,https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/internationalmigration/bulletins/longterminternationalmigrationprovisional/latest,verify: written from memory (May 2025 release)
+2024-12-31,UK net migration (ONS LTIM),345000,https://blog.ons.gov.uk/2025/11/18/updating-our-methods-to-improve-eu-and-british-migration-statistics/,ONS revised estimate (Nov 2025 methods update); provisional estimate in May 2025 was 431000
 2025-06-30,UK net migration (ONS LTIM),204000,https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/internationalmigration/bulletins/longterminternationalmigrationprovisional/yearendingjune2025,provisional; immigration 898000; official statistics in development
-2021-07-01,US net international migration (Census),376000,https://www.census.gov/programs-surveys/popest.html,verify: written from memory; Vintage 2024 estimate for the year to 1 July
-2022-07-01,US net international migration (Census),1700000,https://www.census.gov/programs-surveys/popest.html,verify: written from memory; Vintage 2024
-2023-07-01,US net international migration (Census),2300000,https://www.census.gov/programs-surveys/popest.html,verify: written from memory; Vintage 2024
-2024-07-01,US net international migration (Census),2800000,https://www.census.gov/programs-surveys/popest.html,verify: written from memory; Vintage 2024
+2024-07-01,US net international migration (Census),2800000,https://www.census.gov/newsroom/press-releases/2024/population-estimates-international-migration.html,Census Bureau Vintage 2024 release (19 Dec 2024): net 2.8 million between 2023 and 2024
 2025-06-30,Hong Kong one-way permit holders (C&SD),32000,https://www.info.gov.hk/gia/general/202508/14/P2025081400404.htm,mid-2024 to mid-2025
 2025-06-30,Hong Kong net movement of residents (C&SD),18200,https://www.info.gov.hk/gia/general/202508/14/P2025081400404.htm,mid-2024 to mid-2025: OWP holders 32000 and other residents -13800
 2025-06-30,Hong Kong natural change (C&SD),-14800,https://www.info.gov.hk/gia/general/202508/14/P2025081400404.htm,mid-2024 to mid-2025: births 35200 less deaths 50000; for scale against migration
-2022-06-30,Hong Kong net movement of residents (C&SD),-113200,https://www.censtatd.gov.hk/en/,verify: written from memory; mid-2021 to mid-2022
+2022-06-30,Hong Kong net movement of residents (C&SD),-95000,https://www.info.gov.hk/gia/general/202208/11/P2022081100393.htm,Mid-year population for 2022: mid-2021 to mid-2022 net outflow 95000 (OWP holders +18300 and other residents -113200)
