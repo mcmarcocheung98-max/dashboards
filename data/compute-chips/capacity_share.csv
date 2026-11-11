@@ -1,14 +1,14 @@
 date,series,value,source,note
-# share of world leading-edge (<10nm) logic capacity, %; 2032 is the SIA/BCG projection with the CHIPS Act. US and Taiwan figures are the widely quoted ones; the rest verify
-2022-01-01,Taiwan,69,https://www.semiconductors.org/emerging-resilience-in-the-semiconductor-supply-chain/,SIA/BCG May 2024; verify
-2022-01-01,South Korea,23,https://www.semiconductors.org/emerging-resilience-in-the-semiconductor-supply-chain/,SIA/BCG May 2024; verify
-2022-01-01,China,8,https://www.semiconductors.org/emerging-resilience-in-the-semiconductor-supply-chain/,SIA/BCG May 2024; verify
-2022-01-01,US,0,https://www.semiconductors.org/emerging-resilience-in-the-semiconductor-supply-chain/,SIA/BCG May 2024: no US <10nm capacity in 2022; verify
-2022-01-01,Japan,0,https://www.semiconductors.org/emerging-resilience-in-the-semiconductor-supply-chain/,SIA/BCG May 2024; verify
-2022-01-01,Europe,0,https://www.semiconductors.org/emerging-resilience-in-the-semiconductor-supply-chain/,SIA/BCG May 2024; verify
-2032-01-01,Taiwan,47,https://www.semiconductors.org/emerging-resilience-in-the-semiconductor-supply-chain/,SIA/BCG projection; verify
-2032-01-01,South Korea,9,https://www.semiconductors.org/emerging-resilience-in-the-semiconductor-supply-chain/,SIA/BCG projection; verify
-2032-01-01,China,2,https://www.semiconductors.org/emerging-resilience-in-the-semiconductor-supply-chain/,SIA/BCG projection; verify
-2032-01-01,US,28,https://www.semiconductors.org/emerging-resilience-in-the-semiconductor-supply-chain/,SIA/BCG projection: 0% to 28% by 2032; verify
-2032-01-01,Japan,12,https://www.semiconductors.org/emerging-resilience-in-the-semiconductor-supply-chain/,SIA/BCG projection; verify
-2032-01-01,Europe,2,https://www.semiconductors.org/emerging-resilience-in-the-semiconductor-supply-chain/,SIA/BCG projection; verify
+# share of world leading-edge (<10nm) logic capacity, %; 2032 is the SIA/BCG projection with the CHIPS Act. Source: SIA/BCG May 2024 report PDF Exhibit 6 (p.14) 'Global wafer fabrication capacity by technology category by region', Logic <10 nm row. Checked 11 Nov 2026 against the report text only (the exhibit numbers did not extract); rows still marked verify need reading off the chart
+2022-01-01,Taiwan,69,https://web-assets.bcg.com/57/d1/ad16a66b41f5a178aca9274ca36f/emerging-resilience-in-the-semiconductor-supply-chain.pdf,SIA/BCG May 2024; verify
+2022-01-01,South Korea,23,https://web-assets.bcg.com/57/d1/ad16a66b41f5a178aca9274ca36f/emerging-resilience-in-the-semiconductor-supply-chain.pdf,SIA/BCG May 2024; verify
+2022-01-01,China,8,https://web-assets.bcg.com/57/d1/ad16a66b41f5a178aca9274ca36f/emerging-resilience-in-the-semiconductor-supply-chain.pdf,SIA/BCG May 2024; p.13 says advanced logic was 'almost 100% distributed between South Korea and Taiwan in 2022'; verify
+2022-01-01,US,0,https://web-assets.bcg.com/57/d1/ad16a66b41f5a178aca9274ca36f/emerging-resilience-in-the-semiconductor-supply-chain.pdf,SIA/BCG May 2024 p.13: 'In 2022 the United States did not produce any advanced logic chips'
+2022-01-01,Japan,0,https://web-assets.bcg.com/57/d1/ad16a66b41f5a178aca9274ca36f/emerging-resilience-in-the-semiconductor-supply-chain.pdf,SIA/BCG May 2024; verify
+2022-01-01,Europe,0,https://web-assets.bcg.com/57/d1/ad16a66b41f5a178aca9274ca36f/emerging-resilience-in-the-semiconductor-supply-chain.pdf,SIA/BCG May 2024; verify
+2032-01-01,Taiwan,47,https://web-assets.bcg.com/57/d1/ad16a66b41f5a178aca9274ca36f/emerging-resilience-in-the-semiconductor-supply-chain.pdf,SIA/BCG projection; verify
+2032-01-01,South Korea,9,https://web-assets.bcg.com/57/d1/ad16a66b41f5a178aca9274ca36f/emerging-resilience-in-the-semiconductor-supply-chain.pdf,SIA/BCG projection; verify
+2032-01-01,China,2,https://web-assets.bcg.com/57/d1/ad16a66b41f5a178aca9274ca36f/emerging-resilience-in-the-semiconductor-supply-chain.pdf,SIA/BCG projection; verify
+2032-01-01,US,28,https://web-assets.bcg.com/57/d1/ad16a66b41f5a178aca9274ca36f/emerging-resilience-in-the-semiconductor-supply-chain.pdf,SIA/BCG projection; p.13 says 'nearly 30%' by 2032 and the exhibit value is not yet read; verify
+2032-01-01,Japan,12,https://web-assets.bcg.com/57/d1/ad16a66b41f5a178aca9274ca36f/emerging-resilience-in-the-semiconductor-supply-chain.pdf,SIA/BCG projection; p.13 says 'Europe and Japan will host a meaningful ~12%' (together or each is unclear); verify
+2032-01-01,Europe,2,https://web-assets.bcg.com/57/d1/ad16a66b41f5a178aca9274ca36f/emerging-resilience-in-the-semiconductor-supply-chain.pdf,SIA/BCG projection; verify
