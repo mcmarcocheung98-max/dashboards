@@ -350,7 +350,7 @@
    "status": "waiting",
    "since": "2026-11-11",
    "title": "Debt & Rates: clear 292 verify rows (imf.csv 116, spending 44, fed_target 42, pboc 29)",
-   "detail": "Roadmap r-verify-rows. Batches of one file, one push each."
+   "detail": "Roadmap r-verify-rows. Batches of one file, one push each. 11 Nov: batch 1 done (f86ab1e), imf.csv 117 rows cleared; 175 left, spending.csv next."
   },
   {
    "id": "verify-demographics",
@@ -1560,6 +1560,22 @@
      "what": "all 58 verify rows resolved: 48 cite their official release (8 corrected, among them UK net migration to Dec 2024 431k to 345k and HK net movement mid-2022 -113,200 to -95,000), 10 removed for lack of an official source; China's births rest on NBS figures as reported by the press",
      "commit": "e9639d2",
      "by": "session:demographics"
+    },
+    {
+     "dashboard": "Space",
+     "slug": "space",
+     "tab": "ukhk",
+     "what": "every milestone checked against a source that was opened (five dates corrected, one row still verify) and 29 rows added for 2025-26: New Glenn, Starship flights 7-14, Zhuque-3, the UK launch licences, Hong Kong's first astronaut",
+     "commit": "482f027",
+     "by": "session:space"
+    },
+    {
+     "dashboard": "Debt & Rates",
+     "slug": "debt-rates",
+     "tab": "debt",
+     "what": "verify rows batch 1: all 117 rows of imf.csv now carry exact values from the IMF's WEO API, each with its query address; spending.csv is next",
+     "commit": "f86ab1e",
+     "by": "session:debt-rates"
     }
    ],
    "review": "trends",
@@ -1567,7 +1583,8 @@
     "Tomorrow: /api/ai-stocks/midterms current.sp500_source should read SPY and current.proxy.sid QQQ; the midterm FRED entries on health should carry handled",
     "Tomorrow's health: did the FRED sources on AI Stocks and Luxury come back after the HTTP/1.1 change?",
     "Read replies: Trends review, Debt & Rates and Demographics verify rows, AI review (Tuesday), Pokémon slow tests",
-    "Thursday: token totals if three or more sessions ran"
+    "Thursday: token totals if three or more sessions ran",
+    "Live check failed twice this afternoon before any page loaded (the runner could not resolve security.ubuntu.com while installing Chromium's system packages); if tomorrow's run fails the same way, cache the browser install or drop --with-deps"
    ],
    "asks": [
     "approve r-fred-via-actions (a one-minute daily Action that commits the FRED series the site needs) or skip it and accept stale FRED series",
