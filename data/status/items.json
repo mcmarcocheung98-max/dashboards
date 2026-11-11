@@ -40,7 +40,7 @@
    "priority": "medium",
    "since": "2026-10-28",
    "status": "open",
-   "detail": "The Railway variable unlocks /nba-odds in your browser for 30 days at a time. The GitHub secret lets the live-check workflow open private pages too; without it they are skipped.",
+   "detail": "The Railway variable unlocks /nba-odds in your browser for 30 days at a time. The GitHub secret lets the live-check workflow open private pages too; without it they are skipped. Since 11 Nov the repo is public: the live check opens private pages with the secret but no longer screenshots them.",
    "link": "https://github.com/mcmarcocheung98-max/dashboards/settings/secrets/actions"
   },
   {
@@ -70,7 +70,7 @@
    "priority": "low",
    "since": "2026-10-27",
    "status": "open",
-   "detail": "The server does the OneDrive copy itself now; the workflow no longer reads this secret.",
+   "detail": "The server does the OneDrive copy itself now; the workflow no longer reads this secret. Still worth doing now the repo is public: a secret no workflow reads is only a risk.",
    "link": "https://github.com/mcmarcocheung98-max/dashboards/settings/secrets/actions"
   },
   {
@@ -1528,6 +1528,14 @@
      "what": "the 2026 cycle's figures and path now come from Nasdaq's SPY and QQQ closes (labelled); finished cycles stay on the FRED seed; FRED tried at most once a day and marked handled on /api/health when the seed covers it",
      "commit": "c87c7dd",
      "by": "session:ai-stocks"
+    },
+    {
+     "dashboard": "shared",
+     "slug": "status",
+     "tab": "log",
+     "what": "the owner made the repository public: Actions minutes and storage are free. Repo and history scanned for secrets (none found); smoke takes no screenshots of private dashboards; playbook rules for a public repo",
+     "commit": "56744ff",
+     "by": "agent"
     }
    ],
    "review": "trends",
