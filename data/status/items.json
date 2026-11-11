@@ -347,10 +347,10 @@
   {
    "id": "verify-debt-rates",
    "owner": "session:debt-rates",
-   "status": "waiting",
+   "status": "blocked",
    "since": "2026-11-11",
    "title": "Debt & Rates: clear 292 verify rows (imf.csv 116, spending 44, fed_target 42, pboc 29)",
-   "detail": "Roadmap r-verify-rows. Batches of one file, one push each. 11 Nov: batch 1 done (f86ab1e), imf.csv 117 rows cleared; 175 left, spending.csv next."
+   "detail": "Roadmap r-verify-rows. Batches of one file, one push each. 11 Nov: batch 1 done (f86ab1e), imf.csv 117 rows cleared; 175 left, spending.csv next. 170 of 292 cleared by the evening (f86ab1e, d4e7b14, 441fa03). The other 122 need government hosts the session cannot reach; waiting for the owner."
   },
   {
    "id": "verify-demographics",
@@ -1576,6 +1576,14 @@
      "what": "verify rows batch 1: all 117 rows of imf.csv now carry exact values from the IMF's WEO API, each with its query address; spending.csv is next",
      "commit": "f86ab1e",
      "by": "session:debt-rates"
+    },
+    {
+     "dashboard": "Debt & Rates",
+     "slug": "debt-rates",
+     "tab": "policy",
+     "what": "verify rows batches 2 and 3: fed_target.csv (42 rows from FRED's target-rate series; the Dec 2015 hike moved to the 16th) and cn_cpi.csv (11 rows from the IMF). 170 of 292 cleared",
+     "commit": "441fa03",
+     "by": "session:debt-rates"
     }
    ],
    "review": "trends",
@@ -1587,6 +1595,7 @@
     "Live check failed twice this afternoon before any page loaded (the runner could not resolve security.ubuntu.com while installing Chromium's system packages); if tomorrow's run fails the same way, cache the browser install or drop --with-deps"
    ],
    "asks": [
+    "Debt & Rates: 122 rows have official sources (gov.uk, OBR, HK Budget, China MoF, PBoC, ChinaBond, the Fed, CBO) that its session's network cannot open. Allow those hosts on an environment for it, or accept the rows staying marked verify",
     "approve r-fred-via-actions (a one-minute daily Action that commits the FRED series the site needs) or skip it and accept stale FRED series",
     "Bluesky: a free account's handle and app password as Railway variables BSKY_HANDLE and BSKY_APP_PASSWORD restore the Social tab's keyword counts",
     "HKMA blocks Railway intermittently: accept a stale HIBOR when it does, or approve a hand-entered monthly HIBOR CSV fallback",
