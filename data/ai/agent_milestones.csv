@@ -10,3 +10,24 @@ date,event,company,kind,source,note
 2025-04-09,Agent2Agent protocol,Google,protocol,https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/,
 2025-05-16,Codex,OpenAI,coding agents,https://openai.com/index/introducing-codex/,cloud coding agent
 2025-07-17,ChatGPT agent,OpenAI,agents,https://openai.com/index/introducing-chatgpt-agent/,
+2025-08-06,Jules coding agent out of beta,Google,coding agents,https://blog.google/technology/google-labs/jules-now-available/,"public launch, Gemini 2.5"
+2025-08-26,Claude for Chrome (research preview),Anthropic,agents,https://techcrunch.com/2025/08/26/anthropic-launches-a-claude-ai-agent-that-lives-in-chrome/,browser agent extension
+2025-09-16,Agent Payments Protocol (AP2),Google,protocol,https://pymnts.com/news/artificial-intelligence/2025/google-debuts-agent-payments-protocol-bolster-ai-commerce,open protocol extending A2A and MCP
+2025-09-25,Copilot coding agent generally available,Microsoft,coding agents,https://github.blog/changelog/2025-09-25-copilot-coding-agent-is-now-generally-available/,GitHub; paid Copilot plans
+2025-09-29,Instant Checkout and Agentic Commerce Protocol,OpenAI,protocol,https://openai.com/index/buy-it-in-chatgpt/,open standard co-developed with Stripe
+2025-10-01,Microsoft Agent Framework (preview),Microsoft,tools,https://devblogs.microsoft.com/foundry/introducing-microsoft-agent-framework-the-open-source-engine-for-agentic-ai-apps/,open-source SDK unifying Semantic Kernel and AutoGen
+2025-10-06,AgentKit,OpenAI,tools,https://techcrunch.com/2025/10/06/openai-launches-agentkit-to-help-developers-build-and-ship-ai-agents,"DevDay 2025: Agent Builder, ChatKit, Evals"
+2025-10-07,Gemini 2.5 Computer Use model,Google,agents,https://blog.google/innovation-and-ai/models-and-research/google-deepmind/gemini-computer-use-model/,preview in the Gemini API
+2025-10-21,ChatGPT Atlas browser with agent mode,OpenAI,agents,https://openai.com/index/introducing-chatgpt-atlas/,macOS browser
+2025-11-18,Agent 365,Microsoft,tools,https://siliconangle.com/2025/11/18/microsoft-introduces-agent-365-control-center-pack-new-ai-agents-enterprise-users/,Ignite 2025; control plane for enterprise agents
+2025-11-18,Google Antigravity,Google,coding agents,https://thenewstack.io/antigravity-is-googles-new-agentic-development-platform/,agent-first IDE with Gemini 3; Google's own post may be dated 20 Nov - verify date
+2025-12-09,MCP donated to the Agentic AI Foundation,Anthropic,protocol,https://anthropic.com/news/donating-the-model-context-protocol-and-establishing-of-the-agentic-ai-foundation,Linux Foundation fund co-founded with OpenAI and Block
+2026-01-12,Cowork (research preview),Anthropic,agents,https://claude.com/blog/cowork-research-preview,Claude Code for the rest of your work
+2026-02-02,Codex app for macOS,OpenAI,coding agents,https://fortune.com/2026/02/02/openai-launches-codex-app-to-bring-coding-models-to-more-users-openclaw-ai-agents/,multi-agent coding app
+2026-02-05,OpenAI Frontier,OpenAI,tools,https://axios.com/2026/02/05/openai-platform-ai-agents,enterprise platform to build and manage agents
+2026-04-08,Claude Managed Agents (public beta),Anthropic,tools,https://itbrief.co.uk/story/anthropic-launches-claude-managed-agents-in-public-beta,hosted agent runtime; date from a secondary report - verify date
+2026-05-14,Grok Build (early beta),xAI,coding agents,https://www.eweek.com/news/xai-grok-build-coding-agent/,terminal coding agent
+2026-05-19,Gemini Spark,Google,agents,https://www.tomsguide.com/ai/google-gemini/google-unveils-gemini-spark-a-24-7-personal-ai-agent-that-could-be-a-game-changer-for-agentic-ai,I/O 2026; always-on personal agent
+2026-09-09,Muse personal agent,Meta,agents,https://www.thestar.com.my/tech/tech-news/2026/09/09/meta-launches-ai-agent-that-can-access-other-apps-to-send-emails-make-payments,Reuters report; may be 8 Sep US time - verify date
+2026-09-29,Dots always-on agents,OpenAI,agents,https://thenextweb.com/news/openai-dots-always-on-ai-agents-cloud-computers-devday,DevDay 2026; agents with their own cloud computers
+2026-10-21,Claude Duet (research preview),Anthropic,agents,https://dealroom.co/news/164918-anthropic-launches-claude-duet-a-proactive-agent-app-taking-on-metas-mus/,proactive agent app; press report - verify against Anthropic's announcement

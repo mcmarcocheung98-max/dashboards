@@ -905,7 +905,7 @@ def test_ai_readings_from_cached_payloads(snapdir, monkeypatch):
     from app import topics
     assert {x["tab"] for x in r} == {t for t, _ in topics.REGISTRY["ai"].tabs}          # every tab reads, and only real tab keys
     assert keys["ramp_us"]["value"] == 55.86 and keys["ramp_us"]["lean"] == 1 and keys["uk_firms"]["value"] == 29.7
-    assert keys["ai_share_us"]["lean"] == 1 and keys["chatgpt_wau"]["value"] == 800000000
+    assert keys["ai_share_us"]["lean"] == 1 and keys["chatgpt_wau"]["value"] == 1200000000
     assert all(x["lean"] in (-1, 0, 1) for x in r) and len(_clean(r)) == len(r)
     B.json_safe(r)
 

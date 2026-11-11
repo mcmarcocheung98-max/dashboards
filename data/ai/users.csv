@@ -7,3 +7,15 @@ date,series,value,source,note
 2025-08-04,ChatGPT weekly active users,700000000,https://www.cnbc.com/2025/08/04/openai-chatgpt-700-million-users.html,OpenAI
 2025-10-06,ChatGPT weekly active users,800000000,https://openai.com/devday/,OpenAI DevDay 2025
 2023-03-16,Microsoft 365 Copilot paid seats,0,https://blogs.microsoft.com/blog/2023/03/16/introducing-microsoft-365-copilot/,announced (0 = launch marker)
+2026-02-27,ChatGPT weekly active users,900000000,https://9to5mac.com/2026/02/27/chatgpt-approaching-1-billion-weekly-active-users/,"OpenAI, with its $110B funding round (press report) - verify against an OpenAI statement"
+2026-09-29,ChatGPT weekly active users,1200000000,https://openai.com/index/devday-2026-recap/,OpenAI DevDay 2026 recap: 1.2B weekly users
+2025-05-20,Gemini app monthly active users,400000000,https://blog.google/innovation-and-ai/technology/ai/io-2025-keynote/,"Sundar Pichai, Google I/O 2025"
+2025-07-23,Gemini app monthly active users,450000000,https://blog.google/inside-google/message-ceo/alphabet-earnings-q2-2025/,"Pichai, Alphabet Q2 2025 earnings call"
+2025-10-29,Gemini app monthly active users,650000000,https://blog.google/inside-google/message-ceo/alphabet-earnings-q3-2025/,"Pichai, Alphabet Q3 2025 earnings call (over 650 million)"
+2026-02-04,Gemini app monthly active users,750000000,https://blog.google/company-news/inside-google/message-ceo/alphabet-earnings-q4-2025/,"Pichai, Alphabet Q4 2025 earnings call (more than 750 million)"
+2026-05-19,Gemini app monthly active users,900000000,https://blog.google/innovation-and-ai/sundar-pichai-io-2026/,"Pichai, Google I/O 2026 (surpassed 900 million)"
+2026-07-22,Gemini app monthly active users,950000000,https://9to5google.com/2026/07/22/alphabet-q2-2026-earnings/,"Pichai, Alphabet Q2 2026 earnings call (press report)"
+2026-08-11,Gemini app monthly active users,1000000000,https://9to5google.com/2026/08/11/gemini-app-1-billion/,Pichai: passed 1 billion monthly users (press report)
+2026-01-28,Microsoft 365 Copilot paid seats,15000000,https://www.directionsonmicrosoft.com/blog/microsoft-claims-15-million-paid-m365-copilot-seats,Microsoft FY26 Q2 earnings call
+2026-04-29,Microsoft 365 Copilot paid seats,20000000,https://www.fool.com/earnings/call-transcripts/2026/04/29/microsoft-msft-q3-2026-earnings-transcript/,"Satya Nadella, FY26 Q3 earnings call (over 20 million)"
+2026-07-29,Microsoft 365 Copilot paid seats,30000000,https://www.fool.com/earnings/call-transcripts/2026/08/07/microsoft-msft-q4-2026-earnings-call-transcript/,"Nadella, FY26 Q4 earnings call (over 30 million); transcript page dated 7 Aug"
