@@ -1,14 +1,16 @@
 date,site,country,event,source,note
-2020-05-15,TSMC Arizona,US,TSMC announces a $12bn 5nm fab in Phoenix,https://pr.tsmc.com/english/news/2033,verify
-2021-04-01,TSMC Arizona,US,Construction of Fab 21 phase 1 begins,https://pr.tsmc.com/english/latest-news,verify
-2022-12-06,TSMC Arizona,US,Second fab announced; investment raised to $40bn,https://pr.tsmc.com/english/news/2977,verify
-2024-04-08,TSMC Arizona,US,$6.6bn CHIPS Act award; third fab; plan raised to $65bn,https://www.commerce.gov/news/press-releases/2024/04/biden-harris-administration-announces-preliminary-terms-tsmc-expanded,verify
-2024-12-31,TSMC Arizona,US,Fab 1 (N4) in volume production in Q4 2024,https://investor.tsmc.com/english/quarterly-results,verify
-2025-03-03,TSMC Arizona,US,"TSMC adds $100bn (three more fabs, two packaging plants, an R&D centre): $165bn in all",https://pr.tsmc.com/english/latest-news,verify
-2021-11-09,JASM Kumamoto,Japan,TSMC and Sony announce JASM (22/28nm and 12/16nm) in Kumamoto,https://pr.tsmc.com/english/latest-news,verify
-2024-02-24,JASM Kumamoto,Japan,Fab 1 opening ceremony; second fab (6/7nm) announced,https://pr.tsmc.com/english/latest-news,verify
-2024-12-27,JASM Kumamoto,Japan,Fab 1 in volume production,https://pr.tsmc.com/english/latest-news,verify
-2023-08-08,ESMC Dresden,Germany,"TSMC, Bosch, Infineon and NXP form ESMC (28/22nm, 16/12nm); production targeted for 2027",https://pr.tsmc.com/english/news/3049,verify
-2024-08-20,ESMC Dresden,Germany,Groundbreaking,https://pr.tsmc.com/english/latest-news,verify
-2025-04-01,Rapidus Chitose,Japan,2nm pilot line starts in Hokkaido,https://www.rapidus.inc/en/news_topics/,verify
-2025-02-28,Intel Ohio,US,First Ohio fab pushed to 2030-31,https://www.intel.com/content/www/us/en/newsroom/news/ohio-update.html,verify
+2020-05-15,TSMC Arizona,US,TSMC announces a $12bn 5nm fab in Phoenix,https://pr.tsmc.com/english/news/2033,"checked 2026-11-11: TSMC release of 15 May 2020 (5nm fab in Arizona, about $12bn spent 2021-2029)"
+2021-06-01,TSMC Arizona,US,Construction of Fab 21 phase 1 begins,https://taipeitimes.com/News/biz/archives/2021/06/03/2003758486,"checked 2026-11-11: corrected from 1 Apr 2021; TSMC said at its Technology Symposium on 1 Jun 2021 that construction had begun (no TSMC press release; Taipei Times report)"
+2022-12-06,TSMC Arizona,US,Second fab (3nm from 2026) announced; investment raised to $40bn,https://pr.tsmc.com/english/news/2977,"checked 2026-11-11: TSMC release of 6 Dec 2022 (read in its PDF attachment): second fab under construction, total about $40bn"
+2024-04-08,TSMC Arizona,US,Preliminary terms for up to $6.6bn CHIPS Act funding; third fab; plan raised to over $65bn,https://content.govdelivery.com/accounts/USDOC/bulletins/394fb75,"checked 2026-11-11: Commerce Department release of 8 Apr 2024; wording corrected: a non-binding preliminary memorandum of terms, not a final award"
+2024-12-31,TSMC Arizona,US,Fab 1 (N4) in volume production in Q4 2024,https://www.marketbeat.com/earnings/reports/2025-1-16-taiwan-semiconductor-manufacturing-company-limited-stock,"checked 2026-11-11: C.C. Wei on the 4Q24 call (16 Jan 2025): first fab entered high-volume production in 4Q24 on N4; date is the quarter end, no exact day given"
+2025-03-03,TSMC Arizona,US,"TSMC adds $100bn (three more fabs, two packaging plants, an R&D centre): $165bn in all",https://pr.tsmc.com/english/news/3210,"checked 2026-11-11: White House announcement 3 Mar 2025 (US time); TSMC release and SEC 6-K dated 4 Mar 2025 (Hsinchu)"
+2021-11-09,JASM Kumamoto,Japan,TSMC and Sony announce a 22/28nm fab in Kumamoto,https://pr.tsmc.com/english/news/2880,"checked 2026-11-11: TSMC release of 9 Nov 2021; corrected: 12/16nm was added on 15 Feb 2022 (row below)"
+2022-02-15,JASM Kumamoto,Japan,Denso takes a stake; JASM adds 12/16nm FinFET,https://pr.tsmc.com/english/news/2911,"checked 2026-11-11: TSMC release of 15 Feb 2022 (new row split from the Nov 2021 one)"
+2024-02-06,JASM Kumamoto,Japan,Second fab (6/7nm) announced; Toyota joins; operating by end-2027,https://pr.tsmc.com/english/news/3113,"checked 2026-11-11: TSMC release of 6 Feb 2024 (read in its PDF attachment); new row split from the opening ceremony"
+2024-02-24,JASM Kumamoto,Japan,Fab 1 opening ceremony,https://pr.tsmc.com/english/news/3113,"checked 2026-11-11: TSMC release of 24 Feb 2024; corrected: the second fab was announced on 6 Feb (row above)"
+2024-12-27,JASM Kumamoto,Japan,Fab 1 in volume production,https://www.trendforce.com/news/2024/12/27/news-tsmc-sets-key-milestone-in-japan-as-kumamoto-fab-begins-mass-production/,"checked 2026-11-11: TSMC confirmed it to the press on 27 Dec 2024 (TrendForce); C.C. Wei on the 4Q24 call: volume production 'at the end of 2024'; no TSMC release"
+2023-08-08,ESMC Dresden,Germany,"TSMC, Bosch, Infineon and NXP plan the ESMC joint venture (28/22nm, 16/12nm); production targeted by end-2027",https://pr.tsmc.com/english/news/3049,"checked 2026-11-11: joint release of 8 Aug 2023 (read in its PDF attachment); wording corrected: a planned venture, subject to regulatory approvals"
+2024-08-20,ESMC Dresden,Germany,Groundbreaking,https://pr.tsmc.com/english/news/3169,"checked 2026-11-11: TSMC release of 20 Aug 2024 (groundbreaking ceremony in Dresden)"
+2025-04-01,Rapidus Chitose,Japan,2nm pilot line starts in Hokkaido,https://www.rapidus.inc/en/iim/,"checked 2026-11-11: Rapidus says the IIM-1 pilot line started in April 2025; 1 Apr from Jiji Press"
+2025-02-28,Intel Ohio,US,First Ohio fab pushed to 2030-31,https://newsroom.intel.com/corporate/ohio-one-construction-timeline-update,"checked 2026-11-11: Intel newsroom 28 Feb 2025: Mod 1 construction done in 2030, operations 2030-2031"
