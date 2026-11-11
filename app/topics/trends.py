@@ -57,6 +57,11 @@ AI_TITLE = re.compile(r"\b(AI|A\.I\.|AGI|LLMs?|GPT[-\w.]*|ChatGPT|OpenAI|Anthrop
                       r"language models?|inference|fine-?tun\w*|embeddings?|RAG|Hugging ?Face|Nvidia|CUDA|GPUs?)\b", re.I)
 # public.api.bsky.app answers 403 to Railway; the AppView host answers (checked with /layout, 2026-10-26)
 BSKY = "https://api.bsky.app/xrpc/app.bsky.feed.searchPosts?q={q}&sort=latest&since={a}&until={b}&limit=100"
+# Bluesky's appview answers 403 to unauthenticated post search from this server (Nov 2026). With a free account's app password in the
+# Railway variables BSKY_HANDLE and BSKY_APP_PASSWORD the fill logs in and searches through the account's host instead.
+BSKY_LOGIN = "https://bsky.social/xrpc/com.atproto.server.createSession"
+BSKY_AUTHED = "https://bsky.social/xrpc/app.bsky.feed.searchPosts?q={q}&sort=latest&since={a}&until={b}&limit=100"
+_bsky_token: dict = {}
 REDDIT = ("https://www.reddit.com/r/{sub}/about.json", "https://old.reddit.com/r/{sub}/about.json", "https://api.reddit.com/r/{sub}/about")
 GITHUB = "https://api.github.com/repos/{repo}"
 GTRENDS = ("https://trends.google.com/trends/api/explore?hl=en-US&tz=0&req=%7B%22comparisonItem%22%3A%5B%7B%22keyword%22%3A%22bitcoin%22%2C%22geo%22%3A%22%22%2C"
@@ -448,13 +453,36 @@ def fill_hn(items: list[dict], out: dict, done: dict) -> None:
         save("hn", store)               # after each topic: the first backfill takes minutes and a redeploy must not lose it
 
 
+def bsky_configured() -> bool:
+    return bool(os.environ.get("BSKY_HANDLE") and os.environ.get("BSKY_APP_PASSWORD"))
+
+
+def bsky_login() -> dict:
+    """com.atproto.server.createSession with the configured handle and app password (replaced by a fixture in the tests)."""
+    return json.loads(B._download(BSKY_LOGIN, 30, False, BOT, post={"identifier": os.environ["BSKY_HANDLE"], "password": os.environ["BSKY_APP_PASSWORD"]}))
+
+
+def bsky_headers() -> dict:
+    """BOT, plus a session token when an account is configured (one login an hour; Bluesky's access tokens last about two)."""
+    if not bsky_configured():
+        return BOT
+    if time.time() - _bsky_token.get("at", 0) > 3600:
+        _pace("bsky")
+        j = bsky_login()
+        if not j.get("accessJwt"):
+            raise ValueError("Bluesky: login gave no token")
+        _bsky_token.update(jwt=j["accessJwt"], at=time.time())
+    return {**BOT, "Authorization": f"Bearer {_bsky_token['jwt']}"}
+
+
 def count_bsky(q: str, day: pd.Timestamp) -> tuple[int, bool]:
     """Posts matching q on one UTC day, paging up to BSKY_PAGES; (count, capped)."""
     a, b = day.strftime("%Y-%m-%dT00:00:00Z"), (day + pd.Timedelta(days=1)).strftime("%Y-%m-%dT00:00:00Z")
     n, cursor = 0, None
+    base, headers = (BSKY_AUTHED, bsky_headers()) if bsky_configured() else (BSKY, BOT)
     for _ in range(BSKY_PAGES):
-        url = BSKY.format(q=quote(q), a=a, b=b) + (f"&cursor={quote(cursor)}" if cursor else "")
-        j = json.loads(download(url, "bsky", BOT))
+        url = base.format(q=quote(q), a=a, b=b) + (f"&cursor={quote(cursor)}" if cursor else "")
+        j = json.loads(download(url, "bsky", headers))
         n += len(j.get("posts") or [])
         cursor = j.get("cursor")
         if not cursor or not j.get("posts"):
@@ -848,7 +876,10 @@ def _social_now() -> dict:
         if gh and all(_gain_between(s, end - pd.Timedelta(days=7), end) is not None for s in gh.values()) else None
     last_day = max((s.index[-1] for s in gh.values()), default=None)
     stars = {"week": week_gain(last_day), "prev_week": week_gain(last_day - pd.Timedelta(days=7)), "to": str(last_day.date())} if last_day is not None else {}
-    return {"front": {"share": _pts(fr["ai"] / fr["total"], 4) if len(fr) else [], "total": _pts(fr["total"], 0) if len(fr) else [],
+    state = load("state")
+    return {"bsky_login": bsky_configured(), "refused": {src: (state.get("counts", {}).get(src, [0, 0])[0] == 0 and state.get("counts", {}).get(src, [0, 0])[1] > 0)
+                                                        for src in ("bsky", "reddit")},
+            "front": {"share": _pts(fr["ai"] / fr["total"], 4) if len(fr) else [], "total": _pts(fr["total"], 0) if len(fr) else [],
                       "ai": _pts(fr["ai"], 0) if len(fr) else []},
             "stars_week": stars,
             "hn": {"stories": [{"key": k, "name": lab[k], "points": _pts(st[k], 0)} for k in order[:6]], "comments": [{"key": k, "name": lab[k], "points": _pts(cm[k], 0)} for k in order[:6]],

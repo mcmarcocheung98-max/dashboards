@@ -12,8 +12,14 @@ const table = (head, rows) => el("div", { class: "scroll" }, el("table", {}, el(
 const line = (s, i) => ({ ...s, color: css(SERIES[i % SERIES.length]), dashed: i >= SERIES.length });
 const THEME_LINK = (label, slug) => slug ? link(label, "/" + slug) : label;
 const zpill = z => el("span", { class: "pill " + (z == null ? "" : z >= 1 ? "ok" : z <= -1 ? "bad" : "") }, zf(z));
-const problems = d => d && d.problems && Object.keys(d.problems).length ? el("details", { style: "margin-top:6px" }, el("summary", { class: "muted" }, Object.keys(d.problems).length + " downloads did not work in the last run"),
-  el("div", { class: "muted" }, ...Object.entries(d.problems).map(([k, v]) => el("div", {}, k + ": " + v)))) : null;
+// the downloads the last background run could not make, named (the first six), with the reason on hover
+const problems = d => {
+  const P = Object.entries((d && d.problems) || {}).filter(([k]) => k !== "log");
+  if (!P.length) return null;
+  const names = P.slice(0, 6).map(([k, v], i) => [i ? ", " : "", el("span", { title: v, style: "text-decoration:underline dotted" }, k)]).flat();
+  return el("details", { style: "margin-top:6px" }, el("summary", { class: "muted" }, P.length + (P.length === 1 ? " download" : " downloads") + " did not work in the last run: ", ...names, P.length > 6 ? " and " + (P.length - 6) + " more" : ""),
+    el("div", { class: "muted" }, ...P.map(([k, v]) => el("div", {}, k + ": " + v))));
+};
 const empty = what => el("div", { class: "muted" }, "No " + what + " yet: the background download fills it within a few minutes of a deploy, and daily logs build up from launch.");
 
 const VIEWS = {
@@ -88,12 +94,15 @@ const VIEWS = {
     const hnt = (H.rows || []).length ? card("Hacker News by topic, last full week", table(["Topic", "Stories", "Comments", "Stories vs 4 wks", "vs 13 wks"], H.rows.map(r => el("tr", {},
       el("td", {}, r.label), el("td", {}, f0(r.stories)), el("td", {}, f0(r.comments)), el("td", { class: cls(r.s_4) }, pc0(r.s_4)), el("td", { class: cls(r.s_13) }, pc0(r.s_13)))))) : null;
     const bs = card("Bluesky posts a day", ...((S.lines || []).length ? [...linesChart(S.lines.map((t, i) => line(t, i)), f0, { small: true }),
-      table(["Keyword", "Posts (" + (S.rows[0] || {}).date + ")", "7-day average"], S.rows.map(r => el("tr", {}, el("td", {}, r.label), el("td", {}, r.capped ? "500+" : f0(r.posts)), el("td", {}, f0(r.avg7)))))] : [empty("Bluesky counts")]),
+      table(["Keyword", "Posts (" + (S.rows[0] || {}).date + ")", "7-day average"], S.rows.map(r => el("tr", {}, el("td", {}, r.label), el("td", {}, r.capped ? "500+" : f0(r.posts)), el("td", {}, f0(r.avg7)))))] : [el("div", { class: "muted" }, d.bsky_login ? "Logged in to Bluesky: counts start with the next daily run." : (d.refused || {}).bsky
+        ? "Bluesky's search answers 403 to this server without a login (since early Nov 2026). The owner can set BSKY_HANDLE and BSKY_APP_PASSWORD (a free account's app password) in Railway's variables; counts start the next day."
+        : "No Bluesky counts yet: logged once a day from launch.")]),
       S.closed ? note(S.closed + ".") : null,
       note("Posts matching the keyword on each UTC day, from Bluesky's public search, counted once a day from launch (up to 500 a day: '500+' means more). Bluesky only, not X."));
     const rd = card("Reddit subscribers", ...((R.lines || []).length ? [...linesChart(R.lines.map((t, i) => line(t, i)), big, { small: true }),
       table(["Subreddit", "Theme", "Subscribers", "Active now", "30-day change", "Read"], R.rows.map(r => el("tr", {}, el("td", {}, link("r/" + r.sub, "https://www.reddit.com/r/" + r.sub + "/")), el("td", {}, THEMES_LABEL[r.theme] || r.theme || "–"),
-        el("td", {}, big(r.subscribers)), el("td", {}, f0(r.active)), el("td", { class: cls(r.d30) }, r.d30 == null ? "–" : (r.d30 > 0 ? "+" : "") + big(r.d30)), el("td", {}, r.date))))] : [empty("Reddit counts")]),
+        el("td", {}, big(r.subscribers)), el("td", {}, f0(r.active)), el("td", { class: cls(r.d30) }, r.d30 == null ? "–" : (r.d30 > 0 ? "+" : "") + big(r.d30)), el("td", {}, r.date))))] : [el("div", { class: "muted" }, (d.refused || {}).reddit ? "Reddit refuses this server (403 Blocked), so these counts are hand-entered: data/trends/reddit.csv, one dated and cited row per reading. None entered yet."
+        : "No Reddit counts yet: logged once a day from launch.")]),
       R.closed ? note(R.closed + ".") : null,
       note("Read once a day from each subreddit's about.json (one request every few seconds). Reddit often refuses cloud servers; then counts are hand-entered in data/trends/reddit.csv (series 'sub|subscribers' or 'sub|active')."),
       cite(R.cited));

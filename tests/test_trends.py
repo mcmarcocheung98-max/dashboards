@@ -151,6 +151,8 @@ def site_json(url: str) -> dict:
             "housing/prices": {"london_real": site_points("2016-01-01", "MS", lambda t: 450000 + 1000 * (t.year - 2016) * 12)},
             "ai/openings": {"US": {"all": site_points("2020-02-02", "W-SUN", lambda t: 100), "sectors": {}},
                             "ai_share": {"US": site_points("2020-02-01", "MS", lambda t: 0.5 + 0.1 * (t.year - 2020))}},
+            "compute-chips/overview": {"chips": {"prices": {"NVDA": site_points("2018-01-01", "B", lambda t: 5 * 1.6 ** (t.year - 2018))}}},
+            "debt-rates/yields": {"nominal": {"US": site_points("2016-01-01", "MS", lambda t: 2 + 0.3 * math.sin(t.year))}},
             "space/satellites": {"active": {"cumulative_starlink": site_points("2019-05-01", "MS", lambda t: 60 * ((t.year - 2019) * 12 + t.month))}},
             "climate/temperature": {"monthly": {"GISTEMP": site_points("1880-01-01", "MS", lambda t: 0.2 + 0.02 * (t.year - 1980))}},
             }.get(path, {"nothing": "here"})
@@ -484,7 +486,12 @@ def test_reality(filled):
     assert th["bitcoin"]["stats"]["n"] > 100 and th["bitcoin"]["stats"]["level"] is not None
     assert th["ai"]["reality"] and th["climate"]["reality"]                     # dotted path and 'monthly.*'
     assert th["space"]["reality"] and th["climate"]["reality"][0][0] == int(pd.Timestamp("2015-01-01").timestamp())   # 1880 on, read from 2015
-    assert "error" in th["rates"] and th["rates"]["paths"] == []                # a payload with no series says so
+    assert all("error" not in t for t in d["themes"]), [t["theme"] for t in d["themes"] if "error" in t]
+    bad = [{**r, "path": "nominal.XX"} if r["theme"] == "rates" else r for r in M.reality_rows()]
+    from unittest import mock
+    with mock.patch.object(M, "reality_rows", lambda: bad):
+        rates = next(t for t in M._reality_now()["themes"] if t["theme"] == "rates")
+    assert "nominal.XX" in rates["error"] and "nominal.US" in rates["paths"]          # a wrong path says which series exist
     last = pd.to_datetime(th["bitcoin"]["attention"][-1][0], unit="s")
     assert last == pd.Timestamp("2026-09-01")                                     # October is not finished
 
@@ -615,6 +622,30 @@ def test_recent_z():
     w = pd.Series([5.0, 6, 5, 7, 5, 6, 5, 6, 30], index=pd.date_range("2026-08-30", periods=9, freq="W-SUN"))
     assert M.recent_z(w) > 3 and M.recent_z(w.iloc[:5]) is None
     assert abs(M.recent_z(pd.Series([1.0, 2, 1, 2, 1, 2, 1, 3], index=w.index[:8]))) < 3      # a quiet thread is not a breakout
+
+
+def test_bluesky_logs_in_when_an_account_is_configured(filled, monkeypatch):
+    monkeypatch.setenv("BSKY_HANDLE", "dashboards.bsky.social")
+    monkeypatch.setenv("BSKY_APP_PASSWORD", "app-password-fixture")
+    monkeypatch.setattr(M, "bsky_login", lambda: {"accessJwt": "jwt-fixture"})
+    monkeypatch.setattr(M, "_bsky_token", {})
+    seen = []
+    monkeypatch.setattr(M, "download", lambda url, site_=None, headers=None, **k: seen.append((url, headers)) or fake_download(url))
+    n, _ = M.count_bsky("waymo", TODAY - pd.Timedelta(days=1))
+    assert n > 0 and seen[0][0].startswith("https://bsky.social/xrpc/app.bsky.feed.searchPosts")
+    assert seen[0][1]["Authorization"] == "Bearer jwt-fixture"
+    assert M._social_now()["bsky_login"] is True
+    monkeypatch.delenv("BSKY_HANDLE")
+    seen.clear()
+    M.count_bsky("waymo", TODAY - pd.Timedelta(days=1))
+    assert seen[0][0].startswith("https://api.bsky.app/") and "Authorization" not in seen[0][1]
+
+
+def test_social_says_which_sources_refuse(filled):
+    st = M.load("state")
+    st["counts"].update(bsky=[0, 2], reddit=[0, 2])
+    M.save("state", st)
+    assert M._social_now()["refused"] == {"bsky": True, "reddit": True}
 
 
 # ------------------------------------------------------------------ the seed files and registration
