@@ -281,7 +281,7 @@ def main() -> int:
                     print(line, flush=True)
                     if cnl or sync.get("ok") is False or (follow and follow.get("ok") is False) or not askp["ok"]:
                         bad.append(line)
-                    if theme == "light":
+                    if theme == "light" and slug not in private:      # the repo is public: a private page's screenshot must not land in a downloadable artifact
                         pg.screenshot(path=str(out / f"{slug}-{key}.png"), full_page=True)
             bad += [f"{theme}: JS {e}" for e in errs]
             pg.close()

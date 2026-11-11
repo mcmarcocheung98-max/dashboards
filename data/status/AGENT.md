@@ -115,15 +115,17 @@ First line: "All dashboards OK" or "N problems". Then: what shipped (with commit
 dashboard reviewed and what it found, watch points crossed, whether the email went, proposals waiting for an answer, and what
 only the owner can do. Post nothing on GitHub.
 
-## GitHub Actions budget
+## GitHub Actions and the public repo
 
-The repo is private, so every runner minute and every stored artifact counts against the account's free allowance. Keep it low:
-- **One status push per run.** Collect the note, log, pending, actions, usage.json and luxury CSVs and push them together at the
-  end (section 6), not commit by commit. Pushes that touch only `data/status/**`, `data/graphify/**` or Markdown skip the tests
-  workflow (they are validated locally); anything else runs the suite, so a stray extra push costs about two minutes.
-- Never push while `live-check` runs (a restart fails its tabs and the re-run costs ten minutes).
-- `show-json` is cheap (seconds); `live-check` is not (about ten minutes): once a day, never for a single endpoint.
-- Screenshot artifacts are kept three days and pruned by the live-check run itself; do not raise the retention.
+The repo has been public since 11 Nov 2026, so runner minutes and artifact storage are free; the budget is no longer a constraint.
+Keep the habits that also make the run reliable: one status push per run, never push while `live-check` runs (a restart fails
+its tabs), status-only pushes skip the tests workflow.
+
+Public means everything committed, every workflow log and every artifact can be read by anyone:
+- Never commit a secret, a passcode, a private dashboard's data export, or anything about the owner beyond what the site shows.
+- `show-json` prints its response in a public log: never point it at a private dashboard's endpoint with a passcode or cookie.
+- `smoke.py` takes no screenshots of private dashboards; keep it that way.
+- Notes on `/status` are public on the site already: write them as such (no account details, no personal data).
 
 ## Limits
 
