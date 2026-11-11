@@ -23,14 +23,15 @@ FRED, Yahoo and Stooq are not used: from Railway they time out, return 429 or ar
 
 **Checked on the server.** `/api/space/layout` from Railway on 2026-10-26: GCAT `launch.tsv` (13.8 MB, launch code column `LaunchCode`), `orgs.tsv` (0.7 MB) and `satcat.tsv` (19.3 MB), CelesTrak `satcat.csv` (6.8 MB) and the Nasdaq API (stocks and ETF) all answered 200 with the layouts the parsers expect, and every tab drew from live data in the live-check run. Later that day CelesTrak answered 403 to a repeat download (it blocks clients that fetch the same file again within a few hours), so GCAT and CelesTrak files are downloaded at most once every 20 hours: a younger disk snapshot is used as it is, even after a redeploy, and `/layout` no longer probes CelesTrak. The parsers look columns up by name, ignoring case, and read only the columns they use. If a tab says "not available", open `/api/space/layout` and compare the header line with `parse_tsv` / `parse_celestrak` in `app/topics/space.py`.
 
-## Hand-entered rows: all marked `verify`
+## Hand-entered rows: `checked` or `verify`
 
-**Every hand-entered row was entered from memory and says `verify` in its note.** Check each against its cited page, then fix the value or drop `verify`. Least certain:
+**`milestones.csv` was checked on 9 Nov 2026.** Each row cites a page that was opened and states the date (Wikipedia, SpaceNews, gov.uk); its note says `checked 2026-11-09`. That check corrected four dates (the Falcon 9 landing, the SaxaVord licence, the HK payload specialist month) and two descriptions (Mengtian completing Tiangong, the Golden Bauhinia launch). It also added 2025–26 milestones. One row is still `verify`: PolyU's sampling system on Chang'e 6, which no page on those sites confirmed. Rows added later should cite their page and say `checked <date>`.
+
+**`cost.csv`, `starlink.csv` and `economy.csv` were entered from memory and say `verify` in every note.** Check each against its cited page, then fix the value or drop `verify`. Least certain:
 
 - the CSIS per-kg figures for Ariane 5, Atlas V and Delta IV Heavy, and the Ariane 6 price;
 - Starlink subscriber dates (the June 2021, mid-2025 and November 2025 rows) and anything after November 2025, which is not entered yet;
-- Space Foundation totals before 2021 (the 2017 method change), the OECD budget figure and the UK Size and Health years;
-- the HK rows (Golden Bauhinia launch date, the payload specialist announcement month) and the SaxaVord licence date.
+- Space Foundation totals before 2021 (the 2017 method change), the OECD budget figure and the UK Size and Health years.
 
 Add a row to `milestones.csv` with `kind=launch`, `place=UK` and `site=SaxaVord` (or another UK site) when a UK vertical launch happens: the UK checklist row and the "days since" reading follow from it.
 

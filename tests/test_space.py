@@ -230,7 +230,7 @@ def test_seed_files():
         for r in rs:
             pd.Timestamp(r["date"])
             assert r["source"].startswith("http"), (name, r)
-            assert "verify" in r["note"], (name, r)               # entered from memory: nothing checked against the page yet
+            assert "verify" in r["note"] or "checked 20" in r["note"], (name, r)   # each row is checked against its page or still says verify
             if name != "milestones":
                 float(r["value"])
     assert {r["kind"] for r in B.manual_rows("space", "cost")} <= {"flown", "target"}

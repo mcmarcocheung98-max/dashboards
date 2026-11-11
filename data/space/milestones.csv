@@ -1,19 +1,48 @@
 date,place,kind,event,outcome,site,source,note
-1971-10-28,UK,launch,Black Arrow R3 puts Prospero into orbit from Woomera (Australia): the only all-British orbital launch,success,Woomera (Australia),https://en.wikipedia.org/wiki/Prospero_(satellite),from memory; verify
-2015-12-21,US,mission,Falcon 9 lands its first stage after an orbital launch,,,https://www.spacex.com/launches/,from memory; verify
-2019-05-24,US,mission,First 60 Starlink satellites launched,,,https://www.spacex.com/launches/,from memory; verify
-2022-11-03,China,mission,Tiangong space station completed (Mengtian module docks),,,https://www.cmse.gov.cn/,from memory; verify
-2022-11-16,UK,site,CAA licenses Spaceport Cornwall (Newquay),,,https://www.caa.co.uk/space/,from memory; verify
-2023-01-09,UK,launch,"Virgin Orbit LauncherOne ""Start Me Up"" from Spaceport Cornwall fails to reach orbit",failure,Spaceport Cornwall,https://www.caa.co.uk/space/,first orbital attempt from UK soil; from memory; verify
-2023-01-15,HK,mission,Hong Kong Aerospace Technology Group's first Golden Bauhinia satellites launched on a Chinese rocket,,,https://www.hkatg.com/,date approximate; from memory; verify
-2023-04-04,UK,policy,Virgin Orbit files for bankruptcy; Cornwall loses its launch operator,,,https://www.gov.uk/government/organisations/uk-space-agency,from memory; verify
-2023-04-20,US,mission,First integrated Starship flight test,,,https://www.spacex.com/vehicles/starship/,from memory; verify
-2023-07-12,China,mission,LandSpace Zhuque-2 is the first methane-fuelled rocket to reach orbit,,,https://www.landspace.com/,from memory; verify
-2024-01-08,UK,site,CAA grants SaxaVord (Shetland) a spaceport licence: the first vertical launch site in Western Europe,,,https://www.caa.co.uk/space/,from memory; verify
-2024-06-01,HK,policy,China's fourth astronaut selection includes a payload specialist from Hong Kong for the first time,,,https://www.cmse.gov.cn/,month approximate; from memory; verify
-2024-06-25,China,mission,Chang'e 6 returns the first samples from the lunar far side,,,https://www.cnsa.gov.cn/english/,from memory; verify
-2024-06-25,HK,mission,Hong Kong PolyU's sampling and packaging system flies on Chang'e 6,,,https://www.polyu.edu.hk/,from memory; verify
-2024-08-06,China,mission,First 18 Qianfan (Thousand Sails) broadband satellites launched,,,https://www.cnsa.gov.cn/english/,from memory; verify
-2024-08-19,UK,site,RFA One first stage catches fire during a static fire test at SaxaVord,,,https://www.rfa.space/,from memory; verify
-2024-10-13,US,mission,Starship Super Heavy booster caught by the launch tower,,,https://www.spacex.com/vehicles/starship/,from memory; verify
-2024-12-16,China,mission,First Guowang (China SatNet) broadband satellites launched,,,https://www.cnsa.gov.cn/english/,from memory; verify
+1971-10-28,UK,launch,Black Arrow R3 puts Prospero into orbit from Woomera (Australia): the only all-British orbital launch,success,Woomera (Australia),https://en.wikipedia.org/wiki/Black_Arrow,checked 2026-11-09
+2015-12-22,US,mission,Falcon 9 lands its first stage after an orbital launch,,,https://en.wikipedia.org/wiki/Falcon_9_flight_20,"checked 2026-11-09; launched 01:29 UTC 22 Dec (21 Dec local)"
+2019-05-24,US,mission,First 60 Starlink satellites launched,,,https://en.wikipedia.org/wiki/Starlink,checked 2026-11-09
+2022-11-03,China,mission,"Mengtian module moved to Tianhe's side port, completing Tiangong's assembly (docked 31 Oct)",,,https://en.wikipedia.org/wiki/Mengtian_experiment_module,"checked 2026-11-09; relocated 01:32 UTC 3 Nov"
+2022-11-16,UK,site,CAA licenses Spaceport Cornwall (Newquay),,,https://en.wikipedia.org/wiki/Newquay_Airport,checked 2026-11-09
+2023-01-09,UK,launch,"Virgin Orbit LauncherOne ""Start Me Up"" from Spaceport Cornwall fails to reach orbit",failure,Spaceport Cornwall,https://en.wikipedia.org/wiki/Virgin_Orbit,checked 2026-11-09; first orbital attempt from UK soil
+2023-01-15,HK,mission,Golden Bauhinia-3/4/6 satellites launched on a Long March 2D,,,https://en.wikipedia.org/wiki/Long_March_2D,"checked 2026-11-09; page does not name HK Aerospace Technology Group, and Golden Bauhinia-2 flew in Oct 2021, so not the first"
+2023-04-04,UK,policy,Virgin Orbit files for bankruptcy; Cornwall loses its launch operator,,,https://en.wikipedia.org/wiki/Virgin_Orbit,checked 2026-11-09
+2023-04-20,US,mission,First integrated Starship flight test,,,https://en.wikipedia.org/wiki/Starship_flight_test_1,checked 2026-11-09
+2023-07-12,China,mission,LandSpace Zhuque-2 is the first methane-fuelled rocket to reach orbit,,,https://en.wikipedia.org/wiki/Zhuque-2,checked 2026-11-09
+2023-12-17,UK,site,CAA grants SaxaVord (Shetland) a spaceport licence: the first vertical launch site in Western Europe,,,https://spacenews.com/saxavord-spaceport-receives-u-k-license/,checked 2026-11-09; date corrected from 2024-01-08
+2024-05-01,HK,policy,China's fourth astronaut selection includes a payload specialist from Hong Kong for the first time,,,https://en.wikipedia.org/wiki/Lai_Ka-ying,"checked 2026-11-09; month only (reports in May 2024)"
+2024-06-25,China,mission,Chang'e 6 returns the first samples from the lunar far side,,,https://en.wikipedia.org/wiki/Chang%27e_6,checked 2026-11-09
+2024-06-25,HK,mission,Hong Kong PolyU's sampling and packaging system flies on Chang'e 6,,,https://www.polyu.edu.hk/,"not confirmed on Wikipedia, SpaceNews or Space.com (checked 2026-11-09); from memory; verify"
+2024-08-06,China,mission,First 18 Qianfan (Thousand Sails) broadband satellites launched,,,https://en.wikipedia.org/wiki/Qianfan,checked 2026-11-09
+2024-08-19,UK,site,RFA One first stage catches fire during a static fire test at SaxaVord,,,https://en.wikipedia.org/wiki/RFA_One,checked 2026-11-09
+2024-10-13,US,mission,Starship Super Heavy booster caught by the launch tower,,,https://en.wikipedia.org/wiki/Starship_flight_test_5,checked 2026-11-09
+2024-12-16,China,mission,First Guowang (China SatNet) broadband satellites launched,,,https://en.wikipedia.org/wiki/Guowang,checked 2026-11-09
+2025-01-16,UK,policy,CAA grants RFA a licence to launch RFA One from SaxaVord: the first UK licence for a vertical orbital launch,,,https://spacenews.com/rfa-gets-u-k-launch-license/,checked 2026-11-09
+2025-01-16,US,mission,New Glenn's first launch reaches orbit,,,https://en.wikipedia.org/wiki/New_Glenn,checked 2026-11-09
+2025-01-16,US,mission,"Starship Flight 7: booster caught again, but the first Block 2 ship is lost during ascent",,,https://en.wikipedia.org/wiki/Starship_flight_test_7,checked 2026-11-09; 22:37 UTC
+2025-03-02,US,mission,Firefly's Blue Ghost makes the first fully successful commercial Moon landing,,,https://en.wikipedia.org/wiki/Blue_Ghost_Mission_1,checked 2026-11-09
+2025-03-06,US,mission,"Starship Flight 8: booster caught, ship lost again during ascent",,,https://en.wikipedia.org/wiki/Starship_flight_test_8,checked 2026-11-09
+2025-05-27,US,mission,"Starship Flight 9: first reflown Super Heavy booster; ship reaches planned velocity, then loses attitude control",,,https://en.wikipedia.org/wiki/Starship_flight_test_9,checked 2026-11-09
+2025-05-28,China,mission,Tianwen-2 asteroid sample-return mission launched,,,https://en.wikipedia.org/wiki/Tianwen-2,checked 2026-11-09
+2025-06-17,China,mission,Mengzhou crewed spacecraft passes its pad abort test,,,https://en.wikipedia.org/wiki/Mengzhou_(spacecraft),checked 2026-11-09
+2025-08-04,UK,policy,Skyrora becomes the first UK company to get a CAA launch licence (suborbital Skylark L from SaxaVord),,,https://spacenews.com/skyrora-gets-uk-launch-license-as-first-flight-likely-slips-to-2026/,checked 2026-11-09; SpaceNews story dated 4 Aug (CAA release dated 5 Aug)
+2025-08-20,UK,policy,Government announces the UK Space Agency will join DSIT by April 2026,,,https://www.gov.uk/government/news/uk-space-sector-bolstered-with-government-reforms-to-boost-growth-and-cut-red-tape,checked 2026-11-09
+2025-08-26,US,mission,"Starship Flight 10: first Block 2 ship to complete its objectives, ending in a controlled splashdown in the Indian Ocean",,,https://en.wikipedia.org/wiki/Starship_flight_test_10,checked 2026-11-09
+2025-11-05,China,mission,Crack found in the Shenzhou 20 window (suspected debris strike); crew return delayed,,,https://en.wikipedia.org/wiki/Shenzhou_20,checked 2026-11-09; crew landed 14 Nov in Shenzhou 21
+2025-11-13,US,mission,New Glenn first stage lands for the first time (NG-2),,,https://en.wikipedia.org/wiki/New_Glenn,checked 2026-11-09
+2025-11-25,China,mission,Shenzhou 22 launched uncrewed as an emergency lifeboat for the Tiangong crew,,,https://en.wikipedia.org/wiki/Shenzhou_22,checked 2026-11-09
+2025-12-03,China,mission,"Zhuque-3 maiden flight reaches orbit, but the booster landing attempt fails",,,https://en.wikipedia.org/wiki/Zhuque-3,checked 2026-11-09
+2025-12-23,China,mission,"Long March 12A maiden flight reaches orbit, but the booster landing attempt fails",,,https://en.wikipedia.org/wiki/Long_March_12A,checked 2026-11-09
+2026-02-11,China,mission,Mengzhou in-flight (max-q) abort test on a Long March 10 test stage,,,https://en.wikipedia.org/wiki/Mengzhou_(spacecraft),checked 2026-11-09
+2026-02-11,UK,policy,Orbex folds and enters administration,,,https://spacenews.com/uk-launcher-orbex-files-for-administration-after-failed-funding-efforts/,checked 2026-11-09; Wikipedia gives 18 Feb 2026 as the day operations ceased
+2026-02-18,UK,policy,UK cap on launch operator liability comes into force,,,https://spacenews.com/uk-caps-launch-liability-in-timely-boost-for-nascent-domestic-market/,checked 2026-11-09
+2026-05-22,US,mission,"Starship Flight 12: first Block 3 flight and first from Starbase's second pad; booster crashes in the Gulf",,,https://en.wikipedia.org/wiki/Starship_flight_test_12,checked 2026-11-09
+2026-05-24,HK,mission,Lai Ka-ying launches on Shenzhou 23 as payload specialist: the first Hong Kong astronaut,,,https://en.wikipedia.org/wiki/Lai_Ka-ying,"checked 2026-11-09; 15:08 UTC 24 May (25 May HK time)"
+2026-07-04,China,mission,Tianwen-2 arrives at asteroid Kamoʻoalewa,,,https://en.wikipedia.org/wiki/Tianwen-2,checked 2026-11-09
+2026-07-10,China,mission,Long March 10B maiden flight: first Chinese orbital booster recovery (net catch on a sea platform),,,https://en.wikipedia.org/wiki/Long_March_10B,checked 2026-11-09
+2026-07-24,US,mission,Starship Flight 13 deploys the first operational Starlink satellites (suborbital),,,https://en.wikipedia.org/wiki/Starship_flight_test_13,checked 2026-11-09
+2026-08-10,UK,site,Tank leak delays RFA One's first orbital launch attempt from SaxaVord,,,https://spacenews.com/tank-problem-delays-first-rfa-launch/,"checked 2026-11-09; launch had been slated for 10 Aug; no UK orbital launch attempt found as of 9 Nov 2026"
+2026-08-18,China,mission,Zhuque-3 booster lands on land after an orbital launch: first Chinese landing on legs,,,https://en.wikipedia.org/wiki/Zhuque-3,checked 2026-11-09; 23:43 UTC
+2026-09-08,UK,policy,New UK Space Strategy published (£7.8bn to 2030),,,https://www.gov.uk/government/news/new-space-strategy-will-bolster-uk-defences-against-threats-from-space,checked 2026-11-09
+2026-09-28,US,mission,Starship Flight 14 is the first to reach orbit and deploys 26 Starlink V3 satellites,,,https://en.wikipedia.org/wiki/Starship_flight_14,checked 2026-11-09
+2026-10-02,UK,policy,HyImpulse secures a UK licence to launch from SaxaVord as Orbex assets are sold,,,https://spacenews.com/hyimpulse-secures-launch-license-as-orbex-assets-are-sold/,checked 2026-11-09; SpaceNews story date
