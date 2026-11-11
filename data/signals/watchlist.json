@@ -439,38 +439,63 @@
    "key": "frontier_record_age",
    "signal": "Months since the last frontier training-compute record (Epoch AI)",
    "watch": "above 12 months",
-   "proposed": true
+   "approved": "2026-11-11"
   },
   {
    "key": "price_per_point",
    "signal": "Cheapest price per million output tokens within 50 Arena points of the top",
    "watch": "falls by half on a year, or rises",
-   "proposed": true
+   "approved": "2026-11-11"
   },
   {
    "key": "open_gap",
    "signal": "Best open-weights model's Arena gap to the top",
    "watch": "under 20 points, or over 100",
-   "proposed": true
+   "approved": "2026-11-11"
   },
   {
    "key": "china_share_top20",
    "signal": "Chinese developers' share of the Arena top 20",
    "watch": "above 40% or below 10%",
-   "proposed": true
+   "approved": "2026-11-11"
   },
   {
    "key": "release_cadence",
    "signal": "Median days between frontier-family releases, trailing 12 months",
    "watch": "under 60 days",
-   "proposed": true
+   "approved": "2026-11-11"
   }
  ],
  "options": [
-  {"key": "vix_term", "signal": "VIX term structure: VIX3M minus VIX", "watch": "below 0 (inverted) or above +5", "proposed": true},
-  {"key": "ai_iv_rank", "signal": "AI basket median IV rank", "watch": "above 80 or below 20", "proposed": true},
-  {"key": "skew_ai", "signal": "AI basket median 25-delta skew (put IV minus call IV)", "watch": "above the 90th or below the 10th percentile of its history (SKEW index fallback until 60 days)", "proposed": true},
-  {"key": "vrp", "signal": "Share of symbols with front-month IV above 30-day realised", "watch": "below 30% (options cheap vs movement) or above 90%", "proposed": true},
-  {"key": "pc_oi", "signal": "SPY put/call open-interest ratio", "watch": "above 2.0 or below 1.0", "proposed": true}
+  {
+   "key": "vix_term",
+   "signal": "VIX term structure: VIX3M minus VIX",
+   "watch": "below 0 (inverted) or above +5",
+   "approved": "2026-11-11"
+  },
+  {
+   "key": "ai_iv_rank",
+   "signal": "AI basket median IV rank",
+   "watch": "above 80 or below 20",
+   "approved": "2026-11-11"
+  },
+  {
+   "key": "skew_ai",
+   "signal": "AI basket median 25-delta skew (put IV minus call IV)",
+   "watch": "above the 90th or below the 10th percentile of its history (SKEW index fallback until 60 days)",
+   "approved": "2026-11-11"
+  },
+  {
+   "key": "vrp",
+   "signal": "Share of symbols with front-month IV above 30-day realised",
+   "watch": "below 30% (options cheap vs movement) or above 90%",
+   "approved": "2026-11-11"
+  },
+  {
+   "key": "pc_oi",
+   "signal": "SPY put/call open-interest ratio",
+   "watch": "above 2.0 or below 1.0",
+   "approved": "2026-11-11"
+  }
  ]
 }

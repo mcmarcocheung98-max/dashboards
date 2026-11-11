@@ -1462,6 +1462,14 @@
      "what": "Bluesky search logs in with an app password when BSKY_HANDLE and BSKY_APP_PASSWORD are set (owner action until then, the card says why it is empty); Reddit card says counts are hand-entered and cited; the failed-downloads line names them; both reality paths confirmed live and the local fixtures gained the two payloads",
      "commit": "3e92457",
      "by": "session:trends"
+    },
+    {
+     "dashboard": "Signals",
+     "slug": "signals",
+     "tab": "board",
+     "what": "the owner approved the five AI Models and five Options signals; they count on the board and in the newsletter from today",
+     "commit": "",
+     "by": "agent"
     }
    ],
    "review": "trends",
@@ -1471,13 +1479,13 @@
     "Thursday: token totals if three or more sessions ran"
    ],
    "asks": [
-    "Approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals; the AI Models and Options signals are still proposed",
     "Bluesky: a free account's handle and app password as Railway variables BSKY_HANDLE and BSKY_APP_PASSWORD restore the Social tab's keyword counts",
     "HKMA blocks Railway intermittently: accept a stale HIBOR when it does, or approve a hand-entered monthly HIBOR CSV fallback",
     "Broker for the options trading portal",
     "Gmail newsletter secrets (built, not sent again today), eBay keys, the three bag retail prices, Arena ranks 8-17",
     "Replies owed in the Pokémon, Longevity and Compute-chips sessions",
-    "Pokémon session: say go in its own conversation; it has the test speed-up ready plus two older items waiting there"
+    "Pokémon session: say go in its own conversation; it has the test speed-up ready plus two older items waiting there",
+    "Approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals"
    ]
   }
  ]
