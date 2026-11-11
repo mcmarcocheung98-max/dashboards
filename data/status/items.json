@@ -371,10 +371,10 @@
   {
    "id": "midterms-timeout",
    "owner": "session:ai-stocks",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-11",
    "title": "AI Stocks: /api/ai-stocks/midterms did not answer within 300 s on the server",
-   "detail": "First call after the deploy (10:50 UTC) timed out with no bytes. Asked for a snapshot-first answer and a check of the FRED fetches on /api/health."
+   "detail": "First call after the deploy (10:50 UTC) timed out with no bytes. Asked for a snapshot-first answer and a check of the FRED fetches on /api/health. Fixed in bb5c495 the same hour: answers in under a second from the seed. FRED itself is unreachable from Railway (see r-fred-via-actions)."
   }
  ],
  "roadmap": [
@@ -627,6 +627,16 @@
    "area": "Trading",
    "by": "agent",
    "detail": "Asked by the owner on 8 Nov. Waits on the owner's choice of broker (Interactive Brokers, Tastytrade, Alpaca, Saxo) and paper-first or live. Design: behind the passcode plus a separate trading passcode, broker keys as Railway variables, a confirmation step on every order, per-order and daily loss limits, a kill switch, an order and fill log on the volume, paper account until the owner flips a setting."
+  },
+  {
+   "id": "r-fred-via-actions",
+   "title": "FRED series fetched by a daily GitHub Action and committed, since Railway cannot reach FRED",
+   "status": "proposed",
+   "by": "agent",
+   "horizon": "now",
+   "size": "small",
+   "detail": "A small workflow runs once a day on a GitHub runner (which reaches FRED), downloads the eleven fredgraph.csv series the site uses (AI Stocks: SPASTT01USM661N, SP500, NASDAQCOM, NASDAQ100, VIXCLS; Luxury: CPIAUCSL, DEXSZUS, DEXUSEU, DEXUSUK; Options and Debt & Rates where they fall back to FRED) into data/fred/ and commits them with [skip ci]; _base's FRED fetch reads the committed file when the live call fails. About one runner minute a day.",
+   "why": "FRED has answered the Railway server with resets or timeouts since at least 7 Nov; HTTP/1.1 did not help (curl exit 28 on every series at 11:15 today). Nine FRED series on two dashboards are stale or failing, and the new Midterms tab can only move its 2026 line from a seed. A GitHub runner fetched FRED in 0.5 s this week."
   }
  ],
  "log": [
@@ -1437,7 +1447,7 @@
   {
    "date": "2026-11-11",
    "title": "Trends reviewed; verify-row clean-up handed to Debt & Rates and Demographics; Housing's HKMA sources back",
-   "summary": "All 308 tabs loaded in both themes, the first clean live check since the Options and AI Models launches. Housing's four HKMA sources are fresh again after eight days stale. The Trends review found the Bluesky and Reddit cards still reading not available, two Attention-vs-reality pairs pointing at series the other dashboards do not carry, and a line that counts failed downloads without naming them; handed to its session. The two dashboards holding most of the 417 unsourced rows (Debt & Rates 292, Demographics 56) were asked to clear them. The Altcoins test that was sped up on Monday now fails on the date (19 of 52 events against a 40% floor), passed on CI yesterday; its session has the fix. The Altcoins session pinned that test within the hour, and the FRED fix (HTTP/1.1 for the curl fetch, after a week of curl exit 92 on AI Stocks and Luxury) went to main with the tests green. The Trends session answered the same morning; the two reality paths were right on the live server (my local fixtures lacked the payloads). Housing's session traced the HKMA 405 to an Alibaba Cloud WAF block of the Railway network that lets requests through only now and then, so HIBOR may go stale again: an owner decision. Two more pushes this morning: AI Stocks gained a Midterms tab the owner asked for (the broad market was higher 12 months after 14 of 17 midterms, median about +12%; the tech proxy higher in all 13 cycles since 1974, median about +25%; 2026 so far S&P 500 -0.6%, Nasdaq-100 -1.6%), and the AI dashboard's hand-kept lists are current again.",
+   "summary": "All 308 tabs loaded in both themes, the first clean live check since the Options and AI Models launches. Housing's four HKMA sources are fresh again after eight days stale. The Trends review found the Bluesky and Reddit cards still reading not available, two Attention-vs-reality pairs pointing at series the other dashboards do not carry, and a line that counts failed downloads without naming them; handed to its session. The two dashboards holding most of the 417 unsourced rows (Debt & Rates 292, Demographics 56) were asked to clear them. The Altcoins test that was sped up on Monday now fails on the date (19 of 52 events against a 40% floor), passed on CI yesterday; its session has the fix. The Altcoins session pinned that test within the hour, and the FRED fix (HTTP/1.1 for the curl fetch, after a week of curl exit 92 on AI Stocks and Luxury) went to main with the tests green. The Trends session answered the same morning; the two reality paths were right on the live server (my local fixtures lacked the payloads). Housing's session traced the HKMA 405 to an Alibaba Cloud WAF block of the Railway network that lets requests through only now and then, so HIBOR may go stale again: an owner decision. Two more pushes this morning: AI Stocks gained a Midterms tab the owner asked for (the broad market was higher 12 months after 14 of 17 midterms, median about +12%; the tech proxy higher in all 13 cycles since 1974, median about +25%; 2026 so far S&P 500 -0.6%, Nasdaq-100 -1.6%), and the AI dashboard's hand-kept lists are current again. Server check after the Midterms fix: the endpoint answers in under a second, but every FRED series on AI Stocks and Luxury times out from Railway even over HTTP/1.1 (curl exit 28), so FRED is unreachable from the server, like HKMA; the AI dashboard already moved to BLS for that reason. Proposed below: fetch the few FRED series the site needs from a GitHub runner once a day and commit them.",
    "changes": [
     {
      "dashboard": "shared",
@@ -1483,7 +1493,7 @@
      "dashboard": "AI Stocks",
      "slug": "ai-stocks",
      "tab": "midterms",
-     "what": "new Midterms tab: the 12 months after every US midterm since 1958 (OECD all-shares, S&P 500 from 2018) with a tech or AI proxy per cycle and 2026 against the median path; FRED only, via the HTTP/1.1 fix. First server call did not answer within 300 s; its session is checking the FRED fetches",
+     "what": "new Midterms tab: the 12 months after every US midterm since 1958 (OECD all-shares, S&P 500 from 2018) with a tech or AI proxy per cycle and 2026 against the median path; FRED only, via the HTTP/1.1 fix",
      "commit": "9015523",
      "by": "session:ai-stocks"
     },
@@ -1494,6 +1504,22 @@
      "what": "Users and Agents lists brought up to Nov 2026, one cited row each; launch markers no longer show as zero",
      "commit": "94e9ffe",
      "by": "session:ai"
+    },
+    {
+     "dashboard": "AI Stocks",
+     "slug": "ai-stocks",
+     "tab": "midterms",
+     "what": "Midterms answers at once from kept copies or a committed FRED seed; downloads moved to a background job; the server answers in under a second",
+     "commit": "bb5c495",
+     "by": "session:ai-stocks"
+    },
+    {
+     "dashboard": "Signals",
+     "slug": "signals",
+     "tab": "board",
+     "what": "two tests still expected the AI Models and Options rows to be proposed; updated for the approval",
+     "commit": "72347e1",
+     "by": "agent"
     }
    ],
    "review": "trends",
@@ -1503,6 +1529,7 @@
     "Thursday: token totals if three or more sessions ran"
    ],
    "asks": [
+    "approve r-fred-via-actions (a one-minute daily Action that commits the FRED series the site needs) or skip it and accept stale FRED series",
     "Bluesky: a free account's handle and app password as Railway variables BSKY_HANDLE and BSKY_APP_PASSWORD restore the Social tab's keyword counts",
     "HKMA blocks Railway intermittently: accept a stale HIBOR when it does, or approve a hand-entered monthly HIBOR CSV fallback",
     "Broker for the options trading portal",
