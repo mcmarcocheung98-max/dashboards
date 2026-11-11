@@ -137,6 +137,31 @@ Yahoo is not used: it answers Railway with 429.
   period end and filing date. TSMC and ASML report under IFRS and Arm files annual 20-F: none has quarterly facts, and their panels
   say so. Nebius's companyfacts hold only Yandex's rouble facts to 2023, so its panel says there are no US GAAP facts.
 
+
+## Midterms: the event study's method
+
+Asked for by the owner on 11 Nov 2026: "after each mid term, how did the stock market do in 12 months? also give a proxy index for AI
+stock on each cycle". Tab `midterms`, endpoint `/api/ai-stocks/midterms`.
+
+- **Dates:** every US midterm election since 1958, on the Tuesday after the first Monday of November (1958-11-04 ... 2026-11-03).
+- **12 months:** from the election-day close (the last close on or before it) to the last close 365 days later. A cycle less than a
+  year old shows its return so far. Also shown: the proxy's 6-month return, and its worst close in the 12 months against election day.
+- **Broad market:** the OECD's US share-price index for all shares (FRED `SPASTT01USM661N`, monthly averages from 1957), from the
+  election month's average to the same month a year on. It is the only free series reaching back to 1958 that this server can get
+  (FRED's S&P 500 and Dow start in 2016; Yahoo, Stooq and the Shiller file are not reachable). It is broader than the S&P 500, and it
+  fell in the year after the 1986, 2010 and 2014 midterms, so the often-quoted "the S&P 500 has risen in the 12 months after every
+  midterm" is not reproduced here. The S&P 500's own daily return is shown from 2018, where FRED has it.
+- **AI proxy of each cycle:** no AI stock index exists before the last few years, so each cycle uses the index that held its
+  leading technology companies: none for 1958-1970 (no free daily tech index that far back), the Nasdaq Composite for 1974-1982
+  (FRED `NASDAQCOM`, from 1971), the Nasdaq-100 from 1986 (FRED `NASDAQ100`, from 1985), and from 2022 this dashboard's AI basket next to
+  the Nasdaq-100 so the cycles stay comparable.
+- **Path chart:** each cycle's proxy rebased to 100 at the election-day close, over 252 trading days, with the median of the
+  completed cycles and the current cycle so far.
+- **Reading (what changed):** the current cycle's Nasdaq-100 level against the median path at the same trading day; +1 when it is
+  more than 3 points ahead, -1 when more than 3 behind.
+- **Caveats:** 17 completed midterms, 13 with a tech proxy: a small sample, each cycle with its own rates, recessions and wars. The
+  Nasdaq-100 is reshuffled each year towards its winners (survivorship). Prices without dividends. History, not a forecast.
+
 ## Caveats and gaps
 
 - **13F filings are a partial, late view.** US long positions only: no shorts, cash, non-13F assets (most foreign shares, private

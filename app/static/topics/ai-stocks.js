@@ -430,6 +430,53 @@ const VIEWS = {
       note("Sales (code S) summed. A filing counts as under a plan when it ticks the Rule 10b5-1 box or a footnote names 10b5-1."));
     return [head, T, SL];
   },
+
+  // event study: the 12 months after each US midterm election, the broad market and the cycle's tech proxy (the AI basket from 2022)
+  async midterms() {
+    const d = await api("midterms"), R = d.rows || [], S = d.summary || {}, C = d.current;
+    const so = (v, p) => v == null ? "–" : pct(v, 1) + (p ? " so far" : "");
+    const med = x => x && x.median != null ? pct(x.median, 1) : "–";
+    const days = C ? Math.round((Date.now() / 1000 - Date.parse(C.date) / 1000) / 86400) : null;
+    const head = card("What did stocks do in the 12 months after each midterm?", el("div", { class: "kpis" },
+      kpi("Broad US market, median 12 months after (" + (S.market || {}).n + " midterms)", med(S.market), cls((S.market || {}).median)),
+      kpi("Higher 12 months later", (S.market || {}).up + " of " + (S.market || {}).n),
+      kpi("Tech proxy, median 12 months after (" + (S.proxy || {}).n + " since 1974)", med(S.proxy), cls((S.proxy || {}).median)),
+      kpi("Tech proxy higher 12 months later", (S.proxy || {}).up + " of " + (S.proxy || {}).n),
+      ...(C ? [kpi(C.year + " midterm (" + dateOf(C.date) + "): S&P 500 so far", so(C.sp500, true), cls(C.sp500)),
+               kpi("Nasdaq-100 so far, " + days + " days in", so((C.proxy || {}).r12, true), cls((C.proxy || {}).r12)),
+               ...(C.ai ? [kpi("AI basket so far", so(C.ai.r12, true), cls(C.ai.r12))] : [])] : [])),
+      el("div", { class: "warn", style: "margin-top:8px" }, (S.market || {}).n + " midterms is a small sample, and each cycle had its own rates, recessions and wars. History, not a forecast, and not investment advice."),
+      errs(d, "Some series are"), asOf(d), stale(d));
+    const full = Object.entries(d.paths || {}).filter(([k, p]) => !/AI/.test(k) && p.length > 250);
+    const cy = C ? String(C.year) : null;
+    const lines = [...full.map(([k, p]) => ({ name: k, points: p, color: "color-mix(in srgb, var(--muted) 45%, transparent)", width: 1 })),
+      ...(d.median_path && d.median_path.length ? [{ name: "Median of " + full.length + " cycles", points: d.median_path, color: css("--s1"), width: 3 }] : []),
+      ...(d.paths && d.paths["2022 AI basket"] ? [{ name: "2022 AI basket", points: d.paths["2022 AI basket"], color: css("--s2"), width: 2 }] : []),
+      ...(cy && d.paths && d.paths[cy] ? [{ name: cy + " Nasdaq-100 (so far)", points: d.paths[cy], color: css("--down"), width: 3 }] : []),
+      ...(cy && d.paths && d.paths[cy + " AI basket"] ? [{ name: cy + " AI basket (so far)", points: d.paths[cy + " AI basket"], color: css("--s4"), width: 3 }] : [])];
+    const P = lines.length ? card("The tech proxy's path after each midterm, 100 = election-day close",
+      ...svgLines(lines, { xFmt: v => "day " + Math.round(v), yFmt: v => num(v, 0), xTicks: [0, 21, 63, 126, 189, 252], hline: 100, log: true, xName: "trading day after the election", h: 320,
+        note: "Hover for each cycle on that trading day. 252 trading days is about 12 months." }),
+      note("Grey: each midterm since 1974 on its cycle's proxy (Nasdaq Composite 1974–1982, Nasdaq-100 from 1986). Blue: the median of those cycles. Click a name to hide it."))
+      : card("Paths", el("div", { class: "muted" }, "Not available right now."));
+    const done = R.filter(r => r.complete).slice().reverse();
+    const bars = done.length ? card("12-month return after each midterm: broad market against the tech proxy",
+      ...svgBars(done.map(r => String(r.year)), [{ name: "Broad US market (OECD, monthly average)", values: done.map(r => r.market), color: css("--s1") },
+        { name: "Tech proxy of the cycle", values: done.map(r => (r.proxy || {}).r12 == null ? null : r.proxy.r12), color: css("--s2") },
+        ...(done.some(r => r.ai) ? [{ name: "AI basket", values: done.map(r => r.ai ? r.ai.r12 : null), color: css("--s4") }] : [])], { yFmt: v => Math.round(v * 100) + "%" })) : null;
+    const T = card("Each midterm", table(["Election", "Broad market, 12 months", "S&P 500, 12 months", "Tech proxy", "Proxy, 6 months", "Proxy, 12 months", "Proxy's worst fall in the 12 months", "AI basket, 12 months"],
+      R.map(r => { const p = r.proxy || {}; return el("tr", {}, td(dateOf(r.date)), td(r.market == null ? (r.complete ? "–" : "not yet") : pct(r.market, 1), cls(r.market)),
+        td(so(r.sp500, r.sp500_partial), cls(r.sp500)), td(p.name || "none (before 1974)"), td(p.r6 == null ? "–" : pct(p.r6, 1), cls(p.r6)), td(so(p.r12, p.partial), cls(p.r12)),
+        td(p.worst == null ? "–" : ddf(p.worst), p.worst < -0.1 ? "down" : ""), td(r.ai ? so(r.ai.r12, r.ai.partial) : "–", r.ai ? cls(r.ai.r12) : "")); })),
+      note("12 months from the election-day close (the last close on or before it) to the last close a year later. Broad market: the OECD's US share-price index for all shares (FRED SPASTT01USM661N), the election month's average to the same month a year on, the only free series back to 1958; it is broader than the S&P 500 and fell in three of these years. S&P 500: FRED's daily closes, which start in 2016. Worst fall: the lowest close in the 12 months against the election-day close."));
+    const W = card("Which index stands in for AI stocks in each cycle", table(["Midterms", "Proxy", "Why"], [
+      el("tr", {}, td("1958–1970"), td("none"), td("No free daily technology index reaches back this far; the broad market only.")),
+      el("tr", {}, td("1974–1982"), td("Nasdaq Composite"), td("Where that era's computer and chip makers (Intel, Apple from 1980) listed; it starts in 1971.")),
+      el("tr", {}, td("1986–2018"), td("Nasdaq-100"), td("The largest non-financial Nasdaq companies: PCs, software, then the internet and smartphones; it starts in 1985.")),
+      el("tr", {}, td("2022–"), td("AI basket, with the Nasdaq-100"), td("This dashboard's 13 AI leaders (equal weight, from 2020), next to the Nasdaq-100 so the cycles stay comparable."))]),
+      note("No AI stock index exists before the last few years; each proxy is the index that held that cycle's leading technology companies. Survivorship applies: the Nasdaq-100 is reshuffled each year to its biggest winners."));
+    return [head, P, bars, T, W].filter(Boolean);
+  },
 };
 window.TOPIC = { VIEWS, presets: [["1m", "1M", 30], ["3m", "3M", 91], ["6m", "6M", 182], ["1y", "1Y", 365], ["5y", "5Y", 1826], ["all", "All", 0]] };
 })();

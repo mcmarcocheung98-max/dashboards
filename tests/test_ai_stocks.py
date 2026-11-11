@@ -183,11 +183,24 @@ def patch_download(set_attr=setattr):
     set_attr(B, "_download", lambda url, *a, **k: edgar_fixture(url) if is_edgar(url) else real(url, *a, **k))
 
 
+def fred_csv(sid: str) -> str:
+    """Long FRED histories for the midterm study: a monthly broad index from 1957, daily Nasdaq Composite (1971), Nasdaq-100 (1986),
+    S&P 500 (2016), each a steady climb with a dip in the year after the 1986 and 2018 midterms."""
+    start, freq = {"SPASTT01USM661N": ("1957-01-01", "MS"), "NASDAQCOM": ("1971-02-05", "B"), "NASDAQ100": ("1986-01-02", "B"), "SP500": ("2016-11-07", "B")}[sid]
+    d = pd.date_range(start, "2026-11-10", freq=freq)
+    yrs = (d - d[0]).days / 365.25
+    dip = np.where(((d >= "1987-08-01") & (d <= "1987-12-31")) | ((d >= "2018-12-01") & (d <= "2018-12-31")), 0.8, 1.0)
+    v = 100 * np.exp(0.08 * yrs + 0.03 * np.sin(yrs * 3)) * dip
+    rows = [f"{t.date()},{x:.3f}" for t, x in zip(d, v)]
+    rows[3] = rows[3].split(",")[0] + ","                                 # a gap, as FRED leaves on holidays
+    return f"observation_date,{sid}\n" + "\n".join(rows)
+
+
 def fake_fetch(url, ttl=0, **k):
     if is_edgar(url) and ("/companyfacts/" not in url or k.get("key", "").endswith("#panel")):
         return B.fetch(url, ttl, **k)
     if "fredgraph" in url:
-        return vix_csv()
+        return vix_csv() if "VIXCLS" in url else fred_csv(url.split("id=")[1])
     if "cboe" in url:
         return vix_csv(cboe=True)
     if "companyfacts" in url:
@@ -234,7 +247,7 @@ def mocked(tmp_path, monkeypatch):
 # ------------------------------------------------------------------ pure pieces
 def test_registered():
     t = topics.REGISTRY["ai-stocks"]
-    assert t.module == "ai_stocks" and {k for k, _ in t.tabs} == {"setup", "drawdown", "trend", "dips", "fear", "fundamentals", "institutions", "insiders"} <= set(M.ENDPOINTS)
+    assert t.module == "ai_stocks" and {k for k, _ in t.tabs} == {"setup", "drawdown", "trend", "dips", "fear", "fundamentals", "institutions", "insiders", "midterms"} <= set(M.ENDPOINTS)
     assert M.fill_13f in M.BACKGROUND and M.fill_insiders in M.BACKGROUND
     assert topics.category("ai-stocks") == "Money & markets"
     m = topics.meta("ai-stocks")
@@ -573,7 +586,7 @@ def test_readings_and_signals(mocked):
     assert M.SIGNALS() == [] and M.READINGS() == []                         # nothing cached: nothing downloaded
     M.fill_13f()
     M.fill_insiders()
-    for k in ("setup", "drawdown", "trend", "dips", "fear", "fundamentals", "institutions", "insiders"):
+    for k in ("setup", "drawdown", "trend", "dips", "fear", "fundamentals", "institutions", "insiders", "midterms"):
         M.ENDPOINTS[k]()
     r = M.READINGS()
     assert {x["tab"] for x in r} == {t for t, _ in topics.REGISTRY["ai-stocks"].tabs} and all(x["lean"] in (-1, 0, 1) for x in r)
@@ -638,3 +651,40 @@ def test_combined_backtest_on_dips(mocked):
     assert X["combined"]["dd"] != X["core"]["dd"]
     assert "SNDK" in X["combined_since"] and "MSFT" not in X["combined_since"]
     B.json_safe(p)
+
+
+# ------------------------------------------------------------------ midterms event study
+def test_election_days():
+    assert [str(M.election_day(y).date()) for y in (1958, 1962, 2018, 2022, 2026, 2030)] == \
+        ["1958-11-04", "1962-11-06", "2018-11-06", "2022-11-08", "2026-11-03", "2030-11-05"]
+    assert M.midterm_years(pd.Timestamp("2026-11-02"))[-1] == 2022 and M.midterm_years(pd.Timestamp("2026-11-03"))[-1] == 2026
+    assert M.proxy_for(1970) is None and M.proxy_for(1974) == "NASDAQCOM" and M.proxy_for(1986) == "NASDAQ100"
+
+
+def test_forward_returns():
+    d = pd.bdate_range("2020-11-02", "2021-11-30")
+    s = pd.Series(np.linspace(100, 150, len(d)), index=d)
+    s.loc["2021-03-01":"2021-03-05"] = 80
+    r, partial = M.fwd_daily(s, pd.Timestamp("2020-11-03"))
+    assert not partial and r == pytest.approx(s[:"2021-11-03"].iloc[-1] / s["2020-11-03"] - 1, abs=1e-4)
+    assert M.fwd_daily(s, pd.Timestamp("2021-06-01"))[1]                      # a year on is past the data: so far
+    assert M.worst_daily(s, pd.Timestamp("2020-11-03")) == pytest.approx(80 / s["2020-11-03"] - 1, abs=1e-4)
+    assert M.fwd_daily(s, pd.Timestamp("2019-01-01")) == (None, False)        # before the series: nothing
+    m = pd.Series([100.0, 110.0], index=pd.to_datetime(["2020-11-01", "2021-11-01"]))
+    assert M.fwd_monthly(m, pd.Timestamp("2020-11-03")) == pytest.approx(0.10) and M.fwd_monthly(m, pd.Timestamp("2021-11-02")) is None
+    p = M.path(s, pd.Timestamp("2020-11-03"))
+    assert p[0] == [0, 100.0] and len(p) == M.YEAR_DAYS + 1
+
+
+def test_midterms_tab(mocked):
+    d = M.ENDPOINTS["midterms"]()
+    years = [r["year"] for r in d["rows"]]
+    assert years[0] == 2026 and years[-1] == 1958 and len(years) == 18 and not d["errors"]
+    r = {x["year"]: x for x in d["rows"]}
+    assert r[1958]["market"] is not None and "proxy" not in r[1958] and r[1974]["proxy"]["name"] == "Nasdaq Composite"
+    assert r[1986]["proxy"]["sid"] == "NASDAQ100" and r[1986]["proxy"]["r12"] < r[1990]["proxy"]["r12"]       # the fixture's 1987 dip
+    assert "sp500" in r[2018] and "sp500" not in r[2014] and r[2022]["ai"]["r12"] is not None and "ai" not in r[2018]
+    assert d["current"]["year"] == 2026 and d["current"]["proxy"]["partial"] and r[2026]["market"] is None
+    assert d["summary"]["market"]["n"] == 17 and d["summary"]["proxy"]["n"] == 13
+    assert len(d["median_path"]) == M.YEAR_DAYS + 1 and "2022 AI basket" in d["paths"] and "1970" not in d["paths"]
+    B.json_safe(d)

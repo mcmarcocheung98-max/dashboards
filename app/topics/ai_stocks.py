@@ -11,6 +11,8 @@ fundamentals  revenue growth on a year for the basket's US filers (SEC EDGAR com
 insiders      Form 4 open-market purchases (P) and sales (S) of the last 90 days for every US filer; cluster buys (background fill_insiders)
 companies     not a tab: each stock's fundamentals for the stock panel (companyfacts, 10-Q and 10-K, trailing four quarters)
 institutions  10 funds' latest two 13F-HR filings (EDGAR, background job fill_13f, kept 7 days): New/Added/Trimmed/Sold in our stocks
+midterms      event study: the 12 months after each US midterm since 1958, the broad market (OECD, monthly) and each cycle's tech
+              proxy (Nasdaq Composite, Nasdaq-100, the AI basket from 2022), FRED daily closes
 layout        not a tab: what this server gets back from each source, to check reachability from Railway
 
 Prices: daily closes from Nasdaq's quote API (Yahoo answers Railway with 429). The basket is an equal-weight index rebalanced daily
@@ -39,7 +41,7 @@ TOPIC = Topic(SLUG, "AI Stocks: the setup after the dip",
               "dips like this before? Thirteen AI leaders in an equal-weight basket, and the owner's ten picks as a second group, against QQQ, "
               "SPY and SMH, with VIX and revenue growth.",
               "ai_stocks", (("setup", "Setup"), ("drawdown", "Drawdown"), ("trend", "Trend & breadth"), ("dips", "After past dips"),
-                            ("fear", "Fear & relative"), ("fundamentals", "Fundamentals"), ("institutions", "Institutions"), ("insiders", "Insiders")),
+                            ("fear", "Fear & relative"), ("fundamentals", "Fundamentals"), ("institutions", "Institutions"), ("insiders", "Insiders"), ("midterms", "Midterms")),
               ("setup", "drawdown", "trend", "dips", "fear", "fundamentals"), icon="chart")
 
 BASKET = ("NVDA", "AVGO", "AMD", "TSM", "ASML", "MU", "ARM", "MSFT", "GOOGL", "AMZN", "META", "ORCL", "PLTR")
@@ -80,6 +82,7 @@ SOURCES = [{"name": "Nasdaq quote API (daily closes of the 13 basket stocks, the
            {"name": "SEC EDGAR companyfacts (10-Q, 10-K revenue)", "url": "https://www.sec.gov/edgar/sec-api-documentation", "cadence": "quarterly"},
            {"name": "Hyperscaler capex from the AI Compute, Power & Chips dashboard", "url": "/compute-chips#capex", "cadence": "quarterly"},
            {"name": "SEC EDGAR 13F-HR information tables (10 funds, data/ai-stocks/funds.csv)", "url": "https://www.sec.gov/divisions/investment/13ffaq", "cadence": "quarterly"},
+           {"name": "FRED: OECD US share prices (SPASTT01USM661N), Nasdaq Composite, Nasdaq-100, S&P 500 (midterm study)", "url": "https://fred.stlouisfed.org/series/NASDAQ100", "cadence": "daily / monthly"},
            {"name": "SEC EDGAR Form 4 insider filings (open-market purchases and sales)", "url": "https://www.sec.gov/files/forms-3-4-5.pdf", "cadence": "daily"}]
 NOTES = ("Not investment advice: this page shows where AI share prices stand against their own history and makes no buy or sell call. "
          "The basket is an equal-weight index of 13 AI stocks, rebalanced daily, 100 on 2 January 2020; prices exclude dividends. "
@@ -1200,6 +1203,138 @@ def fill_insiders() -> dict:
     return res
 
 
+# ------------------------------------------------------------------ midterms: an event study of the 12 months after each US midterm election
+FRED_CSV = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}"
+# broad market: the OECD's US share-price index (monthly average of daily closes, FRED SPASTT01USM661N, from 1957), the only free series
+# reaching back to the 1958 midterm; the S&P 500's daily closes (FRED SP500) cover only the last ten years
+MARKET_SERIES, SP500_SERIES = "SPASTT01USM661N", "SP500"
+# the AI proxy of each cycle: the index the era's leading technology companies traded in, daily from FRED; the AI basket from 2022
+PROXY_SERIES = {"NASDAQCOM": "Nasdaq Composite", "NASDAQ100": "Nasdaq-100"}
+MIDTERM_FIRST = 1958
+YEAR_DAYS = 252                     # trading days in the path chart (about 12 months)
+
+
+def election_day(y: int) -> pd.Timestamp:
+    """US general election: the Tuesday after the first Monday of November."""
+    d = pd.Timestamp(f"{y}-11-01")
+    monday = d + pd.Timedelta(days=(0 - d.weekday()) % 7)
+    return monday + pd.Timedelta(days=1)
+
+
+def midterm_years(today: pd.Timestamp | None = None) -> list[int]:
+    today = today or pd.Timestamp.now().normalize()
+    return [y for y in range(MIDTERM_FIRST, today.year + 1, 4) if election_day(y) <= today]
+
+
+def proxy_for(y: int) -> str | None:
+    """The tech proxy of a cycle: Nasdaq Composite from 1974 (it starts in 1971), Nasdaq-100 from 1986 (it starts in 1985);
+    none before 1974. The AI basket is added alongside from 2022 (it starts in 2020)."""
+    return "NASDAQ100" if y >= 1986 else "NASDAQCOM" if y >= 1974 else None
+
+
+def fred_series(sid: str) -> pd.Series:
+    """A FRED series by id (curl, HTTP/1.1: see _base._download), '.' gaps dropped."""
+    d = pd.read_csv(StringIO(fetch(FRED_CSV.format(sid=sid), DAY, curl=True, timeout=40, min_bytes=500)), dtype=str)
+    if len(d.columns) < 2:
+        raise ValueError(f"FRED {sid}: layout changed")
+    s = pd.Series(pd.to_numeric(d.iloc[:, 1], errors="coerce").values, index=pd.to_datetime(d.iloc[:, 0], errors="coerce"))
+    s = s[s.index.notna()].dropna().sort_index()
+    if len(s) < 20:
+        raise ValueError(f"FRED {sid}: {len(s)} rows")
+    return s
+
+
+def fwd_daily(s: pd.Series, t: pd.Timestamp, days: int = 365) -> tuple[float | None, bool]:
+    """Return from the last close on or before t to the last close on or before t + days; (value so far, True) when not yet complete."""
+    a = s[s.index <= t]
+    if not len(a) or (t - a.index[-1]).days > 7:
+        return None, False
+    end = t + pd.Timedelta(days=days)
+    b = s[s.index <= end]
+    partial = s.index[-1] < end
+    return _r(b.iloc[-1] / a.iloc[-1] - 1, 4), partial
+
+
+def worst_daily(s: pd.Series, t: pd.Timestamp, days: int = 365):
+    """The deepest fall below the election-day close in the next `days` calendar days (0 when it never closed lower)."""
+    a = s[s.index <= t]
+    if not len(a) or (t - a.index[-1]).days > 7:
+        return None
+    fut = s[(s.index > t) & (s.index <= t + pd.Timedelta(days=days))]
+    return _r(min(0.0, fut.min() / a.iloc[-1] - 1), 4) if len(fut) else None
+
+
+def fwd_monthly(s: pd.Series, t: pd.Timestamp, months: int = 12):
+    """Election month's average to the same month a year on (monthly series dated the 1st); None until that month is published."""
+    m0, m1 = t.to_period("M").to_timestamp(), (t.to_period("M") + months).to_timestamp()
+    return _r(s[m1] / s[m0] - 1, 4) if m0 in s.index and m1 in s.index else None
+
+
+def path(s: pd.Series, t: pd.Timestamp, n: int = YEAR_DAYS) -> list[list]:
+    """[[trading day after the election, level rebased to 100 at the election-day close]] for the path chart."""
+    a = s[s.index <= t]
+    if not len(a) or (t - a.index[-1]).days > 7:
+        return []
+    seg = pd.concat([a.iloc[-1:], s[s.index > t].iloc[:n]])
+    return [[i, _r(100 * v / seg.iloc[0], 2)] for i, v in enumerate(seg.values)]
+
+
+def _midterms_now() -> dict:
+    errors, ser = {}, {}
+    for sid in (MARKET_SERIES, SP500_SERIES, *PROXY_SERIES):
+        try:
+            ser[sid] = fred_series(sid)
+        except Exception as e:
+            errors[sid] = type(e).__name__
+    try:
+        ai = _model()["idx"]
+    except Exception as e:
+        ai, errors["AI basket"] = None, type(e).__name__
+    mkt, sp = ser.get(MARKET_SERIES), ser.get(SP500_SERIES)
+    rows, paths = [], {}
+    for y in midterm_years():
+        t = election_day(y)
+        row = {"year": y, "date": str(t.date())}
+        row["market"] = fwd_monthly(mkt, t) if mkt is not None else None
+        if sp is not None and sp.index[0] <= t:
+            row["sp500"], row["sp500_partial"] = fwd_daily(sp, t)
+            row["sp500_worst"] = worst_daily(sp, t)
+        pid = proxy_for(y)
+        if pid and pid in ser:
+            r, p = fwd_daily(ser[pid], t)
+            row["proxy"] = {"sid": pid, "name": PROXY_SERIES[pid], "r12": r, "partial": p, "r6": fwd_daily(ser[pid], t, 182)[0],
+                            "worst": worst_daily(ser[pid], t)}
+            paths[str(y)] = path(ser[pid], t)
+        if ai is not None and ai.index[0] <= t:
+            r, p = fwd_daily(ai, t)
+            row["ai"] = {"r12": r, "partial": p, "r6": fwd_daily(ai, t, 182)[0], "worst": worst_daily(ai, t)}
+            paths[f"{y} AI basket"] = path(ai, t)
+        row["complete"] = pd.Timestamp.now().normalize() >= t + pd.Timedelta(days=365)
+        rows.append(row)
+    done = [r for r in rows if r["complete"]]
+
+    def summ(vals):
+        v = [x for x in vals if x is not None]
+        return {"n": len(v), "median": _r(float(np.median(v)), 4) if v else None, "mean": _r(float(np.mean(v)), 4) if v else None,
+                "up": sum(1 for x in v if x > 0), "min": _r(min(v), 4) if v else None, "max": _r(max(v), 4) if v else None}
+    proxy_done = [r["proxy"]["r12"] for r in done if r.get("proxy")]
+    med_path = []
+    full = [p for k, p in paths.items() if "AI" not in k and len(p) > YEAR_DAYS]
+    if full:
+        med_path = [[i, _r(float(np.median([p[i][1] for p in full])), 2)] for i in range(YEAR_DAYS + 1)]
+    cur = rows[-1] if rows and not rows[-1]["complete"] else None
+    out = {"rows": rows[::-1], "summary": {"market": summ([r["market"] for r in done]), "proxy": summ(proxy_done),
+                                           "sp500": summ([r.get("sp500") for r in done])},
+           "paths": paths, "median_path": med_path, "current": cur, "errors": errors, "proxies": PROXY_SERIES,
+           "stale": stale_info_fred(), "updated": int(time.time())}
+    out["as_of"] = B.latest_date(*[s for s in ser.values()]) if ser else None
+    return out
+
+
+def stale_info_fred() -> dict:
+    return B.stale_info([FRED_CSV.format(sid=s) for s in (MARKET_SERIES, SP500_SERIES, *PROXY_SERIES)])
+
+
 # ------------------------------------------------------------------ readings and signals (cached payloads only)
 def _cached_payload(name: str) -> dict:
     from ..cache import _cache
@@ -1261,6 +1396,14 @@ def READINGS() -> list[dict]:
     if by:
         add("fundamentals", "revenue_yoy", "Basket revenue growth on a year, latest quarter (%)", _r(100 * by[-1][1], 1),
             _band(by[-1][1] - (by[-2][1] if len(by) >= 2 else by[-1][1]), -0.02, 0.02), "+1 when growth sped up by more than 2 points on the quarter before, -1 when it slowed")
+    mt = _cached_payload("midterms")
+    c, mp = mt.get("current") or {}, mt.get("median_path") or []
+    cp = (mt.get("paths") or {}).get(str(c.get("year"))) or []
+    if c and cp and len(mp) > len(cp) - 1:
+        day, now = cp[-1]
+        gap = _r(now - mp[day][1], 1)
+        add("midterms", "midterm_vs_median", f"{c['year']} midterm: Nasdaq-100 against the median past cycle, day {day} (points, 100 = election day)", gap,
+            _band(gap, -3, 3), "+1 when this cycle is more than 3 points ahead of the median midterm path at the same trading day, -1 when more than 3 behind")
     return out
 
 
@@ -1326,5 +1469,6 @@ ENDPOINTS = {"setup": _cached_ep("setup", _setup_now), "drawdown": _cached_ep("d
              "dips": _cached_ep("dips", _dips_now), "fear": _cached_ep("fear", _fear_now), "fundamentals": _cached_ep("fundamentals", _fundamentals_now),
              "institutions": _cached_ep("institutions", _institutions_now, 1800), "insiders": _cached_ep("insiders", _insiders_now, 1800),
              "companies": _cached_ep("companies", _companies_now, 1800),
+             "midterms": _cached_ep("midterms", _midterms_now),
              "layout": _cached_ep("layout", _layout_now, 1800)}
 BACKGROUND = [fill_13f, fill_insiders]             # slow, paced EDGAR downloads the server runs outside page requests (app/server.py _warm)
