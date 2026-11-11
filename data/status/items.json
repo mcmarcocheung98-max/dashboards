@@ -1520,10 +1520,19 @@
      "what": "two tests still expected the AI Models and Options rows to be proposed; updated for the approval",
      "commit": "72347e1",
      "by": "agent"
+    },
+    {
+     "dashboard": "AI Stocks",
+     "slug": "ai-stocks",
+     "tab": "midterms",
+     "what": "the 2026 cycle's figures and path now come from Nasdaq's SPY and QQQ closes (labelled); finished cycles stay on the FRED seed; FRED tried at most once a day and marked handled on /api/health when the seed covers it",
+     "commit": "c87c7dd",
+     "by": "session:ai-stocks"
     }
    ],
    "review": "trends",
    "next": [
+    "Tomorrow: /api/ai-stocks/midterms current.sp500_source should read SPY and current.proxy.sid QQQ; the midterm FRED entries on health should carry handled",
     "Tomorrow's health: did the FRED sources on AI Stocks and Luxury come back after the HTTP/1.1 change?",
     "Read replies: Trends review, Debt & Rates and Demographics verify rows, AI review (Tuesday), Pokémon slow tests",
     "Thursday: token totals if three or more sessions ran"
