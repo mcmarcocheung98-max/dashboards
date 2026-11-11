@@ -46,9 +46,11 @@ Each chart's card says what it shows and what 5-, 10- and 20-year question it an
   checked with `/api/debt-rates/layout` on 2026-10-26), so the page reads this copy. **US and UK rows were copied exactly from the API
   on 2026-10-26** (Actions > show-json on `https://www.imf.org/external/datamapper/api/v1/<indicator>`). The API ignores its country
   filter and the job log is cut at about 300k characters; entities are sorted by name, so the end of the log (United Kingdom,
-  United States) survives and China and Hong Kong do not. **China and Hong Kong rows are headline years from memory, marked verify**:
-  replace them from the DataMapper pages (or a full download of the WEO database) and drop `verify`. Refresh all rows after each WEO
-  (April, October). `pytest -m network tests/test_debt_rates.py -k imf` compares the copy with the live API from a machine that can
+  United States) survives and China and Hong Kong do not. **China and Hong Kong rows were copied exactly from the IMF SDMX API on
+  2026-11-11** (show-json on `https://api.imf.org/external/sdmx/3.0/data/dataflow/IMF.RES/WEO/%2B/<ISO>.<code>.A?format=sdmx-json&attributes=none`,
+  one country and one indicator per query: the API honours only the first indicator in a key). The SDMX WEO dataflow carries the
+  balance, primary balance and revenue as `GGXCNL_NGDP`, `GGXONLB_NGDP` and `GGR_NGDP`; those rows keep the page's `_G01_GDP_PT`
+  series names and say the WEO code in `note`. Refresh all rows after each WEO (April, October). `pytest -m network tests/test_debt_rates.py -k imf` compares the copy with the live API from a machine that can
   reach it.
 
 All rows carry a `source` URL. Rows whose `note` says **verify** were written from memory (or from a search summary) and must be checked against the cited page; replace the value and drop `verify` once checked.

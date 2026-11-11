@@ -499,7 +499,9 @@ def test_imf_copy_covers_the_four_countries_and_the_scorecard_inputs():
     for key in D.IMF_IND:
         assert set(D.imf(key)) == {"USA", "GBR", "HKG", "CHN"}, key
     rows = B.manual_rows(D.SLUG, "imf")
-    assert all("verify" in r["note"] for r in rows if r["series"][:3] in ("CHN", "HKG"))
+    cn_hk = [r for r in rows if r["series"][:3] in ("CHN", "HKG")]
+    assert cn_hk and not any("verify" in r["note"] for r in rows)
+    assert all(r["source"].startswith("https://api.imf.org/") for r in cn_hk)
 
 
 def test_hand_entered_rows_cite_a_source():
