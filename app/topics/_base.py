@@ -94,7 +94,7 @@ def _download(url: str, timeout: int = 60, curl: bool = False, headers: dict | N
     """The body as text. binary=True returns the bytes decoded as latin-1 (lossless: .encode("latin-1") gives the bytes back), so a
     workbook or zip goes through the same snapshot path as a CSV."""
     if curl:    # FRED (and some UK sites) reset python-requests connections (TLS fingerprinting); plain curl is unaffected (see events._curl)
-        cmd = ["curl", "-s", "-L", "--retry", "2", "--max-time", str(timeout), "-A", UA["User-Agent"], "-w", "\n%{http_code}", url]
+        cmd = ["curl", "-s", "-L", "--http1.1", "--retry", "2", "--max-time", str(timeout), "-A", UA["User-Agent"], "-w", "\n%{http_code}", url]   # --http1.1: FRED resets HTTP/2 streams from cloud hosts (curl exit 92)
         r = subprocess.run(cmd, capture_output=True, text=not binary)
         out = r.stdout if not binary else r.stdout.decode("latin-1")
         body, _, code = out.rpartition("\n")
