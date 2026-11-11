@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-10",
+ "updated": "2026-11-11",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -207,9 +207,9 @@
    "id": "hkma-405",
    "title": "Housing: HKMA's firewall blocks the Railway server (405) since 1 Nov",
    "owner": "session:housing",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-03",
-   "detail": "api.hkma.gov.hk answers 405 with an Alibaba Cloud WAF block page for the server's IP, for every header variant, so it is an IP block, not an API change. HIBOR is served from its snapshot and housing › global keeps the UK and US rates and names HIBOR as missing. If it still fails at 3 days, the housing session will put the options to the owner: a hand-entered monthly HIBOR CSV, or another source. On 4 Nov the error changed to 502 Bad Gateway (since 3 Nov 18:31). Reminded 10 Nov."
+   "detail": "api.hkma.gov.hk answers 405 with an Alibaba Cloud WAF block page for the server's IP, for every header variant, so it is an IP block, not an API change. HIBOR is served from its snapshot and housing › global keeps the UK and US rates and names HIBOR as missing. If it still fails at 3 days, the housing session will put the options to the owner: a hand-entered monthly HIBOR CSV, or another source. On 4 Nov the error changed to 502 Bad Gateway (since 3 Nov 18:31). Reminded 10 Nov. Resolved by 11 Nov: all 15 Housing sources fresh on /api/health (no reply from the session; HKMA answers again)."
   },
   {
    "id": "p-signals-wiring",
@@ -313,6 +313,38 @@
    "since": "2026-11-10",
    "title": "Options: ai_iv_rank and vrp not crossed on a thin IV history",
    "detail": "Board read IV rank 0.0 and VRP 29.2% crossed on one day of history (10 Nov). Done the same morning (f4b025c)."
+  },
+  {
+   "id": "trends-review-1111",
+   "owner": "session:trends",
+   "status": "waiting",
+   "since": "2026-11-11",
+   "title": "Trends: Bluesky auth or owner action, Reddit cards as hand-entered, two reality.csv paths, name the failed downloads",
+   "detail": "From the 11 Nov review."
+  },
+  {
+   "id": "verify-debt-rates",
+   "owner": "session:debt-rates",
+   "status": "waiting",
+   "since": "2026-11-11",
+   "title": "Debt & Rates: clear 292 verify rows (imf.csv 116, spending 44, fed_target 42, pboc 29)",
+   "detail": "Roadmap r-verify-rows. Batches of one file, one push each."
+  },
+  {
+   "id": "verify-demographics",
+   "owner": "session:demographics",
+   "status": "waiting",
+   "since": "2026-11-11",
+   "title": "Demographics: clear 56 verify rows (births 29, tfr 19, migration 7, pensions 1)",
+   "detail": "Roadmap r-verify-rows."
+  },
+  {
+   "id": "altcoins-date-test",
+   "owner": "session:btc-cycles",
+   "status": "waiting",
+   "since": "2026-11-11",
+   "title": "Altcoins: test_volume_and_unlock_tabs depends on the run date (19 >= 20.8 fails on 11 Nov)",
+   "detail": "Passed on CI 10 Nov; the next push to main is likely red until pinned."
   }
  ],
  "roadmap": [
@@ -714,6 +746,18 @@
     "session:btc-cycles and session:pokemon-cards (slow tests)",
     "session:options (thin-history guard)",
     "session:housing (hkma-405 reminder)"
+   ]
+  },
+  {
+   "date": "2026-11-11",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Live check: 308 of 308 tabs loaded (light and dark), all tabs OK; the only not-available cards are the known Trends social pair, Housing global, BTC Cycles about and the status roadmap. Health: Housing back to 15 fresh; known failures only (Bluesky and Reddit 403, Yahoo 429, FRED curl 92 on AI Stocks and five Luxury series now four days stale). Signals 66 of 83 wired, 17 crossed: AI Stocks VIX flipped (19.9, back below 20), Prediction Markets biggest move -19.5 points, Options' VIX term and skew no longer crossed, its IV rank reads none by the new guard. Newsletter built, not sent. Local tests: 447 passed, 1 failed (Altcoins, date-dependent). Prune deleted 2 bundles.",
+   "fixed": [],
+   "handed": [
+    "session:trends (review)",
+    "session:debt-rates and session:demographics (verify rows)",
+    "session:btc-cycles (date-dependent test)"
    ]
   }
  ],
@@ -1355,6 +1399,33 @@
     "Approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals; the AI Models and Options signals are still proposed",
     "Broker for the options trading portal (Alpaca paper first is the recommendation)",
     "Gmail newsletter secrets (the email was built again today and not sent), eBay keys, the three bag retail prices, Arena ranks 8-17",
+    "Replies owed in the Pokémon, Longevity and Compute-chips sessions"
+   ]
+  },
+  {
+   "date": "2026-11-11",
+   "title": "Trends reviewed; verify-row clean-up handed to Debt & Rates and Demographics; Housing's HKMA sources back",
+   "summary": "All 308 tabs loaded in both themes, the first clean live check since the Options and AI Models launches. Housing's four HKMA sources are fresh again after eight days stale. The Trends review found the Bluesky and Reddit cards still reading not available, two Attention-vs-reality pairs pointing at series the other dashboards do not carry, and a line that counts failed downloads without naming them; handed to its session. The two dashboards holding most of the 417 unsourced rows (Debt & Rates 292, Demographics 56) were asked to clear them. The Altcoins test that was sped up on Monday now fails on the date (19 of 52 events against a 40% floor), passed on CI yesterday; its session has the fix. A FRED fix (HTTP/1.1 for the curl fetch, after a week of curl exit 92 on AI Stocks and Luxury) is ready and waits for that test so main is not pushed red.",
+   "changes": [
+    {
+     "dashboard": "Compute & Chips",
+     "slug": "compute-chips",
+     "tab": "supply",
+     "what": "export-control timeline checked against the BIS, Federal Register and SEC pages; six rows cleared, Hong Kong row corrected, six stay verify",
+     "commit": "6b8582f",
+     "by": "session:compute-chips"
+    }
+   ],
+   "review": "trends",
+   "next": [
+    "Push the FRED HTTP/1.1 fix once the Altcoins date test is pinned (or by Friday regardless, with the failing test named in the note)",
+    "Read replies: Trends review, Debt & Rates and Demographics verify rows, AI review (Tuesday), Pokémon slow tests",
+    "Thursday: token totals if three or more sessions ran"
+   ],
+   "asks": [
+    "Approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals; the AI Models and Options signals are still proposed",
+    "Broker for the options trading portal",
+    "Gmail newsletter secrets (built, not sent again today), eBay keys, the three bag retail prices, Arena ranks 8-17",
     "Replies owed in the Pokémon, Longevity and Compute-chips sessions"
    ]
   }
