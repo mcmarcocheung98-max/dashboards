@@ -326,7 +326,7 @@
    "status": "waiting",
    "since": "2026-11-10",
    "title": "Pokémon tests under 3 s each (six between 4 and 15 s now)",
-   "detail": "Saves about a sixth of every tests run; owner's Actions budget."
+   "detail": "Saves about a sixth of every tests run; owner's Actions budget. 11 Nov: the session has the change ready and waits for the owner's go in its own conversation (it also holds two older items there)."
   },
   {
    "id": "options-thin-guard",
@@ -1476,7 +1476,8 @@
     "HKMA blocks Railway intermittently: accept a stale HIBOR when it does, or approve a hand-entered monthly HIBOR CSV fallback",
     "Broker for the options trading portal",
     "Gmail newsletter secrets (built, not sent again today), eBay keys, the three bag retail prices, Arena ranks 8-17",
-    "Replies owed in the Pokémon, Longevity and Compute-chips sessions"
+    "Replies owed in the Pokémon, Longevity and Compute-chips sessions",
+    "Pokémon session: say go in its own conversation; it has the test speed-up ready plus two older items waiting there"
    ]
   }
  ]
