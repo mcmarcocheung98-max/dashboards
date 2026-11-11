@@ -1,13 +1,13 @@
 date,value,source,note
-# China CPI, year-on-year %, annual average (National Bureau of Statistics)
-2015-12-31,1.4,https://www.stats.gov.cn/english/PressRelease/,verify: annual average from memory
-2016-12-31,2.0,https://www.stats.gov.cn/english/PressRelease/,verify: annual average from memory
-2017-12-31,1.6,https://www.stats.gov.cn/english/PressRelease/,verify: annual average from memory
-2018-12-31,2.1,https://www.stats.gov.cn/english/PressRelease/,verify: annual average from memory
-2019-12-31,2.9,https://www.stats.gov.cn/english/PressRelease/,verify: annual average from memory
-2020-12-31,2.5,https://www.stats.gov.cn/english/PressRelease/,verify: annual average from memory
-2021-12-31,0.9,https://www.stats.gov.cn/english/PressRelease/,verify: annual average from memory
-2022-12-31,2.0,https://www.stats.gov.cn/english/PressRelease/,verify: annual average from memory
-2023-12-31,0.2,https://www.stats.gov.cn/english/PressRelease/,verify: annual average from memory
-2024-12-31,0.2,https://www.stats.gov.cn/english/PressRelease/,verify: annual average from memory
-2025-12-31,0.0,https://www.stats.gov.cn/english/PressRelease/,verify: approximate annual average from memory
+# China CPI, year-on-year %, annual average (National Bureau of Statistics data as published in the IMF World Economic Outlook, PCPIPCH)
+2015-12-31,1.463774,https://api.imf.org/external/sdmx/3.0/data/dataflow/IMF.RES/WEO/%2B/CHN.PCPIPCH.A?format=sdmx-json&attributes=none&measures=all&dimensionAtObservation=AllDimensions,IMF WEO PCPIPCH (NBS annual average CPI) copied from the IMF SDMX API 2026-11-11
+2016-12-31,2.00566,https://api.imf.org/external/sdmx/3.0/data/dataflow/IMF.RES/WEO/%2B/CHN.PCPIPCH.A?format=sdmx-json&attributes=none&measures=all&dimensionAtObservation=AllDimensions,IMF WEO PCPIPCH (NBS annual average CPI) copied from the IMF SDMX API 2026-11-11
+2017-12-31,1.574629,https://api.imf.org/external/sdmx/3.0/data/dataflow/IMF.RES/WEO/%2B/CHN.PCPIPCH.A?format=sdmx-json&attributes=none&measures=all&dimensionAtObservation=AllDimensions,IMF WEO PCPIPCH (NBS annual average CPI) copied from the IMF SDMX API 2026-11-11
+2018-12-31,2.077693,https://api.imf.org/external/sdmx/3.0/data/dataflow/IMF.RES/WEO/%2B/CHN.PCPIPCH.A?format=sdmx-json&attributes=none&measures=all&dimensionAtObservation=AllDimensions,IMF WEO PCPIPCH (NBS annual average CPI) copied from the IMF SDMX API 2026-11-11
+2019-12-31,2.913056,https://api.imf.org/external/sdmx/3.0/data/dataflow/IMF.RES/WEO/%2B/CHN.PCPIPCH.A?format=sdmx-json&attributes=none&measures=all&dimensionAtObservation=AllDimensions,IMF WEO PCPIPCH (NBS annual average CPI) copied from the IMF SDMX API 2026-11-11
+2020-12-31,2.502936,https://api.imf.org/external/sdmx/3.0/data/dataflow/IMF.RES/WEO/%2B/CHN.PCPIPCH.A?format=sdmx-json&attributes=none&measures=all&dimensionAtObservation=AllDimensions,IMF WEO PCPIPCH (NBS annual average CPI) copied from the IMF SDMX API 2026-11-11
+2021-12-31,0.924194,https://api.imf.org/external/sdmx/3.0/data/dataflow/IMF.RES/WEO/%2B/CHN.PCPIPCH.A?format=sdmx-json&attributes=none&measures=all&dimensionAtObservation=AllDimensions,IMF WEO PCPIPCH (NBS annual average CPI) copied from the IMF SDMX API 2026-11-11
+2022-12-31,1.950673,https://api.imf.org/external/sdmx/3.0/data/dataflow/IMF.RES/WEO/%2B/CHN.PCPIPCH.A?format=sdmx-json&attributes=none&measures=all&dimensionAtObservation=AllDimensions,IMF WEO PCPIPCH (NBS annual average CPI) copied from the IMF SDMX API 2026-11-11
+2023-12-31,0.235735,https://api.imf.org/external/sdmx/3.0/data/dataflow/IMF.RES/WEO/%2B/CHN.PCPIPCH.A?format=sdmx-json&attributes=none&measures=all&dimensionAtObservation=AllDimensions,IMF WEO PCPIPCH (NBS annual average CPI) copied from the IMF SDMX API 2026-11-11
+2024-12-31,0.219856,https://api.imf.org/external/sdmx/3.0/data/dataflow/IMF.RES/WEO/%2B/CHN.PCPIPCH.A?format=sdmx-json&attributes=none&measures=all&dimensionAtObservation=AllDimensions,IMF WEO PCPIPCH (NBS annual average CPI) copied from the IMF SDMX API 2026-11-11
+2025-12-31,0.049958,https://api.imf.org/external/sdmx/3.0/data/dataflow/IMF.RES/WEO/%2B/CHN.PCPIPCH.A?format=sdmx-json&attributes=none&measures=all&dimensionAtObservation=AllDimensions,IMF WEO PCPIPCH (NBS annual average CPI) copied from the IMF SDMX API 2026-11-11

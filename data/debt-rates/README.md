@@ -65,7 +65,7 @@ All rows carry a `source` URL. Rows whose `note` says **verify** were written fr
 - `qe_programs.csv`: `date,end,name,kind,what,source,note`: QE1-3, Twist, QT1-2, reserve-management purchases and Treasury buybacks. Rows marked verify (end of QE1, Covid QE size, end of QT2, the 2025 bill purchases, the buyback start) are from memory.
 - `maturity.csv`: average maturity by country (US, UK, China, HK), all **verify**.
 - `fomc.csv`: `date,meeting,source,note`, one row per scheduled FOMC meeting, dated the decision day (second day). 2026 entered from memory (**verify**); add the next year's dates when the Fed publishes them.
-- `cn_cpi.csv`: China CPI, annual average year-on-year %, NBS (**verify**). Monthly rows can be added (date = the month).
+- `cn_cpi.csv`: China CPI, annual average year-on-year %, NBS data as carried in the IMF WEO (`PCPIPCH`), copied from the IMF SDMX API on 2026-11-11. Monthly rows can be added (date = the month).
 - `stress_events.csv`: `date,country,event,source,note`, notable auction tails, downgrades and market stress. Add a row when an auction tails noticeably (the TreasuryDirect result against the when-issued yield) or a rating changes.
 
 ## Tabs
