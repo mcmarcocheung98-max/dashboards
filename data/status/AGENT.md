@@ -121,6 +121,10 @@ The repo has been public since 11 Nov 2026, so runner minutes and artifact stora
 Keep the habits that also make the run reliable: one status push per run, never push while `live-check` runs (a restart fails
 its tabs), status-only pushes skip the tests workflow.
 
+**Daily usage.** The last step of `live-check` prints one `USAGE <date> total=<N>min runs=<n> <workflow>=<min> …` line per day
+for the last seven days. Copy yesterday's line into the log entry (`"actions": {"date", "minutes", "runs"}`) and name it in the
+report in one clause; say more only when a day passes 150 minutes or one workflow triples, and find out which pushes caused it.
+
 Public means everything committed, every workflow log and every artifact can be read by anyone:
 - Never commit a secret, a passcode, a private dashboard's data export, or anything about the owner beyond what the site shows.
 - `show-json` prints its response in a public log: never point it at a private dashboard's endpoint with a passcode or cookie.

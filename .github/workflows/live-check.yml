@@ -51,3 +51,14 @@ jobs:
           gh api --paginate "repos/${{ github.repository }}/actions/artifacts?per_page=100" \
             -q '.artifacts[] | select(.name == "smoke-shots" and .expired == false and .created_at < (now - 3 * 86400 | todate)) | .id' \
             | xargs -r -n1 -I{} sh -c 'gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/{}" && echo "deleted {}"'
+      - name: Actions usage, last 7 days
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Runner minutes per day and workflow (each job rounded up to a whole minute, as GitHub bills a private repo).
+          # The repo is public, so these cost nothing; the dev agent reports the line each morning so a jump is noticed.
+          gh run list --limit 400 --json workflowName,createdAt,startedAt,updatedAt,status \
+            -q '[.[] | select(.status == "completed" and .createdAt > (now - 7 * 86400 | todate))
+                 | {d: .createdAt[:10], w: .workflowName, m: ((((.updatedAt | fromdate) - (.startedAt | fromdate)) / 60) | ceil)}]
+                | group_by(.d)[] | "USAGE \(.[0].d) total=\(map(.m) | add)min runs=\(length) " + (group_by(.w) | map("\(.[0].w)=\(map(.m) | add)") | join(" "))'
