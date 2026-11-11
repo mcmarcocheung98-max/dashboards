@@ -39,12 +39,12 @@ def hl_candles(post: dict, n: int = 900) -> str:
     c = base * np.exp(np.cumsum(rng.normal(0, 0.04, n))); o = np.r_[c[0], c[:-1]]
     v = rng.lognormal(0, 0.4, n) * 1e6
     v[rng.choice(n, 25, replace=False)] *= 6
-    if coin == "ENA":
-        for t in UL.events("ENA").date:
-            if t in idx:
-                v[idx.get_loc(t)] *= 5
+    if coin == "ENA":                              # unlock days get a fixed $ volume above any noise day (the spikes top out near $24m), larger unlocks
+        for r in UL.events("ENA").itertuples():    # higher, so the busiest day within +-4 is always an unlock day whatever the run date
+            if r.date in idx:
+                v[idx.get_loc(r.date)] = 1e8 * (1 + min(float(r.amount_m), 5000.0) / 5000.0)
     return json.dumps([{"t": int(t.timestamp() * 1000), "T": int(t.timestamp() * 1000) + 86399999, "s": coin, "i": "1d", "o": f"{o[i]:.6f}", "h": f"{max(o[i], c[i]) * 1.02:.6f}",
-                        "l": f"{min(o[i], c[i]) * 0.98:.6f}", "c": f"{c[i]:.6f}", "v": f"{v[i] / c[i]:.3f}", "n": 100} for i, t in enumerate(idx)])
+                        "l": f"{min(o[i], c[i]) * 0.98:.6f}", "c": f"{c[i]:.6f}", "v": f"{v[i] / c[i]:.6f}", "n": 100} for i, t in enumerate(idx)])
 
 
 def _post(a, k):
