@@ -341,10 +341,10 @@
   {
    "id": "altcoins-date-test",
    "owner": "session:btc-cycles",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-11",
    "title": "Altcoins: test_volume_and_unlock_tabs depends on the run date (19 >= 20.8 fails on 11 Nov)",
-   "detail": "Passed on CI 10 Nov; the next push to main is likely red until pinned."
+   "detail": "Passed on CI 10 Nov; the next push to main is likely red until pinned. Fixed the same morning (f34742d)."
   }
  ],
  "roadmap": [
@@ -753,7 +753,9 @@
    "run": "scheduled",
    "result": "ok",
    "summary": "Live check: 308 of 308 tabs loaded (light and dark), all tabs OK; the only not-available cards are the known Trends social pair, Housing global, BTC Cycles about and the status roadmap. Health: Housing back to 15 fresh; known failures only (Bluesky and Reddit 403, Yahoo 429, FRED curl 92 on AI Stocks and five Luxury series now four days stale). Signals 66 of 83 wired, 17 crossed: AI Stocks VIX flipped (19.9, back below 20), Prediction Markets biggest move -19.5 points, Options' VIX term and skew no longer crossed, its IV rank reads none by the new guard. Newsletter built, not sent. Local tests: 447 passed, 1 failed (Altcoins, date-dependent). Prune deleted 2 bundles.",
-   "fixed": [],
+   "fixed": [
+    "curl fetch forces HTTP/1.1 for FRED (6fd1d0e)"
+   ],
    "handed": [
     "session:trends (review)",
     "session:debt-rates and session:demographics (verify rows)",
@@ -1405,8 +1407,16 @@
   {
    "date": "2026-11-11",
    "title": "Trends reviewed; verify-row clean-up handed to Debt & Rates and Demographics; Housing's HKMA sources back",
-   "summary": "All 308 tabs loaded in both themes, the first clean live check since the Options and AI Models launches. Housing's four HKMA sources are fresh again after eight days stale. The Trends review found the Bluesky and Reddit cards still reading not available, two Attention-vs-reality pairs pointing at series the other dashboards do not carry, and a line that counts failed downloads without naming them; handed to its session. The two dashboards holding most of the 417 unsourced rows (Debt & Rates 292, Demographics 56) were asked to clear them. The Altcoins test that was sped up on Monday now fails on the date (19 of 52 events against a 40% floor), passed on CI yesterday; its session has the fix. A FRED fix (HTTP/1.1 for the curl fetch, after a week of curl exit 92 on AI Stocks and Luxury) is ready and waits for that test so main is not pushed red.",
+   "summary": "All 308 tabs loaded in both themes, the first clean live check since the Options and AI Models launches. Housing's four HKMA sources are fresh again after eight days stale. The Trends review found the Bluesky and Reddit cards still reading not available, two Attention-vs-reality pairs pointing at series the other dashboards do not carry, and a line that counts failed downloads without naming them; handed to its session. The two dashboards holding most of the 417 unsourced rows (Debt & Rates 292, Demographics 56) were asked to clear them. The Altcoins test that was sped up on Monday now fails on the date (19 of 52 events against a 40% floor), passed on CI yesterday; its session has the fix. The Altcoins session pinned that test within the hour, and the FRED fix (HTTP/1.1 for the curl fetch, after a week of curl exit 92 on AI Stocks and Luxury) went to main with the tests green.",
    "changes": [
+    {
+     "dashboard": "shared",
+     "slug": "status",
+     "tab": "log",
+     "what": "the curl fetch forces HTTP/1.1 so FRED stops resetting streams from Railway (curl exit 92 on AI Stocks and Luxury for a week); tests green on main",
+     "commit": "6fd1d0e",
+     "by": "agent"
+    },
     {
      "dashboard": "Compute & Chips",
      "slug": "compute-chips",
@@ -1414,11 +1424,19 @@
      "what": "export-control timeline checked against the BIS, Federal Register and SEC pages; six rows cleared, Hong Kong row corrected, six stay verify",
      "commit": "6b8582f",
      "by": "session:compute-chips"
+    },
+    {
+     "dashboard": "Altcoins",
+     "slug": "altcoins",
+     "tab": "coins",
+     "what": "the ENA unlock date check no longer depends on the run date",
+     "commit": "f34742d",
+     "by": "session:btc-cycles"
     }
    ],
    "review": "trends",
    "next": [
-    "Push the FRED HTTP/1.1 fix once the Altcoins date test is pinned (or by Friday regardless, with the failing test named in the note)",
+    "Tomorrow's health: did the FRED sources on AI Stocks and Luxury come back after the HTTP/1.1 change?",
     "Read replies: Trends review, Debt & Rates and Demographics verify rows, AI review (Tuesday), Pokémon slow tests",
     "Thursday: token totals if three or more sessions ran"
    ],
