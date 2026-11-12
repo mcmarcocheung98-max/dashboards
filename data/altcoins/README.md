@@ -70,8 +70,9 @@ average AND the score is not a buy. **Action words**: BUY at ≥ +0.5, SELL at e
 
 **The fitted board** keeps the nine gauges' zone scores but learns each one's sign and weight: a gauge's weight is the Spearman rank
 correlation of its zone score with the coin's return over the next 30 days, pooled across every coin on the study (memecoins included),
-kept when at least 1.5 standard errors from zero on 100+ active coin-days, with the sign kept (a backwards zone gets a negative weight and
-counts the other way), scaled so the absolute weights sum to 1 with none above 40%. Weights are first fitted after 180 pooled days and
+kept when at least 2 standard errors from zero counting one observation per 30 days (not one per coin-day; see the signals section) on 100+
+active coin-days, with the sign kept (a backwards zone gets a negative weight and counts the other way), scaled so the absolute weights sum to 1
+with none above 40%. On ten coins no gauge clears that bar today, so the fitted board gives no reading; it will speak when a gauge earns it. Weights are first fitted after 180 pooled days and
 re-fitted every 30 days on rows whose forward return was already known, so every day's fitted score uses earlier data only. The same five
 levels apply. Its backtest trades the fitted score close to close (long ≥ +0.2, short ≤ −0.2, also long only, 0.095% a side on every
 change) and its record-by-zone table is shown next to the BTC-style one.
@@ -121,11 +122,19 @@ Two signs were flipped on 30 Oct 2026 after the first live fit: *inside a zone* 
 *place in the 1-year range* reads +1 near the 1-year high and −1 near the low (the 52-week-high effect). Both had a significantly negative record
 at 7 days (rank correlation −0.048 and −0.045, t ≈ −3), so their record since that date is in-sample for the flip and should be read as such.
 
-**Weighting rule.** Each signal is judged on the return over the next 7 days by default; the page also fits and backtests the whole thing
-on 14 and 30 days (the "Judge on" switch and the horizon table), with the same trading rule. Its weight is its Spearman rank correlation with that return over
-every coin's history pooled, kept only when positive, at least 1.5 standard errors from zero and measured on 100+ active coin-days, and the kept
-correlations are scaled to sum to 1 with no single signal above 40% (equal weights if nothing qualifies, and the page says so). Final score = Σ weight × signal, clipped to ±1. Strong buy ≥ +0.5, lean buy ≥ +0.2,
-lean sell ≤ −0.2, strong sell ≤ −0.5.
+**Weighting rule.** Each signal is judged on the return over the next 7 days by default (also 14 and 30; the "Judge on" switch). A signal
+earns weight only when its Spearman rank correlation with that return, over every coin's history pooled, is positive, measured on 100+ active
+coin-days, and at least 2 standard errors from zero **counting one observation per horizon** (the number of distinct days the signal was active,
+divided by the horizon). The earlier rule counted every coin-day as independent; because 7- to 30-day windows overlap and the ten coins move
+together, that overstated every t-statistic five to twenty times, and the weights it produced were fits to noise (their walk-forward backtests
+lost money). Kept correlations are scaled to sum to 1, none above 40%.
+
+**The fixed rule (T2).** On ten coins no signal clears that bar, so the final score falls back to a rule with nothing fitted: the plain mean
+of *30-day momentum*, *inside a zone (flipped)* and *place in the 1-year range (flipped)*. These are the three signals whose record held up on
+both data sets: here, and on the trading bot's point-in-time top-10 Binance basket since 2019 (62 coin histories; `docs/Alt_Zone_Signals_Study.xlsx`
+in the trading repo, where the zone flip chosen on this page's data was confirmed on data it had not seen). Final score = that mean, clipped to
+±1. Strong buy ≥ +0.5, lean buy ≥ +0.2, lean sell ≤ −0.2, strong sell ≤ −0.5. **Read it long only**: a buy reading says the coin is rising,
+out of volume-backed resistance and near its highs; anything else says stand aside. Shorting the low readings has not paid.
 
 **Backtest method (walk-forward).** Weights are first fitted once 180 days of pooled history exist and re-fitted every 30 days, each time on
 rows whose 7-day return was already known; every day's score uses the latest weights fitted before it. Trading it: position at each close from
@@ -134,9 +143,10 @@ funding not included; also long-only. A short that loses more than 100% in one d
 
 ### Caveats
 
-- The signal definitions and thresholds were chosen by hand, and the weights adapt, so the out-of-sample figure is honest about the weights
-  but not about the design: a first pass, not a verified edge. The trading bot's repo runs the same study on the Binance basket with its
-  luck tests before anything is traded.
+- The fixed rule was chosen on 11 Nov 2026 after seeing both records, so its history before that date is in-sample for the choice and flatters
+  it; its record from that date on is the honest one, and the page keeps the date. What it adds over holding is mostly smaller falls (on all ten
+  coins, long only: a worst fall of about a third against almost nine tenths for holding), from being in cash through down-trends: a trend
+  filter, not a forecast of which coin will do best.
 - Hyperliquid histories are short (HYPE from late 2024, most others from 2023), so the first fit uses a few hundred coin-days and early weights
   swing. Perp volume, not spot.
 - Twenty signals on ten correlated coins: some weights will be noise, and the final signal leans on momentum-type signals in trends. Read the

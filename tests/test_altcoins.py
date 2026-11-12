@@ -412,8 +412,17 @@ def test_weights_reward_a_signal_that_predicts_and_the_backtest_adds_up():
     assert w["trend"] == max(w.values()) and abs(sum(w.values()) - 1) < 1e-9 and "by rank correlation" in how
     ev = {r["signal"]: r for r in SG.evaluate(S, fwd)}
     assert ev["trend"]["ic"] > 0.7 and ev["trend"]["hit_rate"] > 0.95 and ev["trend"]["after_buy"] > 0 > ev["trend"]["after_sell"]
-    eq, _ = SG.weights_from(S.iloc[:25], fwd.iloc[:25])                              # under 30 active days: equal weights, never empty
-    assert all(abs(x - 1 / 20) < 1e-9 for x in eq.values())
+    fx, how_fx = SG.weights_from(S.iloc[:25], fwd.iloc[:25])                         # nothing can clear the bar: the fixed rule, never a fit to noise
+    assert fx == SG.fixed_weights() and how_fx.startswith("fixed rule T2") and abs(sum(fx.values()) - 1) < 1e-9 and {k for k, v in fx.items() if v} == {"momentum_30d", "in_zone", "range_1y"}
+    # the bar counts one observation per horizon: a signal that is the same on many coins the same day, with overlapping 30-day windows, is not 6,000 observations
+    idx = pd.date_range("2024-01-01", periods=600, freq="D")
+    rng = np.random.default_rng(8)
+    common = pd.Series(np.cumsum(rng.normal(0, 1, 600)), index=idx)                  # one market-wide path shared by ten "coins"
+    pooled = pd.concat([pd.DataFrame({k: 0.0 for k in SG.SIGNALS}, index=idx).assign(btc_trend=np.sign(common.diff(30)).fillna(0), _f=(common.shift(-30) - common) + rng.normal(0, 0.5, 600)) for _ in range(10)])
+    ev30 = {r["signal"]: r for r in SG.evaluate(pooled[list(SG.SIGNALS)], pooled["_f"], 30)}["btc_trend"]
+    assert ev30["dates"] <= 600 and abs(ev30["t_adj"]) < abs(ev30["t"]) / 10 and ev30["days_active"] > 5000
+    wn, how_n = SG.weights_from(pooled[list(SG.SIGNALS)], pooled["_f"], 30)
+    assert abs(ev30["t_adj"]) >= SG.MIN_T or how_n.startswith("fixed rule")
     per = {"A": (S, d.close), "B": (SG.signals(_walk(n=600, seed=4), None), _walk(n=600, seed=4).close)}
     wf = SG.walk_forward(per)
     assert wf["fits"] and wf["weights_now"]["trend"] > 0.5 and wf["composite"]["A"].iloc[:SG.MIN_TRAIN_DAYS].isna().all() and wf["composite"]["A"].dropna().abs().max() <= 1
@@ -428,6 +437,10 @@ def test_weights_reward_a_signal_that_predicts_and_the_backtest_adds_up():
     assert b["total"] == pytest.approx((1 + 0.1 - SG.COST_PER_SIDE) * (1 - SG.COST_PER_SIDE) - 1, rel=1e-6) and b["changes"] == 2    # costs are taken from the day's return
     lo = SG.backtest(comp.where(comp <= 0, -0.5), close, long_short=False)            # a sell reading never shorts when long only
     assert lo["time_short"] == 0 and lo["total"] == 0
+    bs = SG.basket_stats(wf["composite"], {"A": d.close, "B": _walk(n=600, seed=4).close}, long_short=False)
+    assert bs["coins"] == 2 and {"rule", "hold", "rule_before", "rule_after", "equity", "hold_curve"} <= set(bs) and 0 <= bs["time_in_market"] <= 1 and bs["rule"]["days"] > 300
+    sr = SG.strategy_returns(pd.Series([0.5, 0.5, 0.0], index=pd.date_range("2025-01-01", periods=3)), pd.Series([10, 11, 12.1], index=pd.date_range("2025-01-01", periods=3)))
+    assert sr.iloc[0] == pytest.approx(0.1 - SG.COST_PER_SIDE) and sr.iloc[1] == pytest.approx(0.1)             # cost on the way in only; the last day has no next move
     rows = SG.contributions(S.iloc[-1], w)
     assert rows[0]["contribution"] == max(abs(r["contribution"]) for r in rows) * (1 if rows[0]["contribution"] >= 0 else -1) and len(rows) == 20
 
@@ -438,6 +451,8 @@ def test_signals_tab(filled):
     ok = [c for c in d["coins"] if c["status"] == "ok"]
     assert len(ok) == len(A.HL_COINS) and d["btc_error"] is None and len(d["signals"]) == 20 and d["weights"] and abs(sum(d["weights"].values()) - 1) < 1e-6
     assert d["horizons"] == [7, 14, 30] and set(d["by_horizon"]) == {"7", "14", "30"} and d["horizon"] == 7
+    assert d["min_t"] == SG.MIN_T and d["fixed_rule"]["name"] == "T2" and d["basket"]["long_only"]["coins"] == len(ok) and "equity" in d["basket"]["long_only"] and "equity" not in d["basket"]["long_short"]
+    assert all("t_adj" in r and "dates" in r for r in d["per_signal"])
     c = next(x for x in ok if x["ticker"] == "ENA")
     assert c["label"] in ("strong buy", "lean buy", "neutral", "lean sell", "strong sell") and -1 <= c["score"] <= 1 and c["lean"] in (-1, 0, 1)
     assert len(c["contributions"]) == 20 and len(c["today"]) == 20 and c["backtest"]["days"] > 100 and "equity" in c["backtest"] and "equity" not in c["backtest_long_only"] and c["backtest"]["hit_horizon"] == 7

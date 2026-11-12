@@ -330,14 +330,15 @@ def payload(d: pd.DataFrame, years: float = 2.0) -> dict:
 
 # ------------------------------------------------------------------ the fitted board: the same gauges, signs and weights learned from their record
 FIT_HORIZON = 30                 # days ahead the gauges are judged on (the record tables start at 30 days)
-FIT_MIN_T = 1.5                  # a gauge earns weight when its rank correlation is this many standard errors from zero (either sign)
+FIT_MIN_T = 2.0                  # a gauge earns weight when its rank correlation is this many standard errors from zero (either sign),
+                                 # counting one observation per horizon on which it was active, not one per coin-day
 FIT_MIN_ACTIVE = 100             # ... on at least this many coin-days where the gauge was not neutral
 FIT_MAX_WEIGHT = 0.4             # no gauge above this share of the final score (by absolute weight)
 FIT_REFIT_DAYS = 30
 FIT_MIN_TRAIN = 180
 
 
-def gauge_record(scores: pd.DataFrame, fwd: pd.Series) -> list[dict]:
+def gauge_record(scores: pd.DataFrame, fwd: pd.Series, h: int = FIT_HORIZON) -> list[dict]:
     """Per gauge: rank correlation of its zone score with the forward return (sign kept: negative means the zone is backwards),
     the t-stat, the average forward return after buy-zone and sell-zone readings, and the hit rate of its sign."""
     out = []
@@ -351,20 +352,21 @@ def gauge_record(scores: pd.DataFrame, fwd: pd.Series) -> list[dict]:
         row = {"key": g.key, "name": g.name, "group": g.group, "days_active": n}
         if n >= 30 and s[m].nunique() > 1:
             ic = float(s[m].rank().corr(f[m].rank()))
-            row |= {"ic": ic, "t": ic * np.sqrt(n), "after_buy": float(f[m & (s > 0)].mean()) if (m & (s > 0)).any() else None,
+            dates = int(pd.Index(scores.index[m.to_numpy()]).nunique())            # t counts coin-days; t_adj one observation per horizon (windows overlap, coins move together)
+            row |= {"ic": ic, "t": ic * np.sqrt(n), "dates": dates, "t_adj": ic * np.sqrt(max(dates / h, 1.0)), "after_buy": float(f[m & (s > 0)].mean()) if (m & (s > 0)).any() else None,
                     "after_sell": float(f[m & (s < 0)].mean()) if (m & (s < 0)).any() else None, "hit_rate": float((np.sign(s[m]) == np.sign(f[m])).mean())}
         else:
-            row |= {"ic": None, "t": None, "after_buy": None, "after_sell": None, "hit_rate": None}
+            row |= {"ic": None, "t": None, "dates": None, "t_adj": None, "after_buy": None, "after_sell": None, "hit_rate": None}
         out.append(row)
     return out
 
 
-def fitted_weights(scores: pd.DataFrame, fwd: pd.Series) -> tuple[dict, str]:
+def fitted_weights(scores: pd.DataFrame, fwd: pd.Series, h: int = FIT_HORIZON) -> tuple[dict, str]:
     """Signed weights: a gauge's rank correlation with the forward return (so a backwards zone gets a negative weight), kept when at least
     FIT_MIN_T standard errors from zero on FIT_MIN_ACTIVE+ active coin-days, scaled so the absolute weights sum to 1 with none above
     FIT_MAX_WEIGHT; empty (no reading) when nothing qualifies."""
-    rec = gauge_record(scores, fwd)
-    w = {r["key"]: r["ic"] for r in rec if r["ic"] is not None and r["t"] is not None and abs(r["t"]) >= FIT_MIN_T and r["days_active"] >= FIT_MIN_ACTIVE}
+    rec = gauge_record(scores, fwd, h)
+    w = {r["key"]: r["ic"] for r in rec if r["ic"] is not None and r["t_adj"] is not None and abs(r["t_adj"]) >= FIT_MIN_T and r["days_active"] >= FIT_MIN_ACTIVE}
     w = {k: v for k, v in w.items() if v != 0}
     if not w:
         return {}, "no gauge cleared the bar"
@@ -401,7 +403,7 @@ def fitted_walk_forward(per_coin: dict[str, tuple[pd.DataFrame, pd.Series]], h: 
     fits = []
     for j, t in enumerate(fit_dates):
         train = pooled[pooled.index < t - pd.Timedelta(days=h)]
-        w, how = fitted_weights(train[keys], train["_fwd"])
+        w, how = fitted_weights(train[keys], train["_fwd"], h)
         until = fit_dates[j + 1] if j + 1 < len(fit_dates) else dates[-1] + pd.Timedelta(days=1)
         fits.append({"date": str(t.date()), "until": str((until - pd.Timedelta(days=1)).date()), "weights": w, "how": how, "train_rows": int(len(train))})
         for k, (S, _) in per_coin.items():
@@ -409,8 +411,8 @@ def fitted_walk_forward(per_coin: dict[str, tuple[pd.DataFrame, pd.Series]], h: 
             if m.any() and w:
                 comp[k][m] = fitted_composite(S[m].reindex(columns=keys), w).to_numpy()
     known = pooled[pooled["_fwd"].notna()]
-    w_now, how_now = fitted_weights(known[keys], known["_fwd"])
-    return {"composite": comp, "fits": fits, "weights_now": w_now, "how_now": how_now, "train_rows_now": int(len(known)), "record": gauge_record(known[keys], known["_fwd"])}
+    w_now, how_now = fitted_weights(known[keys], known["_fwd"], h)
+    return {"composite": comp, "fits": fits, "weights_now": w_now, "how_now": how_now, "train_rows_now": int(len(known)), "record": gauge_record(known[keys], known["_fwd"], h)}
 
 
 def zone_returns_of(score_series: pd.Series, px: pd.Series, horizons=(30, 90, 180)) -> list[dict]:

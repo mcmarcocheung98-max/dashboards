@@ -19,7 +19,12 @@ COST_PER_SIDE = 0.00045 + 0.0005  # Hyperliquid perp taker fee + slippage allowa
 ENTER = 0.2                       # composite needed to be long (above) or short (below the negative)
 REFIT_DAYS = 30
 MIN_TRAIN_DAYS = 180
-MIN_T = 1.5                       # a signal earns weight only if its rank correlation is this many standard errors from zero
+MIN_T = 2.0                       # a signal earns weight only if its rank correlation is this many standard errors from zero, counting one
+                                  # observation per horizon (not per coin-day: the forward windows overlap and the coins move together)
+# The fixed rule the final signal falls back to when no signal clears that bar (on ten coins, none does): the mean of the three signals that
+# held up on both data sets (Hyperliquid, ten coins; Binance, the point-in-time top-10 basket since 2019). Nothing is fitted. Chosen on
+# 11 Nov 2026 after seeing both records, so its history before that date is in-sample for the choice; its record from then on is not.
+FIXED_RULE = {"name": "T2", "frozen_on": "2026-11-11", "weights": {"momentum_30d": 1 / 3, "in_zone": 1 / 3, "range_1y": 1 / 3}}
 MIN_ACTIVE = 100                  # ... and it has fired on at least this many coin-days (a rare signal's correlation is noise)
 MAX_WEIGHT = 0.4                  # no single signal carries more than this share of the final score
 
@@ -173,8 +178,10 @@ def forward(c: pd.Series, h: int = HORIZON) -> pd.Series:
     return c.shift(-h) / c - 1
 
 
-def evaluate(S: pd.DataFrame, fwd: pd.Series) -> list[dict]:
-    """Per signal: rank correlation with the forward return (IC) and its t-stat, average forward return after +1-ish and -1-ish days, hit rate."""
+def evaluate(S: pd.DataFrame, fwd: pd.Series, h: int = HORIZON) -> list[dict]:
+    """Per signal: rank correlation with the forward return (IC); `t` counts every coin-day as independent (far too generous: h-day windows
+    overlap and coins move together), `t_adj` counts one observation per h days on which the signal was active (dates / h); the average forward
+    return after buy-side and sell-side days, and the hit rate."""
     out = []
     f = fwd.reindex(S.index)
     for k in SIGNALS:
@@ -184,24 +191,30 @@ def evaluate(S: pd.DataFrame, fwd: pd.Series) -> list[dict]:
         row = {"signal": k, "days_active": n, "share_active": float((s != 0).mean())}
         if n >= 30 and s[m].nunique() > 1:
             ic = float(s[m].rank().corr(f[m].rank()))                 # Spearman = Pearson on ranks (no scipy needed)
-            row |= {"ic": ic, "t": ic * np.sqrt(n), "after_buy": float(f[m & (s > 0)].mean()) if (m & (s > 0)).any() else None,
+            dates = int(pd.Index(S.index[m.to_numpy()]).nunique())
+            row |= {"ic": ic, "t": ic * np.sqrt(n), "dates": dates, "t_adj": ic * np.sqrt(max(dates / h, 1.0)),
+                    "after_buy": float(f[m & (s > 0)].mean()) if (m & (s > 0)).any() else None,
                     "after_sell": float(f[m & (s < 0)].mean()) if (m & (s < 0)).any() else None,
                     "hit_rate": float((np.sign(s[m]) == np.sign(f[m])).mean())}
         else:
-            row |= {"ic": None, "t": None, "after_buy": None, "after_sell": None, "hit_rate": None}
+            row |= {"ic": None, "t": None, "dates": None, "t_adj": None, "after_buy": None, "after_sell": None, "hit_rate": None}
         out.append(row)
     return out
 
 
-def weights_from(S: pd.DataFrame, fwd: pd.Series) -> tuple[dict, str]:
-    """Weight = the signal's rank correlation with the forward return when it is positive, at least MIN_T standard errors from zero and
-    measured on at least MIN_ACTIVE active coin-days, scaled so the weights sum to 1 with no signal above MAX_WEIGHT (the excess is shared
-    out); equal weights when nothing qualifies (so the composite is never silently empty)."""
-    ev = evaluate(S, fwd)
-    w = {r["signal"]: max(0.0, r["ic"]) for r in ev if r["ic"] is not None and r["t"] is not None and r["t"] >= MIN_T and r["days_active"] >= MIN_ACTIVE}
+def fixed_weights() -> dict:
+    return {k: float(FIXED_RULE["weights"].get(k, 0.0)) for k in SIGNALS}
+
+
+def weights_from(S: pd.DataFrame, fwd: pd.Series, h: int = HORIZON) -> tuple[dict, str]:
+    """Weight = the signal's rank correlation with the forward return when it is positive, at least MIN_T standard errors from zero on the
+    overlap-adjusted count (one observation per horizon) and measured on at least MIN_ACTIVE active coin-days, scaled so the weights sum to 1
+    with no signal above MAX_WEIGHT (the excess is shared out). When nothing qualifies, the fixed rule's weights (FIXED_RULE): never a fit to noise."""
+    ev = evaluate(S, fwd, h)
+    w = {r["signal"]: max(0.0, r["ic"]) for r in ev if r["ic"] is not None and r["t_adj"] is not None and r["t_adj"] >= MIN_T and r["days_active"] >= MIN_ACTIVE}
     w = {k: v for k, v in w.items() if v > 0}
     if not w:
-        return {k: 1 / len(SIGNALS) for k in SIGNALS}, "equal (no signal cleared the bar)"
+        return fixed_weights(), f"fixed rule {FIXED_RULE['name']} (no signal cleared the bar)"
     for _ in range(len(w)):                                                 # cap, then share the excess among the uncapped
         tot = sum(w.values())
         w = {k: v / tot for k, v in w.items()}
@@ -233,7 +246,7 @@ def walk_forward(per_coin: dict[str, tuple[pd.DataFrame, pd.Series]], h: int = H
     comp = {k: pd.Series(np.nan, index=S.index) for k, (S, _) in per_coin.items()}
     for j, t in enumerate(fit_dates):
         train = pooled[pooled.index < t - pd.Timedelta(days=h)]
-        w, how = weights_from(train[list(SIGNALS)], train["_fwd"])
+        w, how = weights_from(train[list(SIGNALS)], train["_fwd"], h)
         until = fit_dates[j + 1] if j + 1 < len(fit_dates) else dates[-1] + pd.Timedelta(days=1)
         fits.append({"date": str(t.date()), "until": str((until - pd.Timedelta(days=1)).date()), "weights": w, "how": how, "train_rows": int(len(train))})
         for k, (S, _) in per_coin.items():
@@ -241,8 +254,47 @@ def walk_forward(per_coin: dict[str, tuple[pd.DataFrame, pd.Series]], h: int = H
             if m.any():
                 comp[k][m] = composite(S[m], w).to_numpy()
     known = pooled[pooled["_fwd"].notna()]
-    w_now, how_now = weights_from(known[list(SIGNALS)], known["_fwd"])
+    w_now, how_now = weights_from(known[list(SIGNALS)], known["_fwd"], h)
     return {"composite": comp, "fits": fits, "weights_now": w_now, "how_now": how_now, "train_rows_now": int(len(known))}
+
+
+def strategy_returns(comp: pd.Series, c: pd.Series, enter: float = ENTER, cost: float = COST_PER_SIDE, long_short: bool = True) -> pd.Series:
+    """Daily returns of trading a score close to close: the position taken at each close earns the next day's move; costs on every change."""
+    x = comp.dropna()
+    px = c.reindex(x.index)
+    pos = pd.Series(np.where(x >= enter, 1.0, np.where(x <= -enter, -1.0 if long_short else 0.0, 0.0)), index=x.index)
+    turn = pos.diff().abs().fillna(pos.abs())
+    return (pos * px.pct_change().shift(-1) - turn * cost).dropna().clip(lower=-1.0)
+
+
+def curve_stats(r: pd.Series) -> dict:
+    r = r.dropna()
+    if len(r) < 60:
+        return {"days": int(len(r))}
+    eq = (1 + r).cumprod()
+    return {"days": int(len(r)), "from": str(r.index[0].date()), "to": str(r.index[-1].date()), "total": float(eq.iloc[-1] - 1),
+            "a_year": float(eq.iloc[-1] ** (365 / len(r)) - 1) if eq.iloc[-1] > 0 else -1.0, "sharpe": float(r.mean() / r.std() * np.sqrt(365)) if r.std() > 0 else None,
+            "worst_drop": float((eq / eq.cummax() - 1).min())}
+
+
+def basket_stats(comps: dict[str, pd.Series], closes: dict[str, pd.Series], long_short: bool = False, split: str = "2025-07-01") -> dict:
+    """The rule on every coin at once, equal weight across the coins that have a score that day, next to holding the same coins the same way;
+    also before and from `split` (the date the trading bot's studies treat as the start of unseen data)."""
+    rs = [strategy_returns(comps[k], closes[k], long_short=long_short).rename(k) for k in comps if comps[k].notna().sum() > 60]
+    if not rs:
+        return {}
+    panel = pd.concat(rs, axis=1).sort_index()
+    hold = pd.concat([closes[k].pct_change().shift(-1).reindex(panel.index).where(panel[k].notna()).rename(k) for k in panel.columns], axis=1)
+    r, hr = panel.mean(axis=1), hold.mean(axis=1)
+    cut = pd.Timestamp(split)
+    out = {"coins": int(panel.shape[1]), "rule": curve_stats(r), "hold": curve_stats(hr), "rule_before": curve_stats(r[r.index < cut]), "hold_before": curve_stats(hr[hr.index < cut]),
+           "rule_after": curve_stats(r[r.index >= cut]), "hold_after": curve_stats(hr[hr.index >= cut]), "split": split,
+           "time_in_market": float((panel != 0).mean().mean())}
+    eq, heq = (1 + r).cumprod(), (1 + hr.fillna(0)).cumprod()
+    step = max(1, len(eq) // 600)
+    out["equity"] = [[int(t.timestamp()), round(float(v), 5)] for t, v in eq.iloc[::step].items()]
+    out["hold_curve"] = [[int(t.timestamp()), round(float(v), 5)] for t, v in heq.iloc[::step].items()]
+    return out
 
 
 def backtest(comp: pd.Series, c: pd.Series, enter: float = ENTER, cost: float = COST_PER_SIDE, long_short: bool = True, h: int = HORIZON) -> dict:

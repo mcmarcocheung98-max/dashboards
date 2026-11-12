@@ -427,7 +427,8 @@ def _signals_now() -> dict:
     for h in SG.HORIZONS:
         out["by_horizon"][str(h)] = _horizon_block(per, h)
     main = out["by_horizon"].get(str(SG.HORIZON), {})
-    out |= {k: main.get(k) for k in ("weights", "how", "train_rows", "weights_drift", "per_signal", "pooled_backtest", "counts", "error")}
+    out |= {k: main.get(k) for k in ("weights", "how", "train_rows", "weights_drift", "per_signal", "pooled_backtest", "counts", "error", "basket", "fixed_rule")}
+    out["min_t"] = SG.MIN_T
     for c in coins:                                   # the default horizon's reading on the coin itself, for READINGS and the table
         if c["status"] == "ok" and c["ticker"] in (main.get("coins") or {}):
             r = main["coins"][c["ticker"]]
@@ -452,7 +453,7 @@ def _horizon_block(per: dict, h: int) -> dict:
         block["weights_drift"] = float(sum(abs(wf["weights_now"][k] - last[k]) for k in SG.SIGNALS) / 2)
     try:
         pooled = pd.concat([S.assign(_fwd=SG.forward(c, h).reindex(S.index)) for S, c in per.values()])
-        block["per_signal"] = SG.evaluate(pooled[list(SG.SIGNALS)], pooled["_fwd"])
+        block["per_signal"] = SG.evaluate(pooled[list(SG.SIGNALS)], pooled["_fwd"], h)
     except Exception as e:
         block["per_signal"], block["per_signal_error"] = [], f"{type(e).__name__}: {e}"
     for ticker, (S, close) in per.items():
@@ -465,10 +466,16 @@ def _horizon_block(per: dict, h: int) -> dict:
                  "composite": [[int(t.timestamp()), round(float(v), 3)] for t, v in comp.dropna().items()],
                  "price_series": [[int(t.timestamp()), float(v)] for t, v in close.reindex(comp.dropna().index).items()],
                  "backtest": SG.backtest(comp, close, h=h), "backtest_long_only": {k: v for k, v in SG.backtest(comp, close, long_short=False, h=h).items() if k not in ("equity", "hold_curve")},
-                 "own_eval": SG.evaluate(S, SG.forward(close, h))}
+                 "own_eval": SG.evaluate(S, SG.forward(close, h), h)}
         except Exception as e:
             r = {"status": "error", "why": f"{type(e).__name__}: {e}"}
         block["coins"][ticker] = r
+    try:                                             # the rule on every coin at once, equal weight, next to holding the same coins
+        closes = {t: c for t, (S, c) in per.items()}
+        block["basket"] = {"long_only": SG.basket_stats(wf["composite"], closes, long_short=False), "long_short": {k: v for k, v in SG.basket_stats(wf["composite"], closes, long_short=True).items() if k not in ("equity", "hold_curve")}}
+    except Exception as e:
+        block["basket_error"] = f"{type(e).__name__}: {e}"
+    block["fixed_rule"] = {**SG.FIXED_RULE, "in_use": bool(block.get("how", "").startswith("fixed rule"))}
     ok = [r for r in block["coins"].values() if r.get("status") == "ok" and r.get("score") is not None]
     block["counts"] = {"buy": sum(r["lean"] > 0 for r in ok), "sell": sum(r["lean"] < 0 for r in ok), "neutral": sum(r["lean"] == 0 for r in ok)}
     bts = [r["backtest"] for r in ok if r["backtest"].get("total") is not None]

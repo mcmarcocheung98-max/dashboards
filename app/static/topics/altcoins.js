@@ -569,10 +569,10 @@ const sc2 = v => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.a
 const w1 = v => v == null ? "–" : (v * 100).toFixed(0) + "%";
 
 function signalsTable(coins) {
-  const H = ["Coin", "Final signal", "Score", "Biggest push", "Walk-forward: strategy a year", "Hold a year", "Sharpe", "Worst fall", "Hit rate", "Since"];
+  const H = ["Coin", "Final signal", "Score", "Biggest push", "Long only: a year", "Hold a year", "Sharpe", "Worst fall", "Hit rate", "Since"];
   const rows = coins.filter(c => c.status === "ok").slice().sort((a, b) => (b.score ?? -9) - (a.score ?? -9));
   return el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...H.map((h, i) => el("th", { style: (i > 1 && i !== 3 ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
-    ...rows.map(c => { const B = c.backtest || {}, top = (c.contributions || []).filter(x => x.contribution !== 0).slice(0, 2);
+    ...rows.map(c => { const B = { ...(c.backtest || {}), ...(c.backtest_long_only || {}) }, top = (c.contributions || []).filter(x => x.contribution !== 0).slice(0, 2);
       return el("tr", { style: "cursor:pointer", onclick: () => pickSig(c.ticker) },
         el("td", {}, el("b", {}, c.ticker), " ", el("span", { class: "muted" }, c.group === "Memecoin" ? "meme" : "candidate")),
         el("td", { class: SG_CLS[c.label] || "" }, c.label), el("td", { style: "text-align:right", class: cls(c.score) }, sc2(c.score)),
@@ -587,14 +587,14 @@ function signalsTable(coins) {
 function signalGrid(c, d) {
   // the 20 signals today for one coin: value, weight, contribution, and the pooled record (rank correlation, hit rate) behind the weight
   const pooled = Object.fromEntries((d.per_signal || []).map(r => [r.signal, r])), own = Object.fromEntries((c.own_eval || []).map(r => [r.signal, r]));
-  const H = ["Signal", "Family", "Today", "Weight", "Push", "Rank corr. (all coins)", "Hit rate (all coins)", "Hit rate (" + c.ticker + ")", "Active days"];
+  const H = ["Signal", "Family", "Today", "Weight", "Push", "Rank corr. (all coins)", "t, overlap-adjusted", "Hit rate (all coins)", "Hit rate (" + c.ticker + ")", "Active days"];
   const rows = (c.contributions || []).slice().sort((a, b) => b.weight - a.weight || Math.abs(b.value) - Math.abs(a.value));
   return el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...H.map((h, i) => el("th", { style: (i > 1 ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
     ...rows.map(r => { const p = pooled[r.signal] || {}, o = own[r.signal] || {}, meta = (d.signals || []).find(x => x.key === r.signal) || {};
       return el("tr", { title: meta.means || "" }, el("td", {}, r.label), el("td", { class: "muted" }, r.family),
         el("td", { style: "text-align:right", class: cls(r.value) }, sc2(r.value)), el("td", { style: "text-align:right", class: r.weight > 0 ? "" : "muted" }, w1(r.weight)),
         el("td", { style: "text-align:right", class: cls(r.contribution) }, sc2(r.contribution)),
-        el("td", { style: "text-align:right", class: cls(p.ic) }, p.ic == null ? "–" : sc2(p.ic)), el("td", { style: "text-align:right", class: p.hit_rate > 0.5 ? "up" : p.hit_rate < 0.5 ? "down" : "" }, p.hit_rate == null ? "–" : Math.round(p.hit_rate * 100) + "%"),
+        el("td", { style: "text-align:right", class: cls(p.ic) }, p.ic == null ? "–" : sc2(p.ic)), el("td", { style: "text-align:right", class: Math.abs(p.t_adj || 0) >= (d.min_t || 2) ? "up" : "muted" }, p.t_adj == null ? "–" : p.t_adj.toFixed(1)), el("td", { style: "text-align:right", class: p.hit_rate > 0.5 ? "up" : p.hit_rate < 0.5 ? "down" : "" }, p.hit_rate == null ? "–" : Math.round(p.hit_rate * 100) + "%"),
         el("td", { style: "text-align:right", class: o.hit_rate > 0.5 ? "up" : o.hit_rate < 0.5 ? "down" : "" }, o.hit_rate == null ? "–" : Math.round(o.hit_rate * 100) + "%"),
         el("td", { style: "text-align:right", class: "muted" }, p.days_active == null ? "–" : num(p.days_active))); })));
 }
@@ -622,6 +622,18 @@ function backtestCard(d, c) {
       "Every day shown uses weights fitted only on earlier data (re-fitted every " + d.refit_days + " days on all coins pooled), so this is out of sample, but the signal definitions and thresholds were chosen by hand before any test: treat it as a first pass."));
 }
 
+function basketCard(d) {
+  const B = (d.basket || {}).long_only, S = (d.basket || {}).long_short;
+  if (!B || !B.rule || B.rule.total == null) return null;
+  const row = (name, r, h) => el("tr", {}, el("td", {}, name), ...[r, h].flatMap(x => [el("td", { style: "text-align:right", class: cls(x.total) }, pctOrDash(x.total, 0)), el("td", { style: "text-align:right" }, x.sharpe == null ? "–" : x.sharpe.toFixed(2)), el("td", { style: "text-align:right", class: "down" }, pctOrDash(x.worst_drop, 0))]));
+  return el("div", { style: "margin-top:10px" }, el("b", {}, "The signal on all " + B.coins + " coins at once, long only, equal weight, against holding the same coins"),
+    el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Period", "Signal: total", "Sharpe", "Worst fall", "Holding: total", "Sharpe", "Worst fall"].map((h, i) => el("th", { style: (i ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
+      row("All (" + B.rule.from + " on)", B.rule, B.hold), B.rule_before.total != null ? row("Before " + B.split, B.rule_before, B.hold_before) : null, B.rule_after.total != null ? row("From " + B.split, B.rule_after, B.hold_after) : null,
+      S && S.rule && S.rule.total != null ? row("Long + short, all", S.rule, S.hold) : null)),
+    ...linesChart([{ name: "Signal, long only", points: B.equity, color: css("--s1") }, { name: "Holding the coins", points: B.hold_curve, dashed: true, color: css("--hold") }], v => v == null ? "–" : v.toFixed(2) + "×", { log: true, small: true }),
+    note("In the market " + Math.round((B.time_in_market || 0) * 100) + "% of coin-days: long a coin while its score is at or above +" + d.enter + ", in cash otherwise; 0.095% each way on every change, funding not included. The gain over holding is mostly smaller falls, from being out of coins in a down-trend; shorting the low scores as well has not paid."));
+}
+
 function weightsCard(d) {
   const W = d.weights || {}, rows = (d.signals || []).map(s => ({ ...s, w: W[s.key] || 0 })).sort((a, b) => b.w - a.w);
   const P = d.pooled_backtest;
@@ -630,7 +642,9 @@ function weightsCard(d) {
     P ? el("div", { class: "kpis", style: "margin-top:10px" }, kpi("Coins backtested", String(P.coins)), kpi("Beat holding the coin", P.beat_hold + " of " + P.coins, P.beat_hold > P.coins / 2 ? "up" : "down"),
       kpi("Median a year: strategy / hold", pct(P.median_a_year, 0) + " / " + pct(P.median_hold_a_year, 0), cls(P.median_a_year - P.median_hold_a_year)),
       kpi("Median Sharpe", P.median_sharpe.toFixed(2)), kpi("Median worst fall", pct(P.median_worst_drop, 0)), kpi("Median 7-day hit rate", Math.round(P.median_hit_rate_7d * 100) + "%", P.median_hit_rate_7d > 0.5 ? "up" : "down")) : null,
-    note("A signal earns weight when its rank correlation with the next " + d.horizon + " days' return, over every coin's history, is positive, at least 1.5 standard errors from zero and measured on 100+ active coin-days; weights are the correlations scaled to sum to 1, none above 40%. " +
+    basketCard(d),
+    note("A signal earns weight only when its rank correlation with the next " + d.horizon + " days' return is positive and at least " + (d.min_t || 2) + " standard errors from zero, counting one observation per " + d.horizon + " days rather than one per coin-day (the windows overlap and the coins move together; the naive count overstated every figure five to twenty times). " +
+      "On ten coins nothing clears that bar, so the final signal is the fixed rule " + ((d.fixed_rule || {}).name || "") + ": the plain mean of 30-day momentum, the flipped zone position and the flipped 1-year range, the three signals that held up both here and on the trading bot's Binance basket since 2019. Nothing in it is fitted. It was chosen on " + ((d.fixed_rule || {}).frozen_on || "") + " after seeing both records, so its history before that date flatters it; watch the record from that date. " +
       (d.weights_drift != null ? "Today's weights differ from the last fitted set by " + Math.round(d.weights_drift * 100) + "% of the total. " : "") + "Hover a name for what the signal means."));
 }
 
@@ -640,7 +654,7 @@ function signalsDetail(d0, d, c) {
   const intro = card(null, el("div", { class: "kpis" },
       kpi("Leaning buy", String((d.counts || {}).buy || 0), (d.counts || {}).buy ? "up" : ""), kpi("Neutral", String((d.counts || {}).neutral || 0)), kpi("Leaning sell", String((d.counts || {}).sell || 0), (d.counts || {}).sell ? "down" : ""),
       kpi("Signals", (d.signals || []).length + " · judged on " + SG_H + " days"), kpi("Weights re-fitted", "every " + d.refit_days + " days")), hs,
-    note("Twenty daily signals on top of the volume zones (where the price sits against them, retests, breaks, the balance of big days, trend, RSI, BTC's trend, unlock windows), each scored −1 to +1, weighted by what it was worth across every coin's past, summed into one score. " +
+    note("Twenty daily signals on top of the volume zones (where the price sits against them, retests, breaks, the balance of big days, trend, RSI, BTC's trend, unlock windows), each scored −1 to +1, Tested honestly, none is distinguishable from noise on ten coins alone, so the final score is a fixed rule: the mean of the three that also held up on the trading bot's wider Binance basket (30-day momentum, the flipped zone position, the flipped 1-year range). Read it long only: a buy reading means the coin is rising, out of resistance, near its highs; anything else means stand aside. " +
       "Strong buy ≥ +0.5, lean buy ≥ +" + d.enter + ", lean sell ≤ −" + d.enter + ", strong sell ≤ −0.5. Research, not advice."));
   if (!c || c.status !== "ok" || c.score == null) return [intro, card(null, el("div", { class: "muted" }, !c ? "No signals for this coin." : c.status === "error" ? "Not available right now (" + (c.why || "") + ")." : c.status + ".")), horizonCard(d0)];
   const coinHead = card(c.ticker + " today: " + c.label + " (" + sc2(c.score) + ")",
@@ -801,14 +815,14 @@ function fittedRecordCard(F) {
   if (!F || !F.record) return null;
   const W = F.weights_now || {};
   return card("Each gauge's record across every coin, and the weight it earns (" + (F.how_now || "") + ")",
-    el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Gauge", "Group", "Active coin-days", "Rank corr. with " + F.horizon + "-day return", "t", "After a buy reading", "After a sell reading", "Hit rate", "Weight"].map((h, i) => el("th", { style: (i > 1 ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
+    el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Gauge", "Group", "Active coin-days", "Rank corr. with " + F.horizon + "-day return", "t, overlap-adjusted", "After a buy reading", "After a sell reading", "Hit rate", "Weight"].map((h, i) => el("th", { style: (i > 1 ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
       ...F.record.map(r => el("tr", {}, el("td", {}, r.name), el("td", { class: "muted" }, r.group), el("td", { style: "text-align:right" }, num(r.days_active)),
-        el("td", { style: "text-align:right", class: cls(r.ic) }, r.ic == null ? "–" : (r.ic > 0 ? "+" : "") + r.ic.toFixed(3)), el("td", { style: "text-align:right" }, r.t == null ? "–" : r.t.toFixed(1)),
+        el("td", { style: "text-align:right", class: cls(r.ic) }, r.ic == null ? "–" : (r.ic > 0 ? "+" : "") + r.ic.toFixed(3)), el("td", { style: "text-align:right", class: Math.abs(r.t_adj || 0) >= 2 ? "up" : "muted" }, r.t_adj == null ? "–" : r.t_adj.toFixed(1)),
         el("td", { style: "text-align:right", class: cls(r.after_buy) }, pctOrDash(r.after_buy, 1)), el("td", { style: "text-align:right", class: cls(r.after_sell) }, pctOrDash(r.after_sell, 1)),
         el("td", { style: "text-align:right", class: r.hit_rate > 0.5 ? "up" : r.hit_rate < 0.5 ? "down" : "" }, r.hit_rate == null ? "–" : Math.round(r.hit_rate * 100) + "%"),
         el("td", { style: "text-align:right", class: (W[r.key] || 0) < 0 ? "down" : (W[r.key] || 0) > 0 ? "" : "muted" }, W[r.key] == null ? "0" : sgn2(W[r.key])))))),
     note("A gauge's zone score (+1 buy zone to −1 sell zone) against the coin's return over the next " + F.horizon + " days, every coin pooled (" + num(F.train_rows || 0) + " coin-days). A negative correlation means the zone has been backwards. " +
-      "Weight = the correlation when it is 1.5+ standard errors from zero on 100+ active coin-days, scaled so the absolute weights sum to 1 (none above 40%)." +
+      "Weight = the correlation when it is 2+ standard errors from zero counting one observation per " + F.horizon + " days (not per coin-day: the windows overlap and the coins move together), on 100+ active coin-days, scaled so the absolute weights sum to 1 (none above 40%). On ten coins no gauge clears that bar, so the fitted board gives no reading: the earlier fitted weights were fits to noise." +
       (F.pooled_backtest ? " Trading the fitted score walk-forward: beat holding on " + F.pooled_backtest.beat_hold + " of " + F.pooled_backtest.coins + " coins, median Sharpe " + (F.pooled_backtest.median_sharpe == null ? "–" : F.pooled_backtest.median_sharpe.toFixed(2)) + ", median worst fall " + pctOrDash(F.pooled_backtest.median_worst_drop, 0) + ", median hit rate " + (F.pooled_backtest.median_hit_rate == null ? "–" : Math.round(F.pooled_backtest.median_hit_rate * 100) + "%") + "." : "")));
 }
 
