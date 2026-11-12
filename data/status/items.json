@@ -383,6 +383,14 @@
    "since": "2026-11-12",
    "title": "Prediction Markets: retire resolved watchlist rows (midterms, World Series, October Fed), cite a market page per row, biggest_move must not count resolutions",
    "detail": "From the 12 Nov review."
+  },
+  {
+   "id": "luxury-fred-hang",
+   "owner": "session:luxury",
+   "status": "waiting",
+   "since": "2026-11-12",
+   "title": "Luxury: a page view must never wait on FRED (hung over 180 s in two live checks)",
+   "detail": "Seed plus background fetch, as AI Stocks did in bb5c495 and c87c7dd."
   }
  ],
  "roadmap": [
@@ -813,12 +821,18 @@
   {
    "date": "2026-11-12",
    "run": "scheduled",
-   "result": "ok",
-   "summary": "Local tests 456 passed. Newsletter built, not sent (no Gmail secrets). Signals 66 of 83 wired, 16 crossed. Live check still running when this entry was written; its result is added below when read.",
+   "result": "problems",
+   "summary": "Live check: all 155 light tabs loaded (one on retry, after the agent's own two status pushes restarted the server and stretched the pass to 19 minutes); the dark pass reached 28 tabs, then /luxury did not finish loading in over three minutes and the job hit its 25-minute limit. Same place as the afternoon run on 11 Nov: Luxury's FRED fetches time out inside page views. Health otherwise: known failures only (Bluesky and Reddit 403, Yahoo 429, FRED timeouts on AI Stocks and Luxury, four TCGdex cards stale). Local tests 456 passed. Newsletter built, not sent. Signals 66 of 83 wired, 16 crossed.",
    "fixed": [],
    "handed": [
-    "session:prediction-markets (review)"
-   ]
+    "session:prediction-markets (review)",
+    "session:luxury (FRED inside page views)"
+   ],
+   "actions": {
+    "date": "2026-11-11",
+    "minutes": 201,
+    "runs": 67
+   }
   }
  ],
  "notes": [
@@ -1626,8 +1640,8 @@
   },
   {
    "date": "2026-11-12",
-   "title": "Prediction Markets reviewed: its watchlist is two weeks stale; token totals collected",
-   "summary": "The Prediction Markets review found a watchlist written on 26 Oct that still follows questions that have resolved (the 3 Nov midterms, the World Series, the October Fed meeting), 14 rows without a cited market page, and a biggest-move signal that may be counting resolutions as moves; handed to its session. Token totals for twelve sessions were collected for the Graphify Daily tokens tab. The unsourced-row count is 190, down from 417 on Tuesday: Demographics is at zero, Debt & Rates cleared 170 and waits on network access for its last 122. Signals: 66 of 83 wired, 16 crossed; the 10-year real yield rose to 2.78% and the Options volatility premium fell to 17%.",
+   "title": "Luxury hangs when its FRED copies lapse; Prediction Markets' watchlist is two weeks stale",
+   "summary": "The Prediction Markets review found a watchlist written on 26 Oct that still follows questions that have resolved (the 3 Nov midterms, the World Series, the October Fed meeting), 14 rows without a cited market page, and a biggest-move signal that may be counting resolutions as moves; handed to its session. Token totals for twelve sessions were collected for the Graphify Daily tokens tab. The unsourced-row count is 190, down from 417 on Tuesday: Demographics is at zero, Debt & Rates cleared 170 and waits on network access for its last 122. Signals: 66 of 83 wired, 16 crossed; the 10-year real yield rose to 2.78% and the Options volatility premium fell to 17%. The live check loaded all 155 tabs in light mode, then hung on Luxury in the dark pass for the second day running and was cut at its 25-minute limit: when Luxury's cached FRED copies lapse, a page view waits through minute-long timeouts, because FRED does not answer Railway. Handed to the Luxury session with the fix AI Stocks used yesterday.",
    "changes": [
     {
      "dashboard": "Altcoins",
