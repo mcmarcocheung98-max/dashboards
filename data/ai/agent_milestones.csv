@@ -20,12 +20,12 @@ date,event,company,kind,source,note
 2025-10-07,Gemini 2.5 Computer Use model,Google,agents,https://blog.google/innovation-and-ai/models-and-research/google-deepmind/gemini-computer-use-model/,preview in the Gemini API
 2025-10-21,ChatGPT Atlas browser with agent mode,OpenAI,agents,https://openai.com/index/introducing-chatgpt-atlas/,macOS browser
 2025-11-18,Agent 365,Microsoft,tools,https://siliconangle.com/2025/11/18/microsoft-introduces-agent-365-control-center-pack-new-ai-agents-enterprise-users/,Ignite 2025; control plane for enterprise agents
-2025-11-18,Google Antigravity,Google,coding agents,https://thenewstack.io/antigravity-is-googles-new-agentic-development-platform/,agent-first IDE with Gemini 3; Google's own post may be dated 20 Nov - verify date
+2025-11-20,Google Antigravity,Google,coding agents,https://developers.googleblog.com/en/build-with-google-antigravity-our-new-agentic-development-platform/,agent-first IDE with Gemini 3 Pro; Google Developers Blog dated 20 Nov 2025 ("available today in public preview"); press reported it on 18 Nov with Gemini 3
 2025-12-09,MCP donated to the Agentic AI Foundation,Anthropic,protocol,https://anthropic.com/news/donating-the-model-context-protocol-and-establishing-of-the-agentic-ai-foundation,Linux Foundation fund co-founded with OpenAI and Block
 2026-01-12,Cowork (research preview),Anthropic,agents,https://claude.com/blog/cowork-research-preview,Claude Code for the rest of your work
 2026-02-02,Codex app for macOS,OpenAI,coding agents,https://fortune.com/2026/02/02/openai-launches-codex-app-to-bring-coding-models-to-more-users-openclaw-ai-agents/,multi-agent coding app
 2026-02-05,OpenAI Frontier,OpenAI,tools,https://axios.com/2026/02/05/openai-platform-ai-agents,enterprise platform to build and manage agents
-2026-04-08,Claude Managed Agents (public beta),Anthropic,tools,https://itbrief.co.uk/story/anthropic-launches-claude-managed-agents-in-public-beta,hosted agent runtime; date from a secondary report - verify date
+2026-04-08,Claude Managed Agents (public beta),Anthropic,tools,https://claude.com/resources/articles/claude-managed-agents,hosted agent runtime; Anthropic's article dated 8 Apr 2026 ("available today in public beta on the Claude Platform")
 2026-05-14,Grok Build (early beta),xAI,coding agents,https://www.eweek.com/news/xai-grok-build-coding-agent/,terminal coding agent
 2026-05-19,Gemini Spark,Google,agents,https://www.tomsguide.com/ai/google-gemini/google-unveils-gemini-spark-a-24-7-personal-ai-agent-that-could-be-a-game-changer-for-agentic-ai,I/O 2026; always-on personal agent
 2026-09-09,Muse personal agent,Meta,agents,https://www.thestar.com.my/tech/tech-news/2026/09/09/meta-launches-ai-agent-that-can-access-other-apps-to-send-emails-make-payments,Reuters report; may be 8 Sep US time - verify date
