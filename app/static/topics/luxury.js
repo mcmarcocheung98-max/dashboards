@@ -6,7 +6,8 @@ const prem = v => v == null ? "–" : pct(v, 0);
 const premCls = v => v == null ? "" : v > 0.02 ? "up" : v < -0.02 ? "down" : "";
 const table = (heads, rows) => el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...heads.map(h => el("th", {}, h))), ...rows));
 const srcCell = (url, note) => el("td", { class: "wrap" }, url ? link(host(url), url) : "–", note ? " · " + note : "");
-const fxNote = d => d && d.fx_fallback ? el("div", { class: "warn", style: "margin-top:6px" }, "Exchange rates are not reachable right now: USD, CHF and EUR prices converted at fixed approximate rates.") : null;
+const fxNote = d => d && d.fx_fallback ? el("div", { class: "warn", style: "margin-top:6px" }, "Exchange rates are not reachable right now: USD, CHF and EUR prices converted at fixed approximate rates.")
+  : d && d.fx_source && /copy to/.test(d.fx_source) ? el("div", { class: "muted", style: "margin-top:6px" }, "Exchange rates from an older copy (" + d.fx_source + "); a fresh download is tried once a day in the background.") : null;
 const verifyNote = (n, total) => n ? el("div", { class: "muted", style: "margin-top:6px" }, n + " of " + total + " hand-entered points are marked verify (entered from an article or from memory, not confirmed on the cited page).") : null;
 // a list price as a step: hold each price until the next change, and to today
 const step = (pts, end) => { const out = []; pts.forEach((p, i) => { out.push(p); const nx = pts[i + 1]; out.push([(nx ? nx[0] : end) - 86400, p[1]]); }); return out; };
@@ -135,7 +136,8 @@ const VIEWS = {
       el("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px" }, el("span", { class: "muted" }, "Bought on 1 January"), sel(years.map(y => [y, y]), year, e => { year = e.target.value; draw(); })),
       host, note("Bought at the list price in force on that day (or at launch, if later), sold at the latest resale point (sold if known, else asking) through the category's usual platform (" +
         Object.entries(d.default_platform || {}).map(([k, v]) => words[k].toLowerCase() + ": " + v).join(", ") + "). S&P 500: price change over the same period, dividends left out" + (d.sp500_source ? " (" + d.sp500_source + ")" : "") +
-        ". UK CPI: " + (d.cpi_uk_source || "not available") + ". Real: the return after UK inflation. Shipping, insurance, servicing and VAT or duty are not deducted."),
+        ". UK CPI: " + (d.cpi_uk_source || "not available") + ". Real: the return after UK inflation. Shipping, insurance, servicing and VAT or duty are not deducted." +
+        (d.sources && Object.values(d.sources).some(v => /copy to/.test(v)) ? " Series marked 'copy to <date>' come from the committed copies in data/luxury/fred, used until a download works (tried once a day in the background)." : "") + (d.fx_source ? " Exchange rates: " + d.fx_source + "." : "")),
       missing(d, "sp500", "The S&P 500"), missing(d, "cpi_uk", "UK CPI"), stale(d));
     // ---- the calculator: nothing is stored
     const v = { item: items[0] ? items[0].id : null, date: "2022-01-01", price: null, platform: fees[0] ? fees[0].platform : null };

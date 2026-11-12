@@ -24,6 +24,11 @@ liquidity  how easily each item trades: attention (monthly Wikipedia pageviews p
            visible), with the StockX bid-ask spread per bag; and a liquidity score per market, like the heat score: supply (listings
            against their own history, more = looser), the spread, auction sell-through, days to sell and attention
 
+Context series (CPI, FX, the S&P 500) are never downloaded during a page view: a view reads the copy in memory, then the snapshot on the
+volume, then the committed seed in data/luxury/fred/ (cut to what the charts need, labelled as an older copy). fill_context (BACKGROUND,
+also started by a view that finds only seeds) downloads them at most once a day: the ECB's daily reference rates for FX first, ONS for UK
+CPI, FRED for the rest (FRED times out from Railway; a failure is marked handled on /api/health while the seed serves).
+
 Data. The brand sites and the resale platforms have no free API and refuse servers, so prices are hand-entered, dated and sourced
 (data/luxury/*.csv): items.csv (one row per item), retail.csv (official list prices as they change), resale.csv (asking or sold points
 per item), fees.csv (platform fee schedules), indices.csv (public resale indices' headline figures). Rows marked 'verify' were not
@@ -34,6 +39,7 @@ Leans in READINGS(): +1 means the market is heating (resale above retail, score 
 from __future__ import annotations
 
 import re
+import threading
 import time
 from io import StringIO
 from urllib.parse import quote
@@ -58,6 +64,12 @@ FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={id}"
 FRED_IDS = {"cpi_us": "CPIAUCSL", "cpi_uk": "GBRCPIALLMINMEI", "gbpusd": "DEXUSUK", "chfusd": "DEXSZUS", "eurusd": "DEXUSEU", "sp500": "SP500"}
 ONS_CPI = "https://www.ons.gov.uk/generator?format=csv&uri=/economy/inflationandpriceindices/timeseries/d7bt/mm23"   # UK CPI index (2015=100)
 NASDAQ_SPX = "https://api.nasdaq.com/api/quote/SPX/historical?assetclass=index&fromdate={a}&todate={b}&limit=9999"
+NASDAQ_SPX_KEY = "https://api.nasdaq.com/api/quote/SPX/historical?assetclass=index"                      # stable snapshot address
+ECB_FX = "https://data-api.ecb.europa.eu/service/data/EXR/D.USD+GBP+CHF.EUR.SP00.A?format=csvdata&startPeriod=2015-01-01"   # daily reference rates per EUR
+FRED_SEED = B.MANUAL_DIR / "luxury" / "fred"       # committed copies, cut to what the charts need, for when FRED has never answered this server
+CONTEXT_TIMEOUT = 30
+CONTEXT_RETRY_S = DAY                               # the context sources are tried at most once a day (FRED times out from Railway)
+_CTX_RUNNING = threading.Lock()
 PLAIN_UA = {"User-Agent": "dashboards/1.0 (+https://github.com/mcmarcocheung98-max/dashboards)"}   # FRED answers a plain client at once where the browser UA stalls
 NASDAQ_HEADERS = {"Accept": "application/json, text/plain, */*", "Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"}
 WIKI_MONTHLY = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/{title}/monthly/2015070100/{b}"
@@ -80,8 +92,10 @@ SOURCES = [{"name": "Hand-entered, cited per row: brand list prices (Rolex, Herm
            {"name": "Wikipedia page summaries: each article's lead image for the item cards (an owner-supplied image URL in items.csv takes precedence)", "url": "https://en.wikipedia.org/api/rest_v1/", "cadence": "daily"},
            {"name": "Hand-entered, dated: whether the brand site has each item in stock (stock.csv), read by hand because the brand sites refuse servers", "url": "https://github.com/mcmarcocheung98-max/dashboards/tree/main/data/luxury", "cadence": "weekly"},
            {"name": "eBay Browse API (eBay UK): active fixed-price listings per item, count and asking prices, one snapshot a day once EBAY_APP_ID and EBAY_CERT_ID are set", "url": "https://developer.ebay.com/api-docs/buy/browse/overview.html", "cadence": "daily"},
-           {"name": "FRED: US CPI (CPIAUCSL), UK CPI (GBRCPIALLMINMEI; ONS D7BT when it answers), USD, CHF and EUR to GBP (DEXUSUK, DEXSZUS, DEXUSEU), S&P 500 (SP500)",
-            "url": "https://fred.stlouisfed.org/", "cadence": "daily"}]
+           {"name": "ECB daily reference rates (USD, GBP, CHF per EUR) for the exchange rates; FRED's DEXUSUK, DEXSZUS, DEXUSEU when the ECB does not answer; committed copies (data/luxury/fred) when neither has",
+            "url": "https://data.ecb.europa.eu/", "cadence": "daily, in the background"},
+           {"name": "FRED: US CPI (CPIAUCSL), UK CPI (GBRCPIALLMINMEI; ONS D7BT when it answers), S&P 500 (SP500; Nasdaq's index quote when FRED fails); downloaded in the background at most once a day, never during a page view; committed copies serve until a download works",
+            "url": "https://fred.stlouisfed.org/", "cadence": "daily, in the background"}]
 NOTES = ("Hand-entered points are sparse: a premium is the last resale point against the list price in force on that date, not a daily market. "
          "Asking prices run above sold prices; condition, box and papers, and VAT or import duty on cross-border sales all move the figure. "
          "Rows marked 'verify' were not confirmed on the cited page. Not investment advice: the page gives no buy or sell calls.")
@@ -162,68 +176,189 @@ def parse_ons(text: str) -> pd.Series:
     return pd.Series(out).sort_index()
 
 
-def fred(key: str) -> pd.Series:
-    """FRED's CSV through curl first (FRED resets python-requests connections from Railway, see _base._download), then through
-    requests with a plain user-agent (some proxies stall the browser UA and break curl's HTTP/2 stream); either way the disk snapshot serves when both fail."""
+def fred_download(key: str) -> pd.Series:
+    """BACKGROUND only: FRED's CSV through curl (what works from Railway when FRED answers at all), then requests with a plain user-agent;
+    the snapshot is written on success."""
     url = FRED.format(id=FRED_IDS[key])
     try:
-        return parse_fred(fetch(url, DAY, curl=True, timeout=25, min_bytes=300))
+        return parse_fred(fetch(url, DAY, curl=True, timeout=CONTEXT_TIMEOUT, min_bytes=300))
     except Exception as e:
         try:
-            return parse_fred(fetch(url, DAY, curl=False, timeout=40, min_bytes=300, headers=PLAIN_UA))
+            return parse_fred(fetch(url, DAY, curl=False, timeout=CONTEXT_TIMEOUT, min_bytes=300, headers=PLAIN_UA))
         except Exception:
             raise e
+
+
+def fred_kept(key: str) -> tuple[pd.Series, str | None]:
+    """For page views, never a download: the copy fetched last (memory, then the snapshot on the volume), else the committed seed in
+    data/luxury/fred/. Returns the series and, when it is the seed, the seed's last date (shown as an older copy)."""
+    url = FRED.format(id=FRED_IDS[key])
+    try:
+        return parse_fred(B.cached_only(url)), None
+    except LookupError:
+        pass
+    f = FRED_SEED / f"{FRED_IDS[key]}.csv"
+    if not f.exists():
+        raise LookupError("not fetched yet")
+    s = parse_fred(f.read_text(encoding="utf-8"))
+    return s, str(s.index[-1].date())
+
+
+def kept(url: str, parser):
+    """A non-FRED source's kept copy (memory, then snapshot), parsed; LookupError when never fetched."""
+    return parser(B.cached_only(url))
+
+
+def parse_ecb(text: str) -> dict[str, pd.Series]:
+    """ECB data API CSV (EXR, daily reference rates): CURRENCY, TIME_PERIOD, OBS_VALUE columns -> {USD: per-EUR series, GBP: ..., CHF: ...}."""
+    df = pd.read_csv(StringIO(text), dtype=str)
+    need = {"CURRENCY", "TIME_PERIOD", "OBS_VALUE"}
+    if not need <= set(df.columns):
+        raise ValueError("ECB: layout changed")
+    out = {}
+    for cur, g in df.groupby("CURRENCY"):
+        s = pd.Series(pd.to_numeric(g["OBS_VALUE"], errors="coerce").values, index=pd.to_datetime(g["TIME_PERIOD"], errors="coerce")).dropna().sort_index()
+        if len(s) >= 20:
+            out[cur] = s
+    if not {"USD", "GBP"} <= set(out):
+        raise ValueError("ECB: no USD or GBP")
+    return out
+
+
+def ecb_rates(ecb: dict) -> dict[str, pd.Series]:
+    """GBP per USD, CHF and EUR, monthly means, from the ECB's per-EUR rates."""
+    gbp = ecb["GBP"].resample("MS").mean()
+    out = {"USD": (gbp / ecb["USD"].resample("MS").mean()).dropna(), "EUR": gbp.dropna()}
+    if "CHF" in ecb:
+        out["CHF"] = (gbp / ecb["CHF"].resample("MS").mean()).dropna()
+    return out
 
 
 def cpi_uk() -> tuple[pd.Series, str]:
-    """ONS CPI (D7BT) when it answers, else FRED's copy of the OECD series (which stops in 2025); the ONS failure is then handled."""
+    """UK CPI from kept copies only: ONS (D7BT) when it has answered, else FRED's copy of the OECD series (snapshot, else the seed)."""
     try:
-        return parse_ons(fetch(ONS_CPI, DAY, timeout=25, min_bytes=300)), "ONS"
+        return kept(ONS_CPI, parse_ons), "ONS"
     except Exception:
-        s = fred("cpi_uk")
-        handled(ONS_CPI, "ONS did not answer; UK CPI from FRED's copy of the OECD series")
-        return s, "FRED"
+        s, seed = fred_kept("cpi_uk")
+        return s, "FRED" + (f" (copy to {seed})" if seed else "")
 
 
 def sp500() -> tuple[pd.Series, str]:
-    """S&P 500 daily closes: FRED first, Nasdaq's index quote API when FRED fails (then the FRED failure is handled)."""
+    """S&P 500 closes from kept copies only: FRED (snapshot, else the seed), else Nasdaq's index quote if the background job fetched it."""
     try:
-        return fred("sp500"), "FRED"
-    except Exception as e:
-        try:
-            s = B.nasdaq_daily("SPX", "2016-01-01", lambda url, ttl, **k: __import__("json").loads(fetch(url, ttl, headers=NASDAQ_HEADERS, **k)), assetclass="index")
-            handled(FRED.format(id=FRED_IDS["sp500"]), "FRED did not answer; S&P 500 from Nasdaq's quote API")
-            return s, "Nasdaq"
-        except Exception:
-            raise e
+        s, seed = fred_kept("sp500")
+        if not seed:
+            return s, "FRED"
+        fred_s, fred_src = s, f"FRED (copy to {seed})"
+    except LookupError:
+        fred_s, fred_src = None, None
+    try:
+        j = __import__("json").loads(B.cached_only(NASDAQ_SPX_KEY))
+        rows = (((j or {}).get("data") or {}).get("tradesTable") or {}).get("rows") or []
+        n = pd.Series({pd.to_datetime(r["date"], format="%m/%d/%Y"): float(str(r["close"]).replace("$", "").replace(",", "")) for r in rows if r.get("close")}).sort_index()
+        if len(n) >= 20 and (fred_s is None or n.index[-1] > fred_s.index[-1]):
+            return n, "Nasdaq"
+    except Exception:
+        pass
+    if fred_s is None:
+        raise LookupError("not fetched yet")
+    return fred_s, fred_src
 
 
 def fx() -> dict:
-    """GBP per USD, CHF and EUR, monthly means, from FRED's daily fixings; FX_FALLBACK (flagged) when FRED has never answered."""
-    out, fallback = {"GBP": None}, False
+    """GBP per USD, CHF and EUR, monthly means, from kept copies only: the ECB's reference rates when the background job has them, else
+    FRED's fixings (snapshot, else the committed seed); FX_FALLBACK (flagged) only when nothing at all is kept."""
+    out, fallback, src, seeds = {"GBP": None}, False, None, []
     try:
-        usd_per_gbp = fred("gbpusd").resample("MS").mean()
-        out["USD"] = 1 / usd_per_gbp
-        try:
-            out["CHF"] = 1 / (fred("chfusd").resample("MS").mean() * usd_per_gbp)
-        except Exception:
-            out["CHF"] = None
-        try:
-            out["EUR"] = fred("eurusd").resample("MS").mean() / usd_per_gbp
-        except Exception:
-            out["EUR"] = None
+        out.update(ecb_rates(kept(ECB_FX, parse_ecb)))
+        src = "ECB"
     except Exception:
-        fallback = True
+        try:
+            usd_per_gbp, seed = fred_kept("gbpusd")
+            usd_per_gbp = usd_per_gbp.resample("MS").mean()
+            out["USD"] = 1 / usd_per_gbp
+            seeds += [seed] if seed else []
+            for cur, key in (("CHF", "chfusd"), ("EUR", "eurusd")):
+                try:
+                    r, sd = fred_kept(key)
+                    r = r.resample("MS").mean()
+                    out[cur] = 1 / (r * usd_per_gbp) if cur == "CHF" else r / usd_per_gbp
+                    seeds += [sd] if sd else []
+                except Exception:
+                    out[cur] = None
+            src = "FRED" + (f" (copy to {max(seeds)})" if seeds else "")
+        except Exception:
+            fallback = True
     for k, v in FX_FALLBACK.items():
         if out.get(k) is None:
             out[k] = v
             fallback = fallback or k in ("USD",)
-    return {"rates": out, "fallback": fallback}
+    return {"rates": out, "fallback": fallback, "source": src or "fixed approximate rates", "seed": bool(seeds)}
+
+
+def fill_context() -> dict:
+    """BACKGROUND job: the context sources at most once a day (a marker on the volume, so a restart does not reset it): the ECB's rates, ONS,
+    Nasdaq's S&P quote, each FRED series, and each Wikipedia article's pageviews and summary (its lead image), each CONTEXT_TIMEOUT seconds,
+    six at a time; a FRED failure is marked handled while the seed serves; then the cached payloads are dropped so the next view reads the
+    new copies. Also started by a view that finds only seeds or an article never fetched."""
+    from concurrent.futures import ThreadPoolExecutor
+    from ..cache import _cache
+    if not _CTX_RUNNING.acquire(blocking=False):
+        return {"context": "already running"}
+    try:
+        mark = B.SNAP_DIR / "luxury-context-try.txt"
+        try:
+            last = float(mark.read_text())
+        except (OSError, ValueError):
+            last = 0.0
+        missing = [t for t in all_wiki_titles() if not (B._snap(wiki_key(t)).exists())]
+        if time.time() - last < CONTEXT_RETRY_S and not missing:
+            return {"context": "tried less than a day ago"}
+        B.SNAP_DIR.mkdir(parents=True, exist_ok=True)
+        mark.write_text(str(time.time()))
+
+        def one(name):
+            try:
+                if name.startswith("wiki:"):
+                    try:
+                        wiki_views_download(name[5:])
+                    except ValueError:
+                        pass                                   # a stub with months of history: fetched and kept, the view falls through it
+                    wiki_image_download(name[5:])
+                elif name == "ecb":
+                    parse_ecb(fetch(ECB_FX, DAY, timeout=CONTEXT_TIMEOUT, min_bytes=500, headers=PLAIN_UA))
+                elif name == "ons":
+                    parse_ons(fetch(ONS_CPI, DAY, timeout=CONTEXT_TIMEOUT, min_bytes=300))
+                elif name == "nasdaq_spx":
+                    url = NASDAQ_SPX.format(a="2016-01-01", b=pd.Timestamp.now().strftime("%Y-%m-%d"))
+                    fetch(url, DAY, timeout=CONTEXT_TIMEOUT, headers=NASDAQ_HEADERS, key=NASDAQ_SPX_KEY, min_bytes=500)
+                else:
+                    fred_download(name)
+                return name, "ok"
+            except Exception as e:
+                if name in FRED_IDS and (FRED_SEED / f"{FRED_IDS[name]}.csv").exists():
+                    handled(FRED.format(id=FRED_IDS[name]), "FRED does not answer the server; the committed copy serves (data/luxury/fred)")
+                return name, f"{type(e).__name__}: {str(e)[:80]}"
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            res = dict(ex.map(one, ["ecb", "ons", "nasdaq_spx", *FRED_IDS, *("wiki:" + t for t in all_wiki_titles())]))
+        for k in ("fx", "overview", "watches", "bags", "roi", "liquidity"):
+            _cache.pop(f"topic:{SLUG}:{k}", None)
+        return res
+    finally:
+        _CTX_RUNNING.release()
+
+
+def _kick_context() -> None:
+    if not _CTX_RUNNING.locked():
+        threading.Thread(target=fill_context, daemon=True, name="luxury_fill_context").start()
 
 
 def _fx_cached() -> dict:
     from ..cache import _cached
-    return _cached(f"topic:{SLUG}:fx", 6 * 3600, fx)
+    r = _cached(f"topic:{SLUG}:fx", 6 * 3600, fx)
+    if r.get("seed") or r.get("fallback"):
+        _kick_context()                                   # returns at once; fill_context tries the sources at most once a day
+    return r
 
 
 def to_gbp(price: float, cur: str, date: pd.Timestamp, FX: dict | None = None) -> float | None:
@@ -561,10 +696,21 @@ def parse_summary(j: dict) -> dict | None:
     return {"src": th["source"], "width": th.get("width"), "height": th.get("height"), "page": ((j.get("content_urls") or {}).get("desktop") or {}).get("page") or ("https://en.wikipedia.org/wiki/" + quote(str(j.get("title") or "").replace(" ", "_")))}
 
 
+def wiki_summary_url(title: str) -> str:
+    return WIKI_SUMMARY.format(title=quote(title.replace(" ", "_"), safe=""))
+
+
+def wiki_image_download(title: str) -> dict | None:
+    """BACKGROUND only: the article's summary (its lead image), snapshotted for the views."""
+    return parse_summary(__import__("json").loads(fetch(wiki_summary_url(title), DAY, headers=WIKI_BOT, timeout=CONTEXT_TIMEOUT, min_bytes=40)))
+
+
 def wiki_image(title: str) -> dict | None:
-    """The article's lead image, cached a day with a snapshot (None when the article has none)."""
-    j = __import__("json").loads(fetch(WIKI_SUMMARY.format(title=quote(title.replace(" ", "_"), safe="")), DAY, headers=WIKI_BOT, timeout=20, min_bytes=40))
-    return parse_summary(j)
+    """For views, never a download: the kept summary (memory, then snapshot); None when the article has no image or was never fetched."""
+    try:
+        return parse_summary(__import__("json").loads(B.cached_only(wiki_summary_url(title))))
+    except (LookupError, ValueError):
+        return None
 
 
 def photo(item: dict, used_title: str | None = None) -> dict | None:
@@ -623,15 +769,23 @@ def wiki_titles(spec: str) -> list[str]:
     return [t.strip() for t in (spec or "").split("|") if t.strip()]
 
 
-def wiki_views(title: str) -> pd.Series:
-    """Monthly pageviews of an English Wikipedia article (users, all access) since July 2015, indexed by month start. Raises when the
-    article has fewer than MIN_WIKI_MONTHS months (a recent stub), so the caller can try the next title."""
-    j = __import__("json").loads(fetch(wiki_url(title), DAY, headers=WIKI_BOT, timeout=30, min_bytes=40, key=wiki_key(title)))
-    d = parse_wiki(j)
+def _wiki_series(text: str, title: str) -> pd.Series:
+    d = parse_wiki(__import__("json").loads(text))
     s = pd.Series({pd.Timestamp(k): v for k, v in d.items()}, dtype=float).sort_index()
     if len(s) < MIN_WIKI_MONTHS:
         raise ValueError(f"Wikimedia: only {len(s)} months for {title} (a recent article)")
     return s
+
+
+def wiki_views_download(title: str) -> pd.Series:
+    """BACKGROUND only: an article's monthly pageviews since July 2015, snapshotted under a stable key for the views."""
+    return _wiki_series(fetch(wiki_url(title), DAY, headers=WIKI_BOT, timeout=CONTEXT_TIMEOUT, min_bytes=40, key=wiki_key(title)), title)
+
+
+def wiki_views(title: str) -> pd.Series:
+    """For views, never a download: the kept copy (memory, then snapshot), indexed by month start; LookupError when never fetched, ValueError
+    when the article has fewer than MIN_WIKI_MONTHS months (a recent stub), so the caller can try the next title."""
+    return _wiki_series(B.cached_only(wiki_key(title)), title)
 
 
 def wiki_pick(spec: str) -> tuple[str | None, pd.Series | None, dict[str, str]]:
@@ -683,8 +837,9 @@ def attention(views: dict[str, pd.Series], its: list[dict] | None = None) -> dic
 
 
 def _wiki_all(its: list[dict]) -> tuple[dict[str, pd.Series], dict[str, str]]:
-    """Every item's article series, each item failing on its own: ({title: series}, {title: error}). An item lists its titles in order
-    of preference (wiki = "A|B"); the first with enough history is used, the stubs before it are reported, not errors."""
+    """Every item's article series from kept copies, each item failing on its own: ({title: series}, {title: error}). An item lists its
+    titles in order of preference (wiki = "A|B"); the first with enough history is used, the stubs before it are reported, not errors. A
+    title never fetched reads "downloading" and starts the background fill."""
     out, errs = {}, {}
     for spec in sorted({i["wiki"] for i in its if i.get("wiki")}):
         if any(t in out for t in wiki_titles(spec)):
@@ -695,8 +850,14 @@ def _wiki_all(its: list[dict]) -> tuple[dict[str, pd.Series], dict[str, str]]:
             for t, e in tried.items():
                 errs[t] = e + "; used " + title + " instead"
         else:
-            errs.update(tried)
+            errs.update({t: ("downloading" if e.startswith("LookupError") else e) for t, e in tried.items()})
+    if any(v == "downloading" for v in errs.values()):
+        _kick_context()
     return out, errs
+
+
+def all_wiki_titles() -> list[str]:
+    return sorted({t for i in items(with_watchlist=True) for t in wiki_titles(i.get("wiki"))})
 
 
 # ------------------------------------------------------------------ auction results: hammer vs estimate, sell-through
@@ -884,11 +1045,19 @@ def _views(cat: str | None = None) -> list[dict]:
 
 
 def _context() -> dict:
-    """FRED context with each part failing on its own."""
+    """The context series from kept copies only (never a download during a view), each part failing on its own; `sources` names where
+    each came from ("FRED (copy to 2026-10-01)" is the committed seed). A seed or a missing series starts the background fill."""
     out: dict = {}
-    B._part(out, "cpi_us", lambda: fred("cpi_us"))
-    B._part(out, "cpi_uk", lambda: cpi_uk())
-    B._part(out, "sp500", lambda: sp500())
+
+    def cpi_us():
+        s, seed = fred_kept("cpi_us")
+        return s, "FRED" + (f" (copy to {seed})" if seed else "")
+    B._part(out, "cpi_us", cpi_us)
+    B._part(out, "cpi_uk", cpi_uk)
+    B._part(out, "sp500", sp500)
+    out["sources"] = {k: out[k][1] for k in ("cpi_us", "cpi_uk", "sp500") if out.get(k)}
+    if any(out.get(f"{k}_error") for k in ("cpi_us", "cpi_uk", "sp500")) or any("copy to" in v for v in out["sources"].values()):
+        _kick_context()
     return out
 
 
@@ -925,7 +1094,7 @@ def _overview_now() -> dict:
             "where": line, "items": [{**{k: v[k] for k in ("id", "name", "brand", "reference", "category", "url", "retail_now", "retail_date", "latest", "premium", "change_1y", "change_3y", "n_points", "n_verify", "note")},
                                       **card_extras(v["id"])} for v in views],
             "counts": {"points": sum(v["n_points"] for v in views), "verify": sum(v["n_verify"] for v in views)},
-            "fx_fallback": FX["fallback"], "as_of": max((v["latest"]["date"] for v in views if v["latest"]), default=None),
+            "fx_fallback": FX["fallback"], "fx_source": FX["source"], "as_of": max((v["latest"]["date"] for v in views if v["latest"]), default=None),
             "stale": B.stale_info([FRED.format(id=i) for i in FRED_IDS.values()]), "cited": cited("resale", "retail"), "updated": int(time.time())}
 
 
@@ -934,7 +1103,7 @@ def _cat_now(cat: str) -> dict:
     bk = basket(cat, views)
     FX = _fx_cached()
     out = {"items": views, "premium": _pts(bk["premium"], 4), "ratio": _pts(bk["ratio"], 4), "index": _pts(bk["index"], 2), "share_above": _pts(bk["share_above"], 3),
-           "n": _pts(bk["n"], 0), "need": bk["need"], "fx_fallback": FX["fallback"], "cited": cited("resale", "retail"), "updated": int(time.time()),
+           "n": _pts(bk["n"], 0), "need": bk["need"], "fx_fallback": FX["fallback"], "fx_source": FX["source"], "cited": cited("resale", "retail"), "updated": int(time.time()),
            "as_of": max((v["latest"]["date"] for v in views if v["latest"]), default=None),
            "stale": B.stale_info([FRED.format(id=i) for i in FRED_IDS.values()])}
     if cat == "bag":
@@ -996,16 +1165,17 @@ def retail_calendar(views: list[dict]) -> tuple[list[dict], dict]:
 def _roi_now() -> dict:
     views = _views()
     fee_list = fees()
+    FX = _fx_cached()
     ctx = _context()
     spx = ctx.get("sp500")[0] if ctx.get("sp500") else None
     cpi = ctx.get("cpi_uk")[0] if ctx.get("cpi_uk") else None
-    cpi_us = ctx.get("cpi_us")
+    cpi_us = ctx.get("cpi_us")[0] if ctx.get("cpi_us") else None
     return {"rows": roi_rows(views, fee_list, spx, cpi), "fees": fee_list, "default_platform": DEFAULT_PLATFORM,
             "items": [{k: v[k] for k in ("id", "name", "category", "retail_points", "latest", "retail_now")} for v in views],
             "sp500": _pts(spx.resample("ME").last(), 2) if spx is not None else None, "sp500_source": ctx["sp500"][1] if ctx.get("sp500") else None, "sp500_error": ctx.get("sp500_error"),
             "cpi_uk": _pts(cpi, 3) if cpi is not None else None, "cpi_uk_source": ctx["cpi_uk"][1] if ctx.get("cpi_uk") else None, "cpi_uk_error": ctx.get("cpi_uk_error"),
-            "cpi_us": _pts(cpi_us, 3) if cpi_us is not None else None, "cpi_us_error": ctx.get("cpi_us_error"),
-            "stale": B.stale_info([FRED.format(id=i) for i in FRED_IDS.values()] + [ONS_CPI]), "as_of": str(_now().date()), "updated": int(time.time())}
+            "cpi_us": _pts(cpi_us, 3) if cpi_us is not None else None, "cpi_us_error": ctx.get("cpi_us_error"), "sources": ctx.get("sources") or {}, "fx_source": FX["source"],
+            "stale": B.stale_info([FRED.format(id=i) for i in FRED_IDS.values()] + [ONS_CPI, ECB_FX]), "as_of": str(_now().date()), "updated": int(time.time())}
 
 
 def _heat_now() -> dict:
@@ -1059,7 +1229,7 @@ def _cached_ep(name, fn, ttl=3600):
     return lambda: _cached(f"topic:{SLUG}:{name}", ttl, fn)
 
 
-BACKGROUND = [EBAY.fill]          # the daily eBay snapshot (the server runs it at start and every 6 hours; it does nothing until the keys are set)
+BACKGROUND = [fill_context, EBAY.fill]   # the context downloads (once a day) and the daily eBay snapshot; the server runs them at start and every 6 hours
 
 ENDPOINTS = {"overview": _cached_ep("overview", _overview_now), "watches": _cached_ep("watches", lambda: _cat_now("watch")), "bags": _cached_ep("bags", lambda: _cat_now("bag")),
              "roi": _cached_ep("roi", _roi_now), "heat": _cached_ep("heat", _heat_now), "liquidity": _cached_ep("liquidity", _liquidity_now), "fees": _cached_ep("fees", _fees_now, 600), "items": _cached_ep("items", _items_now, 600)}

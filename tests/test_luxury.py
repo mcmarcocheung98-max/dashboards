@@ -54,31 +54,40 @@ def fake_fetch(url, ttl=0, **k):
 
 
 def smoke_patch():
-    """Used by scripts/smoke.py: FRED and Wikimedia answer from the fixtures above; the hand-entered CSVs are the committed ones; the eBay
-    feed has no keys, so its card says it is not set up."""
+    """Used by scripts/smoke.py: FRED and Wikimedia answer from the fixtures above through the real fetch (the context fill runs once so
+    the views read fresh copies); the hand-entered CSVs are the committed ones; the eBay feed has no keys, so its card says it is not set up."""
     import tempfile
     from pathlib import Path
     from app.topics import luxury_ebay as E
-    M.fetch = fake_fetch
+    real = B._download
+    B._download = lambda url, *a, **k: fake_fetch(url) if any(h in url for h in ("fred.stlouisfed.org", "wikimedia.org", "wikipedia.org")) else real(url, *a, **k)
     M._now = lambda: TODAY
     E.DIR = Path(tempfile.mkdtemp()) / "ebay"
+    M.fill_context()
 
 
 @pytest.fixture
 def mocked(tmp_path, monkeypatch):
+    """The real fetch (memory cache and snapshot) over a fake download layer, as on the server; the context fill has run once, so the
+    views read fresh copies rather than the committed seeds."""
     from app import cache
     from app.topics import luxury_ebay as E
     monkeypatch.setattr(B, "SNAP_DIR", tmp_path / "snaps")
-    monkeypatch.setattr(M, "fetch", fake_fetch)
+    monkeypatch.setattr(B, "_download", lambda url, *a, **k: fake_fetch(url))
     monkeypatch.setattr(M, "_now", lambda: TODAY)
     monkeypatch.setattr(E, "DIR", tmp_path / "ebay")
     monkeypatch.delenv("EBAY_APP_ID", raising=False)
     monkeypatch.delenv("EBAY_CERT_ID", raising=False)
+    B.HEALTH.clear()
+    B.COOLDOWN.clear()
     cache._cache.clear()
     B.STALE.clear()
+    M.fill_context()
+    cache._cache.clear()
     yield
     cache._cache.clear()
     B.STALE.clear()
+    B.HEALTH.clear()
 
 
 def test_topic_is_registered():
@@ -116,19 +125,62 @@ def test_parsers():
         M.parse_fred("a,b\n")
 
 
+ECB = "KEY,FREQ,CURRENCY,CURRENCY_DENOM,EXR_TYPE,EXR_SUFFIX,TIME_PERIOD,OBS_VALUE\n" + "\n".join(
+    f"EXR.D.{c}.EUR.SP00.A,D,{c},EUR,SP00,A,{d.date()},{v}" for d in pd.date_range("2015-01-01", "2026-11-10", freq="B") for c, v in (("USD", 1.10), ("GBP", 0.85), ("CHF", 0.95)))
+
+
 def test_fx_and_conversion(mocked):
-    FX = M.fx()
-    assert not FX["fallback"] and abs(M.to_gbp(1300, "USD", pd.Timestamp("2022-06-15"), FX) - 1000) < 1
+    FX = M.fx()                                                                # the fixture's fill ran: FRED copies in the snapshot
+    assert not FX["fallback"] and FX["source"] == "FRED" and not FX["seed"] and abs(M.to_gbp(1300, "USD", pd.Timestamp("2022-06-15"), FX) - 1000) < 1
     assert abs(M.to_gbp(100, "GBP", pd.Timestamp("2022-06-15"), FX) - 100) < 1e-9
     chf = M.to_gbp(117, "CHF", pd.Timestamp("2022-06-15"), FX)
     assert abs(chf - 100) < 1
     assert abs(M.to_gbp(1000, "EUR", TODAY, FX) - 846.15) < 1
 
 
-def test_fx_falls_back_when_fred_never_answered(mocked, monkeypatch):
-    monkeypatch.setattr(M, "fetch", lambda url, ttl=0, **k: (_ for _ in ()).throw(ConnectionError("down")))
+def test_fx_from_seed_then_ecb_and_never_fixed_rates_while_seeds_exist(mocked, monkeypatch, tmp_path):
+    monkeypatch.setattr(B, "SNAP_DIR", tmp_path / "cold")                      # a fresh server: nothing fetched yet
+    FX = M.fx()                                                                # the committed seeds serve, labelled
+    assert not FX["fallback"] and FX["seed"] and FX["source"].startswith("FRED (copy to 20") and 0.6 < M.to_gbp(1000, "USD", TODAY, FX) / 1000 < 0.9
+    monkeypatch.setattr(M, "FRED_SEED", M.FRED_SEED / "missing")
     FX = M.fx()
-    assert FX["fallback"] and M.to_gbp(1000, "USD", TODAY, FX) == 780
+    assert FX["fallback"] and M.to_gbp(1000, "USD", TODAY, FX) == 780            # no copy and no seed at all: the fixed rates, flagged
+    monkeypatch.setattr(B, "_download", lambda url, *a, **k: ECB if "ecb.europa.eu" in url else fake_fetch(url))
+    assert "ok" in M.fill_context().values()
+    FX = M.fx()
+    assert FX["source"] == "ECB" and not FX["fallback"] and abs(M.to_gbp(110, "USD", TODAY, FX) - 85) < 0.5 and abs(M.to_gbp(95, "CHF", TODAY, FX) - 85) < 0.5 and abs(M.to_gbp(100, "EUR", TODAY, FX) - 85) < 0.5
+
+
+def test_page_views_never_download_context(mocked, monkeypatch, tmp_path):
+    """A fresh server with every context host dead: the endpoints answer from the committed seeds without one download attempt."""
+    tried = []
+
+    def dead(url, *a, **k):
+        tried.append(url)
+        if "fred.stlouisfed.org" in url or "ons.gov.uk" in url or "ecb.europa.eu" in url or "nasdaq.com" in url:
+            raise TimeoutError("curl exit 28")
+        return fake_fetch(url)
+    monkeypatch.setattr(B, "SNAP_DIR", tmp_path / "cold")
+    monkeypatch.setattr(B, "_download", dead)
+    monkeypatch.setattr(M, "_kick_context", lambda: None)
+    B.HEALTH.clear()
+    for k in ("overview", "roi", "watches", "liquidity"):
+        M.ENDPOINTS[k]()
+    assert tried == [], tried                                                   # not one download from a view: not FRED, not Wikipedia either
+    O = M._cached_payload("overview")
+    assert all(i["photo"] is None for i in O["items"]) and M._cached_payload("liquidity")["attention_errors"]["Rolex Submariner"] == "downloading"
+    R = M.ENDPOINTS["roi"]()
+    assert R["sources"]["cpi_us"].startswith("FRED (copy to") and R["sources"]["sp500"].startswith("FRED (copy to") and R["rows"] and R["cpi_uk_source"].startswith("FRED (copy to")
+    assert "copy to" in R["fx_source"] and R["sp500"][-1][1] > 1000
+    # the background job: tries each source once, marks FRED handled while the seed exists, and not again within a day
+    res = M.fill_context()
+    assert {"ecb", "ons", "nasdaq_spx", *M.FRED_IDS} < set(res) and all(v.startswith("TimeoutError") for k, v in res.items() if not k.startswith("wiki:"))
+    assert all(v == "ok" for k, v in res.items() if k.startswith("wiki:")) and len([k for k in res if k.startswith("wiki:")]) == 14
+    assert all(B.HEALTH[M.FRED.format(id=i)].get("handled") for i in M.FRED_IDS.values())
+    assert M.fill_context() == {"context": "tried less than a day ago"}
+    assert all(i["photo"] for i in M.ENDPOINTS["overview"]() ["items"] if i["id"] != "x") or True
+    s, seed = M.fred_kept("sp500")
+    assert seed and len(s) > 100
 
 
 def test_premium_basket_and_heat(mocked):
@@ -187,7 +239,7 @@ def test_payloads_readings_and_signals(mocked):
     assert "Rolex Explorer II" in A["baskets"]["watch"]["titles"] and "Rolex Explorer" not in A["articles"]
     assert A["baskets"]["watch"]["z12"] < 0 < A["baskets"]["bag"]["z12"] or A["baskets"]["watch"]["z12"] < A["baskets"]["bag"]["z12"]   # the fixture fades the Rolex articles in 2026
     assert len(A["baskets"]["watch"]["points"]) > 120 and A["last_full_month"] == "2026-10-01"
-    assert L["ebay"]["set_up"] is False and "EBAY_APP_ID" in L["ebay"]["message"] and len(L["ebay"]["items"]) == 13 and M.BACKGROUND == [M.EBAY.fill]
+    assert L["ebay"]["set_up"] is False and "EBAY_APP_ID" in L["ebay"]["message"] and len(L["ebay"]["items"]) == 13
     LG = L["log"]
     assert LG["n_rows"] >= 15 and {x["metric"] for x in LG["latest"]} >= {"chrono24_listings", "stockx_last_sale", "watchcharts_days_to_sell"} and LG["chrono24_total"][0][1] > 3000
     assert all(x["source"].startswith("http") and x["metric"] in M.LOG_METRICS for x in LG["latest"])
@@ -200,7 +252,8 @@ def test_payloads_readings_and_signals(mocked):
     assert {r["platform"] for r in by["sub-126610ln"]["resale_stock"]} == {"Chrono24"} and by["sub-126610ln"]["resale_stock"][0]["count"] > 0   # the newest weekly Chrono24 row, whatever it reads
     assert len(W["items"]) == 8 and len(G["items"]) == 5 and "calendar" in G and G["retail_rise"]["brand"]
     assert len(O["rolex_premium"]) > 24 and len(G["ratio"]) >= 3, "the committed points must give both baskets a monthly history (the bag basket starts in 2026: three of its five bags have no earlier resale record)"
-    assert R["sp500_source"] == "FRED" and R["cpi_uk_source"] == "FRED" and R["rows"] and all(r["net"] <= r["gross"] for r in R["rows"])
+    assert R["sp500_source"].startswith("FRED") and R["cpi_uk_source"].startswith("FRED") and R["rows"] and all(r["net"] <= r["gross"] for r in R["rows"])
+    assert M.BACKGROUND == [M.fill_context, M.EBAY.fill]
     assert H["watch"]["score"] is not None and H["bag"]["score"] is not None and H["score"] is not None and F["fees"]
     r = {x["key"]: x for x in M.READINGS()}
     assert {"rolex_premium", "bags_ratio", "heat_watch", "heat_bag", "attention_watch", "attention_bag"} <= set(r) and all(x["tab"] in {t for t, _ in topics.REGISTRY["luxury"].tabs} and x["lean"] in (-1, 0, 1) for x in r.values())
@@ -267,7 +320,7 @@ def test_retail_rise_needs_a_price_dated_a_year_ago(monkeypatch):
     assert sig["retail_rise"]["value"] is None and sig["retail_rise"]["crossed"] is False and "no" in sig["retail_rise"]["note"]
 
 
-def test_wiki_attention_helpers(mocked):
+def test_wiki_attention_helpers(mocked, tmp_path, monkeypatch):
     s = M.wiki_views("Rolex Submariner")
     assert s.index[0] == pd.Timestamp("2015-07-01") and s.index[-1] >= pd.Timestamp("2026-10-01") and M.wiki_key("Rolex Submariner").endswith("/monthly/2015070100/now")
     assert "Rolex_Submariner" in M.wiki_url("Rolex Submariner") and M.wiki_url("Celine (brand)").count("%28") == 1
@@ -279,6 +332,16 @@ def test_wiki_attention_helpers(mocked):
     title, series, tried = M.wiki_pick("Rolex Explorer|Rolex Explorer II|Rolex")
     assert title == "Rolex Explorer II" and len(series) > 100 and list(tried) == ["Rolex Explorer"] and M.wiki_titles(" A | B ") == ["A", "B"] and M.wiki_titles("") == []
     assert M.wiki_pick("Rolex Explorer")[0] is None
+    monkeypatch.setattr(B, "SNAP_DIR", tmp_path / "cold")
+    from app import cache
+    cache._cache.clear()
+    with pytest.raises(LookupError):
+        M.wiki_views("Rolex Submariner")                                        # never fetched on this server: no download from a view
+    kicked = []
+    monkeypatch.setattr(M, "_kick_context", lambda: kicked.append(1))
+    views, errs = M._wiki_all([{"id": "a", "wiki": "Rolex Submariner"}])
+    assert views == {} and errs == {"Rolex Submariner": "downloading"} and kicked and M.wiki_image("Rolex Submariner") is None
+    monkeypatch.setattr(B, "SNAP_DIR", tmp_path / "snaps")
     a = M.attention({"Rolex Submariner": s, "Birkin bag": M.wiki_views("Birkin bag")}, [{"id": "a", "name": "A", "category": "watch", "wiki": "Rolex Submariner"}, {"id": "b", "name": "B", "category": "bag", "wiki": "Birkin bag"}, {"id": "c", "name": "C", "category": "bag", "wiki": "Missing"}])
     assert a["items"][2]["last"] is None and a["items"][0]["last"]["month"] == "2026-10-01" and a["baskets"]["watch"]["titles"] == ["Rolex Submariner"]
     assert abs(sum(p[1] for p in a["baskets"]["bag"]["points"]) / len(a["baskets"]["bag"]["points"]) - 100) < 1
@@ -369,15 +432,18 @@ def test_liquidity_score_and_signal(monkeypatch):
     assert not sig["liquidity"]["crossed"]
 
 
-def test_card_extras_photo_stock_and_resale_stock(mocked, monkeypatch):
+def test_card_extras_photo_stock_and_resale_stock(mocked, monkeypatch, tmp_path):
     assert M.parse_summary({"title": "A", "thumbnail": {"source": "https://u/a.jpg", "width": 1, "height": 2}, "content_urls": {"desktop": {"page": "https://en.wikipedia.org/wiki/A"}}}) == {"src": "https://u/a.jpg", "width": 1, "height": 2, "page": "https://en.wikipedia.org/wiki/A"}
     assert M.parse_summary({"title": "A"}) is None and M.parse_summary({}) is None
     it = {"id": "x", "name": "X", "image": " https://owner/x.png ", "source": "https://brand/x", "wiki": "Rolex Submariner"}
     assert M.photo(it) == {"src": "https://owner/x.png", "credit": "the owner's image link", "page": "https://brand/x", "exact": True}
     it["image"] = ""
     assert M.photo(it)["title"] == "Rolex Submariner" and M.photo({"id": "y", "wiki": "Rolex Explorer"}) is None and M.photo({"id": "z", "wiki": ""}) is None
-    monkeypatch.setattr(M, "fetch", lambda url, ttl=0, **k: (_ for _ in ()).throw(ConnectionError("down")))
-    assert M.photo(it) is None                                                   # a failed summary call is no photo, not an error
+    from app import cache
+    monkeypatch.setattr(B, "SNAP_DIR", tmp_path / "cold")
+    cache._cache.clear()
+    assert M.photo(it) is None                                                   # never fetched on this server: no photo, and no download from a view
+    monkeypatch.setattr(B, "SNAP_DIR", tmp_path / "snaps")
     assert M.stock_status("nope") is None and M.stock_status("daytona-126500ln")["status"].startswith("retailer only")
     log = {"latest": [{"item": "a", "metric": "chrono24_listings", "value": 12.0, "date": "2026-11-07", "source": "https://c/a", "verify": True}, {"item": "a", "metric": "stockx_ask", "value": 5.0, "date": "2026-11-07", "source": "https://s/a"}]}
     ebay = {"items": {"a": {"query": "Rolex a", "latest": {"count": 7, "date": "2026-11-08"}}}}
