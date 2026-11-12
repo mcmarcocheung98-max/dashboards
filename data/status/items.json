@@ -387,10 +387,10 @@
   {
    "id": "luxury-fred-hang",
    "owner": "session:luxury",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-12",
    "title": "Luxury: a page view must never wait on FRED (hung over 180 s in two live checks)",
-   "detail": "Seed plus background fetch, as AI Stocks did in bb5c495 and c87c7dd."
+   "detail": "Seed plus background fetch, as AI Stocks did in bb5c495 and c87c7dd. Fixed within the hour (238aad0); to be confirmed by the 13 Nov live check."
   }
  ],
  "roadmap": [
@@ -1658,10 +1658,19 @@
      "what": "smoke: a tab whose stamp never reads Updated is a failed tab with a retry, not a crash (pushed last evening after a Debt & Rates check died on it)",
      "commit": "92b8a84",
      "by": "agent"
+    },
+    {
+     "dashboard": "Luxury",
+     "slug": "luxury",
+     "tab": "overview",
+     "what": "a page view never downloads: context series come from memory, the snapshot or a committed FRED seed, and a once-a-day background job tries the ECB, ONS, Nasdaq and FRED. Cold overview 0.6 s instead of 91 s in the session's test; item photos and pageviews moved to the same job",
+     "commit": "238aad0",
+     "by": "session:luxury"
     }
    ],
    "review": "prediction-markets",
    "next": [
+    "Tomorrow's live check: Luxury loads in both passes; whether the ECB and ONS routes answer on Railway",
     "Read the Prediction Markets session's reply (watchlist refresh, verify rows, biggest_move excluding resolutions)",
     "Friday: review the next dashboard not yet reviewed (china-us-tech, compute-chips, longevity, pokemon-cards, altcoins, btc-cycles, luxury, ai-models, options, demographics remain)"
    ],
