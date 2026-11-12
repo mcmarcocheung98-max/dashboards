@@ -141,9 +141,10 @@ const VIEWS = {
         el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Watchlist", ...Object.values(VENUE).map(v => v[0])].map(h => el("th", {}, h))),
           ...r.watch.map(w => el("tr", {}, wrap([w.label]), ...Object.keys(VENUE).map(v => el("td", {}, w[v] ? link(prob(w[v].yes), w[v].url) : "–")))))),
         r.listed.length ? [el("h2", { style: "margin-top:12px" }, "Also listed"), marketTable(r.listed, ["yes", "d1", "vol24", "end"])] : el("div", { class: "muted", style: "margin-top:6px" }, "Nothing else listed under this region's tags."),
-        note({ US: "The Fed, CPI and the midterms. Lines: Polymarket's daily price for each watchlist row; the table adds the other venues.",
-               UK: "Politics and the Bank of England. UK markets are thin next to US ones, so a few trades can move them.",
-               HK: "The Hang Seng, the PBoC and Taiwan, where listed. Few venues list Hong Kong or China macro markets; 'Also listed' shows what Polymarket has under its China, Hong Kong and Taiwan tags." }[r.key]));
+        note({ US: "The Fed, CPI, a recession, Treasury yields and the 2028 race.",
+               UK: "The Bank of England, UK inflation and the pound. UK markets are thin next to US ones, so a few trades can move them.",
+               HK: "The PBoC, Taiwan and China's place in the AI race. Polymarket lists no Hong Kong macro market (under its Hong Kong tag there are only daily weather markets); 'Also listed' shows what it has under its China, Hong Kong and Taiwan tags." }[r.key]
+          + " Lines: Polymarket's price for each watchlist row, one point a day at that day's last trade; the last point is the current price, the same figure as the table, which adds the other venues."));
     });
     return [hd, why(d.missing), ...blocks, nfa()].filter(Boolean);
   },
@@ -152,7 +153,11 @@ const VIEWS = {
     const d = await api("accuracy"), a = d.p30 || {}, b = d.p7 || {};
     const hd = staticHead(kpi("Resolved markets", num(d.n)), kpi("Brier score, 30 days before", a.brier == null ? "–" : a.brier.toFixed(3)),
       kpi("Brier score, 7 days before", b.brier == null ? "–" : b.brier.toFixed(3)), kpi("Resolved Yes", a.base == null ? "–" : prob(a.base)));
-    if (!d.n) return [hd, card(null, el("div", { class: "muted" }, "The calibration sample is being built by a background job (a few hundred paced requests); it appears within hours of a deploy.")), nfa()];
+    const ret = d.retired || [];
+    const retired = ret.length ? card("Retired from the watchlist", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Retired", "Question", "Outcome", "Last price before"].map(h => el("th", {}, h))),
+      ...ret.map(r => el("tr", {}, el("td", {}, r.date), wrap([link(r.label, r.source)]), wrap([r.outcome || "–"]), el("td", {}, r.last_price ? r.last_price : "–"))))),
+      note("Watchlist questions that resolved, or stopped matching an open market, with what happened and where the market stood before (data/prediction-markets/retired.csv).")) : null;
+    if (!d.n) return [hd, card(null, el("div", { class: "muted" }, "The calibration sample is being built by a background job (a few hundred paced requests); it appears within hours of a deploy.")), retired, nfa()].filter(Boolean);
     const pts = c => (c.buckets || []).map(x => [x.price * 100, x.freq * 100]);
     const cal = card("Calibration: priced chance against how often it happened (%)",
       ...svgLines([{ name: "30 days before", points: pts(a), color: css("--s2") }, { name: "7 days before", points: pts(b), color: css("--s1") },
@@ -167,7 +172,7 @@ const VIEWS = {
       note("Brier score: the average squared gap between the price and the outcome (0 is perfect; always saying 50% scores 0.25). Lower is better."));
     const miss = (d.misses || []).length ? card("Big misses: priced 70+ points away a week before", marketTable((d.misses || []).map(m => ({ q: m.q, yes: m.p7, d1: null, vol: m.vol, end: new Date(m.closed * 1000).toISOString().slice(0, 10) })), ["yes", "vol", "end"]),
       note("Chance a week before resolution; each resolved the other way. The most traded first.")) : null;
-    return [hd, cal, el("div", { class: "grid2" }, counts, cats), miss, nfa()].filter(Boolean);
+    return [hd, cal, el("div", { class: "grid2" }, counts, cats), miss, retired, nfa()].filter(Boolean);
   },
 };
 

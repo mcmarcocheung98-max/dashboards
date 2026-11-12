@@ -194,6 +194,32 @@ def seed_log(days: int = 75) -> None:
         csv.writer(fh).writerows(rows)
 
 
+FIXTURE_WATCHLIST = """\
+date,key,label,category,region,polymarket,pick,kalshi,manifold,predictit,source,note
+2026-10-26,fed_next,Fed: no change at the next FOMC meeting,macro,US,fed_decision no_change,soonest,KXFEDDECISION:hold/maintain,,,https://polymarket.com/event/fed-decision-in-october-20260617190323537,Polymarket keywords checked against the Gamma API on 2026-10-26; Kalshi subtitle wording verify
+2026-10-26,fed_dec_cut,Fed: a 25 bp cut in December,macro,US,fed_decision december 25_bp decrease/cut,volume,KXFEDDECISION:december cut 25,fed december 2026:december_meeting/december_2026_meeting cut,,https://polymarket.com/,verify: keywords from memory; check on the Markets tab that the matched question is the December meeting
+2026-10-26,us_cpi,US CPI: the most traded CPI question,macro,US,cpi !china !uk !euro,soonest,,,,https://polymarket.com/,verify: keywords from memory; on 2026-10-26 a bare 'cpi' matched China's CPI. CPI markets are buckets (2.6% in October; above 3.9% in November) that differ by venue; so no cross-venue comparison (Kalshi KXCPIYOY dropped)
+2026-10-26,us_recession,US recession in 2026,macro,US,recession 2026,volume,KXRECSSNBER:recession,us recession 2026:recession 2026,recession 2026,https://polymarket.com/,verify: keywords and Kalshi series ticker KXRECSSNBER from memory
+2026-10-26,house_2026,Democrats win the House in the 2026 midterms,politics,US,house 2026 democrat,volume,CONTROLH:2026 democrat/2026-d,democrats win the house 2026:house democrat,house 2026 democrat,https://www.predictit.org/,verify: keywords from memory; Kalshi series CONTROLH answers from Railway (2026-10-26) and also lists 2028, hence the year
+2026-10-26,senate_2026,Republicans keep the Senate in the 2026 midterms,politics,US,senate 2026 republican !balance !house,volume,CONTROLS:2026 republican/2026-r,republicans senate 2026:senate republican,senate 2026 republican,https://www.predictit.org/,verify: keywords from memory; Kalshi series CONTROLS answers from Railway (2026-10-26) and also lists 2028, hence the year; on 2026-10-26 Polymarket's 'Balance of Power: R Senate, R House' combination matched until !balance
+2026-10-26,uk_starmer,Keir Starmer out as Prime Minister,politics,UK,starmer out/leave/resign,volume,,starmer:starmer out/leave/resign/prime_minister !if,starmer,https://polymarket.com/,verify: keywords from memory; no Polymarket match on 2026-10-26; conditional Manifold questions ('If Labour wins…') excluded
+2026-10-26,uk_boe,Bank of England: the next rate decision,macro,UK,bank_of_england/boe,soonest,KXBOE:cut/hold,,,https://polymarket.com/,verify: keywords from memory (on 2026-10-26 'boe' inside 'Nijboer' matched a tennis match before keywords had to start a word); Kalshi series KXBOE returned no markets on 2026-10-26; Manifold dropped (its only open question was a different one: a rate rise in 2026)
+2026-10-26,hk_hsi,Hang Seng Index: the most traded question,macro,HK,hang_seng,volume,,hang seng:hang_seng,,https://polymarket.com/,verify: keywords from memory ('hsi' matched 'Kuo Hsi' on 2026-10-26, so it is gone); may have no listed market
+2026-10-26,cn_pboc,PBoC: rate cut,macro,HK,pboc/people's_bank/china_rate/china_interest,volume,,pboc:pboc/china,,https://polymarket.com/,verify: keywords from memory; may have no listed market
+2026-10-26,taiwan,China invades or blockades Taiwan,geo,HK,china taiwan invade/invasion/blockade,volume,,china invade taiwan:taiwan 2026 !2027 !if,taiwan,https://polymarket.com/,verify: keywords from memory; conditional Manifold questions ('…if China invades') excluded after one matched on 2026-10-26
+2026-10-26,btc_150k,Bitcoin reaches $150k,crypto,,bitcoin 150/150k/150_000/150000,volume,KXBTCMAXY:150,bitcoin 150k:bitcoin 150,,https://polymarket.com/,verify: keywords and Kalshi series ticker KXBTCMAXY from memory
+2026-10-26,ai_model,Best AI model: the most traded question,ai,,best_ai/top_ai/ai_model,volume,,best ai model:best_ai,,https://polymarket.com/,verify: keywords from memory
+2026-10-26,ukraine,Russia-Ukraine ceasefire,geo,,russia ukraine ceasefire,volume,,ukraine ceasefire:ceasefire 2026 !if,ukraine ceasefire,https://polymarket.com/,verify: keywords from memory
+2026-10-26,world_series,World Series: the most traded team,sports,,world_series,volume,,,,https://polymarket.com/,verify: keywords from memory; the World Series is played in late October
+"""
+
+
+def fixture_watchlist() -> list[dict]:
+    """The watchlist the fixture markets above were built for (the live list in data/prediction-markets/ changes as questions resolve)."""
+    import io
+    return [r for r in csv.DictReader(io.StringIO(FIXTURE_WATCHLIST)) if r.get("key")]
+
+
 def smoke_patch() -> None:
     """Used by scripts/smoke.py: every source of this dashboard answers from the fixtures above, with a log and a calibration sample."""
     import tempfile
@@ -202,6 +228,7 @@ def smoke_patch() -> None:
     M._log_file = lambda: own / "daily.csv"
     M._acc_file = lambda: own / "resolved.json"
     M.fetch_json = fake_fetch_json
+    M.watchlist = fixture_watchlist
     M.PACE = 0
     seed_log()
     M.fill_accuracy()
@@ -213,6 +240,7 @@ def mocked(tmp_path, monkeypatch):
     monkeypatch.setattr(B, "SNAP_DIR", tmp_path / "snaps")
     monkeypatch.setattr(M, "fetch_json", fake_fetch_json)
     monkeypatch.setattr(M, "PACE", 0)
+    monkeypatch.setattr(M, "watchlist", fixture_watchlist)
     cache._cache.clear()
     B.STALE.clear()
     yield
@@ -387,11 +415,14 @@ def test_registry_and_seed_file():
     assert len(rows) >= 12 and all(r["source"] for r in rows)
     assert {r["region"] for r in rows} >= {"US", "UK", "HK"} and {r["category"] for r in rows} >= {k for k, _, _, _ in M.CATEGORIES}
     for r in rows:
-        assert r["category"] in M.CAT_LABEL and r.get("pick") in ("", "volume", "soonest")
+        assert r["category"] in M.CAT_LABEL and r.get("pick") in ("", "volume", "soonest", "favourite")
+        assert r["source"].startswith(("https://polymarket.com/event/", "https://kalshi.com/markets/"))     # the market page it matched
+        assert "verify" not in r.get("note", "")
         assert not r.get("kalshi") or ":" in r["kalshi"]
         assert not r.get("manifold") or ":" in r["manifold"]
-        if "from memory" in r.get("note", ""):
-            assert "verify" in r["note"]
+    retired = B.manual_rows(M.SLUG, "retired")
+    assert retired and all(r["source"] and r["outcome"] for r in retired)
+    assert not {r["key"] for r in rows} & {r["key"] for r in retired}         # a question is live or retired, not both
 
 
 # ------------------------------------------------------------------ live (run by hand)
@@ -449,3 +480,26 @@ def test_signal_watch_points(mocked, monkeypatch):
     assert not run([], recs({6: 0.02, 7: 0.05, 8: 0.03}))["calibration"]["crossed"]
     assert run([], recs({7: 0.02, 8: 0.05}))["calibration"]["crossed"] is False             # one rise is not two
     assert run([], recs({5: 0.02, 7: 0.03, 8: 0.05}))["calibration"]["crossed"] is False     # June missing: not two months running
+
+
+def test_favourite_pick_takes_the_leading_outcome():
+    cands = [{"q": "a", "yes": 0.14, "vol": 9e6, "end": "2027-04-01"}, {"q": "b", "yes": 0.145, "vol": 1e6, "end": "2027-04-01"}]
+    assert M._pick(cands, "favourite", "vol", "end")["q"] == "b"            # the highest priced, not the most traded
+    assert M._pick(cands, "volume", "vol", "end")["q"] == "a"
+
+
+def test_biggest_move_leaves_out_markets_that_are_settling(mocked):
+    from app import cache
+    far, soon = str((NOW + pd.Timedelta(days=30)).date()), str(NOW.date())
+    row = lambda k, d1, yes, end: {"key": k, "label": k, "poly": {"yes": yes, "d1": d1, "end": end, "vol24": 1}, "kalshi": None}
+    cache._cache[f"{M.SLUG}:rows"] = (1e18, ([row("resolved", -0.195, 0.004, far), row("last_day", 0.3, 0.6, soon), row("live", 0.04, 0.5, far)], {}))
+    s = {x["key"]: x for x in M.SIGNALS()}["biggest_move"]
+    assert s["value"] == 4.0 and not s["crossed"] and s["note"].startswith("live")
+    cache._cache[f"{M.SLUG}:rows"] = (1e18, ([row("resolved", -0.195, 0.004, far)], {}))
+    s = {x["key"]: x for x in M.SIGNALS()}["biggest_move"]
+    assert s["value"] is None and not s["crossed"] and "last day" in s["note"]
+
+
+def test_accuracy_lists_retired_watchlist_rows(mocked):
+    d = M.ENDPOINTS["accuracy"]()
+    assert d["retired"] and d["retired"][0]["outcome"] and d["retired"] == sorted(d["retired"], key=lambda r: r["date"], reverse=True)

@@ -1,0 +1,9 @@
+date,key,label,outcome,last_price,source,note
+# Watchlist rows taken off the live list, newest first: what happened, and where the market stood before (date of that price in brackets).
+2026-11-12,house_2026,Democrats win the House in the 2026 midterms,Yes: Democrats won the House (called 4 Nov 2026),Polymarket 91.5% (26 Oct),https://kalshi.com/markets/controlh,outcome from Kalshi CONTROLH-2026-D (settled Yes on 4 Nov 2026)
+2026-11-12,senate_2026,Republicans keep the Senate in the 2026 midterms,No: Democrats won the Senate (called 4 Nov 2026),Kalshi 37% (3 Nov),https://kalshi.com/markets/controls,outcome from Kalshi CONTROLS-2026-D (settled Yes on 4 Nov 2026); the Polymarket match was a seat-count bracket so Kalshi is the price shown
+2026-11-12,world_series,World Series: the most traded team,Milwaukee Brewers won (29 Oct 2026),Brewers 83% (26 Oct),https://polymarket.com/event/mlb-world-series-champion-2026,outcome from Polymarket (event closed 29 Oct 2026)
+2026-11-12,fed_oct,Fed: no change at the October 2026 meeting,Yes: no change (28 Oct 2026),Polymarket 92.7% (26 Oct),https://polymarket.com/event/fed-decision-in-october-20260617190323537,the fed_next row's October match; outcome from Polymarket (event closed 28 Oct 2026)
+2026-11-12,fed_dec_cut,Fed: a 25 bp cut in December,Open: replaced by the January 2027 meeting,Polymarket 0.35% (12 Nov),https://polymarket.com/event/fed-decision-in-december-20260729232808632,the market prices a hike path (Hike-Pause-Hike for Sep-Oct-Dec at 95.6% on 12 Nov) so a cut is near zero
+2026-11-12,uk_starmer,Keir Starmer out as Prime Minister,Open: no Polymarket market to follow,–,https://polymarket.com/,no open Polymarket market matched on 26 Oct or 12 Nov 2026
+2026-11-12,hk_hsi,Hang Seng Index: the most traded question,Open: no listed market,–,https://polymarket.com/,Polymarket's Hong Kong tag lists only daily weather markets (12 Nov 2026)

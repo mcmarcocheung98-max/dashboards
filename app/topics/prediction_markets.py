@@ -336,9 +336,13 @@ def watchlist() -> list[dict]:
     return [r for r in manual_rows(SLUG, "watchlist") if r.get("key")]
 
 
-def _pick(cands: list[dict], how: str, vol: str, end: str) -> dict | None:
+def _pick(cands: list[dict], how: str, vol: str, end: str, price: str = "yes") -> dict | None:
+    """volume: the most traded match; soonest: the most traded of those that close first; favourite: the highest priced (the leading
+    team, candidate or band of a many-outcome event)."""
     if not cands:
         return None
+    if how == "favourite":
+        return max(cands, key=lambda c: c.get(price) or 0)
     if how == "soonest":
         today = str(_now().date())
         live = [c for c in cands if (c.get(end) or "9999") >= today] or cands
@@ -689,7 +693,8 @@ def _accuracy_now() -> dict:
                             key=lambda r: -r["vol"])[:12],
            "since": time.strftime("%Y-%m-%d", time.gmtime(min(r["closed"] for r in recs))) if recs else None,
            "latest": time.strftime("%Y-%m-%d", time.gmtime(max(r["closed"] for r in recs))) if recs else None,
-           "min_volume": ACC_MIN_VOLUME, "stale": {}, "updated": int(time.time())}
+           "min_volume": ACC_MIN_VOLUME, "stale": {}, "updated": int(time.time()),
+           "retired": sorted(manual_rows(SLUG, "retired"), key=lambda r: r["date"], reverse=True)}
     out["as_of"] = out["latest"]
     return out
 
@@ -777,7 +782,10 @@ def SIGNALS() -> list[dict]:
     out = []
 
     # biggest_move: the largest 24-hour change in a watchlist market's Polymarket price
-    moves = [(abs(r["poly"]["d1"]), r) for r in rows if r.get("poly") and r["poly"].get("d1") is not None]
+    # a market in its last day, or already priced as settled (1% or less, 99% or more), is resolving, not moving
+    tomorrow = str((_now() + pd.Timedelta(days=1)).date())
+    moves = [(abs(r["poly"]["d1"]), r) for r in rows if r.get("poly") and r["poly"].get("d1") is not None
+             and (r["poly"].get("end") or "9999") > tomorrow and 0.01 < (r["poly"].get("yes") or 0) < 0.99]
     if moves:
         _, r = max(moves, key=lambda x: x[0])
         d1 = round(r["poly"]["d1"] * 100, 1)
@@ -786,7 +794,8 @@ def SIGNALS() -> list[dict]:
                     "note": f"{r['label']}: {r['poly']['yes'] * 100:.0f}% on Polymarket"})
     else:
         out.append({"key": "biggest_move", "tab": "markets", "label": "Biggest 24-hour move on the watchlist", "value": None, "lean": 0,
-                    "watch": "any market moves 10 points in a day", "crossed": False, "note": "waiting for the first fetch of the watchlist"})
+                    "watch": "any market moves 10 points in a day", "crossed": False,
+                    "note": "no open watchlist market outside its last day" if rows else "waiting for the first fetch of the watchlist"})
 
     # venue_gap: Polymarket against Kalshi on the rows that matched both (the same question, checked by the watchlist keywords)
     gaps = [(round(abs(r["poly"]["yes"] - r["kalshi"]["yes"]) * 100, 1), r) for r in rows if r.get("poly") and r.get("kalshi")]

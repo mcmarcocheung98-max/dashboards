@@ -36,12 +36,19 @@ each venue by **keywords**, so the next Fed meeting or a new contract is picked 
 - `kalshi`: `SERIES:keywords`, e.g. `KXFEDDECISION:hold/maintain` (keywords matched on the market title, its Yes subtitle and its ticker, so `CONTROLH:2026` picks the 2026 House race).
 - `manifold`: `search term:keywords` (open binary markets only).
 - `predictit`: keywords on the market and contract name.
-- `pick`: `volume` (the most traded match) or `soonest` (the one that closes first: the next meeting, the next print).
+- `pick`: `volume` (the most traded match), `soonest` (the one that closes first: the next meeting, the next print) or `favourite` (the
+  highest priced outcome of a many-outcome event: the leading team, band or company).
 - `category`: politics, macro, crypto, ai, sports, geo. `region`: US, UK, HK or blank.
 
-The Markets and Cross-venue tabs show what each row matched; check it before reading the number. Rows whose keywords or Kalshi series came from
-memory say **verify** in the note; when a match looks wrong, tighten the keywords and change the note to say when it was checked. Every row
-cites a source (the venue page).
+The Markets and Cross-venue tabs show what each row matched; check it before reading the number. Every row's `source` is the market page its
+keywords matched when it was last checked, and the note says when; a venue column is filled only where that venue's match was seen live. When a
+match looks wrong, tighten the keywords and update the note. Keep 12 to 16 open questions with the same mix of kinds and regions.
+
+**Retiring a row.** When a question resolves, or no open market matches it any more, move it to `retired.csv`
+(`date,key,label,outcome,last_price,source,note`): what happened, where the market stood before (with the date of that price) and the page the
+outcome came from. The Accuracy tab lists them. On 12 Nov 2026 the midterm rows, the World Series, October's Fed decision, the December cut,
+Starmer and the Hang Seng were retired, and the January 2027 Fed meeting, the 10-year yield, the 2028 race, UK inflation, the pound,
+China's AI race and the NFL champion added.
 
 ## What is logged, and where
 
@@ -67,7 +74,7 @@ The four approved in `data/signals/watchlist.json`, read from cached data only (
 
 | Key | Value | Crossed when |
 |---|---|---|
-| `biggest_move` | the largest 24-hour change in a watchlist market's Polymarket price, in points (lean = its sign) | 10 points or more either way |
+| `biggest_move` | the largest 24-hour change in a watchlist market's Polymarket price, in points (lean = its sign). Markets in their last day, or already priced as settled (1% or less, 99% or more), are left out: a resolution is not a move | 10 points or more either way |
 | `venue_gap` | the largest gap between Polymarket and Kalshi among watchlist questions matched on both | above 5 points |
 | `volume` | the watchlist markets' 24-hour volume now, against the average logged day of the last 30 (each market's logged 24-hour volume; before 3 Nov, the day's change in its all-time volume) | twice the average or more, with 5+ logged days |
 | `calibration` | Brier score of the price 30 days before resolution, by month resolved (months with 10+ markets) | higher in each of the last two complete months than the month before (three back-to-back months; a month under 10 markets breaks the run) |
