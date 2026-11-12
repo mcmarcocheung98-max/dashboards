@@ -247,10 +247,20 @@
   {
    "date": "2026-11-11",
    "session": "dev-agent",
-   "input": 34,
-   "cache_write": 243332,
-   "cache_read": 345263,
-   "output": 1175,
+   "input": 2300,
+   "cache_write": 1398053,
+   "cache_read": 45371377,
+   "output": 61016,
+   "lookups": 1,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-11-12",
+   "session": "dev-agent",
+   "input": 4,
+   "cache_write": 397440,
+   "cache_read": 499393,
+   "output": 1187,
    "lookups": 0,
    "source": "transcript"
   }
@@ -448,5 +458,5 @@
  },
  "saving_per_lookup": 112958,
  "saving_measured": "2026-10-31",
- "updated": "2026-11-11 07:44 UTC"
+ "updated": "2026-11-12 07:41 UTC"
 }
