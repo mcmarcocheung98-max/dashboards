@@ -226,6 +226,17 @@
   },
   {
    "date": "2026-11-09",
+   "session": "ai-models",
+   "input": 202515,
+   "cache_write": 879355,
+   "cache_read": 3042495,
+   "output": 33519,
+   "cost_usd": 19.45,
+   "source": "totals",
+   "since": "2026-11-08T14:40"
+  },
+  {
+   "date": "2026-11-09",
    "session": "dev-agent",
    "input": 2082,
    "cache_write": 1230231,
@@ -245,6 +256,72 @@
    "source": "transcript"
   },
   {
+   "date": "2026-11-10",
+   "session": "options",
+   "input": 928,
+   "cache_write": 572870,
+   "cache_read": 5317955,
+   "output": 13261,
+   "cost_usd": 13.46,
+   "source": "totals",
+   "since": "2026-11-08T14:46"
+  },
+  {
+   "date": "2026-11-11",
+   "session": "ai",
+   "input": 644995,
+   "cache_write": 1996330,
+   "cache_read": 11900598,
+   "output": 64401,
+   "cost_usd": 18.95,
+   "source": "totals",
+   "since": "2026-11-05T15:29"
+  },
+  {
+   "date": "2026-11-11",
+   "session": "ai-stocks",
+   "input": 1102,
+   "cache_write": 339534,
+   "cache_read": 17772163,
+   "output": 43379,
+   "cost_usd": 7.14,
+   "source": "totals",
+   "since": "2026-11-08T14:40"
+  },
+  {
+   "date": "2026-11-11",
+   "session": "btc-cycles",
+   "input": 540,
+   "cache_write": 927331,
+   "cache_read": 5773758,
+   "output": 12110,
+   "cost_usd": 8.82,
+   "source": "totals",
+   "since": "2026-11-04T20:07"
+  },
+  {
+   "date": "2026-11-11",
+   "session": "debt-rates",
+   "input": 3873,
+   "cache_write": 1634754,
+   "cache_read": 24042492,
+   "output": 75888,
+   "cost_usd": 17.95,
+   "source": "totals",
+   "since": "2026-11-08T12:55"
+  },
+  {
+   "date": "2026-11-11",
+   "session": "demographics",
+   "input": 439220,
+   "cache_write": 1053966,
+   "cache_read": 9092805,
+   "output": 64192,
+   "cost_usd": 10.92,
+   "source": "totals",
+   "since": "2026-11-03T19:21"
+  },
+  {
    "date": "2026-11-11",
    "session": "dev-agent",
    "input": 2300,
@@ -253,6 +330,50 @@
    "output": 61016,
    "lookups": 1,
    "source": "transcript"
+  },
+  {
+   "date": "2026-11-11",
+   "session": "housing",
+   "input": 1550,
+   "cache_write": 1081483,
+   "cache_read": 9045819,
+   "output": 3138,
+   "cost_usd": 10.53,
+   "source": "totals",
+   "since": "2026-11-05T15:31"
+  },
+  {
+   "date": "2026-11-11",
+   "session": "pokemon-cards",
+   "input": 512,
+   "cache_write": 1208844,
+   "cache_read": 1306358,
+   "output": 732,
+   "cost_usd": 9.95,
+   "source": "totals",
+   "since": "2026-11-05T15:35"
+  },
+  {
+   "date": "2026-11-11",
+   "session": "space",
+   "input": 19319,
+   "cache_write": 879281,
+   "cache_read": 8290234,
+   "output": 32544,
+   "cost_usd": 8.96,
+   "source": "totals",
+   "since": "2026-11-03T23:05"
+  },
+  {
+   "date": "2026-11-11",
+   "session": "trends",
+   "input": 623,
+   "cache_write": 1488639,
+   "cache_read": 28988821,
+   "output": 42474,
+   "cost_usd": 18.56,
+   "source": "totals",
+   "since": "2026-11-04T20:05"
   },
   {
    "date": "2026-11-12",
@@ -268,21 +389,21 @@
  "snapshots": {
   "housing": {
    "id": "session_01PTPxuP1i5cZzbFuked5sRt",
-   "as_of": "2026-11-05T15:31:14.607141Z",
-   "input": 24831,
-   "cache_write": 5245057,
-   "cache_read": 92750758,
-   "output": 177228,
-   "cost_usd": 64.1028
+   "as_of": "2026-11-11T10:30:56.336826Z",
+   "input": 26381,
+   "cache_write": 6326540,
+   "cache_read": 101796577,
+   "output": 180366,
+   "cost_usd": 74.632816
   },
   "ai": {
    "id": "session_01V4gwm4gpbgR2T3g3neGZfo",
-   "as_of": "2026-11-05T15:29:50.197309Z",
-   "input": 69125,
-   "cache_write": 6647955,
-   "cache_read": 102120170,
-   "output": 160373,
-   "cost_usd": 76.7939
+   "as_of": "2026-11-11T13:41:23.373044Z",
+   "input": 714120,
+   "cache_write": 8644285,
+   "cache_read": 114020768,
+   "output": 224774,
+   "cost_usd": 95.744437
   },
   "robotaxi": {
    "id": "session_015aqbbZFdfXcibzEC7yT94z",
@@ -295,12 +416,12 @@
   },
   "btc-cycles": {
    "id": "session_01AgBzbLd5WvgunSFvXxYQJW",
-   "as_of": "2026-11-04T20:07:12.847484Z",
-   "input": 3555062,
-   "cache_write": 6800862,
-   "cache_read": 225998120,
-   "output": 675200,
-   "cost_usd": 156.6307
+   "as_of": "2026-11-11T10:30:44.343338Z",
+   "input": 3555602,
+   "cache_write": 7728193,
+   "cache_read": 231771878,
+   "output": 687310,
+   "cost_usd": 165.448419
   },
   "compute-chips": {
    "id": "session_01VySeUhZQDQ5Q3LRA2F2Br4",
@@ -309,25 +430,25 @@
    "cache_write": 2335380,
    "cache_read": 26630611,
    "output": 79650,
-   "cost_usd": 25.6173
+   "cost_usd": 25.617274
   },
   "demographics": {
    "id": "session_017FZw3HVNpap7DPqmrSzp9Y",
-   "as_of": "2026-11-03T19:21:26.209463Z",
-   "input": 125009,
-   "cache_write": 1351162,
-   "cache_read": 35400951,
-   "output": 95285,
-   "cost_usd": 19.7667
+   "as_of": "2026-11-11T14:27:49.034119Z",
+   "input": 564229,
+   "cache_write": 2405128,
+   "cache_read": 44493756,
+   "output": 159477,
+   "cost_usd": 30.690946
   },
   "debt-rates": {
    "id": "session_01DjiLHK9jLscwzRAtBrW7hR",
-   "as_of": "2026-11-08T12:55:39.295271Z",
-   "input": 99791,
-   "cache_write": 4564628,
-   "cache_read": 143741481,
-   "output": 280218,
-   "cost_usd": 70.847429
+   "as_of": "2026-11-11T18:19:47.489639Z",
+   "input": 103664,
+   "cache_write": 6199382,
+   "cache_read": 167783973,
+   "output": 356106,
+   "cost_usd": 88.798985
   },
   "climate": {
    "id": "session_016qhyE8K2Ta61cxezGrnnSf",
@@ -358,21 +479,21 @@
   },
   "space": {
    "id": "session_01NWRBg9G3RhsJj6HU51qjDD",
-   "as_of": "2026-11-03T23:05:12.749644Z",
-   "input": 16001,
-   "cache_write": 2046122,
-   "cache_read": 44228013,
-   "output": 107522,
-   "cost_usd": 27.3647
+   "as_of": "2026-11-11T17:59:18.365285Z",
+   "input": 35320,
+   "cache_write": 2925403,
+   "cache_read": 52518247,
+   "output": 140066,
+   "cost_usd": 36.320096
   },
   "pokemon-cards": {
    "id": "session_01E2rgzyuaUHsMjB6PAC9UoM",
-   "as_of": "2026-11-05T15:35:03.292798Z",
-   "input": 8683,
-   "cache_write": 3554101,
-   "cache_read": 117949533,
-   "output": 236317,
-   "cost_usd": 56.7838
+   "as_of": "2026-11-11T10:31:18.015658Z",
+   "input": 9195,
+   "cache_write": 4762945,
+   "cache_read": 119255891,
+   "output": 237049,
+   "cost_usd": 66.732498
   },
   "prediction-markets": {
    "id": "session_01J3ZVbej7kofN2W2QvFMciM",
@@ -385,12 +506,12 @@
   },
   "trends": {
    "id": "session_01DDQTR7e3Cpv1twBcXdfFFq",
-   "as_of": "2026-11-04T20:05:58.145767Z",
-   "input": 3868,
-   "cache_write": 1940983,
-   "cache_read": 48975893,
-   "output": 131044,
-   "cost_usd": 27.9594
+   "as_of": "2026-11-11T10:30:53.400536Z",
+   "input": 4491,
+   "cache_write": 3429622,
+   "cache_read": 77964714,
+   "output": 173518,
+   "cost_usd": 46.518243
   },
   "nba-odds": {
    "id": "session_01HgurtzQez3NndAMfZFsyAp",
@@ -403,12 +524,12 @@
   },
   "ai-stocks": {
    "id": "session_01Hguru33HhMq9DoqY2C26R6",
-   "as_of": "2026-11-08T14:40:09.703198Z",
-   "input": 1820,
-   "cache_write": 470356,
-   "cache_read": 22368682,
-   "output": 81345,
-   "cost_usd": 9.870764
+   "as_of": "2026-11-11T11:29:47.369853Z",
+   "input": 2922,
+   "cache_write": 809890,
+   "cache_read": 40140845,
+   "output": 124724,
+   "cost_usd": 17.013457
   },
   "daily-check": {
    "id": "session_01Hguru4ZnmwKFghzbQZHzmL",
@@ -439,24 +560,24 @@
   },
   "ai-models": {
    "id": "session_01Hguru1tHBCffh5BwqSs3mk",
-   "as_of": "2026-11-08T14:40:00.288024Z",
-   "input": 558200,
-   "cache_write": 830327,
-   "cache_read": 13907093,
-   "output": 191832,
-   "cost_usd": 26.596006
+   "as_of": "2026-11-09T09:19:15.619646Z",
+   "input": 760715,
+   "cache_write": 1709682,
+   "cache_read": 16949588,
+   "output": 225351,
+   "cost_usd": 46.047737
   },
   "options": {
    "id": "session_01Hguru26F1zDdmAxFa5sdbA",
-   "as_of": "2026-11-08T14:46:12.736817Z",
-   "input": 2120,
-   "cache_write": 261969,
-   "cache_read": 15978085,
-   "output": 109891,
-   "cost_usd": 14.749651
+   "as_of": "2026-11-10T07:50:58.190988Z",
+   "input": 3048,
+   "cache_write": 834839,
+   "cache_read": 21296040,
+   "output": 123152,
+   "cost_usd": 28.20887
   }
  },
  "saving_per_lookup": 112958,
  "saving_measured": "2026-10-31",
- "updated": "2026-11-12 07:41 UTC"
+ "updated": "2026-11-12 07:44 UTC"
 }

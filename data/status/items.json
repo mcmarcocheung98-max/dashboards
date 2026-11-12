@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-11",
+ "updated": "2026-11-12",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -375,6 +375,14 @@
    "since": "2026-11-11",
    "title": "AI Stocks: /api/ai-stocks/midterms did not answer within 300 s on the server",
    "detail": "First call after the deploy (10:50 UTC) timed out with no bytes. Asked for a snapshot-first answer and a check of the FRED fetches on /api/health. Fixed in bb5c495 the same hour: answers in under a second from the seed. FRED itself is unreachable from Railway (see r-fred-via-actions)."
+  },
+  {
+   "id": "pm-review-1112",
+   "owner": "session:prediction-markets",
+   "status": "waiting",
+   "since": "2026-11-12",
+   "title": "Prediction Markets: retire resolved watchlist rows (midterms, World Series, October Fed), cite a market page per row, biggest_move must not count resolutions",
+   "detail": "From the 12 Nov review."
   }
  ],
  "roadmap": [
@@ -800,6 +808,16 @@
     "session:trends (review)",
     "session:debt-rates and session:demographics (verify rows)",
     "session:btc-cycles (date-dependent test)"
+   ]
+  },
+  {
+   "date": "2026-11-12",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Local tests 456 passed. Newsletter built, not sent (no Gmail secrets). Signals 66 of 83 wired, 16 crossed. Live check still running when this entry was written; its result is added below when read.",
+   "fixed": [],
+   "handed": [
+    "session:prediction-markets (review)"
    ]
   }
  ],
@@ -1604,6 +1622,41 @@
     "Replies owed in the Pokémon, Longevity and Compute-chips sessions",
     "Pokémon session: say go in its own conversation; it has the test speed-up ready plus two older items waiting there",
     "Approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals"
+   ]
+  },
+  {
+   "date": "2026-11-12",
+   "title": "Prediction Markets reviewed: its watchlist is two weeks stale; token totals collected",
+   "summary": "The Prediction Markets review found a watchlist written on 26 Oct that still follows questions that have resolved (the 3 Nov midterms, the World Series, the October Fed meeting), 14 rows without a cited market page, and a biggest-move signal that may be counting resolutions as moves; handed to its session. Token totals for twelve sessions were collected for the Graphify Daily tokens tab. The unsourced-row count is 190, down from 417 on Tuesday: Demographics is at zero, Debt & Rates cleared 170 and waits on network access for its last 122. Signals: 66 of 83 wired, 16 crossed; the 10-year real yield rose to 2.78% and the Options volatility premium fell to 17%.",
+   "changes": [
+    {
+     "dashboard": "Altcoins",
+     "slug": "altcoins",
+     "tab": "signals",
+     "what": "honest significance for the signal weights, a fixed fallback for rule T2 and a basket record; the basket card adds the record since every coin trades",
+     "commit": "b73b7e4",
+     "by": "session:altcoins"
+    },
+    {
+     "dashboard": "shared",
+     "slug": "status",
+     "tab": "log",
+     "what": "smoke: a tab whose stamp never reads Updated is a failed tab with a retry, not a crash (pushed last evening after a Debt & Rates check died on it)",
+     "commit": "92b8a84",
+     "by": "agent"
+    }
+   ],
+   "review": "prediction-markets",
+   "next": [
+    "Read the Prediction Markets session's reply (watchlist refresh, verify rows, biggest_move excluding resolutions)",
+    "Friday: review the next dashboard not yet reviewed (china-us-tech, compute-chips, longevity, pokemon-cards, altcoins, btc-cycles, luxury, ai-models, options, demographics remain)"
+   ],
+   "asks": [
+    "Debt & Rates: allow the government hosts its 122 remaining rows need (gov.uk, OBR, HK Budget, China MoF, PBoC, ChinaBond, the Fed, CBO), or accept them staying marked verify",
+    "approve or skip r-fred-via-actions, r-climate-disasters, r-watch-recalibrate, r-private-signals",
+    "Broker for the options trading portal",
+    "Gmail newsletter secrets (built, not sent again), eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback",
+    "Say go in the Pokémon session (test speed-up and two older items)"
    ]
   }
  ]
