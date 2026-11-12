@@ -134,7 +134,7 @@ of *30-day momentum*, *inside a zone (flipped)* and *place in the 1-year range (
 both data sets: here, and on the trading bot's point-in-time top-10 Binance basket since 2019 (62 coin histories; `docs/Alt_Zone_Signals_Study.xlsx`
 in the trading repo, where the zone flip chosen on this page's data was confirmed on data it had not seen). Final score = that mean, clipped to
 ±1. Strong buy ≥ +0.5, lean buy ≥ +0.2, lean sell ≤ −0.2, strong sell ≤ −0.5. **Read it long only**: a buy reading says the coin is rising,
-out of volume-backed resistance and near its highs; anything else says stand aside. Shorting the low readings has not paid.
+out of volume-backed resistance and near its highs; anything else says stand aside. Shorting the low readings has not paid. The basket card's early years rest on few coins (most of the ten did not trade before 2024), so it also shows the record from the day all of them trade; read that row before the whole-history one.
 
 **Backtest method (walk-forward).** Weights are first fitted once 180 days of pooled history exist and re-fitted every 30 days, each time on
 rows whose 7-day return was already known; every day's score uses the latest weights fitted before it. Trading it: position at each close from

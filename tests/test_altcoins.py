@@ -439,6 +439,10 @@ def test_weights_reward_a_signal_that_predicts_and_the_backtest_adds_up():
     assert lo["time_short"] == 0 and lo["total"] == 0
     bs = SG.basket_stats(wf["composite"], {"A": d.close, "B": _walk(n=600, seed=4).close}, long_short=False)
     assert bs["coins"] == 2 and {"rule", "hold", "rule_before", "rule_after", "equity", "hold_curve"} <= set(bs) and 0 <= bs["time_in_market"] <= 1 and bs["rule"]["days"] > 300
+    late = pd.date_range("2025-01-01", periods=200)                                    # a coin that lists later: the full-basket row starts with it
+    cl = pd.Series(100 * np.cumprod(1 + np.random.default_rng(1).normal(0, 0.02, 400)), index=pd.date_range("2024-06-15", periods=400))
+    b2 = SG.basket_stats({"A": pd.Series(0.5, index=cl.index), "B": pd.Series(0.5, index=late)}, {"A": cl, "B": cl.reindex(late)})
+    assert b2["coins_first"] == 1 and b2["full_from"] == "2025-01-01" and b2["rule_full"]["days"] < b2["rule"]["days"] and "full_from" not in bs
     sr = SG.strategy_returns(pd.Series([0.5, 0.5, 0.0], index=pd.date_range("2025-01-01", periods=3)), pd.Series([10, 11, 12.1], index=pd.date_range("2025-01-01", periods=3)))
     assert sr.iloc[0] == pytest.approx(0.1 - SG.COST_PER_SIDE) and sr.iloc[1] == pytest.approx(0.1)             # cost on the way in only; the last day has no next move
     rows = SG.contributions(S.iloc[-1], w)

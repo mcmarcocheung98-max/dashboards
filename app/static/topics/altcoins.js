@@ -629,9 +629,10 @@ function basketCard(d) {
   return el("div", { style: "margin-top:10px" }, el("b", {}, "The signal on all " + B.coins + " coins at once, long only, equal weight, against holding the same coins"),
     el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["Period", "Signal: total", "Sharpe", "Worst fall", "Holding: total", "Sharpe", "Worst fall"].map((h, i) => el("th", { style: (i ? "text-align:right;" : "") + "white-space:nowrap" }, h))),
       row("All (" + B.rule.from + " on)", B.rule, B.hold), B.rule_before.total != null ? row("Before " + B.split, B.rule_before, B.hold_before) : null, B.rule_after.total != null ? row("From " + B.split, B.rule_after, B.hold_after) : null,
+      B.full_from && B.rule_full && B.rule_full.total != null ? row("All " + B.coins + " coins trading (" + B.full_from + " on)", B.rule_full, B.hold_full) : null,
       S && S.rule && S.rule.total != null ? row("Long + short, all", S.rule, S.hold) : null)),
     ...linesChart([{ name: "Signal, long only", points: B.equity, color: css("--s1") }, { name: "Holding the coins", points: B.hold_curve, dashed: true, color: css("--hold") }], v => v == null ? "–" : v.toFixed(2) + "×", { log: true, small: true }),
-    note("In the market " + Math.round((B.time_in_market || 0) * 100) + "% of coin-days: long a coin while its score is at or above +" + d.enter + ", in cash otherwise; 0.095% each way on every change, funding not included. The gain over holding is mostly smaller falls, from being out of coins in a down-trend; shorting the low scores as well has not paid."));
+    note((B.full_from ? "The early years rest on few coins: " + B.coins_first + " of the " + B.coins + " traded at the start and all of them only from " + B.full_from + ", so read the last row before the first. " : "") + "In the market " + Math.round((B.time_in_market || 0) * 100) + "% of coin-days: long a coin while its score is at or above +" + d.enter + ", in cash otherwise; 0.095% each way on every change, funding not included. The gain over holding is mostly smaller falls, from being out of coins in a down-trend; shorting the low scores as well has not paid."));
 }
 
 function weightsCard(d) {

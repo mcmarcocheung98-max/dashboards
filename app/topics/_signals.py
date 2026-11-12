@@ -290,6 +290,12 @@ def basket_stats(comps: dict[str, pd.Series], closes: dict[str, pd.Series], long
     out = {"coins": int(panel.shape[1]), "rule": curve_stats(r), "hold": curve_stats(hr), "rule_before": curve_stats(r[r.index < cut]), "hold_before": curve_stats(hr[hr.index < cut]),
            "rule_after": curve_stats(r[r.index >= cut]), "hold_after": curve_stats(hr[hr.index >= cut]), "split": split,
            "time_in_market": float((panel != 0).mean().mean())}
+    n = panel.notna().sum(axis=1)                                       # how many coins the average is over that day: few of them are old
+    full = n[n >= panel.shape[1]]
+    out["coins_first"] = int(n.iloc[0]) if len(n) else 0
+    if len(full) and full.index[0] > r.index[0]:
+        out["full_from"] = str(full.index[0].date())
+        out["rule_full"], out["hold_full"] = curve_stats(r[r.index >= full.index[0]]), curve_stats(hr[hr.index >= full.index[0]])
     eq, heq = (1 + r).cumprod(), (1 + hr.fillna(0)).cumprod()
     step = max(1, len(eq) // 600)
     out["equity"] = [[int(t.timestamp()), round(float(v), 5)] for t, v in eq.iloc[::step].items()]
