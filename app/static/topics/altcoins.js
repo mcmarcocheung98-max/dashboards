@@ -163,6 +163,7 @@ function cycleClock(R) {
     const X = v => pad.l + Math.max(0, Math.min(x1, v)) / x1 * (W - pad.l - pad.r);
     const svg = svgEl("svg", { width: W, height: H, style: "display:block;font-family:inherit" }, box);
     for (let m = 0; m <= x1; m += W < 600 ? 12 : 6) { svgEl("line", { x1: X(m), x2: X(m), y1: pad.t, y2: H - pad.b, stroke: css("--line") }, svg);
+      if (W < 600 && m === 36) continue;                                     // no room next to "next halving" on a phone
       svgEl("text", { x: X(m), y: H - 7, fill: css("--muted"), "font-size": 10.5, "text-anchor": m === 0 ? "start" : m === x1 ? "end" : "middle" }, svg).textContent = m === 0 ? "halving" : m === x1 ? "next halving" : "+" + m + "m"; }
     const bar = (a, b, y, col, op, msg, dash) => { const r = svgEl("rect", { x: X(a), y: y + 3, width: Math.max(X(b) - X(a), 3), height: rowH - 6, rx: 2, fill: dash ? "none" : css(col), "fill-opacity": op, stroke: dash ? css("--muted") : "none", "stroke-dasharray": dash ? "3 3" : "" }, svg);
       if (msg) { svgEl("title", {}, r).textContent = msg; r.addEventListener("mouseenter", () => { read.textContent = msg; }); } };
@@ -213,11 +214,15 @@ function rotationMap(R) {
   const draw = () => {
     seg.replaceChildren(...[4, 8, 12].map(w => el("button", { class: w === weeks ? "on" : "", onclick: () => { weeks = w; try { sessionStorage.setItem("rotation-weeks", w); } catch (e) {} draw(); } }, "Path: " + w + " weeks")));
     const T = M.map(s => ({ ...s, tr: s.trail.slice(-(weeks + 1)) }));
-    const mx = Math.max(0.1, ...T.flatMap(s => s.tr.map(p => Math.abs(p[1])))) * 1.18, my = Math.max(0.1, ...T.flatMap(s => s.tr.map(p => Math.abs(p[2])))) * 1.18;
+    const span = k => { const all = T.flatMap(s => s.tr.map(p => Math.abs(p[k]))).sort((a, b) => a - b), now = Math.max(...T.map(s => Math.abs(s.tr[s.tr.length - 1][k])));
+      return Math.max(0.1, now * 1.5, all[Math.floor(all.length * 0.85)] * 1.15); };                                  // the frame follows today's dots and most of the paths, not one far-off week
+    const mx = span(1), my = span(2);
     host.replaceChildren(svgBox(Math.min(460, Math.max(320, window.innerWidth * 0.5)), (box, W, H) => {
-      const pad = { l: 44, r: 12, t: 10, b: 30 };
+      const pad = { l: 58, r: 12, t: 10, b: 30 };
       const X = v => pad.l + (v + mx) / (2 * mx) * (W - pad.l - pad.r), Y = v => H - pad.b - (v + my) / (2 * my) * (H - pad.t - pad.b);
       const svg = svgEl("svg", { width: W, height: H, style: "display:block;font-family:inherit" }, box);
+      const clipId = "rotmap-clip-" + Math.round(W);
+      svgEl("rect", { x: pad.l, y: pad.t, width: W - pad.l - pad.r, height: H - pad.t - pad.b }, svgEl("clipPath", { id: clipId }, svgEl("defs", {}, svg)));
       [["Improving", -mx, 0, 0, my, "start", pad.l + 6, pad.t + 14], ["Leading", 0, 0, mx, my, "end", W - pad.r - 6, pad.t + 14],
        ["Lagging", -mx, -my, 0, 0, "start", pad.l + 6, H - pad.b - 8], ["Weakening", 0, -my, mx, 0, "end", W - pad.r - 6, H - pad.b - 8]].forEach(([q, xa, ya, xb, yb, anchor, tx, ty]) => {
         svgEl("rect", { x: X(xa), y: Y(yb), width: X(xb) - X(xa), height: Y(ya) - Y(yb), fill: css(QUAD[q][0]), "fill-opacity": 0.07 }, svg);
@@ -232,19 +237,26 @@ function rotationMap(R) {
       svgEl("line", { x1: pad.l, x2: W - pad.r, y1: Y(0), y2: Y(0), stroke: css("--muted") }, svg);
       svgEl("text", { x: X(0) + 4, y: Y(0) - 4, fill: css("--muted"), "font-size": 10.5 }, svg).textContent = "BTC";
       svgEl("text", { x: (pad.l + W - pad.r) / 2, y: H - 3, fill: css("--muted"), "font-size": 10.5, "text-anchor": "middle" }, svg).textContent = "90 days against BTC (the trend)";
-      svgEl("text", { x: 11, y: (pad.t + H - pad.b) / 2, fill: css("--muted"), "font-size": 10.5, "text-anchor": "middle", transform: "rotate(-90 11 " + (pad.t + H - pad.b) / 2 + ")" }, svg).textContent = "30 days against BTC (the recent move)";
-      const heads = T.map(s => ({ s, x: X(s.x), y: Y(s.y), ly: Y(s.y) })).sort((a, b) => a.y - b.y);
-      for (let i = 1; i < heads.length; i++) for (let j = 0; j < i; j++) if (Math.abs(heads[i].x - heads[j].x) < 90 && heads[i].ly - heads[j].ly < 13) heads[i].ly = heads[j].ly + 13;   // keep the labels apart
-      heads.forEach(({ s, x, y, ly }) => {
+      svgEl("text", { x: 10, y: (pad.t + H - pad.b) / 2, fill: css("--muted"), "font-size": 10.5, "text-anchor": "middle", transform: "rotate(-90 10 " + (pad.t + H - pad.b) / 2 + ")" }, svg).textContent = "30 days against BTC (the recent move)";
+      const heads = T.map(s => ({ s, x: X(s.x), y: Y(s.y), name: SHORT[s.family] || s.sector })).sort((a, b) => b.x - a.x);
+      const boxes = heads.map(h => [h.x - 8, h.y - 8, h.x + 8, h.y + 8]), hit = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+      heads.forEach(h => {                                  // a label goes in the first free spot: right, left, below, above, then further out
+        const w = h.name.length * 6.9 + 4;
+        const spots = [[10, 4, "start"], [-10, 4, "end"], [0, 20, "middle"], [0, -11, "middle"], [10, 17, "start"], [-10, 17, "end"], [10, -9, "start"], [-10, -9, "end"], [0, 33, "middle"], [0, -24, "middle"]];
+        const box = ([dx, dy, a]) => { const x0 = a === "start" ? h.x + dx : a === "end" ? h.x + dx - w : h.x - w / 2; return [x0, h.y + dy - 11, x0 + w, h.y + dy + 3]; };
+        const ok = sp => { const b = box(sp); return b[0] >= pad.l && b[2] <= W - pad.r && b[1] >= pad.t && b[3] <= H - pad.b && !boxes.some(o => hit(b, o)); };
+        h.spot = spots.find(ok) || spots[0]; boxes.push(box(h.spot));
+      });
+      heads.forEach(({ s, x, y, spot, name }) => {
         const col = css((FAMILY[s.family] || [0, "--muted"])[1]);
         const msg = s.rank + " · " + s.sector + ": " + s.quadrant + " (" + QUAD[s.quadrant][1] + "). " + p0(s.x) + " against BTC over 90 days, " + p0(s.y) + " over 30 days; median of " + s.reps + " coins." +
           (s.quadrant_4w && s.quadrant_4w !== s.quadrant ? " Four weeks ago: " + s.quadrant_4w + "." : "");
-        svgEl("polyline", { points: s.tr.map(p => X(p[1]) + "," + Y(p[2])).join(" "), fill: "none", stroke: col, "stroke-width": 1.6, "stroke-opacity": 0.55, "stroke-linejoin": "round" }, svg);
-        s.tr.slice(0, -1).forEach((p, i) => svgEl("circle", { cx: X(p[1]), cy: Y(p[2]), r: 2, fill: col, "fill-opacity": 0.25 + 0.5 * i / s.tr.length }, svg));
+        const g0 = svgEl("g", { "clip-path": "url(#" + clipId + ")" }, svg);
+        svgEl("polyline", { points: s.tr.map(p => X(p[1]) + "," + Y(p[2])).join(" "), fill: "none", stroke: col, "stroke-width": 1.6, "stroke-opacity": 0.55, "stroke-linejoin": "round" }, g0);
+        s.tr.slice(0, -1).forEach((p, i) => svgEl("circle", { cx: X(p[1]), cy: Y(p[2]), r: 2, fill: col, "fill-opacity": 0.25 + 0.5 * i / s.tr.length }, g0));
         const g = svgEl("circle", { cx: x, cy: y, r: 6.5, fill: col, stroke: css("--surface"), "stroke-width": 1.5, style: "cursor:pointer" }, svg);
         svgEl("title", {}, g).textContent = msg; g.addEventListener("mouseenter", () => { read.textContent = msg; }); g.addEventListener("click", () => { read.textContent = msg; });
-        const right = x < W - 110;
-        svgEl("text", { x: x + (right ? 10 : -10), y: ly + 4, fill: css("--ink"), "font-size": 11.5, "font-weight": 600, "text-anchor": right ? "start" : "end", style: "paint-order:stroke", stroke: css("--surface"), "stroke-width": 3 }, svg).textContent = SHORT[s.family] || s.sector;
+        svgEl("text", { x: x + spot[0], y: y + spot[1], fill: css("--ink"), "font-size": 11.5, "font-weight": 600, "text-anchor": spot[2], style: "paint-order:stroke", stroke: css("--surface"), "stroke-width": 3 }, svg).textContent = name;
       });
     }));
   };
@@ -256,7 +268,7 @@ function rotationMap(R) {
       el("td", { style: "text-align:left;color:" + css(QUAD[s.quadrant][0]) }, s.quadrant), el("td", { style: "text-align:left", class: "muted" }, s.quadrant_4w && s.quadrant_4w !== s.quadrant ? s.quadrant_4w : "same"),
       el("td", { style: "text-align:right", class: cls(s.x) }, p0(s.x)), el("td", { style: "text-align:right", class: cls(s.y) }, p0(s.y))))));
   return card("Sector movement against BTC: the rotation map", summary, seg, host, read, tbl,
-    note("Each dot is a candidate sector today and the line behind it is its path, one point a week. Right of the centre the sector has beaten BTC over 90 days; above it, over the last 30. " +
+    note("Each dot is a candidate sector today and the line behind it is its path, one point a week; the frame follows today's dots, so a path that started far away is cut at the edge. Right of the centre the sector has beaten BTC over 90 days; above it, over the last 30. " +
       "A rotation usually runs clockwise: improving, leading, weakening, lagging. BTC is the centre, so a sector can be \"leading\" while its dollar price falls. Medians of each sector's 3-5 representative coins; a mechanical reading, not a view on any coin."));
 }
 function statusCard(R) {
