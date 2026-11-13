@@ -379,10 +379,10 @@
   {
    "id": "pm-review-1112",
    "owner": "session:prediction-markets",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-12",
    "title": "Prediction Markets: retire resolved watchlist rows (midterms, World Series, October Fed), cite a market page per row, biggest_move must not count resolutions",
-   "detail": "From the 12 Nov review."
+   "detail": "From the 12 Nov review. Done 13 Nov (519b008)."
   },
   {
    "id": "luxury-fred-hang",
@@ -403,10 +403,10 @@
   {
    "id": "cut-review-1113",
    "owner": "session:china-us-tech",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-13",
    "title": "China vs US Tech: bring milestones, node gap, EV share, top-cited and listings up to date; fill or drop ic_imports_monthly; source 34 verify rows",
-   "detail": "From the 13 Nov review."
+   "detail": "From the 13 Nov review. Done the same day (f129773, 4acc0d9, 07480b7)."
   }
  ],
  "roadmap": [
@@ -1760,12 +1760,27 @@
      "what": "three verify rows cleared; Google Antigravity moved to 20 Nov 2025",
      "commit": "3d5b9a3",
      "by": "session:ai"
+    },
+    {
+     "dashboard": "China vs US Tech",
+     "slug": "china-us-tech",
+     "tab": "overview",
+     "what": "review closed: milestones to Oct 2026, listings to Jul 2026, EV share 2025, top-cited 2024; the empty chip-imports file and its card removed; no verify rows left (PCT rows cite WIPO, three undatable leaderboard pairs removed). Many figures were read from excerpts of the cited pages, and each such row says so",
+     "commit": "07480b7",
+     "by": "session:china-us-tech"
+    },
+    {
+     "dashboard": "Prediction Markets",
+     "slug": "prediction-markets",
+     "tab": "markets",
+     "what": "watchlist renewed to 16 open questions; 7 resolved ones retired with their outcome and shown on the Accuracy tab; every row cites its market page; biggest_move ignores markets in their last day or priced at 1% or 99%",
+     "commit": "519b008",
+     "by": "session:prediction-markets"
     }
    ],
    "review": "china-us-tech",
    "next": [
     "Altcoins Coins (67 s) and Options Setup (51 s) are the slowest first loads left; ask their sessions if they repeat on Monday",
-    "Prediction Markets watchlist refresh (asked 12 Nov, no reply yet: one reminder on Monday)",
     "Monday: weekly luxury liquidity log and stock refresh; token totals"
    ],
    "asks": [
