@@ -11,11 +11,34 @@ open the matching new tab.
 
 | Tab | What it shows |
 |---|---|
-| Sectors | Where each 2026-27 candidate sector stands today (undervalued / awaiting rotation / neutral / priced in / overvalued, with the supply-overhang check and 3-5 representatives each); the four cycles' sector bursts on one timeline (halving clock or calendar); folded: the live usage metrics behind the status (DeFi TVL, stablecoin supply, Hyperliquid TVL, revenue and fees, DEX volume, the doc's "common metrics of cycle winners") and the doc's per-cycle sector tables with their peak multiples and the cross-cycle comparison. Rules and data: `data/btc-cycles/README.md` |
+| Sectors | Where today sits on the 48-month cycle clock (BTC's bull, bear and recovery phases for each cycle, every past sector burst by family, and the phase now); the rotation map (each candidate sector's 90-day and 30-day move against BTC with its weekly path: leading, weakening, lagging, improving); where each 2026-27 candidate sector stands today (undervalued / awaiting rotation / neutral / priced in / overvalued, with the supply-overhang check and 3-5 representatives each); folded: every past burst cycle by cycle (halving clock or calendar), the live usage metrics behind the status (DeFi TVL, stablecoin supply, Hyperliquid TVL, revenue and fees, DEX volume, the doc's "common metrics of cycle winners") and the doc's per-cycle sector tables with their peak multiples and the cross-cycle comparison. Rules and data: `data/btc-cycles/README.md` |
 | Candidates | Every candidate coin in one sortable table (sector and its status, classifiers, price with a 90-day sparkline and its move against BTC, market cap against the sector leader, float and supply coming in 12 months, RSI vs BTC, bear / base / bull for end-2027 and end-2028, the base-case 2028 cap against the leader; filter, search, CSV); a sort-and-jump index; a card per coin with its KPIs, sparkline and, on demand, its charts, fundamentals and projection; the projection method, the doc's ranked table and the hand-entered sector evidence, folded |
 | Coins | One candidate at a time (pick HYPE, ENA, SOL or NEAR): its signal board and fitted board, buy zone, token unlocks, the case for it, price against BTC, RSI, market cap, then Fundamentals (fees, TVL, supply and unlocks against price, the multiples, the unlock schedule) and the Projection (bear / base / bull to end-2028). For ENA, the full unlock study is a folded section at the bottom: the schedule (past and ahead), the next unlock, what the price did before / into / after every unlock against an ordinary day, simple short-before / buy-after rules with costs and a placebo, and a date check of each listed day against volume |
 | Signals | Every coin's readings on one table (buy zone, BTC-style board, fitted board, twenty-signal score at the chosen horizon, volume-zone position), sorted by how many lean to buying; pick a coin for each in full, as folded sections: the BTC-style board (nine gauges in hand-set zones, averaged; why the score is what it is, what would move it, its record by zone), the fitted board (the same gauges with signs and weights learned from their pooled record, walk-forward, each gauge's record across all coins, every coin's boards), the twenty daily signals (judged on 7, 14 or 30 days; the grid, the score day by day, the walk-forward backtest, today's weights, every coin's final signal), the volume zones (daily candles with the big-volume days and the support / resistance zones they left, what the coin did after its own big days and retests, every coin against its zones) and the buy zones of every coin (top, mid, floor) |
 | Memecoins | The meme-season reading and the basket of six memecoins: the sortable table, each coin and BTC rebased, the basket against BTC (ratio, RSI, equal weight, market caps), the memes' share of the whole market, and 90-day sparklines (see `data/memecoins/README.md`) |
+
+## The cycle clock and rotation map method (`app/topics/btc_cycles.py`, `cycle_clock`, `sector_map`)
+
+**Cycle clock.** Every cycle is laid on one axis: months after its halving, 0 to 48. A cycle's phases come from three dates in the research
+doc (`data/btc-cycles/research.json`): the halving, BTC's peak and BTC's bear low. Bull run = halving to peak, bear market = peak to low,
+recovery = low to the next halving. The phase today uses this cycle's own dates: before the doc's peak it is the bull run; after the peak and
+before the doc's low date, or whenever BTC trades under that low, it is the bear market; otherwise the recovery. Each sector burst from
+`rotation.csv` is placed by months after the halving before it, so a burst that began shortly before a halving sits at the right-hand end of
+the clock. "Past sector bursts running at this month" counts the bursts whose window covers today's month; "the same month in earlier
+cycles" takes each earlier halving plus the same number of months and reports how far BTC was from its low and how long until the next
+burst began.
+
+**Rotation map.** For each candidate sector with liquid representatives (`sector_status.json`), each representative's price is divided by
+BTC's. x is the median 90-day change of that ratio (the trend), y the median 30-day change (the recent move), read once a week for the last
+12 weeks to draw the path. Quadrants: leading (both positive), weakening (90 days positive, 30 negative), lagging (both negative), improving
+(90 days negative, 30 positive). The what-changed card logs each sector's quadrant daily, so a move between quadrants shows up there.
+
+### Caveats
+
+- Four cycles is a small sample, and the burst windows for cycles 1 and 2 are approximate. The clock shows what happened, not a schedule.
+- This cycle's low is the doc's 22 Jun 2026 low. If BTC goes under it the phase reads bear market again and the low date needs editing.
+- The map is relative to BTC: a sector can be "leading" while its dollar price falls, and a single coin can move a sector of three.
+- 90 and 30 days overlap, so a sharp month moves both axes; the path matters more than any one point.
 
 ## The buy zone rule (`app/topics/altcoins.py`, `buy_zone`)
 

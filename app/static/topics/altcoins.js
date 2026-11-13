@@ -131,6 +131,134 @@ function rotationTimeline(R) {
     note("Each bar is the window in which that sector led, from the doc's burst windows (cycles 3-4) and the dates in its text (cycles 1-2, approximate; rows marked verify in data/btc-cycles/rotation.csv). " +
       "On the halving clock the pattern repeats: majors and platforms first, the speculative bursts in the 6-18 months after the halving, privacy last, after BTC's peak (red)."));
 }
+// ---------- where today sits on the 48-month halving clock: BTC's phases per cycle on top, every sector burst by family below
+const SHORT = { defi: "DeFi", stable: "Stablecoins", rwa: "RWA", ai: "AI", l1: "L1s", privacy: "Privacy", btcfi: "BTC-fi", meme: "Memecoins", other: "Other", prediction: "Prediction" };
+const PHASE_COL = { bull: "--up", bear: "--down", recovery: "--s1" };
+const PHASE_WORD = { bull: "Bull run", bear: "Bear market", recovery: "Recovery" };
+const mo = v => Math.round(v), mos = v => mo(v) + (mo(v) === 1 ? " month" : " months");
+function clockRead(K) {
+  const c4 = K.cycles[K.cycles.length - 1], sp = K.same_point || [];
+  const list = xs => xs.length < 2 ? xs.join("") : xs.slice(0, -1).join(", ") + " and " + xs[xs.length - 1];
+  const out = ["Today is month " + mo(K.months_now) + " of the " + mo(c4.len_m) + "-month clock, " + mo(K.to_halving_m) + " months before the next halving. "];
+  if (K.phase === "bull") out.push("BTC has not passed the doc's peak for this cycle: the bull run.");
+  else if (K.phase === "bear") out.push("BTC peaked at month " + mo(c4.peak_m) + (K.low_broken ? " and is back under the doc's " + K.low_date + " low: the bear market is not over." : " and has not reached the doc's low date: the bear market."));
+  else out.push("BTC peaked at month " + mo(c4.peak_m) + " and the doc's bear low was at month " + mo(c4.low_m) + " (" + K.low_date + "). BTC is above that low, so this is the recovery phase for as long as the low holds.");
+  out.push(" " + (K.bursts_now ? K.bursts_now + " of the doc's " + K.bursts_total + " sector bursts were running at this month." : "None of the doc's " + K.bursts_total + " sector bursts was running at this month") +
+    (!K.bursts_now && K.last_burst_end_m != null ? ": the last ended by month " + mo(K.last_burst_end_m) + (K.next_burst_start_m != null ? " and the next began at month " + mo(K.next_burst_start_m) + ", about " + mo(K.next_burst_start_m - K.months_now) + " months from here." : ".") : ""));
+  if (sp.length) out.push(" At the same month in cycles " + list(sp.map(x => String(x.cycle))) + " BTC was " + list(sp.map(x => x.from_low_m >= 0 ? mos(x.from_low_m) + " past its low" : mos(-x.from_low_m) + " before its low")) +
+    ", and the next sector burst came " + list(sp.filter(x => x.next_burst_in_m != null).map(x => mos(x.next_burst_in_m) + " later (" + x.next_burst.replace(/ \((.*)\)$/, ": $1") + ")")) + ".");
+  return out.join("");
+}
+function cycleClock(R) {
+  const K = R.clock;
+  if (!K) return null;
+  const c4 = K.cycles[K.cycles.length - 1];
+  const fams = [...new Set(K.bursts.map(b => b.family))].map(f => { const xs = K.bursts.filter(b => b.family === f).map(b => b.clock_start).sort((a, b) => a - b); return [f, xs[Math.floor((xs.length - 1) / 2)]]; })
+    .sort((a, b) => a[1] - b[1]).map(x => x[0]);
+  const read = el("div", { class: "muted", style: "min-height:18px;margin-top:4px" }, "Hover a bar for its dates.");
+  const lanes = [{ head: "BTC's phases, cycle by cycle" }, ...K.cycles.map(c => ({ c })), { head: "Sector bursts, all four cycles (darker = more than one cycle)" }, ...fams.map(f => ({ f }))];
+  const rowH = 17, H = lanes.length * rowH + 40, x1 = 48;
+  const host = svgBox(H, (box, W) => {
+    const pad = { l: Math.min(178, W * 0.3), r: 14, t: 16, b: 24 };
+    const X = v => pad.l + Math.max(0, Math.min(x1, v)) / x1 * (W - pad.l - pad.r);
+    const svg = svgEl("svg", { width: W, height: H, style: "display:block;font-family:inherit" }, box);
+    for (let m = 0; m <= x1; m += W < 600 ? 12 : 6) { svgEl("line", { x1: X(m), x2: X(m), y1: pad.t, y2: H - pad.b, stroke: css("--line") }, svg);
+      svgEl("text", { x: X(m), y: H - 7, fill: css("--muted"), "font-size": 10.5, "text-anchor": m === 0 ? "start" : m === x1 ? "end" : "middle" }, svg).textContent = m === 0 ? "halving" : m === x1 ? "next halving" : "+" + m + "m"; }
+    const bar = (a, b, y, col, op, msg, dash) => { const r = svgEl("rect", { x: X(a), y: y + 3, width: Math.max(X(b) - X(a), 3), height: rowH - 6, rx: 2, fill: dash ? "none" : css(col), "fill-opacity": op, stroke: dash ? css("--muted") : "none", "stroke-dasharray": dash ? "3 3" : "" }, svg);
+      if (msg) { svgEl("title", {}, r).textContent = msg; r.addEventListener("mouseenter", () => { read.textContent = msg; }); } };
+    lanes.forEach((ln, i) => {
+      const y = pad.t + i * rowH;
+      if (ln.head) { svgEl("text", { x: 4, y: y + 12, fill: css("--ink2"), "font-size": 11.5, "font-weight": 600 }, svg).textContent = W < 600 ? ln.head.split(",")[0] : ln.head; return; }
+      const lab = t => { svgEl("text", { x: pad.l - 6, y: y + 12, fill: css("--muted"), "font-size": 11, "text-anchor": "end" }, svg).textContent = t; };
+      if (ln.c) {
+        const c = ln.c, end = c.now_m != null ? c.now_m : c.len_m, nm = "Cycle " + c.n + " (" + c.year + " halving)";
+        lab(W < 600 ? "Cycle " + c.n + " '" + String(c.year).slice(2) : "Cycle " + c.n + " (" + c.year + (c.now_m != null ? ", this one)" : ")"));
+        bar(0, Math.min(c.peak_m, end), y, "--up", 0.6, nm + ": bull run, halving to BTC's peak at month " + mo(c.peak_m) + ".");
+        if (end > c.peak_m) bar(c.peak_m, Math.min(c.low_m, end), y, "--down", 0.6, nm + ": bear market, peak at month " + mo(c.peak_m) + " to the low at month " + mo(c.low_m) + ".");
+        if (end > c.low_m) bar(c.low_m, end, y, "--s1", 0.45, nm + ": recovery, from the low at month " + mo(c.low_m) + (c.now_m != null ? " to today (month " + mo(c.now_m) + "), if the low holds." : " to the next halving at month " + mo(c.len_m) + "."));
+        if (c.now_m != null) bar(c.now_m, c.len_m, y, "--muted", 0, "Cycle " + c.n + ": still ahead, " + mo(c.len_m - c.now_m) + " months to the next halving.", true);
+        return;
+      }
+      const [nm, col] = FAMILY[ln.f] || [ln.f, "--muted"];
+      lab(W < 600 || nm.length > 26 ? (SHORT[ln.f] || nm) : nm);
+      K.bursts.filter(b => b.family === ln.f).forEach(b => { const d = t => new Date(t * 1000).toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "UTC" });
+        bar(b.clock_start, b.clock_end, y, col, 0.6, b.sector + " (cycle " + b.cycle + "): " + d(b.start) + " to " + d(b.end) + ", months " + mo(b.clock_start) + " to " + mo(b.clock_end) + " after the halving before it."); });
+    });
+    const xn = X(K.months_now);
+    svgEl("line", { x1: xn, x2: xn, y1: pad.t - 2, y2: H - pad.b, stroke: css("--ink"), "stroke-width": 2 }, svg);
+    svgEl("text", { x: xn + (xn > W - 120 ? -5 : 5), y: pad.t + 8, fill: css("--ink"), "font-size": 11.5, "font-weight": 700, "text-anchor": xn > W - 120 ? "end" : "start" }, svg).textContent = "today, month " + mo(K.months_now);
+  });
+  const legend = el("div", { class: "legend" }, ...["bull", "bear", "recovery"].map(k => el("button", {}, el("span", { class: "sw", style: "background:" + css(PHASE_COL[k]) }), PHASE_WORD[k])),
+    el("button", {}, el("span", { class: "sw", style: "background:" + css("--ink") }), "Today"));
+  return card("Where you are on the cycle clock", el("div", { class: "kpis" },
+      kpi("Phase now", PHASE_WORD[K.phase], K.phase === "bear" ? "down" : K.phase === "bull" ? "up" : ""),
+      kpi("Month of the cycle", mo(K.months_now) + " of " + mo(c4.len_m)),
+      K.since_peak_m != null ? kpi("Since BTC's peak", mo(K.since_peak_m) + " months") : null,
+      K.since_low_m != null ? kpi("Since the bear low", mo(K.since_low_m) + " months") : null,
+      kpi("Past sector bursts running at this month", K.bursts_now + " of " + K.bursts_total, K.bursts_now ? "up" : "")),
+    el("div", { style: "margin:8px 0 6px;color:var(--ink2)" }, clockRead(K)), legend, host, read,
+    note("One clock for every cycle: months after the halving, 0 to 48. Phases use the doc's peak and low dates for each cycle (data/btc-cycles/research.json); this cycle's low is the doc's " + K.low_date +
+      " low, which a lower price would undo. Bursts are the doc's windows (rotation.csv; cycles 1-2 approximate), each placed after the halving before it, so a burst that began just before a halving sits at the right-hand end. Four cycles is a small sample: a pattern, not a schedule."));
+}
+
+// ---------- the rotation map: each candidate sector's trend (90 days) and recent move (30 days) against BTC, with its path over the last weeks
+const QUAD = { Leading: ["--up", "trend up, still gaining"], Weakening: ["--s2", "trend up, now giving back"], Lagging: ["--down", "trend down, still losing"], Improving: ["--s1", "trend down, now gaining"] };
+function rotationMap(R) {
+  const M = (R.map || []).filter(s => s.trail && s.trail.length);
+  if (!M.length) return card("Sector movement against BTC", el("div", { class: "muted" }, "Not available right now (the coins' price histories are still loading)."));
+  let weeks = (() => { try { return +sessionStorage.getItem("rotation-weeks") || 8; } catch (e) { return 8; } })();
+  const seg = el("div", { class: "seg" }), host = el("div", {});
+  const read = el("div", { class: "muted", style: "min-height:18px;margin-top:4px" }, "Hover a sector for its numbers.");
+  const p0 = v => (v >= 0 ? "+" : "") + Math.round(v * 100) + "%";
+  const draw = () => {
+    seg.replaceChildren(...[4, 8, 12].map(w => el("button", { class: w === weeks ? "on" : "", onclick: () => { weeks = w; try { sessionStorage.setItem("rotation-weeks", w); } catch (e) {} draw(); } }, "Path: " + w + " weeks")));
+    const T = M.map(s => ({ ...s, tr: s.trail.slice(-(weeks + 1)) }));
+    const mx = Math.max(0.1, ...T.flatMap(s => s.tr.map(p => Math.abs(p[1])))) * 1.18, my = Math.max(0.1, ...T.flatMap(s => s.tr.map(p => Math.abs(p[2])))) * 1.18;
+    host.replaceChildren(svgBox(Math.min(460, Math.max(320, window.innerWidth * 0.5)), (box, W, H) => {
+      const pad = { l: 44, r: 12, t: 10, b: 30 };
+      const X = v => pad.l + (v + mx) / (2 * mx) * (W - pad.l - pad.r), Y = v => H - pad.b - (v + my) / (2 * my) * (H - pad.t - pad.b);
+      const svg = svgEl("svg", { width: W, height: H, style: "display:block;font-family:inherit" }, box);
+      [["Improving", -mx, 0, 0, my, "start", pad.l + 6, pad.t + 14], ["Leading", 0, 0, mx, my, "end", W - pad.r - 6, pad.t + 14],
+       ["Lagging", -mx, -my, 0, 0, "start", pad.l + 6, H - pad.b - 8], ["Weakening", 0, -my, mx, 0, "end", W - pad.r - 6, H - pad.b - 8]].forEach(([q, xa, ya, xb, yb, anchor, tx, ty]) => {
+        svgEl("rect", { x: X(xa), y: Y(yb), width: X(xb) - X(xa), height: Y(ya) - Y(yb), fill: css(QUAD[q][0]), "fill-opacity": 0.07 }, svg);
+        svgEl("text", { x: tx, y: ty, fill: css(QUAD[q][0]), "font-size": 12, "font-weight": 700, "text-anchor": anchor, "letter-spacing": "0.04em" }, svg).textContent = q.toUpperCase();
+      });
+      const step = m => m > 0.6 ? 0.4 : m > 0.3 ? 0.2 : 0.1;
+      for (let v = -Math.floor(mx / step(mx)) * step(mx); v <= mx; v += step(mx)) if (Math.abs(v) > 1e-9) { svgEl("line", { x1: X(v), x2: X(v), y1: pad.t, y2: H - pad.b, stroke: css("--line") }, svg);
+        svgEl("text", { x: X(v), y: H - pad.b + 13, fill: css("--muted"), "font-size": 10.5, "text-anchor": "middle" }, svg).textContent = p0(v); }
+      for (let v = -Math.floor(my / step(my)) * step(my); v <= my; v += step(my)) if (Math.abs(v) > 1e-9) { svgEl("line", { x1: pad.l, x2: W - pad.r, y1: Y(v), y2: Y(v), stroke: css("--line") }, svg);
+        svgEl("text", { x: pad.l - 5, y: Y(v) + 4, fill: css("--muted"), "font-size": 10.5, "text-anchor": "end" }, svg).textContent = p0(v); }
+      svgEl("line", { x1: X(0), x2: X(0), y1: pad.t, y2: H - pad.b, stroke: css("--muted") }, svg);
+      svgEl("line", { x1: pad.l, x2: W - pad.r, y1: Y(0), y2: Y(0), stroke: css("--muted") }, svg);
+      svgEl("text", { x: X(0) + 4, y: Y(0) - 4, fill: css("--muted"), "font-size": 10.5 }, svg).textContent = "BTC";
+      svgEl("text", { x: (pad.l + W - pad.r) / 2, y: H - 3, fill: css("--muted"), "font-size": 10.5, "text-anchor": "middle" }, svg).textContent = "90 days against BTC (the trend)";
+      svgEl("text", { x: 11, y: (pad.t + H - pad.b) / 2, fill: css("--muted"), "font-size": 10.5, "text-anchor": "middle", transform: "rotate(-90 11 " + (pad.t + H - pad.b) / 2 + ")" }, svg).textContent = "30 days against BTC (the recent move)";
+      const heads = T.map(s => ({ s, x: X(s.x), y: Y(s.y), ly: Y(s.y) })).sort((a, b) => a.y - b.y);
+      for (let i = 1; i < heads.length; i++) for (let j = 0; j < i; j++) if (Math.abs(heads[i].x - heads[j].x) < 90 && heads[i].ly - heads[j].ly < 13) heads[i].ly = heads[j].ly + 13;   // keep the labels apart
+      heads.forEach(({ s, x, y, ly }) => {
+        const col = css((FAMILY[s.family] || [0, "--muted"])[1]);
+        const msg = s.rank + " · " + s.sector + ": " + s.quadrant + " (" + QUAD[s.quadrant][1] + "). " + p0(s.x) + " against BTC over 90 days, " + p0(s.y) + " over 30 days; median of " + s.reps + " coins." +
+          (s.quadrant_4w && s.quadrant_4w !== s.quadrant ? " Four weeks ago: " + s.quadrant_4w + "." : "");
+        svgEl("polyline", { points: s.tr.map(p => X(p[1]) + "," + Y(p[2])).join(" "), fill: "none", stroke: col, "stroke-width": 1.6, "stroke-opacity": 0.55, "stroke-linejoin": "round" }, svg);
+        s.tr.slice(0, -1).forEach((p, i) => svgEl("circle", { cx: X(p[1]), cy: Y(p[2]), r: 2, fill: col, "fill-opacity": 0.25 + 0.5 * i / s.tr.length }, svg));
+        const g = svgEl("circle", { cx: x, cy: y, r: 6.5, fill: col, stroke: css("--surface"), "stroke-width": 1.5, style: "cursor:pointer" }, svg);
+        svgEl("title", {}, g).textContent = msg; g.addEventListener("mouseenter", () => { read.textContent = msg; }); g.addEventListener("click", () => { read.textContent = msg; });
+        const right = x < W - 110;
+        svgEl("text", { x: x + (right ? 10 : -10), y: ly + 4, fill: css("--ink"), "font-size": 11.5, "font-weight": 600, "text-anchor": right ? "start" : "end", style: "paint-order:stroke", stroke: css("--surface"), "stroke-width": 3 }, svg).textContent = SHORT[s.family] || s.sector;
+      });
+    }));
+  };
+  draw();
+  const by = q => M.filter(s => s.quadrant === q).map(s => SHORT[s.family] || s.sector);
+  const summary = el("div", { style: "margin:8px 0 6px;color:var(--ink2)" }, ...["Leading", "Improving", "Weakening", "Lagging"].flatMap(q => [el("b", { style: "color:" + css(QUAD[q][0]) }, q + ": "), (by(q).join(", ") || "none") + ". "]));
+  const tbl = el("div", { class: "scroll", style: "margin-top:8px" }, el("table", {}, el("tr", {}, ...["Sector", "Now", "4 weeks ago", "90 days vs BTC", "30 days vs BTC"].map((h, i) => el("th", { style: i > 2 ? "text-align:right" : "text-align:left" }, h))),
+    ...M.slice().sort((a, b) => b.x + b.y - a.x - a.y).map(s => el("tr", {}, el("td", {}, el("b", {}, s.rank + " · " + s.sector)),
+      el("td", { style: "text-align:left;color:" + css(QUAD[s.quadrant][0]) }, s.quadrant), el("td", { style: "text-align:left", class: "muted" }, s.quadrant_4w && s.quadrant_4w !== s.quadrant ? s.quadrant_4w : "same"),
+      el("td", { style: "text-align:right", class: cls(s.x) }, p0(s.x)), el("td", { style: "text-align:right", class: cls(s.y) }, p0(s.y))))));
+  return card("Sector movement against BTC: the rotation map", summary, seg, host, read, tbl,
+    note("Each dot is a candidate sector today and the line behind it is its path, one point a week. Right of the centre the sector has beaten BTC over 90 days; above it, over the last 30. " +
+      "A rotation usually runs clockwise: improving, leading, weakening, lagging. BTC is the centre, so a sector can be \"leading\" while its dollar price falls. Medians of each sector's 3-5 representative coins; a mechanical reading, not a view on any coin."));
+}
 function statusCard(R) {
   const tone = { Undervalued: "ok", "Awaiting rotation": "", Neutral: "", "Priced in": "bad", Overvalued: "bad" };
   const col = { Undervalued: css("--up"), "Awaiting rotation": css("--accent"), Neutral: css("--muted"), "Priced in": css("--s2"), Overvalued: css("--down") };
@@ -958,7 +1086,7 @@ const VIEWS = {
     const mult = bars.length ? card("Peak multiples in this cycle (log scale)", ...svgBarsLog(bars)) : null;
     const tbl = card(c.heading, para(c.intro), table(c.columns, c.rows), para(c.after));
     const cross = card("Cross-cycle comparison", para(d.cross_cycle.intro), table(d.cross_cycle.columns, d.cross_cycle.rows));
-    const top = rot ? [statusCard(rot), rotationTimeline(rot)] : [card(null, el("div", { class: "muted" }, "The sector status is not available right now."))];
+    const top = rot ? [cycleClock(rot), rotationMap(rot), statusCard(rot), fold("Every past burst, cycle by cycle: the detail behind the clock", false, rotationTimeline(rot))] : [card(null, el("div", { class: "muted" }, "The sector status is not available right now."))];
     const usage = m ? fold("The usage behind the status: DeFi TVL, stablecoin supply, Hyperliquid, DEX volume (live)", false, ...metricsCards(m)) : null;
     const doc = fold("The doc's sector tables, cycle by cycle", false, card(null, seg, el("div", { class: "muted" }, "Pick a cycle. Figures are the doc's, approximate before 2024.")), tbl, mult, cross);
     return [...top, usage, doc];

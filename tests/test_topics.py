@@ -1425,6 +1425,26 @@ def test_btc_rotation_timeline_and_sector_status():
     assert st[7]["past"] and all(p["cycle"] in (1, 2, 4) for p in st[7]["past"])
 
 
+def test_btc_cycle_clock_and_sector_map():
+    from app.topics import btc_cycles as C
+    rows = C.rotation_rows()
+    K = C.cycle_clock(rows, pd.Timestamp("2026-11-13"), 0.4)
+    c4 = K["cycles"][-1]
+    assert K["phase"] == "recovery" and K["months_now"] == pytest.approx(30.8, abs=0.2) and c4["peak_m"] < c4["low_m"] < c4["now_m"] < c4["len_m"]
+    assert K["bursts_now"] == 0 and K["bursts_total"] == len(rows) and K["last_burst_end_m"] < K["months_now"] < K["next_burst_start_m"]
+    assert all(0 <= b["clock_start"] <= 48 for b in K["bursts"])                       # a burst that began before a halving sits at the end of the clock before it
+    assert [s["cycle"] for s in K["same_point"]] == [1, 2, 3] and all(s["next_burst_in_m"] > 6 for s in K["same_point"])
+    assert C.cycle_clock(rows, pd.Timestamp("2026-11-13"), -0.1)["phase"] == "bear"    # BTC under the doc's low: the bear is not over
+    assert C.cycle_clock(rows, pd.Timestamp("2025-06-01"))["phase"] == "bull" and C.cycle_clock(rows, pd.Timestamp("2026-01-01"))["phase"] == "bear"
+    idx = pd.date_range("2025-11-01", periods=370)
+    btc = pd.Series(100.0, index=idx)
+    up, down = pd.Series(np.linspace(1, 2, 370), index=idx), pd.Series(np.linspace(2, 1, 370), index=idx)
+    turn = pd.Series(np.r_[np.linspace(3, 1, 350), np.linspace(1, 1.3, 20)], index=idx)       # down for a year, up in the last weeks
+    M = {s["rank"]: s for s in C.sector_map({"HYPE": up, "AAVE": up, "ENA": down, "TRX": down, "ONDO": turn, "LINK": turn}, btc, weeks=8)}
+    assert set(M) == {1, 2, 3} and M[1]["quadrant"] == "Leading" and M[2]["quadrant"] == "Lagging" and M[3]["quadrant"] == "Improving" and M[3]["quadrant_4w"] == "Lagging"
+    assert len(M[1]["trail"]) == 9 and M[1]["reps"] == 2 and M[1]["x"] > M[1]["y"] > 0
+
+
 def test_btc_readings(snapdir, monkeypatch):
     from app.topics import btc_cycles as C, _daily
     monkeypatch.setattr(C, "ENDPOINTS", {**C.ENDPOINTS,

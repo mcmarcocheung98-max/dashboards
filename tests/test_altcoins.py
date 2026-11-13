@@ -347,7 +347,7 @@ def test_volume_and_unlock_tabs(filled):
     r = {x["key"]: x for x in A.READINGS()}
     assert {"vz_ena", "vz_pepe", "ena_next_unlock"} <= set(r) and r["vz_ena"]["tab"] == "signals" and r["ena_next_unlock"]["lean"] in (-1, 0)
     m = topics.method("altcoins")
-    assert [s["title"] for s in m["sections"]] == ["The buy zone rule", "The coin signal board rule", "The volume-zone rule", "The signal weighting rule and backtest method", "The unlock study method"]
+    assert [s["title"] for s in m["sections"]] == ["The cycle clock and rotation map method", "The buy zone rule", "The coin signal board rule", "The volume-zone rule", "The signal weighting rule and backtest method", "The unlock study method"]
 
 
 def test_offline_volume_and_unlocks_degrade(tmp_path, monkeypatch):

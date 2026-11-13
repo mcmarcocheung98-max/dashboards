@@ -947,6 +947,100 @@ def sector_status(coins: list[dict], metrics: dict, evidence: dict) -> list[dict
     return rows
 
 
+CYCLE_LOWS = {1: "2015-01-14", 2: "2018-12-15", 3: "2022-11-21"}        # the doc's BTC bear lows (research.json markers); cycle 4's is its cycle_low
+PHASES = {"bull": "Bull run: from the halving to BTC's peak", "bear": "Bear market: from BTC's peak to its low",
+          "recovery": "Recovery: after the bear low, before the next halving"}
+
+
+def _months(a: pd.Timestamp, b: pd.Timestamp) -> float:
+    return (b - a).days / 30.44
+
+
+def cycle_clock(rows: list[dict], now: pd.Timestamp | None = None, btc_vs_low: float | None = None) -> dict:
+    """Where today sits on the halving clock, from the doc's dates only: each cycle's halving, BTC peak and bear low as months after its
+    halving; the phase today; what the same month looked like in the earlier cycles; and how many sector bursts ran at this point.
+    A burst that began before a halving is placed on the clock of the cycle it began in (months after the halving before it)."""
+    now = now or pd.Timestamp.now()
+    low4 = research()["cycle_low"]["date"]
+    lows = {**CYCLE_LOWS, 4: low4}
+    ends = {1: HALVINGS[1], 2: HALVINGS[2], 3: HALVINGS[3], 4: NEXT_HALVING}
+    cyc = []
+    for c in (1, 2, 3, 4):
+        h = CYCLE_HALVING[c]
+        cyc.append({"n": c, "year": h.year, "peak_m": _r(_months(h, pd.Timestamp(CYCLE_PEAKS[c])), 1), "low_m": _r(_months(h, pd.Timestamp(lows[c])), 1),
+                    "len_m": _r(_months(h, ends[c]), 1)})
+    m_now = _months(HALVINGS[-1], now)
+    cyc[-1]["now_m"] = _r(m_now, 1)
+    peak, low = pd.Timestamp(CYCLE_PEAKS[4]), pd.Timestamp(low4)
+    broken = btc_vs_low is not None and btc_vs_low < 0                      # BTC under the doc's low: the bear is not over
+    key = "bull" if now < peak else "bear" if now < low or broken else "recovery"
+    bursts = []
+    for r in rows:
+        a, b = pd.Timestamp(r["start"], unit="s"), pd.Timestamp(r["end"], unit="s")
+        h = max((x for x in HALVINGS if x <= a), default=HALVINGS[0])
+        bursts.append({"cycle": r["cycle"], "sector": r["sector"], "family": r["family"], "clock_start": _r(_months(h, a), 1), "clock_end": _r(_months(h, b), 1),
+                       "start": r["start"], "end": r["end"]})
+    same = []
+    for c in (1, 2, 3):
+        t = CYCLE_HALVING[c] + pd.Timedelta(days=m_now * 30.44)
+        pk, lw = pd.Timestamp(CYCLE_PEAKS[c]), pd.Timestamp(lows[c])
+        nxt = sorted((x for x in bursts if x["start"] > t.timestamp()), key=lambda x: x["start"])
+        same.append({"cycle": c, "date": t.strftime("%Y-%m"), "phase": "bull" if t < pk else "bear" if t < lw else "recovery", "from_low_m": _r(_months(lw, t), 1),
+                     "next_burst": nxt[0]["sector"] if nxt else None, "next_burst_in_m": _r(_months(t, pd.Timestamp(nxt[0]["start"], unit="s")), 1) if nxt else None})
+    active = [x for x in bursts if x["clock_start"] <= m_now <= x["clock_end"]]
+    last_end = max((x["clock_end"] for x in bursts if x["clock_end"] <= m_now), default=None)
+    ahead = [x["clock_start"] for x in bursts if x["clock_start"] > m_now]
+    return {"cycles": cyc, "bursts": bursts, "months_now": _r(m_now, 1), "phase": key, "phase_name": PHASES[key], "low_broken": broken,
+            "since_peak_m": _r(_months(peak, now), 1) if now >= peak else None, "since_low_m": _r(_months(low, now), 1) if now >= low else None,
+            "to_halving_m": _r(_months(now, NEXT_HALVING), 1), "low_date": low4, "peak_date": CYCLE_PEAKS[4], "same_point": same,
+            "bursts_now": len(active), "bursts_total": len(bursts), "last_burst_end_m": last_end, "next_burst_start_m": min(ahead) if ahead else None}
+
+
+QUADRANTS = {(True, True): "Leading", (True, False): "Weakening", (False, False): "Lagging", (False, True): "Improving"}
+
+
+def sector_map(charts: dict[str, pd.Series], btc: pd.Series, weeks: int = 12) -> list[dict]:
+    """Each candidate sector's movement against BTC: x = its representatives' median 90-day change against BTC (the trend), y = their median
+    30-day change (the recent move), read once a week for the last `weeks` weeks so the path shows. charts: {ticker: daily price}.
+    Quadrants as on a relative rotation graph: Leading (both up), Weakening (trend up, recent down), Lagging (both down), Improving."""
+    cfg = json.loads(SECTOR_STATUS.read_text(encoding="utf-8"))
+    out = []
+    for s in cfg["sectors"]:
+        ratios = []
+        for t in s.get("reps", []):
+            if t in charts:
+                both = pd.concat([charts[t], btc], axis=1, join="inner").dropna()
+                if len(both) > 130:
+                    ratios.append(both.iloc[:, 0] / both.iloc[:, 1])
+        if not ratios:
+            continue
+        end = min(r.index[-1] for r in ratios)
+        trail = []
+        for k in range(weeks, -1, -1):
+            t = end - pd.Timedelta(days=7 * k)
+            xs = [r.asof(t) / r.asof(t - pd.Timedelta(days=90)) - 1 for r in ratios if r.index[0] <= t - pd.Timedelta(days=90)]
+            ys = [r.asof(t) / r.asof(t - pd.Timedelta(days=30)) - 1 for r in ratios if r.index[0] <= t - pd.Timedelta(days=90)]
+            if xs:
+                trail.append([int(t.timestamp()), _r(float(np.median(xs)), 4), _r(float(np.median(ys)), 4)])
+        if not trail:
+            continue
+        q = lambda p: QUADRANTS[(p[1] >= 0, p[2] >= 0)]
+        out.append({"rank": s["rank"], "sector": s["sector"], "family": s["family"], "reps": len(ratios), "trail": trail, "x": trail[-1][1], "y": trail[-1][2],
+                    "quadrant": q(trail[-1]), "quadrant_4w": q(trail[-5]) if len(trail) >= 5 else None})
+    return out
+
+
+def _sector_map_now() -> list[dict]:
+    btc = btc_chart()
+    charts = {}
+    for c in coins_list():
+        try:
+            charts[c["ticker"]] = coin_chart(c["coingecko_id"])[0]
+        except Exception:
+            continue
+    return sector_map(charts, btc)
+
+
 def _rotation_now() -> dict:
     coins = ENDPOINTS["coins"]().get("coins", [])
     try:
@@ -957,7 +1051,17 @@ def _rotation_now() -> dict:
     now = pd.Timestamp.now()
     last_h = max(h for h in HALVINGS if h <= now)
     cfg = json.loads(SECTOR_STATUS.read_text(encoding="utf-8"))
-    return {"rotation": rotation_rows(), "halvings": [int(h.timestamp()) for h in HALVINGS], "next_halving": int(NEXT_HALVING.timestamp()),
+    rows = rotation_rows()
+    try:
+        vs_low = (ENDPOINTS["cycles"]().get("now") or {}).get("vs_low")
+    except Exception:
+        vs_low = None
+    try:
+        smap = _sector_map_now()
+    except Exception:
+        smap = []
+    return {"rotation": rows, "clock": cycle_clock(rows, now, vs_low), "map": smap, "btc_vs_low": vs_low,
+            "halvings": [int(h.timestamp()) for h in HALVINGS], "next_halving": int(NEXT_HALVING.timestamp()),
             "peaks": {c: int(pd.Timestamp(d).timestamp()) for c, d in CYCLE_PEAKS.items()},
             "peak_months": {c: _r((pd.Timestamp(d) - CYCLE_HALVING[c]).days / 30.44, 1) for c, d in CYCLE_PEAKS.items()},
             "months_now": _r((now - last_h).days / 30.44, 1), "months_to_next": _r((NEXT_HALVING - now).days / 30.44, 1),

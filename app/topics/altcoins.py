@@ -580,6 +580,13 @@ def candidate_readings() -> list[dict]:
             if s.get("overhang") in ("heavy", "some"):
                 r["note"] = "supply overhang: " + s["overhang"]
             out.append(r)
+        rot = C.ENDPOINTS["rotation"]()
+        if rot.get("clock"):
+            out.append({"tab": "sectors", "key": "cycle_phase", "label": "Phase on the cycle clock", "value": rot["clock"]["phase_name"].split(":")[0],
+                        "lean": {"bull": 1, "bear": -1}.get(rot["clock"]["phase"], 0), "note": f"month {rot['clock']['months_now']:.0f} after the halving"})
+        for m in rot.get("map", []):                       # a sector changing quadrant against BTC is the movement worth a line
+            out.append({"tab": "sectors", "key": "map:" + str(m["rank"]), "label": "Against BTC, sector " + str(m["rank"]) + ": " + m["sector"], "value": m["quadrant"],
+                        "lean": {"Leading": 1, "Improving": 1, "Lagging": -1, "Weakening": -1}[m["quadrant"]], "note": f"{m['x']:+.0%} over 90 days, {m['y']:+.0%} over 30"})
     except Exception:
         pass
     return out
