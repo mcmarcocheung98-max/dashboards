@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-12",
+ "updated": "2026-11-13",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -391,6 +391,22 @@
    "since": "2026-11-12",
    "title": "Luxury: a page view must never wait on FRED (hung over 180 s in two live checks)",
    "detail": "Seed plus background fetch, as AI Stocks did in bb5c495 and c87c7dd. Fixed within the hour (238aad0); to be confirmed by the 13 Nov live check."
+  },
+  {
+   "id": "ai-stocks-slow-tabs",
+   "owner": "session:ai-stocks",
+   "status": "waiting",
+   "since": "2026-11-13",
+   "title": "AI Stocks: Setup, Dips and Fear take 80-180 s on first load; no downloads inside page views",
+   "detail": "Two live checks running (12 and 13 Nov)."
+  },
+  {
+   "id": "cut-review-1113",
+   "owner": "session:china-us-tech",
+   "status": "waiting",
+   "since": "2026-11-13",
+   "title": "China vs US Tech: bring milestones, node gap, EV share, top-cited and listings up to date; fill or drop ic_imports_monthly; source 34 verify rows",
+   "detail": "From the 13 Nov review."
   }
  ],
  "roadmap": [
@@ -832,6 +848,24 @@
     "date": "2026-11-11",
     "minutes": 201,
     "runs": 67
+   }
+  },
+  {
+   "date": "2026-11-13",
+   "run": "scheduled",
+   "result": "problems",
+   "summary": "Live check: all 155 light tabs loaded (two on retry: AI wages, AI Stocks fear) and 110 dark tabs before the 25-minute limit cut the run; no tab failed. Slow: AI Stocks setup 127 s, dips 83 s, fear 177 s. Luxury fine in both passes. Health: known failures only (Bluesky and Reddit 403, Yahoo 429, one FRED source on AI Stocks, one Trends source stale); Pokémon's TCGdex cards recovered; Luxury shows no stale FRED sources any more. Local tests 460 passed. Newsletter built, not sent. Signals 66 of 83 wired, 15 crossed.",
+   "fixed": [
+    "live check limit 25 to 40 minutes"
+   ],
+   "handed": [
+    "session:ai-stocks (slow tabs)",
+    "session:china-us-tech (review)"
+   ],
+   "actions": {
+    "date": "2026-11-12",
+    "minutes": 104,
+    "runs": 32
    }
   }
  ],
@@ -1680,6 +1714,58 @@
     "Broker for the options trading portal",
     "Gmail newsletter secrets (built, not sent again), eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback",
     "Say go in the Pokémon session (test speed-up and two older items)"
+   ]
+  },
+  {
+   "date": "2026-11-13",
+   "title": "Luxury confirmed fixed; AI Stocks is now the slow dashboard; China vs US Tech reviewed",
+   "summary": "Luxury loaded in seconds in both passes of the live check, so yesterday's fix holds. The run was still cut at its time limit, 110 tabs into the dark pass, because AI Stocks' Setup, Dips and Fear tabs took one to three minutes each on first load, two days running: the same FRED-inside-a-page-view problem, handed to its session; the check's limit is raised from 25 to 40 minutes so one slow dashboard cannot hide the rest. The China vs US Tech review found hand-kept files that stop in 2025 (milestones, node gap), 2024 (EV share) and 2023 (top-cited papers), an empty chip-imports file, and 34 rows without a source; handed to its session. Signals: 66 of 83 wired, 15 crossed; AI Stocks' breadth washout has cleared and VIX is 17.5; the Options volatility premium is down to 8%.",
+   "changes": [
+    {
+     "dashboard": "shared",
+     "slug": "status",
+     "tab": "log",
+     "what": "live check's job limit raised from 25 to 40 minutes",
+     "commit": "fc76ae7",
+     "by": "agent"
+    },
+    {
+     "dashboard": "Luxury",
+     "slug": "luxury",
+     "tab": "overview",
+     "what": "yesterday's fix confirmed live: every Luxury tab loaded within seconds in both passes",
+     "commit": "238aad0",
+     "by": "session:luxury"
+    },
+    {
+     "dashboard": "Robotaxi",
+     "slug": "robotaxi",
+     "tab": "tesla",
+     "what": "two verify rows cleared (UK FSD not approved; Baidu about 1 million driverless rides in Q2 2026)",
+     "commit": "e56bcee",
+     "by": "session:robotaxi"
+    },
+    {
+     "dashboard": "AI",
+     "slug": "ai",
+     "tab": "agents",
+     "what": "three verify rows cleared; Google Antigravity moved to 20 Nov 2025",
+     "commit": "3d5b9a3",
+     "by": "session:ai"
+    }
+   ],
+   "review": "china-us-tech",
+   "next": [
+    "AI Stocks session's reply (no downloads inside page views); tomorrow's live check should finish both passes inside 15 minutes",
+    "Prediction Markets watchlist refresh (asked 12 Nov, no reply yet: one reminder on Monday)",
+    "Monday: weekly luxury liquidity log and stock refresh; token totals"
+   ],
+   "asks": [
+    "Debt & Rates: allow the government hosts its 122 remaining rows need, or accept them staying marked verify",
+    "approve or skip r-fred-via-actions, r-climate-disasters, r-watch-recalibrate, r-private-signals",
+    "Broker for the options trading portal",
+    "Gmail newsletter secrets (built, not sent again), eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback",
+    "Say go in the Pokémon session"
    ]
   }
  ]
