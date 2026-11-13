@@ -153,9 +153,6 @@ const VIEWS = {
     const tr = card("China's integrated-circuit trade, USD bn a year (GACC)", ...yearBars(T, v => "$" + Math.round(v) + "bn", { colorOf: (k, i) => css(SERIES[i % SERIES.length]), h: 240 }),
       ask("Customs value of chips imported (HS 8542) and exported. China spends more on chip imports than on crude oil. Hand-entered from GACC; rows marked verify still need checking.",
         "does the import bill fall as domestic fabs take share, or rise with AI demand?", "does China become a net exporter of mature-node chips?", "does China still need foreign chips at all?"), cite(d.cited));
-    const mo = d.monthly && d.monthly.length >= 2 ? card("China IC imports per month, USD bn", ...linesChart([{ name: "Imports", points: d.monthly, color: colOf("China") }], v => "$" + num(v, 1) + "bn", { small: true }),
-      ask("From the GACC monthly release, one row per month (data/china-us-tech/ic_imports_monthly.csv).", "do imports jump before each new control takes effect (stockpiling)?", "does the trend turn down?", "is the import bill a cost or a choke point?"))
-      : card("China IC imports per month", el("div", { class: "muted" }, "No monthly rows yet. Add one row per month from GACC's 'major imports' table to data/china-us-tech/ic_imports_monthly.csv and the chart appears here."));
     const nodes = ng.length ? card("Leading node in volume production: SMIC vs TSMC", ...svgBars(ng.map(n => n.node + "nm"), [{ name: "Years behind", values: ng.map(n => n.years), color: colOf("China") }], { yFmt: v => num(v, 1) + "y", h: 200 }),
       table(["Node", "TSMC", "SMIC", "Years behind", "Note"], ng.map(n => el("tr", {}, el("td", {}, n.node + "nm"), el("td", {}, dateOf(n.tsmc)), el("td", {}, dateOf(n.smic)), el("td", {}, num(n.years, 1)), el("td", { class: "wrap" }, n.note)))),
       ask("For each node SMIC reached, how long after TSMC. TSMC's 16nm is paired with SMIC's 14nm. SMIC makes 7nm and 5nm-class chips without EUV tools, at lower yields.",
@@ -168,7 +165,7 @@ const VIEWS = {
     const ms = card("SMIC and Huawei milestones", table(["Date", "Who", "What", "Source"],
       (d.milestones || []).map(r => el("tr", {}, el("td", {}, dateOf(r.date)), el("td", {}, r.who), el("td", { class: "wrap" }, r.event), srcCell(r)))),
       ask("Chips and systems China makes without TSMC or Nvidia.", "does Ascend ship in volume enough to train frontier models?", "does Huawei's own HBM end the memory bottleneck?", "is there a second full chip stack outside the US?"));
-    return [head, tr, mo, nodes, ctl, ms].filter(Boolean);
+    return [head, tr, nodes, ctl, ms].filter(Boolean);
   },
 
   async markets() {

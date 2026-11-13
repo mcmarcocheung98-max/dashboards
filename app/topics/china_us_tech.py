@@ -8,7 +8,7 @@ research   PCT international patent filings by origin (WIPO, hand-entered: pct.c
            of the authors' institutions (OpenAlex API, automated); the AI Index count of the 100 most-cited AI papers (top_cited.csv)
 ev         electric share of new car sales (IEA Global EV Outlook via Our World in Data, automated; ev_share.csv fills gaps and Hong
            Kong), China's NEV exports (CAAM), BYD vs Tesla battery-electric deliveries and EV battery makers' shares (SNE Research)
-chips      China's integrated-circuit imports and exports (GACC, hand-entered yearly, monthly when entered), the leading node in volume
+chips      China's integrated-circuit imports and exports (GACC, hand-entered yearly), the leading node in volume
            at TSMC vs SMIC, the export-control timeline (US, allies, China's counter-measures) and SMIC/Huawei milestones
 markets    an equal-weighted US tech basket against US-listed Chinese tech (ADRs, KWEB) from the Nasdaq quote API, the Hang Seng TECH
            index's yearly return (hstech.csv) and listing notes for London, Hong Kong and New York
@@ -57,7 +57,7 @@ SOURCES = [{"name": "Epoch AI: notable AI models", "url": "https://epoch.ai/data
            {"name": "OpenAlex works API", "url": "https://docs.openalex.org/", "cadence": "daily"},
            {"name": "IEA Global EV Outlook via Our World in Data", "url": "https://ourworldindata.org/grapher/electric-car-sales-share", "cadence": "yearly"},
            {"name": "CAAM, SNE Research, BYD and Tesla filings (hand-entered)", "url": "http://en.caam.org.cn/", "cadence": "as published"},
-           {"name": "GACC customs statistics (hand-entered)", "url": "http://english.customs.gov.cn/statics/report/monthly.html", "cadence": "monthly"},
+           {"name": "GACC customs statistics (hand-entered)", "url": "http://english.customs.gov.cn/statics/report/monthly.html", "cadence": "yearly"},
            {"name": "BIS, MOFCOM, TechInsights, company announcements (hand-entered)", "url": "https://www.bis.gov/", "cadence": "as events happen"},
            {"name": "Nasdaq quote API (share prices)", "url": "https://www.nasdaq.com/market-activity/stocks/baba", "cadence": "daily"}]
 NOTES = ("Leans on this page: +1 = China gaining relative to the US, -1 = the US gaining. Rows marked verify were entered from memory or "
@@ -281,11 +281,10 @@ def node_gap() -> list[dict]:
 
 def _chips_now() -> dict:
     trade = _hand("ic_trade")
-    monthly = manual(SLUG, "ic_imports_monthly")
     controls = sorted(manual_rows(SLUG, "controls"), key=lambda r: r["date"], reverse=True)
     cutoff = pd.Timestamp.now() - pd.Timedelta(days=365)
     recent = [r for r in controls if pd.Timestamp(r["date"]) >= cutoff and not r["actor"].startswith("China")]
-    out = {"trade": {k: _year_pts(v, 1) for k, v in trade.items()}, "monthly": _pts(monthly, 2) if isinstance(monthly, pd.Series) else [],
+    out = {"trade": {k: _year_pts(v, 1) for k, v in trade.items()},
            "nodes": node_gap(), "controls": controls, "milestones": sorted(manual_rows(SLUG, "milestones"), key=lambda r: r["date"], reverse=True),
            "recent_direction": sum(int(r.get("direction") or 0) for r in recent), "recent_n": len(recent),
            "cited": manual_sources(SLUG, "ic_trade")[:3], "stale": {}, "updated": int(time.time())}
@@ -517,8 +516,7 @@ def SIGNALS() -> list[dict]:
             0 if chg is None else 1 if chg > 0 else -1, "new high, or down 20% on a year", high or (chg is not None and chg <= -0.2),
             ("a record" if high else "below the record") + (f"; {chg:+.0%} on a year" if chg is not None else "") + ("" if monthly else "; yearly rows until monthly CAAM figures are entered"))
     trade = _hand("ic_trade")
-    monthly_imp = manual(SLUG, "ic_imports_monthly")
-    imp = monthly_imp if isinstance(monthly_imp, pd.Series) and len(monthly_imp) >= 13 else trade.get("Imports")
+    imp = trade.get("Imports")
     if imp is not None and len(imp) >= 2:
         now, ago, monthly = _year_back(imp)
         if ago:

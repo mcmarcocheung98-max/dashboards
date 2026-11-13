@@ -45,7 +45,6 @@ downturn (2023), so read it next to the node gap and the controls timeline.
 | EVs & batteries | BYD vs Tesla BEV deliveries | `byd_tesla.csv` (Tesla quarterly delivery releases; BYD monthly volume filings on HKEX, stock 1211) | **hand-entered** | yearly |
 | EVs & batteries | Battery makers' share; by home country | `battery_share.csv` (SNE Research; `country` column groups the makers) | **hand-entered** | yearly (SNE publishes in February) |
 | Chips trade | China IC imports and exports, yearly | `ic_trade.csv` (GACC, HS 8542) | **hand-entered** | yearly |
-| Chips trade | China IC imports per month | `ic_imports_monthly.csv` (GACC monthly "major imports" table) | **hand-entered**, empty for now | monthly: add one row per month and the chart appears |
 | Chips trade | SMIC vs TSMC node gap | `node_gap.csv` (pairs rows by node; TSMC 16nm is entered as 14) | **hand-entered** | when a new node is confirmed (TechInsights teardowns) |
 | Chips trade | Export-control timeline | `controls.csv` (`direction`: -1 tightens China's access, +1 eases it, 0 China's own counter-measures) | **hand-entered** | as rules are published |
 | Chips trade | SMIC and Huawei milestones | `milestones.csv` | **hand-entered** | as events happen |
@@ -90,7 +89,9 @@ source) stays `verify`. `node_gap.csv` (all 8 rows) checked on 2026-11-03: TSMC 
 - `top_cited.csv`: the AI Index count of the 100 most-cited AI papers by country (China excludes Hong Kong).
 - `ev_share.csv`: fallback EV shares (%) for China, US, UK, World, and the only Hong Kong series (EPD/Transport Department: EV share of new private car first registrations).
 - `ev_exports.csv` (million vehicles), `byd_tesla.csv` (vehicles), `battery_share.csv` (%), `ic_trade.csv` (USD bn), `hstech.csv` (%): one row per year, dated 1 January.
-- `ic_imports_monthly.csv`: one row per month, dated the 1st, USD bn. The `#` line is a comment the loader skips.
+- `node_gap.csv`: no row after December 2025 because no new node has reached volume (checked 13 Nov 2026): TSMC moved A16 to 2027 at its April 2026 symposium, and the Kirin 9050 Pro (September 2026) still uses SMIC's N+3. Add a row when either changes.
+- Monthly chip imports: removed on 13 Nov 2026. GACC's monthly table is not reachable from here and secondary reports cover only scattered months, so the yearly `ic_trade.csv` is the series.
+- Sourcing pass of 13 Nov 2026: no row is marked verify. Where the official site (wipo.int, iea.org, customs.gov.cn, lmarena.ai) does not answer this network, the row cites the page that states the figure and says it was read from a search excerpt; leaderboard pairs without a same-day source for both scores (Dec 2024, Jan 2025) were removed.
 - `controls.csv`, `milestones.csv`, `listings.csv`, `node_gap.csv`: one row per event; see the columns in each header.
 
 ## Caveats
