@@ -387,11 +387,14 @@ function svgLines(series, o = {}) {
 //   log: heights on a log scale (values <= 0 are left out). diverge: colours run red - grey - green around zero (surface and bars).
 const hexRgb = h => { h = h.replace("#", ""); if (h.length === 3) h = [...h].map(c => c + c).join(""); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); };
 const mixRgb = (a, b, t) => "rgb(" + a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",") + ")";
-// series [{name, points: [[x, y], ...], color?}] on their own x values -> { x, rows } on the joined x values (a gap where a series has no point)
-function grid3d(series) {
+// series [{name, points: [[x, y], ...], color?}] on their own x values -> { x, rows } on the joined x values. A series has a gap where it has no
+// point, unless fill is set: then values between two of its points are read off the straight line joining them (never beyond its first or last point).
+function grid3d(series, fill) {
   const have = series.filter(s => s.points && s.points.length);
   const x = [...new Set(have.flatMap(s => s.points.map(p => p[0])))].sort((a, b) => a - b);
-  return { x, rows: have.map(s => { const m = new Map(s.points.map(p => [p[0], p[1]])); return { name: s.name, color: s.color, z: x.map(v => m.has(v) ? m.get(v) : null) }; }) };
+  return { x, rows: have.map(s => { const pts = s.points.filter(p => p[1] != null).slice().sort((a, b) => a[0] - b[0]), m = new Map(pts.map(p => [p[0], p[1]])); let k = 0;
+    return { name: s.name, color: s.color, z: x.map(v => { if (m.has(v)) return m.get(v); if (!fill || !pts.length || v < pts[0][0] || v > pts[pts.length - 1][0]) return null;
+      while (k < pts.length - 2 && pts[k + 1][0] < v) k++; const a = pts[k], b = pts[k + 1]; return a[1] + (b[1] - a[1]) * (v - a[0]) / (b[0] - a[0]); }) }; }) };
 }
 function chart3d(o) {
   const mode = o.mode || "ribbons", zf = o.zFmt || (v => v), xf = o.xFmt || (v => v);
@@ -421,7 +424,7 @@ function chart3d(o) {
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); host.append(cv);
     const g = cv.getContext("2d");
     const ax = 1.3, ay = ny > 1 ? Math.min(0.95, 0.22 + ny * 0.09) : 0.12, az = 0.95;
-    const S = Math.min(W / 3.5, H / 2.2), cx = W / 2, cy = H * 0.68;
+    const S = Math.min(W / 3.5, H / 2.45), cx = W / 2, cy = H * 0.63;
     const U = i => nx > 1 ? -ax + 2 * ax * i / (nx - 1) : 0, V = j => ny > 1 ? ay - 2 * ay * j / (ny - 1) : 0, Wz = z => az * (z - z0) / (z1 - z0);
     let P, hover = null, tops = [];
     const setP = () => { const c = Math.cos(yaw), s = Math.sin(yaw), sp = Math.sin(pitch), cp = Math.cos(pitch);

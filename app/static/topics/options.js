@@ -147,6 +147,12 @@ const VIEWS = {
       thinNote(B.history_days || 0, "IV history"), asOf(d), stale(d));
     const state = { sym: sym0(d, "NVDA") };
     const box = el("div", {});
+    const withTerm = order.filter(k => (S[k].term || []).filter(t => t[1] != null).length > 1).sort((a, b) => ((S[a].front || {}).atm_iv || 0) - ((S[b].front || {}).atm_iv || 0));
+    const surf = withTerm.length > 2 ? card("The volatility surface in 3D: ATM implied volatility by symbol and days to expiry",
+      ...chart3d({ ...grid3d(withTerm.map(k => ({ name: k, points: S[k].term.filter(t => t[0] <= 400).map(t => [t[0], t[1]]) })), true), mode: "surface", zero: false,
+        xFmt: v => v + "d", zFmt: ivf, xHead: "days to expiry", csvName: "iv surface", h: 460,
+        note: "Symbols run front to back from the calmest to the most volatile; expiries run left to right. Drag to turn; hover for a point." }),
+      note("Every symbol's term structure in one picture, expiries up to 400 days. A ridge near the left edge is an event priced into the front expiries (earnings); a surface that climbs to the right is the calm, upward-sloping shape. Between two listed expiries the height is read off the straight line joining them.")) : null;
     const render = () => {
       const s = S[state.sym], R = s.rank || {};
       const ivSeries = [{ name: "ATM IV, front month (daily snapshots)", points: s.iv_hist || [], color: css("--s1") }, { name: "30-day realised", points: s.rv30_hist || [], color: css("--s2") }, { name: "10-day realised", points: s.rv10_hist || [], color: css("--s3"), dashed: true }];
@@ -170,7 +176,7 @@ const VIEWS = {
         td(ivf(f.atm_iv)), td(ivf(s.rv10)), td(ivf(s.rv30)), td(f.atm_iv != null && s.rv30 != null ? ptsf(f.atm_iv - s.rv30) : "–", f.atm_iv != null && s.rv30 != null ? (f.atm_iv > s.rv30 ? "up" : "down") : ""),
         td([R.rank == null ? "–" : num(R.rank, 0), rankTag({ rank_basis: R.basis, rank_days: R.own_days != null ? R.own_days : R.days })], rankCls(R.rank)), td(R.pct == null ? "–" : num(R.pct, 0)), td(num(s.history_days) + "d")); })),
       note("IV30 is Cboe's own 30-day figure on the quote; the ATM IV is this page's, from the front month's chain. " + SMALL));
-    return [head, ...vixCards(d), pick, T];
+    return [head, surf, ...vixCards(d), pick, T].filter(Boolean);
   },
 
   async skew() {

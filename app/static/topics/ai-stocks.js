@@ -283,6 +283,11 @@ const VIEWS = {
     const S = d.stocks ? card("Each stock's drawdown from its peak since 2020",
       ...linesChart(Object.entries(d.stocks).map(([k, p]) => ({ name: k + " " + ddf((d.stock_now || {})[k]), points: p })), ddf, { small: false }),
       note("Click a name to hide it. A stock that listed after 2020 (Arm) counts from its first close.")) : unavailable("Stock drawdowns", d, "stocks");
+    const day3 = t => new Date(t * 1000).toLocaleDateString([], { month: "short", year: "2-digit", timeZone: "UTC" });
+    const S3 = d.stocks && Object.keys(d.stocks).length > 2 ? card("The drawdown landscape in 3D: every stock, every day since 2020",
+      ...chart3d({ ...grid3d(Object.entries(d.stocks).sort((a, b) => ((d.stock_now || {})[b[0]] || 0) - ((d.stock_now || {})[a[0]] || 0)).map(([k, p]) => ({ name: k, points: p })), true), mode: "surface",
+        xFmt: day3, zFmt: ddf, xHead: "date", csvName: "drawdown 3d", h: 460, note: "Stocks run front to back from the shallowest drawdown today to the deepest; time runs left to right. Drag to turn; hover for a point." }),
+      note("The flat top is a stock at its high; a valley is a drawdown. A trench that crosses every stock at once is a market-wide sell-off (2022); a hole under one stock is its own story.")) : null;
     const PC = d.picks_current || {};
     const PB = d.picks_basket ? card("Owner's picks index: drawdown since 2020, the current dip in red",
       el("div", { class: "kpis" }, kpi("Below its peak now", ddf(PC.dd), PC.dd != null && PC.dd < -0.2 ? "down" : ""), kpi("Peak", dateOf(PC.peak)), kpi("Deepest so far", ddf(PC.low), PC.low != null && PC.low < -0.2 ? "down" : ""),
@@ -297,7 +302,7 @@ const VIEWS = {
       E.map(e => el("tr", {}, td(dateOf(e.peak)), td(dateOf(e.trough)), td(ddf(e.depth), e.depth < -0.2 ? "down" : ""), td(num(e.days_to_bottom)),
         td(e.ongoing ? "not yet" : dateOf(e.recovered)), td(e.days_to_recover == null ? "–" : num(e.days_to_recover))))),
       note("Calendar days, peak to bottom and bottom to the next new high. The row marked \"not yet\" is the dip we are in."));
-    return [head, B, S, PB, PS, T];
+    return [head, B, S, S3, PB, PS, T].filter(Boolean);
   },
 
   async trend() {
@@ -464,6 +469,11 @@ const VIEWS = {
       ...(d.paths && d.paths["2022 AI basket"] ? [{ name: "2022 AI basket", points: d.paths["2022 AI basket"], color: css("--s2"), width: 2 }] : []),
       ...(cy && d.paths && d.paths[cy] ? [{ name: cy + " Nasdaq-100 (so far)", points: d.paths[cy], color: css("--down"), width: 3 }] : []),
       ...(cy && d.paths && d.paths[cy + " AI basket"] ? [{ name: cy + " AI basket (so far)", points: d.paths[cy + " AI basket"], color: css("--s4"), width: 3 }] : [])];
+    const P3 = full.length > 2 ? card("The midterm cycles in 3D: the tech proxy's path, one ribbon per midterm (log height)",
+      ...chart3d({ ...grid3d([...(cy && d.paths[cy] ? [{ name: cy + " (so far)", points: d.paths[cy], color: css("--down") }] : []), ...full.slice().reverse().map(([k, p]) => ({ name: k, points: p }))], true), mode: "ribbons", log: true,
+        xFmt: v => "day " + Math.round(v), zFmt: v => num(v, 0), xHead: "trading day after the election", csvName: "midterms 3d", h: 460,
+        note: "The current cycle at the front, then each midterm back to 1974. Drag to turn; hover for a cycle's level on a trading day." }),
+      note("100 = the election-day close. The same paths as the chart below, pulled apart so each cycle's year can be followed on its own.")) : null;
     const P = lines.length ? card("The tech proxy's path after each midterm, 100 = election-day close",
       ...svgLines(lines, { xFmt: v => "day " + Math.round(v), yFmt: v => num(v, 0), xTicks: [0, 21, 63, 126, 189, 252], hline: 100, log: true, xName: "trading day after the election", h: 320,
         note: "Hover for each cycle on that trading day. 252 trading days is about 12 months." }),
@@ -485,7 +495,7 @@ const VIEWS = {
       el("tr", {}, td("1986–2018"), td("Nasdaq-100"), td("The largest non-financial Nasdaq companies: PCs, software, then the internet and smartphones; it starts in 1985.")),
       el("tr", {}, td("2022–"), td("AI basket, with the Nasdaq-100"), td("This dashboard's 13 AI leaders (equal weight, from 2020), next to the Nasdaq-100 so the cycles stay comparable."))]),
       note("No AI stock index exists before the last few years; each proxy is the index that held that cycle's leading technology companies. Survivorship applies: the Nasdaq-100 is reshuffled each year to its biggest winners."));
-    return [head, P, bars, T, W].filter(Boolean);
+    return [head, P3, P, bars, T, W].filter(Boolean);
   },
 };
 window.TOPIC = { VIEWS, presets: [["1m", "1M", 30], ["3m", "3M", 91], ["6m", "6M", 182], ["1y", "1Y", 365], ["5y", "5Y", 1826], ["all", "All", 0]] };
