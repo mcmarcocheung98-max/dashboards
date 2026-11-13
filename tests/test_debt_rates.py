@@ -265,7 +265,8 @@ def test_mts9_tells_receipts_total_from_outlays_total():
 def test_treasury_csv_nominal_and_real_layouts():
     n = D.parse_treasury_csv(treasury_csv(2020, False))
     r = D.parse_treasury_csv(treasury_csv(2020, True))
-    assert set(n) == {"10y", "2y"} and set(r) == {"10y"}
+    assert {"10y", "2y", "m3", "m24", "m120", "m360"} <= set(n) and {"10y", "m120"} <= set(r) and "2y" not in r      # every maturity too, keyed by months
+    assert n["m120"].equals(n["10y"])
     assert n["10y"].index.is_monotonic_increasing and n["10y"].index[0] == pd.Timestamp("2020-01-02")
     with pytest.raises(ValueError):
         D.parse_treasury_csv("Date,1 Mo\n01/02/2020,1.0")
@@ -334,6 +335,9 @@ def test_interest_payload_and_crossing(fixtures):
 
 def test_yields_policy_and_stress(fixtures):
     y = D.ENDPOINTS["yields"]()
+    cv = y["us_curve"]                                                             # the whole par curve for the 3D surface: one row per maturity, one column per month-end
+    assert [r["name"] for r in cv["rows"]][0] == "3 months" and cv["rows"][-1]["name"] == "30 years" and all(len(r["z"]) == len(cv["x"]) for r in cv["rows"])
+    assert cv["x"] == sorted(cv["x"]) and next(r for r in cv["rows"] if r["name"] == "10 years")["z"][-1] == pytest.approx(y["nominal"]["US"][-1][1], abs=0.01)
     assert set(y["nominal"]) == {"US", "UK", "Hong Kong", "China"} and len(y["real"]) == 2
     hk = y["nominal"]["Hong Kong"]
     assert pd.Timestamp(hk[-1][0], unit="s").year >= 2026                # HKGB rows follow the EFN series

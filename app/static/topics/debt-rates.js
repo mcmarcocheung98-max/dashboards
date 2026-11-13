@@ -134,7 +134,13 @@ const VIEWS = {
     const real = card("Real 10-year yields: US TIPS and UK index-linked gilts (%)", ...linesChart(lines(d.real), v => pc(v, 2), { small: true, hlines: [0] }), missing(d, "real", "Real yields"),
       note("The yield after inflation that investors demand: the true cost of borrowing for a government whose tax base grows with inflation. UK index-linked yields are on RPI, which runs above CPI, so they read lower."),
       ask("5 years: real yields near 2% are the highest since before 2008. Can growth keep up? 10 years: they were negative from 2012 to 2021, when debt was close to free. 20 years: if real yields stay above real growth, debt ratios rise even with a balanced primary budget (see Stress)."));
-    return [head, nom, real];
+    const C = d.us_curve || {};
+    const curve = C.rows && C.rows.length > 2 ? card("The US yield curve in 3D: every maturity, every month since 2000 (%)",
+      ...chart3d({ x: C.x, rows: C.rows, mode: "surface", zero: false, h: 480, xFmt: t => new Date(t * 1000).toLocaleDateString([], { month: "short", year: "numeric", timeZone: "UTC" }),
+        zFmt: v => pc(v, 2), xHead: "month", csvName: "us curve 3d", note: "Maturities run front to back, 3 months to 30 years; time runs left to right. Drag to turn; hover for a yield." }),
+      note("Treasury par yields at each month-end. Read across the depth for the curve on a date: rising towards the back is a normal curve, falling is an inverted one (2006–07 and 2022–24, when the front edge stands above the back). " +
+        "Read along the length for one maturity through time: the floor of 2009–15 and 2020–21 is the zero-rate years. The Treasury did not issue 30-year bonds from 2002 to 2006, so the surface has a gap there.")) : null;
+    return [head, nom, curve, real].filter(Boolean);
   },
 
   async policy() {

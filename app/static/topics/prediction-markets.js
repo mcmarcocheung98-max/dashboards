@@ -60,6 +60,12 @@ const VIEWS = {
       note("Polymarket's open events with the most 24-hour volume (the top 300, plus a few regional tags), grouped by their tags. Sports usually leads on any given day; politics leads in election weeks.")) : null;
     const mv = (title, rows, key, txt) => card(title, rows && rows.length ? marketTable(rows, [ "yes", key, key === "d1" ? "vol24" : "vol", "liq"]) : el("div", { class: "muted" }, "No market moved enough."),
       note(txt));
+    const lastC = p => p && p.length ? p[p.length - 1][1] : 0;
+    const cats3 = Object.entries(cl).filter(([, p]) => p && p.length > 5).sort((a, b) => lastC(a[1]) - lastC(b[1]));
+    const cat3d = cats3.length > 2 ? card("The categories in 3D: money traded in 24 hours, one ribbon per category (log height)",
+      ...chart3d({ ...grid3d(cats3.map(([k, p]) => ({ name: k, points: p, color: catCol(k) }))), mode: "ribbons", log: true, h: 440, xFmt: t => new Date(t * 1000).toLocaleDateString([], { day: "numeric", month: "short", timeZone: "UTC" }),
+        zFmt: money, xHead: "date", csvName: "categories 3d", note: "Smallest category today at the front, largest at the back. Drag to turn; hover for a day's volume." }),
+      note("The same daily log as the chart above. On a log height a category ten times larger stands one step higher, so the small ones stay readable beside sports and elections.")) : null;
     return [hd, stale(d), missing(d, "pool", "Polymarket"),
       el("div", { class: "grid2" },
         mv("Biggest movers, 24 hours", d.movers24, "d1", "Change in the Yes price over 24 hours, in points of probability, among markets that traded at least " + money((d.thresholds || {}).vol24) + " in the day; one market per event."),
@@ -70,7 +76,7 @@ const VIEWS = {
         ...(d.events || []).map(e => el("tr", {}, wrap([link(e.title, e.url)]), el("td", {}, e.cat ? ({ politics: "Elections & politics", macro: "Central banks & macro", crypto: "Crypto", ai: "AI & tech", sports: "Sports", geo: "Geopolitics" }[e.cat] || "Other") : "–"),
           el("td", {}, e.n), el("td", {}, money(e.vol24)), el("td", {}, money(e.volume)), el("td", {}, money(e.liq)), el("td", {}, e.end || "–"))))),
         note("An event groups its outcomes (each candidate, each rate move); its volume is the sum of theirs.")),
-      nfa()];
+      cat3d, nfa()].filter(Boolean);
   },
 
   async markets() {

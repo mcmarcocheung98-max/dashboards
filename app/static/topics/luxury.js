@@ -250,7 +250,13 @@ const VIEWS = {
           el("td", { class: "wrap" }, [...new Set(Object.values(r.m).map(x => x.date))].map(dateOf).join(", "))))),
       note("Hand-entered once a week (the dev agent's weekly step appends rows): Chrono24's listing count on the reference's public page, StockX's last sale, highest bid and lowest ask for the bags (USD converted to GBP), WatchCharts' median days on market, and Fashionphile's sold counts where visible. ·v marks a reading not confirmed on the page. " + (Lg.n_rows || 0) + " rows, " + (Lg.n_verify || 0) + " to verify" + (Lg.first ? ", since " + dateOf(Lg.first) : "") + ". A wide bid-ask spread and more listings mean a market where sellers wait; days to sell is the most direct liquidity measure here."),
       cite(Object.values(byItem).flatMap(r => Object.values(r.m)).map(x => ({ source: x.source, date: x.date })).filter((x, i, a) => a.findIndex(y => y.source === x.source) === i).slice(0, 10)));
-    return [score, head, bk, per, tbl, eb, log, ve, st, lots, changesCard("liquidity")];
+    const lastV = a => a.points && a.points.length ? a.points[a.points.length - 1][1] : 0;
+    const arts3 = Object.values(arts).filter(a => a.points && a.points.length > 12).sort((a, b) => lastV(a) - lastV(b));
+    const per3 = arts3.length > 2 ? card("Attention in 3D: each article's monthly views (log height)",
+      ...chart3d({ ...grid3d(arts3.map(a => ({ name: a.title, points: a.points }))), mode: "ribbons", log: true, h: 460, xFmt: t => new Date(t * 1000).toLocaleDateString([], { month: "short", year: "2-digit", timeZone: "UTC" }), zFmt: v => num(v, 0), xHead: "month", csvName: "attention 3d",
+        note: "Least-read article at the front, most-read at the back. Drag to turn; hover for a month's views." }),
+      note("The same series as the chart above, one ribbon per article, so a spike in one name (a launch, an auction record, a film) stands out from the rest.")) : null;
+    return [score, head, bk, per, per3, tbl, eb, log, ve, st, lots, changesCard("liquidity")];
   },
 
   async fees() {

@@ -417,8 +417,15 @@ const VIEWS = {
     const top = [...d.rows].slice(0, 3).map(r => r.borough), bottom = [...d.rows].slice(-3).map(r => r.borough);
     const lines = card("Most and least expensive boroughs, indexed (Jan 2015 = 100)", ...linesChart([...top, ...bottom].filter(b => d.indexed[b]).map(b => ({ name: b, points: d.indexed[b], dashed: bottom.includes(b) })), v => v == null ? "–" : v.toFixed(0)),
       note("Solid: the three most expensive; dashed: the three cheapest. Prime central London has lagged outer boroughs since 2015."));
+    const last = b => { const p = d.indexed[b]; return p && p.length ? p[p.length - 1][1] : 0; };
+    const allB = Object.keys(d.indexed || {}).filter(b => d.indexed[b] && d.indexed[b].length > 12).sort((a, b) => last(a) - last(b));
+    const land = allB.length > 5 ? card("All " + allB.length + " boroughs in 3D: prices indexed to Jan 2015 = 100",
+      ...chart3d({ ...grid3d(allB.map(b => ({ name: b, points: d.indexed[b] })), true), mode: "surface", zero: false, h: 480,
+        xFmt: t => new Date(t * 1000).toLocaleDateString([], { month: "short", year: "numeric", timeZone: "UTC" }), zFmt: v => v == null ? "–" : v.toFixed(0), xHead: "month", csvName: "boroughs 3d",
+        note: "Boroughs run front to back from the weakest to the strongest growth since 2015; time runs left to right. Drag to turn; hover for a borough's index in a month." }),
+      note("Every borough's whole path in one picture. The slope up towards the back is the gap between the boroughs that grew most and least; a ripple that runs straight across is a move the whole city made together (2020–22 up, 2023 down).")) : null;
     const errs = Object.keys(d.errors || {}).length ? note("Not available right now: " + Object.keys(d.errors).join(", ") + ".") : null;
-    return [d.map ? boroughMap(d) : null, boroughPicks(d), card("London's 33 boroughs (UK HPI, " + (d.as_of || "–").slice(0, 7) + ")", el("div", { class: "muted" }, "Click a column to sort."), host, errs), bars, lines].filter(Boolean);
+    return [d.map ? boroughMap(d) : null, boroughPicks(d), card("London's 33 boroughs (UK HPI, " + (d.as_of || "–").slice(0, 7) + ")", el("div", { class: "muted" }, "Click a column to sort."), host, errs), bars, lines, land].filter(Boolean);
   },
   async calc() {
     const d = await api("calc");

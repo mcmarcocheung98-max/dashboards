@@ -19,6 +19,7 @@ fed_target (before the NY Fed API starts), stress_events. Every row cites a sour
 from __future__ import annotations
 
 import json
+import re
 import time
 from io import StringIO
 
@@ -166,6 +167,11 @@ def parse_treasury_csv(text: str) -> dict[str, pd.Series]:
             out[key] = s[s.index.notna()].dropna().sort_index()
     if not out.get("10y", pd.Series(dtype=float)).size:
         raise ValueError("Treasury CSV layout changed: no 10-year column")
+    for c in d.columns[1:]:                      # every maturity as well, keyed by its length in months ("m3", "m120"), for the 3D curve
+        m = re.fullmatch(r"(\d+(?:\.\d+)?)\s*(mo|month|yr|year)s?", c.lower())
+        if m:
+            s = pd.Series(pd.to_numeric(d[c], errors="coerce").to_numpy(), index=t)
+            out[f"m{float(m.group(1)) * (1 if m.group(2).startswith('mo') else 12):g}"] = s[s.index.notna()].dropna().sort_index()
     return out
 
 
@@ -341,7 +347,7 @@ def treasury(kind: str) -> dict[str, pd.Series]:
     with ThreadPoolExecutor(max_workers=4) as ex:
         parts = list(ex.map(one, range(TSY_FROM[kind], now + 1)))
     out = {}
-    for k in ("10y", "2y"):
+    for k in sorted({k for p in parts for k in p}):
         ss = [p[k] for p in parts if k in p and len(p[k])]
         if ss:
             s = pd.concat(ss).sort_index()
@@ -696,6 +702,21 @@ def yields10() -> dict[str, pd.Series]:
     return yields10_why()[0]
 
 
+CURVE_TENORS = (("3 months", 3), ("6 months", 6), ("1 year", 12), ("2 years", 24), ("3 years", 36), ("5 years", 60), ("7 years", 84), ("10 years", 120), ("20 years", 240), ("30 years", 360))
+
+
+def us_curve() -> dict:
+    """The whole US par curve at each month-end: {x: [time, ...], rows: [{name, z: [yield or None, ...]}, ...]}, shortest maturity first.
+    A maturity the Treasury did not publish in a month (the 30-year, 2002 to 2006) is None there."""
+    t = treasury("daily_treasury_yield_curve")
+    cols = {name: month_end(t[f"m{m}"]) for name, m in CURVE_TENORS if f"m{m}" in t and len(t[f"m{m}"])}
+    if len(cols) < 3:
+        return {}
+    idx = sorted(set().union(*[c.index for c in cols.values()]))
+    return {"x": [int(pd.Timestamp(i).timestamp()) for i in idx],
+            "rows": [{"name": name, "z": [None if pd.isna(v) else _r(float(v), 2) for v in c.reindex(idx).to_numpy()]} for name, c in cols.items()]}
+
+
 def _yields_now() -> dict:
     missing: dict = {}
 
@@ -706,7 +727,8 @@ def _yields_now() -> dict:
     out = payload({"nominal": nominal,
                    "real": lambda: {k: _pts(v, 3) for k, v in (("US 10-year TIPS", month_end(treasury("daily_treasury_real_yield_curve")["10y"])),
                                                               ("UK 10-year index-linked", month_end(boe("uk10_real", 2000))))},
-                   "us2": lambda: _pts(month_end(treasury("daily_treasury_yield_curve").get("2y", pd.Series(dtype=float))), 3)},
+                   "us2": lambda: _pts(month_end(treasury("daily_treasury_yield_curve").get("2y", pd.Series(dtype=float))), 3),
+                   "us_curve": us_curve},
                   sources=[TSY.format(y=pd.Timestamp.now().year, kind="daily_treasury_yield_curve"), BOE.format(y=2000, code=BOE_CODES["uk10"][0])])
     out["missing"] = missing
     out["cites"] = {n: manual_sources(SLUG, n) for n in ("cn_10y", "hk_10y")}
