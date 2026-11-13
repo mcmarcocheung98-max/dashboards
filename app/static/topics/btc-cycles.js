@@ -259,7 +259,12 @@ const VIEWS = {
       note("Cycle 4's -53% against -77% to -87% in the three before it.")) : null;
     const anat = fold("BTC cycle anatomy, 2011–2026", true, para(R.anatomy.intro), table(R.anatomy.columns, R.anatomy.rows), para(R.anatomy.after));
     const zones = d.zones ? zonesCard({ ...d.zones, lines: { ...d.zones.lines, price: d.price } }) : null;
-    return [head, bottom, priceCard, zones, ov, dd, anat];
+    const ov3 = d.overlay && Object.keys(d.overlay).length > 1 ? card("The cycles side by side in 3D (price ÷ price on halving day, log height)",
+      ...chart3d({ ...grid3d(Object.entries(d.overlay).reverse().map(([k, pts]) => ({ name: k, points: pts }))), mode: "ribbons", log: true,
+        xFmt: v => (v >= 0 ? "+" : "") + v + "d", zFmt: xf, xHead: "days from halving", csvName: "cycles 3d",
+        note: "Each ribbon is one cycle, oldest at the back. Drag to turn; hover to read a cycle's multiple on a day." }),
+      note("The same numbers as the chart above, one ribbon per cycle: the shrinking peaks read as a staircase from back to front.")) : null;
+    return [head, bottom, priceCard, zones, ov, ov3, dd, anat];
   },
   async etf() {
     const d = await api("etf"), K = d.kpi || {};
@@ -294,7 +299,13 @@ const VIEWS = {
       table(["Date", "Market", "BTC", "Source"], d.intl_rows.map(r => [r.date, r.series, num(+r.value), "[" + host(r.source) + "](" + r.source + ")" + (r.note ? " · " + r.note : "")])),
       note("No free daily feed for these: add a row to data/btc-cycles/etf_holdings.csv from the issuers' holdings pages.")) : null;
     const ms = fold("Milestones", true, table(["Date", "Market", "What happened", "Source"], (d.milestones || []).map(r => [r.date, r.market, r.event, "[" + host(r.source) + "](" + r.source + ")"])));
-    return [head, daily, cum, cumBtc, roll, issuers, tbl, intl, ms];
+    const day3 = t => new Date(t * 1000).toLocaleDateString([], { month: "short", year: "2-digit", timeZone: "UTC" });
+    const iss3 = d.cum_by_issuer && Object.keys(d.cum_by_issuer).length > 1 ? card("Issuers in 3D: cumulative net flows, one ribbon per fund (US$)",
+      ...chart3d({ ...grid3d(Object.entries(d.cum_by_issuer).map(([k, pts]) => ({ name: k, points: pts.map(p => [p[0], p[1] * 1e6]) }))
+        .sort((a, b) => (a.points[a.points.length - 1] || [0, 0])[1] - (b.points[b.points.length - 1] || [0, 0])[1])), mode: "ribbons",
+        xFmt: day3, zFmt: v => usdBig(v), xHead: "date", csvName: "issuers 3d", note: "Largest fund at the back. Drag to turn; hover for a fund's total on a date." }),
+      note("The same series as the chart above. Depth separates the funds, so the small ones are not hidden under IBIT's line.")) : null;
+    return [head, daily, cum, cumBtc, roll, issuers, iss3, tbl, intl, ms];
   },
   async mstr() {
     const d = await api("mstr"), K = d.kpi || {};

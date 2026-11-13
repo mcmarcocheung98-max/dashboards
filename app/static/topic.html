@@ -316,6 +316,8 @@ function svgBox(h, draw) {
   let t;
   const onResize = () => { if (!host.isConnected) { window.removeEventListener("resize", onResize); return; } clearTimeout(t); t = setTimeout(go, 150); };
   window.addEventListener("resize", onResize);
+  // a chart built inside a folded section has no width until the fold opens: draw it the moment it gets one
+  if (window.ResizeObserver) { let seen = 0; const ro = new ResizeObserver(() => { if (!host.isConnected) return; const w = host.clientWidth; if (w && !seen) go(); seen = w; }); ro.observe(host); }
   return host;
 }
 const swatch = (color, label, dashed) => el("span", { style: "display:inline-flex;gap:6px;align-items:center;color:var(--ink2)" }, el("span", { class: "sw" + (dashed ? " dash" : ""), style: "height:8px;width:12px;background:" + color }), label);
@@ -376,6 +378,119 @@ function svgLines(series, o = {}) {
     hit.addEventListener("mousemove", move); hit.addEventListener("touchstart", move, { passive: true }); hit.addEventListener("touchmove", move, { passive: true });
     hit.addEventListener("mouseleave", () => { cur.setAttribute("visibility", "hidden"); read.textContent = o.note || ""; });
   }
+  return [legend, read, box];
+}
+
+// ---------- 3D: a grid of values (rows x columns) drawn as ribbons, a surface or bars on a canvas. Drag to turn it, hover or tap for a value.
+// chart3d({ x: [...], rows: [{ name, z: [...], color? }], mode: "ribbons" | "surface" | "bars", xFmt, zFmt, xHead, log, diverge, h, note, yaw, pitch, csvName })
+//   x: one label or number per column (shared by every row); rows are placed front to back in the order given.
+//   log: heights on a log scale (values <= 0 are left out). diverge: colours run red - grey - green around zero (surface and bars).
+const hexRgb = h => { h = h.replace("#", ""); if (h.length === 3) h = [...h].map(c => c + c).join(""); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); };
+const mixRgb = (a, b, t) => "rgb(" + a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",") + ")";
+// series [{name, points: [[x, y], ...], color?}] on their own x values -> { x, rows } on the joined x values (a gap where a series has no point)
+function grid3d(series) {
+  const have = series.filter(s => s.points && s.points.length);
+  const x = [...new Set(have.flatMap(s => s.points.map(p => p[0])))].sort((a, b) => a - b);
+  return { x, rows: have.map(s => { const m = new Map(s.points.map(p => [p[0], p[1]])); return { name: s.name, color: s.color, z: x.map(v => m.has(v) ? m.get(v) : null) }; }) };
+}
+function chart3d(o) {
+  const mode = o.mode || "ribbons", zf = o.zFmt || (v => v), xf = o.xFmt || (v => v);
+  const rows = (o.rows || []).filter(r => r.z && r.z.some(v => v != null && isFinite(v)));
+  if (!rows.length || !o.x || o.x.length < 2) return [el("div", { class: "muted" }, "Not enough data for the 3D view.")];
+  const step = Math.max(1, Math.ceil(o.x.length / (mode === "bars" ? 60 : 160)));
+  const idx = o.x.map((_, i) => i).filter(i => i % step === 0 || i === o.x.length - 1);
+  const nx = idx.length, ny = rows.length;
+  const T = v => v == null || !isFinite(v) || (o.log && v <= 0) ? null : o.log ? Math.log10(v) : v;
+  const Z = rows.map(r => idx.map(i => T(r.z[i])));
+  const all = Z.flat().filter(v => v != null);
+  let z0 = Math.min(...all), z1 = Math.max(...all);
+  if (!o.log && z0 > 0 && o.zero !== false) z0 = 0;
+  if (z1 === z0) z1 = z0 + 1;
+  const base = !o.log && z0 < 0 && z1 > 0 ? 0 : z0;
+  const yaw0 = o.yaw == null ? -0.62 : o.yaw, pitch0 = o.pitch == null ? 0.48 : o.pitch;
+  let yaw = yaw0, pitch = pitch0, paint = null;
+  const pal = ["--s1", "--s2", "--s3", "--s4", "--s5", "--s6"];
+  const rowColor = j => rows[j].color || css(pal[j % pal.length]);
+  const read = el("div", { class: "muted", style: "min-height:18px" }, o.note || "Drag to turn. Hover or tap for a value.");
+  const csv = csvButton(csvName(o.csvName || "3d"), () => csvText([o.xHead || "x", ...rows.map(r => r.name)], o.x.map((x, i) => [xf(x), ...rows.map(r => r.z[i])])));
+  const reset = el("button", { class: "csv", type: "button", title: "Turn the chart back to where it started", onclick: () => { yaw = yaw0; pitch = pitch0; if (paint) paint(); } }, "Reset view");
+  const legend = el("div", { class: "legend" }, ...(mode === "ribbons" && ny <= 12 ? rows.map((r, j) => swatch(rowColor(j), r.name)) : []), reset, csv);
+  const box = svgBox(o.h || 420, (host, W, H) => {
+    const dpr = window.devicePixelRatio || 1;
+    const cv = el("canvas", { style: "width:" + W + "px;height:" + H + "px;display:block;touch-action:pan-y;cursor:grab" });
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); host.append(cv);
+    const g = cv.getContext("2d");
+    const ax = 1.3, ay = ny > 1 ? Math.min(0.95, 0.22 + ny * 0.09) : 0.12, az = 0.95;
+    const S = Math.min(W / 3.5, H / 2.2), cx = W / 2, cy = H * 0.68;
+    const U = i => nx > 1 ? -ax + 2 * ax * i / (nx - 1) : 0, V = j => ny > 1 ? ay - 2 * ay * j / (ny - 1) : 0, Wz = z => az * (z - z0) / (z1 - z0);
+    let P, hover = null, tops = [];
+    const setP = () => { const c = Math.cos(yaw), s = Math.sin(yaw), sp = Math.sin(pitch), cp = Math.cos(pitch);
+      P = (u, v, w) => { const d = u * s + v * c; return [cx + (u * c - v * s) * S, cy + d * sp * S - w * cp * S, d]; }; };
+    const lo = hexRgb(css("--s1")), mid = hexRgb(css("--s3")), hi = hexRgb(css("--s2")), dn = hexRgb(css("--down")), up = hexRgb(css("--up")), flat = hexRgb(css("--hold"));
+    const heat = z => { if (o.diverge) { const m = Math.max(Math.abs(z0), Math.abs(z1)) || 1, t = Math.max(-1, Math.min(1, z / m)); return t < 0 ? mixRgb(flat, dn, -t) : mixRgb(flat, up, t); }
+      const t = (z - z0) / (z1 - z0); return t < 0.5 ? mixRgb(lo, mid, t * 2) : mixRgb(mid, hi, t * 2 - 1); };
+    const poly = (pts, fill, stroke, lw, alpha) => { g.beginPath(); pts.forEach((p, k) => k ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath();
+      if (fill) { g.globalAlpha = alpha == null ? 1 : alpha; g.fillStyle = fill; g.fill(); g.globalAlpha = 1; } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw || 1; g.stroke(); } };
+    const seg = (a, b, color, lw) => { g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.strokeStyle = color; g.lineWidth = lw || 1; g.stroke(); };
+    const text = (s, p, align, dy) => { g.fillStyle = css("--muted"); g.font = "11px system-ui, sans-serif"; g.textAlign = align || "center"; g.fillText(String(s), p[0], p[1] + (dy || 0)); };
+    paint = () => {
+      setP(); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H); tops = [];
+      const c = Math.cos(yaw), s = Math.sin(yaw), line = css("--line"), wb = Wz(base);
+      const vFar = c > 0 ? -ay : ay, uFar = s > 0 ? -ax : ax, vNear = -vFar, uNear = -uFar, pad = ny > 1 ? 0.06 : 0.3;
+      const vF = vFar * (1 + pad) , vN = vNear * (1 + pad), w0 = Wz(z0);
+      // the floor and the two back walls, with a line at each tick of the height axis
+      poly([P(-ax, vF, w0), P(ax, vF, w0), P(ax, vN, w0), P(-ax, vN, w0)], null, line, 1);
+      const ticks = o.log ? niceTicks(z0, z1, 4).filter(t => t >= z0 && t <= z1) : niceTicks(z0, z1, 4).filter(t => t >= z0 && t <= z1);
+      for (const t of ticks) { const w = Wz(t); seg(P(-ax, vF, w), P(ax, vF, w), line); seg(P(uFar, vF, w), P(uFar, vN, w), line);
+        text(zf(o.log ? Math.pow(10, t) : t), P(uNear, vF, w), uNear * c > 0 ? "left" : "right", 4); }
+      seg(P(-ax, vF, w0), P(-ax, vF, az), line); seg(P(ax, vF, w0), P(ax, vF, az), line); seg(P(uFar, vN, w0), P(uFar, vN, az), line);
+      // column labels along the near edge, row names along the near side
+      const nt = Math.min(nx, W < 520 ? 4 : 6);
+      for (let k = 0; k < nt; k++) { const i = Math.round(k * (nx - 1) / Math.max(1, nt - 1)); text(xf(o.x[idx[i]]), P(U(i), vN, w0), "center", 15); }
+      if (ny > 1) { const every = Math.ceil(ny / (W < 520 ? 6 : 12));
+        for (let j = 0; j < ny; j += every) text(rows[j].name, P(uNear * 1.04, V(j), w0), uNear * c > 0 ? "left" : "right", 4); }
+      const items = [];
+      if (mode === "surface" && ny > 1) {
+        for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) { const q = [Z[j][i], Z[j][i + 1], Z[j + 1][i + 1], Z[j + 1][i]]; if (q.some(v => v == null)) continue;
+          const pts = [P(U(i), V(j), Wz(q[0])), P(U(i + 1), V(j), Wz(q[1])), P(U(i + 1), V(j + 1), Wz(q[2])), P(U(i), V(j + 1), Wz(q[3]))];
+          items.push({ d: (pts[0][2] + pts[1][2] + pts[2][2] + pts[3][2]) / 4, draw: () => poly(pts, heat((q[0] + q[1] + q[2] + q[3]) / 4), "rgba(0,0,0,.16)", 0.5, 0.94) }); }
+      } else if (mode === "bars") {
+        const du = (nx > 1 ? ax / (nx - 1) : 0.2) * 0.72, dv = (ny > 1 ? ay / (ny - 1) : 0.1) * 0.6;
+        for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const z = Z[j][i]; if (z == null) continue;
+          const u = U(i), v = V(j), a = Wz(Math.min(z, base)), b = Wz(Math.max(z, base)), col = o.diverge || ny === 1 || o.heat ? heat(z) : rowColor(j);
+          const vs = c > 0 ? v + dv : v - dv, us = s > 0 ? u + du : u - du;
+          items.push({ d: P(u, v, 0)[2], draw: () => {
+            poly([P(u - du, vs, a), P(u + du, vs, a), P(u + du, vs, b), P(u - du, vs, b)], col, "rgba(0,0,0,.25)", 0.5, 0.80);
+            poly([P(us, v - dv, a), P(us, v + dv, a), P(us, v + dv, b), P(us, v - dv, b)], col, "rgba(0,0,0,.25)", 0.5, 0.62);
+            poly([P(u - du, v - dv, b), P(u + du, v - dv, b), P(u + du, v + dv, b), P(u - du, v + dv, b)], col, "rgba(0,0,0,.25)", 0.5, 1); } }); }
+      } else {
+        for (let j = 0; j < ny; j++) { const col = rowColor(j), v = V(j); let run = [];
+          const flush = () => { if (run.length > 1) { const r = run; items.push({ d: v * c, draw: () => {
+              poly([...r.map(i => P(U(i), v, Wz(Z[j][i]))), ...r.slice().reverse().map(i => P(U(i), v, wb))], col, null, 0, 0.22);
+              g.beginPath(); r.forEach((i, k) => { const p = P(U(i), v, Wz(Z[j][i])); k ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); }); g.strokeStyle = col; g.lineWidth = 1.7; g.stroke(); } }); } run = []; };
+          for (let i = 0; i < nx; i++) Z[j][i] == null ? flush() : run.push(i);
+          flush(); }
+      }
+      items.sort((a, b) => a.d - b.d).forEach(it => it.draw());
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) if (Z[j][i] != null) { const p = P(U(i), V(j), Wz(Z[j][i])); tops.push([p[0], p[1], i, j]); }
+      if (hover) { const p = P(U(hover[0]), V(hover[1]), Wz(Z[hover[1]][hover[0]])), f = P(U(hover[0]), V(hover[1]), wb);
+        seg(p, f, css("--ink2"), 1); g.beginPath(); g.arc(p[0], p[1], 4, 0, 6.3); g.fillStyle = css("--ink"); g.fill(); g.strokeStyle = css("--surface"); g.lineWidth = 1.5; g.stroke(); }
+    };
+    let raf = 0; const later = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; paint(); }); };
+    const pick = e => { const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top; let best = null, bd = 900;
+      for (const t of tops) { const d = (t[0] - mx) ** 2 + (t[1] - my) ** 2; if (d < bd) { bd = d; best = t; } }
+      hover = best ? [best[2], best[3]] : null;
+      read.textContent = best ? rows[best[3]].name + " · " + xf(o.x[idx[best[2]]]) + ": " + zf(rows[best[3]].z[idx[best[2]]]) : (o.note || "Drag to turn. Hover or tap for a value."); later(); };
+    let drag = null;
+    cv.addEventListener("pointerdown", e => { drag = [e.clientX, e.clientY, yaw, pitch]; cv.setPointerCapture(e.pointerId); cv.style.cursor = "grabbing"; pick(e); });
+    cv.addEventListener("pointermove", e => { if (!drag) return pick(e);
+      yaw = drag[2] + (e.clientX - drag[0]) * 0.008; if (e.pointerType === "mouse") pitch = Math.max(0.12, Math.min(1.25, drag[3] + (e.clientY - drag[1]) * 0.006)); later(); });
+    const end = () => { drag = null; cv.style.cursor = "grab"; };
+    cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
+    cv.addEventListener("pointerleave", () => { if (!drag && hover) { hover = null; read.textContent = o.note || "Drag to turn. Hover or tap for a value."; later(); } });
+    paint();
+  });
+  box.classList.add("c3d");
   return [legend, read, box];
 }
 

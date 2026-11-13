@@ -803,7 +803,20 @@ function signalsDetail(d0, d, c) {
     el("div", { class: "muted" }, "Pushing it: " + (c.contributions || []).filter(x => x.contribution !== 0).slice(0, 4).map(x => x.label + " " + sc2(x.contribution)).join(" · ")),
     signalGrid(c, d), note("Today = the signal's score at the last close; weight = its share of the final score; push = today × weight. Rank corr. and hit rate: over every coin's history pooled (the record the weight comes from) and for this coin alone."));
   return [intro, coinHead, ...compositeChart(c, d.enter), backtestCard({ ...d, horizon: SG_H }, c), weightsCard({ ...d, horizon: SG_H }), horizonCard(d0),
-    card("Every coin's final signal, judged on " + SG_H + " days", signalsTable(d.coins || []), note("Click a row to switch the coin. Strategy and hold figures are each coin's walk-forward backtest."))];
+    card("Every coin's final signal, judged on " + SG_H + " days", signalsTable(d.coins || []), note("Click a row to switch the coin. Strategy and hold figures are each coin's walk-forward backtest.")),
+    pushes3d(d)];
+}
+
+// every coin x every signal: today's push (score x weight) as a field of bars, green up for buy and red down for sell
+function pushes3d(d) {
+  const ok = (d.coins || []).filter(c => c.status === "ok" && (c.contributions || []).length).sort((a, b) => (b.score || 0) - (a.score || 0));
+  if (ok.length < 2) return null;
+  const labels = [...new Set(ok.flatMap(c => c.contributions.map(x => x.label)))];
+  const rows = ok.map(c => { const m = new Map(c.contributions.map(x => [x.label, x.contribution])); return { name: c.ticker, z: labels.map(l => m.has(l) ? m.get(l) : null) }; });
+  return card("All coins and all signals in 3D: what pushes each score today",
+    ...chart3d({ x: labels, rows, mode: "bars", diverge: true, zero: true, h: 460, xFmt: v => String(v).length > 16 ? String(v).slice(0, 15) + "…" : v, zFmt: v => v == null ? "–" : sc2(v),
+      xHead: "signal", csvName: "signal pushes 3d", note: "One bar per coin and signal: its push on the final score (today × weight). Drag to turn; hover a bar to read it." }),
+    note("Coins are ordered by their final score, the strongest buy lean at the front; signals run left to right. A green ridge across the grid is one signal lifting every coin; a single tall bar is one coin's own story."));
 }
 
 // ------------------------------------------------------------------ ENA unlocks
@@ -1216,6 +1229,12 @@ const VIEWS = {
       ...linesChart([...live.map(c => ({ name: c.ticker, points: c.rebased })), { name: "BTC", points: d.btc_rebased, dashed: true, color: css("--hold"), width: 2 }],
         v => v == null ? "–" : num(v, 0), { log: true }),
       note("Above BTC's dashed line: beat holding Bitcoin over the period shown. Click a name in the legend to hide it."));
+    const reb3 = live.filter(c => c.rebased && c.rebased.length).length > 1 ? card("The basket in 3D: each coin rebased to 100 a year ago (log height)",
+      ...chart3d({ ...grid3d([{ name: "BTC", points: d.btc_rebased, color: css("--hold") }, ...live.filter(c => c.rebased && c.rebased.length)
+          .sort((a, b) => a.rebased[a.rebased.length - 1][1] - b.rebased[b.rebased.length - 1][1]).map(c => ({ name: c.ticker, points: c.rebased }))]), mode: "ribbons", log: true,
+        xFmt: t => new Date(t * 1000).toLocaleDateString([], { month: "short", year: "2-digit", timeZone: "UTC" }), zFmt: v => v == null ? "–" : num(v, 0), xHead: "date", csvName: "basket 3d",
+        note: "BTC in grey at the front, then the coins from the weakest to the strongest year. Drag to turn; hover for a value." }),
+      note("The same lines as the chart above, pulled apart by depth so each coin's whole year can be read without the others on top of it.")) : null;
     const season = K ? fold("Meme season: the basket against BTC", true,
       card("Basket market cap ÷ BTC market cap (log): rising = memes beating BTC", ...linesChart([{ name: "Basket ÷ BTC", points: sn.ratio }], v => v == null ? "–" : (v * 100).toFixed(2) + "%", { log: true })),
       el("div", { class: "grid2" },
@@ -1227,7 +1246,7 @@ const VIEWS = {
           : [el("div", { class: "kpis" }, kpi("Meme share today", log.length ? (log[0].share * 100).toFixed(2) + "%" : "–"), kpi("Meme sector market cap", log.length ? usdBig(log[0].meme_mcap) : "–"))]),
         note("CoinGecko has no free history of either figure, so this is logged once a day from the first deploy and grows from there.")); })()) : null;
     const sparks = live.length ? fold("Each coin, 90 days", false, el("div", { class: "grid2" }, ...live.map(sparkCard))) : null;
-    return [head, tbl, rebased, season, sparks, stale(d), stale(sn)];
+    return [head, tbl, rebased, reb3, season, sparks, stale(d), stale(sn)];
   },
 };
 function metricsCards(d) {
