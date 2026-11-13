@@ -25,7 +25,7 @@ FRED, Yahoo and Stooq are not used: from Railway they time out, return 429 or ar
 
 ## Hand-entered rows: `checked` or `verify`
 
-**`milestones.csv` was checked on 9 Nov 2026.** Each row cites a page that was opened and states the date (Wikipedia, SpaceNews, gov.uk); its note says `checked 2026-11-09`. That check corrected four dates (the Falcon 9 landing, the SaxaVord licence, the HK payload specialist month) and two descriptions (Mengtian completing Tiangong, the Golden Bauhinia launch). It also added 2025–26 milestones. One row is still `verify`: PolyU's sampling system on Chang'e 6, which no page on those sites confirmed. Rows added later should cite their page and say `checked <date>`.
+**`milestones.csv` was checked on 9 Nov 2026.** Each row cites a page that was opened and states the date (Wikipedia, SpaceNews, gov.uk); its note says `checked 2026-11-09`. That check corrected four dates (the Falcon 9 landing, the SaxaVord licence, the HK payload specialist month) and two descriptions (Mengtian completing Tiangong, the Golden Bauhinia launch). It also added 2025–26 milestones. The last `verify` row, PolyU's sampling system on Chang'e 6, was cleared on 13 Nov 2026 from PolyU's own media release (7 Jun 2024): its date moved from the 25 Jun return to 3 Jun, when the system collected and sealed the samples. Rows added later should cite their page and say `checked <date>`.
 
 **`cost.csv`, `starlink.csv` and `economy.csv` were entered from memory and say `verify` in every note.** Check each against its cited page, then fix the value or drop `verify`. Least certain:
 
