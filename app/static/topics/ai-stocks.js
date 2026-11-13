@@ -234,9 +234,13 @@ function stockCard(c) {
     row("RSI 14", c.rsi == null ? "–" : num(c.rsi, 0), rsiCls(c.rsi)));
 }
 
+// a tab whose prices were never fetched on this server answers at once with {pending}: the background job is downloading them
+const pendingView = d => [card("Downloading prices", el("div", { class: "warn" }, "This server is fetching the daily closes in the background (Nasdaq's quote API). Reload in a minute or two."), note(SMALL))];
+
 const VIEWS = {
   async setup() {
     const d = await api("setup"), N = d.now || {};
+    if (d.pending) return pendingView(d);
     const head = card("Where we are", followHead([
       ...(d.score ? [{ label: "AI Setup Score", points: d.score, fmt: v => num(v, 0) + " · " + BAND_LAB[bandOf(v)], cls: v => bandCls(bandOf(v)) }] : []),
       { label: "AI basket below its high", points: d.dd, fmt: ddf, cls: v => v < -0.2 ? "down" : v > -0.05 ? "up" : "" },
@@ -267,6 +271,7 @@ const VIEWS = {
 
   async drawdown() {
     const d = await api("drawdown"), C = d.current || {}, E = d.episodes || [];
+    if (d.pending) return pendingView(d);
     const head = card("How deep is the dip?", d.basket ? followHead([
       { label: "AI basket below its peak", points: d.basket, fmt: ddf, cls: v => v < -0.2 ? "down" : v > -0.05 ? "up" : "" }]) : null,
       el("div", { class: "kpis" }, kpi("Peak", dateOf(C.peak)), kpi("Deepest so far", ddf(C.low), C.low != null && C.low < -0.2 ? "down" : ""), kpi("Lowest close", dateOf(C.low_date)),
@@ -297,6 +302,7 @@ const VIEWS = {
 
   async trend() {
     const d = await api("trend"), N = d.now || {};
+    if (d.pending) return pendingView(d);
     const head = card("Washing out or still breaking down?", followHead([
       { label: "Above their 50-day", points: d.breadth50, fmt: share, cls: v => v < 0.2 ? "down" : v > 0.6 ? "up" : "" },
       { label: "Above their 200-day", points: d.breadth200, fmt: share, cls: v => v < 0.4 ? "down" : v > 0.6 ? "up" : "" },
@@ -319,6 +325,7 @@ const VIEWS = {
 
   async dips() {
     const d = await api("dips"), rows = d.rows || [], H = ["1m", "3m", "6m"], HL = { "1m": "1 month", "3m": "3 months", "6m": "6 months" };
+    if (d.pending) return pendingView(d);
     const head = card("What happened after dips like this before?", d.dd ? followHead([{ label: "AI basket below its peak", points: d.dd, fmt: ddf, cls: v => v <= -0.15 ? "down" : "" }]) : null,
       el("div", { class: "warn", style: "margin-top:8px" }, "A small sample: " + (d.n || 0) + " finished basket drawdowns of 15% or more since 2020. This is history, not a forecast, and not investment advice."),
       errs(d, "Some prices are"), asOf(d), stale(d));
@@ -341,6 +348,7 @@ const VIEWS = {
 
   async fear() {
     const d = await api("fear"), R = d.relative || {}, V = d.vix_now || {};
+    if (d.pending) return pendingView(d);
     const ch3 = { lag: "3m", fmt: v => pct(v / 100, 1) };
     const head = card("Fear, and is AI leading or lagging?", followHead([
       ...(d.vix ? [{ label: "VIX", points: d.vix, fmt: v => num(v, 1), cls: v => v > 30 ? "down" : v < 20 ? "up" : "" }] : []),

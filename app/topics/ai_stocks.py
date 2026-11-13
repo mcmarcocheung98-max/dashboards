@@ -93,27 +93,85 @@ FOOTER = "Read-only. Not investment advice: no buy or sell calls, and past drawd
 
 
 # ------------------------------------------------------------------ prices
-def nasdaq(sym: str, cls: str = "stocks") -> pd.Series:
-    return B.nasdaq_daily(sym, DATA_START, lambda *a, **k: fetch_json(*a, **k), assetclass=cls)
+class Pending(LookupError):
+    """A view found no kept copy of what it needs: the background job is downloading it (the payload says so, it does not wait)."""
+
+
+PRICE_REFRESH_S = 3 * 3600          # the background job re-downloads closes older than this (it runs every 6 hours)
+_JOBS: dict[str, threading.Lock] = {}
+
+
+def _kick(job) -> None:
+    """Start a BACKGROUND job in a thread unless it is already running: a view that finds no copy never waits for the download."""
+    lock = _JOBS.setdefault(job.__name__, threading.Lock())
+    if not lock.locked():
+        def run():
+            with lock:
+                job()
+        threading.Thread(target=run, daemon=True, name=job.__name__).start()
 
 
 def _src(sym: str, cls: str) -> str:
-    return B.NASDAQ_ANY.format(sym=sym, cls=cls, a=DATA_START, b=pd.Timestamp.now().strftime("%Y-%m-%d"))
+    """The stable address of one Nasdaq series (no end date): the snapshot, /api/health and the view's lookup all use it."""
+    return B.NASDAQ_ANY.format(sym=sym, cls=cls, a=DATA_START, b="").replace("&todate=", "")
+
+
+def nasdaq(sym: str, cls: str = "stocks") -> pd.Series:
+    """BACKGROUND (fill_prices) and tests: download one series, kept under _src so a view finds it on any day."""
+    return B.nasdaq_daily(sym, DATA_START, lambda u, ttl=0, **k: fetch_json(u, PRICE_REFRESH_S, key=_src(sym, cls), **k), assetclass=cls)
+
+
+def nasdaq_kept(sym: str, cls: str = "stocks") -> pd.Series:
+    """For page views: the kept copy only (memory, else the snapshot on the volume); LookupError when it was never fetched."""
+    text = _snap_text(_src(sym, cls))
+    if text is None:
+        raise LookupError("not fetched yet")
+    return B.nasdaq_daily(sym, DATA_START, lambda *a, **k: json.loads(text), assetclass=cls)
+
+
+def _listed(sym: str, s: pd.Series) -> pd.Series:
+    if sym in LISTED:
+        s = s[s.index >= LISTED[sym]]
+        if len(s) < 2:
+            raise LookupError("no closes since listing")
+    return s
 
 
 def _prices_now() -> dict:
+    """Kept copies only. A missing series starts fill_prices and shows as "downloading"; with no basket member at all the tab is pending."""
     px, errors = {}, {}
     for sym, cls in [(s, "stocks") for s in STOCKS] + [(s, "etf") for s in ETFS]:
         try:
-            s = nasdaq(sym, cls)
-            if sym in LISTED:
-                s = s[s.index >= LISTED[sym]]
-                if len(s) < 2:
-                    raise LookupError("no closes since listing")
-            px[sym] = s
+            px[sym] = _listed(sym, nasdaq_kept(sym, cls))
+        except LookupError as e:
+            errors[sym] = "downloading" if str(e) == "not fetched yet" else type(e).__name__
         except Exception as e:
             errors[sym] = type(e).__name__
+    if any(v == "downloading" for v in errors.values()):
+        _kick(fill_prices)
+    if not any(k in px for k in BASKET):
+        raise Pending("prices")
     return {"px": px, "errors": errors, "sources": [_src(s, "stocks") for s in STOCKS] + [_src(s, "etf") for s in ETFS]}
+
+
+def _drop_views() -> None:
+    """After a background download: the tab payloads built from older copies are dropped, so the next view rebuilds from the new ones."""
+    from ..cache import _cache
+    for k in [k for k in _cache if k.startswith(f"topic:{SLUG}:")]:
+        _cache.pop(k, None)
+
+
+def fill_prices() -> dict:
+    """BACKGROUND job: every stock's and ETF's daily closes from Nasdaq (re-downloaded when older than PRICE_REFRESH_S)."""
+    res = {}
+    for sym, cls in [(s, "stocks") for s in STOCKS] + [(s, "etf") for s in ETFS]:
+        try:
+            nasdaq(sym, cls)
+            res[sym] = "ok"
+        except Exception as e:
+            res[sym] = type(e).__name__
+    _drop_views()
+    return res
 
 
 def full_months(s: pd.Series) -> pd.Series:
@@ -443,19 +501,70 @@ def parse_vix(text: str) -> pd.Series:
     return s[~s.index.duplicated(keep="last")]
 
 
+CAPEX_KEPT = lambda: B.SNAP_DIR / "ai-stocks-capex.json"           # fill_market's copy of compute_chips' capex (SNAP_DIR read at call time)
+VIX_SEED = B.MANUAL_DIR / SLUG / "fred" / "VIXCLS.csv"     # committed copy (FRED, from 2019) for a server that has fetched neither source
+
+
 def vix() -> tuple[pd.Series, str]:
-    """VIX daily closes and which source answered: FRED first (through curl, see _base._download), Cboe's history file when FRED fails;
-    the FRED failure is then marked handled in /api/health."""
+    """For page views, never a download: VIX daily closes from the kept Cboe copy, else the kept FRED copy, else the committed seed;
+    and which one ("Cboe", "FRED", "copy to <date>"). fill_market downloads (Cboe first; FRED only when Cboe fails, once a day)."""
+    for url, name in ((CBOE_VIX, "Cboe"), (FRED_VIX, "FRED")):
+        text = _snap_text(url)
+        if text is not None:
+            try:
+                return parse_vix(text), name
+            except ValueError:
+                pass
+    _kick(fill_market)
+    if VIX_SEED.exists():
+        s = parse_vix(VIX_SEED.read_text(encoding="utf-8"))
+        return s, f"copy to {s.index[-1].date()}"
+    raise LookupError("not fetched yet")
+
+
+def fill_market() -> dict:
+    """BACKGROUND job: VIX (Cboe's file first; FRED, which times out from Railway, only when Cboe fails and at most once a day, its failure
+    marked handled while another copy exists), the basket's revenue from EDGAR, and compute_chips' capex (its own cached endpoint)."""
+    res = {}
     try:
-        return parse_vix(fetch(FRED_VIX, DAY, curl=True, timeout=25, min_bytes=500)), "FRED"
+        parse_vix(fetch(CBOE_VIX, DAY / 2, min_bytes=500, timeout=30))
+        res["cboe"] = "ok"
+        handled(FRED_VIX, "VIX from Cboe's history file; FRED is the last resort")
     except Exception as e:
-        first = e
+        res["cboe"] = type(e).__name__
+        mark = B.SNAP_DIR / "ai-stocks-vix-fred-try.txt"
+        try:
+            last = float(mark.read_text())
+        except (OSError, ValueError):
+            last = 0.0
+        if time.time() - last >= FRED_RETRY_S:
+            B.SNAP_DIR.mkdir(parents=True, exist_ok=True)
+            mark.write_text(str(time.time()))
+            try:
+                parse_vix(fetch(FRED_VIX, DAY, curl=True, timeout=FRED_TIMEOUT, min_bytes=500))
+                res["fred"] = "ok"
+            except Exception as e2:
+                res["fred"] = type(e2).__name__
+                if VIX_SEED.exists() or _snap_text(CBOE_VIX) is not None:
+                    handled(FRED_VIX, "FRED does not answer the server; VIX from the kept Cboe copy or the committed seed")
+        else:
+            res["fred"] = "tried less than a day ago"
+    for sym, cik in REV_CIKS.items():
+        try:
+            revenue_fetch(cik)
+            res[f"revenue:{sym}"] = "ok"
+        except Exception as e:
+            res[f"revenue:{sym}"] = type(e).__name__
     try:
-        s = parse_vix(fetch(CBOE_VIX, DAY, min_bytes=500))
-        handled(FRED_VIX, "FRED did not answer; VIX from Cboe's history file")
-        return s, "Cboe"
-    except Exception:
-        raise first
+        cap = CC._capex()
+        if cap.get("ttm"):                                               # our own copy on the volume, for views after a restart
+            B.SNAP_DIR.mkdir(parents=True, exist_ok=True)
+            CAPEX_KEPT().write_text(json.dumps({k: cap.get(k) for k in ("ttm", "kpi", "stale")}))
+        res["capex"] = "ok"
+    except Exception as e:
+        res["capex"] = type(e).__name__
+    _drop_views()
+    return res
 
 
 # ------------------------------------------------------------------ endpoints
@@ -696,11 +805,19 @@ def _fear_now() -> dict:
     return out
 
 
-def revenue(cik: int) -> pd.Series:
-    """Quarterly revenue ($bn, calendar quarters) from EDGAR, kept under its own cache key: compute_chips caches the same companyfacts
-    URLs cut down to capex tags, so its edgar_series would find no revenue in that copy."""
+def revenue_fetch(cik: int) -> str:
+    """BACKGROUND (fill_market): EDGAR revenue facts, kept under their own cache key: compute_chips caches the same companyfacts URLs cut
+    down to capex tags, so its edgar_series would find no revenue in that copy."""
     url = EDGAR.format(cik=cik)
-    j = json.loads(fetch(url, DAY, headers=CC.SEC_HEADERS, key=url + "#revenue", reduce=CC._edgar_reduce(CC.REVENUE_TAGS), min_bytes=100))
+    return fetch(url, DAY, headers=CC.SEC_HEADERS, key=url + "#revenue", reduce=CC._edgar_reduce(CC.REVENUE_TAGS), min_bytes=100)
+
+
+def revenue(cik: int) -> pd.Series:
+    """For page views: quarterly revenue ($bn, calendar quarters) from the kept copy only."""
+    text = _snap_text(EDGAR.format(cik=cik) + "#revenue")
+    if text is None:
+        raise LookupError("not fetched yet")
+    j = json.loads(text)
     ss = sorted((CC.quarterly(j[t]) for t in CC.REVENUE_TAGS if t in j), key=lambda s: s.index.max() if len(s) else pd.Timestamp(0))
     out = pd.Series(dtype=float)
     for s in ss:
@@ -713,8 +830,12 @@ def _fundamentals_now() -> dict:
     for sym, cik in REV_CIKS.items():
         try:
             rev[sym] = revenue(cik)
+        except LookupError:
+            errors[sym] = "downloading"
         except Exception as e:
             errors[sym] = type(e).__name__
+    if any(v == "downloading" for v in errors.values()):
+        _kick(fill_market)
 
     def yoy():
         return {k: _pts((v / v.shift(4) - 1).dropna()[lambda s: s.index >= "2018-01-01"], 4) for k, v in rev.items() if len(v) >= 5}
@@ -732,11 +853,17 @@ def _fundamentals_now() -> dict:
                 out[d.index[i]] = now[both].sum() / ago[both].sum() - 1
         s = pd.Series(out, dtype=float)
         return _pts(s[s.index >= "2018-01-01"], 4)
-    cap = {}
-    try:
-        cap = CC._capex()
-    except Exception as e:
-        errors["capex"] = type(e).__name__
+    from ..cache import _cache
+    hit = _cache.get("topic:compute-chips:capex")                         # compute_chips' own cached payload, else our kept copy: never a download
+    cap = (hit[1] if hit else None) or {}
+    if not cap.get("ttm") and CAPEX_KEPT().exists():
+        try:
+            cap = json.loads(CAPEX_KEPT().read_text())
+        except ValueError:
+            cap = {}
+    if not cap.get("ttm"):
+        errors["capex"] = "downloading"
+        _kick(fill_market)
 
     def capex_yoy():
         t = cap.get("ttm") or []
@@ -1374,14 +1501,13 @@ def _midterms_now() -> dict:
     if errors or seeded:
         _kick_midterms()                                                # returns at once; fill_midterms tries FRED at most once a day
     ai, etf = None, {}
-    if _cache.get(f"topic:{SLUG}:prices"):                               # the AI basket only from prices already cached: never a download here
-        try:
-            m = _model()
-            ai, etf = m["idx"], {k: m["px"][k] for k in ("SPY", "QQQ") if k in m["px"]}
-        except Exception as e:
-            errors["AI basket"] = type(e).__name__
-    else:
-        errors["AI basket"] = "prices not cached yet"
+    try:                                                                 # kept closes only (_prices never downloads): Pending when none
+        m = _model()
+        ai, etf = m["idx"], {k: m["px"][k] for k in ("SPY", "QQQ") if k in m["px"]}
+    except Pending:
+        errors["AI basket"] = "prices downloading"
+    except Exception as e:
+        errors["AI basket"] = type(e).__name__
     mkt, sp = ser.get(MARKET_SERIES), ser.get(SP500_SERIES)
     rows, paths = [], {}
     for y in midterm_years():
@@ -1562,15 +1688,25 @@ def SIGNALS() -> list[dict]:
 
 # ------------------------------------------------------------------ cached endpoints
 def _cached_ep(name, fn, ttl=6 * 3600):
+    """A tab's payload, cached; when its prices were never fetched it answers at once with {"pending": ...} (fill_prices drops it when done)."""
     from ..cache import _cached
-    return lambda: _cached(f"topic:{SLUG}:{name}", ttl, fn)
+
+    def go():
+        try:
+            return fn()
+        except Pending as e:
+            return {"pending": str(e), "stale": {}, "updated": int(time.time()), "as_of": None}
+    return lambda: _cached(f"topic:{SLUG}:{name}", ttl, go)
 
 
-_prices = _cached_ep("prices", _prices_now)
+def _prices():
+    """The kept closes for every tab (raises Pending when none were ever fetched; that is not cached, so the next view looks again)."""
+    from ..cache import _cached
+    return _cached(f"topic:{SLUG}:prices", 6 * 3600, _prices_now)
 ENDPOINTS = {"setup": _cached_ep("setup", _setup_now), "drawdown": _cached_ep("drawdown", _drawdown_now), "trend": _cached_ep("trend", _trend_now),
              "dips": _cached_ep("dips", _dips_now), "fear": _cached_ep("fear", _fear_now), "fundamentals": _cached_ep("fundamentals", _fundamentals_now),
              "institutions": _cached_ep("institutions", _institutions_now, 1800), "insiders": _cached_ep("insiders", _insiders_now, 1800),
              "companies": _cached_ep("companies", _companies_now, 1800),
              "midterms": _cached_ep("midterms", _midterms_now, 600),
              "layout": _cached_ep("layout", _layout_now, 1800)}
-BACKGROUND = [fill_midterms, fill_13f, fill_insiders]             # slow, paced EDGAR downloads the server runs outside page requests (app/server.py _warm)
+BACKGROUND = [fill_prices, fill_market, fill_midterms, fill_13f, fill_insiders]             # slow, paced EDGAR downloads the server runs outside page requests (app/server.py _warm)

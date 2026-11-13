@@ -190,8 +190,14 @@ stock on each cycle". Tab `midterms`, endpoint `/api/ai-stocks/midterms`.
   revenue facts for them. Their prices are in every other tab.
 - **Capex** is cash spent on property and equipment by Microsoft, Alphabet, Amazon, Meta and Oracle, all businesses, not only AI
   (see the AI Compute, Power & Chips dashboard).
-- **VIX from FRED** has timed out from Railway for other series (see `ai_jobs.py`); when it fails, Cboe's own history file is used and
-  the FRED failure is marked handled in `/api/health`. Check with `/api/probe` (`fred vix`, `cboe vix history`) or `/api/ai-stocks/layout`.
+- **Page views never download** (13 Nov 2026: Setup, Dips and Fear took 80-180 s on a first visit while a view waited on FRED's
+  VIX timeouts). Every tab reads kept copies only: memory, then the snapshot on the volume, then a committed seed. The background jobs
+  (`BACKGROUND`, run at start and every 6 hours, and started by a view that finds nothing kept) download: `fill_prices` (Nasdaq closes,
+  kept under a stable address without the end date, re-fetched when over 3 hours old), `fill_market` (VIX from Cboe's history file
+  first; FRED, which times out from Railway, only when Cboe fails and at most once a day, its failure marked handled; the EDGAR revenue
+  facts; compute_chips' capex), `fill_midterms`, `fill_13f`, `fill_insiders`. A tab whose prices were never fetched answers at once with
+  a "downloading" card. VIX falls back to `data/ai-stocks/fred/VIXCLS.csv` (FRED, 2019 to 11 Nov 2026), labelled "copy to <date>".
+  A test (`test_no_view_downloads_on_a_cold_server`) proves no endpoint downloads on a cold server.
 
 ## Signals (`data/signals/watchlist.json`, approved 6 Nov 2026)
 

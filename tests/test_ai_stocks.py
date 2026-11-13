@@ -178,15 +178,26 @@ def is_edgar(url: str) -> bool:
     return "sec.gov/submissions" in url or "/Archives/edgar/" in url or "/companyfacts/" in url
 
 
+def fixture_download(url: str) -> str:
+    """Every source of this dashboard at the download level: the real fetch keeps memory and disk copies as on the server."""
+    if is_edgar(url):
+        return edgar_fixture(url)
+    if "api.nasdaq.com" in url:
+        return json.dumps(nasdaq_json(url.split("/quote/")[1].split("/")[0]))
+    if "cboe" in url:
+        return vix_csv(cboe=True)
+    if "fredgraph" in url:
+        return vix_csv() if "VIXCLS" in url else fred_csv(url.split("id=")[1])
+    raise ConnectionError("fixture: unknown url " + url)
+
+
 def patch_download(set_attr=setattr):
-    """EDGAR answers from the fixtures at the download level, so the real fetch keeps memory and disk copies as on the server."""
     real = B._download
     def dl(url, *a, **k):
-        if is_edgar(url):
-            return edgar_fixture(url)
-        if "fredgraph" in url and "VIXCLS" not in url:                     # the midterm series: through the real fetch, as on the server
-            return fred_csv(url.split("id=")[1])
-        return real(url, *a, **k)
+        try:
+            return fixture_download(url)
+        except ConnectionError:
+            return real(url, *a, **k)
     set_attr(B, "_download", dl)
 
 
@@ -203,49 +214,30 @@ def fred_csv(sid: str) -> str:
     return f"observation_date,{sid}\n" + "\n".join(rows)
 
 
-def fake_fetch(url, ttl=0, **k):
-    if is_edgar(url) and ("/companyfacts/" not in url or k.get("key", "").endswith("#panel")):
-        return B.fetch(url, ttl, **k)
-    if "fredgraph" in url:
-        return vix_csv() if "VIXCLS" in url else B.fetch(url, ttl, **k)
-    if "cboe" in url:
-        return vix_csv(cboe=True)
-    if "companyfacts" in url:
-        text = revenue_facts(int(url.rsplit("CIK", 1)[1].split(".")[0]))
-        return k["reduce"](text) if k.get("reduce") else text
-    raise ConnectionError("fixture: unknown url " + url)
-
-
-def fake_fetch_json(url, ttl=0, **k):
-    if "api.nasdaq.com" in url:
-        return nasdaq_json(url.split("/quote/")[1].split("/")[0])
-    raise ConnectionError("fixture: unknown url " + url)
-
-
 def smoke_patch():
     """Used by scripts/smoke.py: every source of this dashboard answers from the fixtures above (capex through compute_chips' fixtures)."""
-    M.fetch = fake_fetch
-    M.fetch_json = fake_fetch_json
     M.EDGAR_PACE = 0
     patch_download()
     TC.smoke_patch()
-    M.fill_13f()                                                       # what the background jobs would have kept
-    M.fill_insiders()
+    for job in M.BACKGROUND:                                           # what the background jobs would have kept
+        job()
 
 
 @pytest.fixture
 def mocked(tmp_path, monkeypatch):
     from app import cache
     monkeypatch.setattr(B, "SNAP_DIR", tmp_path / "snaps")
-    monkeypatch.setattr(M, "fetch", fake_fetch)
-    monkeypatch.setattr(M, "fetch_json", fake_fetch_json)
     monkeypatch.setattr(M, "EDGAR_PACE", 0)
     patch_download(monkeypatch.setattr)
     monkeypatch.setattr(CC, "_get", TC.fake_get)
     monkeypatch.setattr(CC, "fetch", TC.fake_fetch)
     monkeypatch.setattr(CC, "fetch_json", TC.fake_fetch_json)
+    monkeypatch.setattr(M, "_kick", lambda job: None)                  # tests run the background jobs themselves
     cache._cache.clear()
     B.STALE.clear()
+    B.HEALTH.clear()
+    M.fill_prices()                                                    # what the background jobs keep on the server
+    M.fill_market()
     yield
     cache._cache.clear()
     B.STALE.clear()
@@ -498,7 +490,7 @@ def test_setup(mocked):
     c = p["cards"][0]
     assert c["dd52"] <= 0 and c["vs50"] is not None and 0 <= c["rsi"] <= 100
     assert set(p["lines"]) == {"AI basket", "Owner's picks", "QQQ", "SPY"} and p["lines"]["AI basket"][0][1] == 100
-    assert p["now"]["dd"] < -0.1 and p["vix_source"] == "FRED" and "below its high" in p["where"]
+    assert p["now"]["dd"] < -0.1 and p["vix_source"] == "Cboe" and "below its high" in p["where"]
     assert "buy" not in p["where"].lower() and "sell" not in p["where"].lower()
     assert [c["sym"] for c in p["pick_cards"]] == list(M.PICKS) and "Owner's picks" in p["lines"]
     assert p["picks_now"]["since"]["SNDK"] == "2025-03-03" and p["picks_now"]["since"]["NBIS"] == "2024-11-01"
@@ -517,15 +509,24 @@ def test_setup(mocked):
     B.json_safe(p)
 
 
-def test_vix_falls_back_to_cboe_and_marks_fred_handled(mocked, monkeypatch):
-    def no_fred(url, ttl=0, **k):
-        if "fredgraph" in url:
-            B.HEALTH[url] = {"module": "ai_stocks", "ok": None, "fail": time_now(), "error": "Timeout"}
-            raise TimeoutError("fred")
-        return fake_fetch(url, ttl, **k)
-    monkeypatch.setattr(M, "fetch", no_fred)
-    s, src = M.vix()
-    assert src == "Cboe" and len(s) > 100 and B.HEALTH[M.FRED_VIX].get("handled_how")
+def test_vix_reads_cboe_first_and_tries_fred_once_a_day(mocked, monkeypatch):
+    from app import cache
+    assert M.vix()[1] == "Cboe"                                             # the fill kept Cboe: FRED was not asked
+    assert not any("fredgraph" in u for u in B.HEALTH)
+    tried = []
+
+    def cboe_down(url, *a, **k):
+        tried.append(url)
+        if "cboe" in url or "fredgraph" in url:
+            raise TimeoutError("curl exit 28")
+        return fixture_download(url)
+    monkeypatch.setattr(B, "_download", cboe_down)
+    monkeypatch.setattr(B, "SNAP_DIR", B.SNAP_DIR / "fresh")
+    cache._cache.clear()
+    assert M.vix()[1].startswith("copy to") and tried == []                   # a view: the committed seed, no download
+    res = M.fill_market()
+    assert res["cboe"] == "TimeoutError" and res["fred"] == "TimeoutError" and B.HEALTH[M.FRED_VIX].get("handled_how")
+    assert M.fill_market()["fred"] == "tried less than a day ago"
 
 
 def time_now():
@@ -713,7 +714,7 @@ def test_midterms_answers_at_once_from_the_seed_and_starts_the_download(mocked, 
     t0 = time.time()
     d = M._midterms_now()
     assert time.time() - t0 < 5 and kicked and set(d["seeded"]) == {M.MARKET_SERIES, M.SP500_SERIES, *M.PROXY_SERIES}
-    assert d["errors"] == {"AI basket": "prices not cached yet"} and d["stale"] and not d["pending"]
+    assert "AI basket" not in d["errors"] and d["stale"] and not d["pending"]
     r = {x["year"]: x for x in d["rows"]}                                  # the committed seed is real FRED data to 10 Nov 2026
     assert r[1998]["proxy"]["r12"] == pytest.approx(0.9067, abs=1e-3) and r[2014]["market"] == pytest.approx(-0.045, abs=1e-3)
     assert d["summary"]["market"]["n"] == 17 and d["summary"]["market"]["up"] == 14
@@ -736,15 +737,41 @@ def test_midterm_windows_keep_only_what_the_study_reads():
 
 
 def test_fred_is_tried_once_a_day_and_its_failure_is_handled(mocked, monkeypatch):
-    def down(url, ttl=0, **k):
+    def down(url, *a, **k):
         if "fredgraph" in url and "VIXCLS" not in url:
-            B.HEALTH[url] = {"module": "ai_stocks", "ok": None, "fail": time.time(), "error": "RuntimeError: curl exit 28"}
             raise RuntimeError("curl exit 28, HTTP 000")
-        return fake_fetch(url, ttl, **k)
-    monkeypatch.setattr(M, "fetch", down)
+        return fixture_download(url)
+    monkeypatch.setattr(B, "_download", down)
     res = M.fill_midterms()
     assert set(res.values()) == {"RuntimeError"}
     assert all(B.HEALTH[M.FRED_CSV.format(sid=s)].get("handled_how") for s in (M.MARKET_SERIES, M.SP500_SERIES, *M.PROXY_SERIES))
     assert M.fill_midterms() == {"midterms": "FRED tried less than a day ago"}          # a page view's kick does not retry either
     (B.SNAP_DIR / "ai-stocks-midterms-fred-try.txt").write_text(str(time.time() - 2 * 86400))
     assert set(M.fill_midterms().values()) == {"RuntimeError"}                          # a day later it tries again
+
+
+def test_no_view_downloads_on_a_cold_server(mocked, monkeypatch, tmp_path):
+    """A fresh server, every host dead, no background job run yet: each tab answers at once without one download attempt."""
+    from app import cache
+    tried, kicked = [], []
+
+    def dead(url, *a, **k):
+        tried.append(url)
+        raise TimeoutError("curl exit 28")
+    monkeypatch.setattr(B, "SNAP_DIR", tmp_path / "cold")
+    monkeypatch.setattr(B, "_download", dead)
+    monkeypatch.setattr(M, "_kick", lambda job: kicked.append(job.__name__))
+    monkeypatch.setattr(M, "_kick_midterms", lambda: kicked.append("fill_midterms"))
+    monkeypatch.setattr(CC, "_get", lambda *a, **k: tried.append(a[0]) or (_ for _ in ()).throw(TimeoutError("dead")))
+    cache._cache.clear()
+    B.STALE.clear()
+    t0 = time.time()
+    out = {k: fn() for k, fn in M.ENDPOINTS.items() if k != "layout"}         # layout probes the sources on purpose
+    assert tried == [], tried
+    assert time.time() - t0 < 10
+    for k in ("setup", "drawdown", "trend", "dips", "fear"):
+        assert out[k]["pending"] == "prices", k
+    assert out["fundamentals"]["errors"]["NVDA"] == "downloading" and out["fundamentals"]["errors"]["capex"] == "downloading"
+    assert out["midterms"]["seeded"] and out["midterms"]["rows"]                # history from the committed seed
+    assert {"fill_prices", "fill_market", "fill_midterms"} <= set(kicked)
+    B.json_safe(out)
