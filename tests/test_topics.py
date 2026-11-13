@@ -559,6 +559,10 @@ def _llama(url):
         return {"data": {"market_cap_percentage": {"btc": 59.4}, "total_volume": {"usd": 9.1e10}}}
     if "market_chart" in url:
         return {"total_volumes": [[t * 1000, 1.2e10] for t in ts[-365:]]}
+    if "alternative.me" in url:                  # Fear and Greed: a slow wave through every zone, newest first as the API sends it
+        import math
+        fd = pd.date_range("2018-02-01", "2026-10-20")
+        return {"data": [{"value": str(int(50 + 45 * math.sin(i / 60))), "value_classification": "x", "timestamp": str(int(d.timestamp()))} for i, d in reversed(list(enumerate(fd)))]}
     raise AssertionError(url)
 
 
@@ -1728,3 +1732,65 @@ def test_fetch_reduce_and_nasdaq_assetclass(snapdir, monkeypatch):
     assert "assetclass=stocks" in seen[1]
     with pytest.raises(ValueError):
         B.nasdaq_daily("X", assetclass="crypto")
+
+
+def test_btc_mood_scores_streaks_legs_and_forward_returns():
+    """Fear and Greed and the BTC signal board (_btc_mood.py): gauge ramps, zones, consecutive-day spells, the doc's bull / bear legs, forward returns."""
+    from app.topics import _btc_mood as MD
+    v = pd.Series([0.4, 0.5, 0.65, 0.8, 1.0, 1.4, 1.8, 2.1, 2.4, 3.0, np.nan])
+    sc = MD.gauge_score(v, 0.8, 1.0, 1.8, 2.4)                       # the Mayer zones: +1 at 0.8, ramp from 1.0; ramp from 1.8, -1 at 2.4
+    assert list(sc.iloc[:9].round(3)) == [1, 1, 1, 1, 0, 0, 0, -0.5, -1] and sc.iloc[9] == -1 and np.isnan(sc.iloc[10])
+    assert list(MD.gauge_score(pd.Series([0.5, 0.95, 1.2]), None, None, 0.9, 1.0).round(2)) == [0, -0.5, -1]         # sell side only (Pi Cycle)
+    f = pd.Series([10, 24, 25, 46, 47, 54, 55, 75, 76, 95.0])
+    assert list(MD.fng_zone(f)) == [2, 2, 1, 1, 0, 0, -1, -1, -2, -2]
+    assert list(MD.board_zone(pd.Series([0.6, 0.5, 0.2, 0.19, -0.19, -0.2, -0.5, np.nan])).iloc[:7]) == [2, 2, 1, 0, 0, -1, -2]
+    idx = pd.date_range("2020-01-01", periods=12, freq="D")
+    assert [(str(a.date()), str(b.date()), n) for a, b, n in MD.runs(pd.Series([1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1], index=idx) == 1)] == [
+        ("2020-01-01", "2020-01-02", 2), ("2020-01-04", "2020-01-06", 3), ("2020-01-09", "2020-01-09", 1), ("2020-01-11", "2020-01-12", 2)]
+    marks = [{"date": "2021-01-01", "label": "Peak $x"}, {"date": "2021-07-01", "label": "Low $y"}, {"date": "2022-01-01", "label": "Peak $z"}]
+    L = MD.legs(marks, pd.Timestamp("2022-03-01"))
+    assert [(g["kind"], g["open"]) for g in L] == [("bull", False), ("bear", False), ("bull", False), ("bear", True)] and "so far" in L[-1]["label"]
+    # a score that is in extreme fear for the first 40 days of every 200 and extreme greed for days 100-129, on a price that rises 1% a day
+    # after fear and is flat otherwise: fear must show the higher forward return, with the spell counts and streak lengths right
+    days = pd.date_range("2020-06-01", periods=800, freq="D")
+    k = np.arange(800) % 200
+    val = pd.Series(np.where(k < 40, 10.0, np.where((k >= 100) & (k < 130), 90.0, 50.0)), index=days)
+    px = pd.Series(100 * np.cumprod(1 + np.where((k >= 40) & (k < 100), 0.01, 0.0)), index=days)
+    S = MD.study(val, MD.fng_zone(val), px, marks, MD.FNG_NAMES, min_mark=7)
+    assert S["extreme"]["buy"] == {"spells": 4, "days": 160, "median_days": 40.0, "mean_days": 40.0, "longest": {"days": 40, "from": "2020-06-01", "to": "2020-07-10"}}
+    assert S["extreme"]["sell"]["spells"] == 4 and S["extreme"]["sell"]["median_days"] == 30 and len(S["marks"]) == 8 and all(m["days"] in (30, 40) for m in S["marks"])
+    fw = {r["zone"]: r for r in S["forward"]}
+    assert fw[2]["days"] == 160 and fw[2]["spells"] == 4 and fw[2]["med_30"] > 0.1 > fw[-2]["med_30"] == 0 and fw[2]["up_30"] == 0.75          # the first ten days of a 40-day spell see no rise within 30 days
+    assert S["now"]["zone"] == 0 and S["now"]["zone_days"] == 70 and S["now"]["zone_name"] == "neutral" and S["now"]["kind"] == "bear"
+    assert {r["label"] for r in S["legs"]} == {g["label"] for g in L} and sum(r["days"] for r in S["legs"]) == 800 == S["days"]
+    assert S["ic"]["30"]["ic"] < 0 and len(S["series"]) == 800 and S["series"][0][3] == 2 and S["reads"] and S["depth"][0]["days"] == 28
+    # the board: only gauges with data count, and fewer than five gives no score
+    c = pd.DataFrame({"PriceUSD": np.linspace(100, 400, 1600)}, index=pd.date_range("2018-01-01", periods=1600, freq="D"))
+    d = MD.indicators(c)
+    b = MD.board(d)
+    assert b["aggregate"].isna().all() and b["n"].max() == 4                       # four price gauges alone are not enough
+    d = MD.indicators(c, fng=pd.Series(10.0, index=c.index))
+    b = MD.board(d)
+    last = b.iloc[-1]
+    assert last["n"] == 5 and last["fng"] == 1 and last["aggregate"] == pytest.approx(np.nansum([last[g[0]] for g in MD.GAUGES if g[0] in b]) / 5)
+    assert MD.label(0.5) == "STRONG BUY" and MD.label(-0.2) == "SELL" and MD.label(0.1) == "NEUTRAL" and len(MD.board_today(d, b)) == 5
+
+
+def test_btc_mood_endpoint_and_readings(snapdir, monkeypatch):
+    from app.topics import btc_cycles as C, _daily
+    monkeypatch.setattr(C, "fetch_json", lambda url, ttl, **k: _cm() if "coinmetrics" in url else _llama(url))
+    m = C._mood_now()
+    B.json_safe(m)
+    assert m["fng"]["since"] == "2018-02-01" and m["fng"]["extreme"]["buy"]["spells"] >= 5 and m["board"]["label"] in ("STRONG BUY", "BUY", "NEUTRAL", "SELL", "STRONG SELL")
+    assert m["board"]["n"] >= 5 and "MVRV Z-score" in m["board"]["missing"]          # the fixture has no on-chain columns: the price gauges, F&G and SSR carry it
+    monkeypatch.setattr(C, "ENDPOINTS", {**C.ENDPOINTS, "mood": lambda: m})
+    st = C._mood_stats()
+    assert "series" not in st["fng"] and "marks" not in st["board"] and st["fng"]["reads"] == m["fng"]["reads"]
+    monkeypatch.setattr(C, "ENDPOINTS", {**C.ENDPOINTS, "mood": lambda: m, "cycles": lambda: {}, "signals": lambda: {"status": []}})
+    monkeypatch.setattr(C._flows, "ENDPOINTS", {"etf": lambda: {}, "mstr": lambda: {}})
+    r = {x["key"]: x for x in _daily._clean(C.READINGS())}
+    assert r["fng"]["tab"] == "signals" and r["fng"]["lean"] in (-1, 0, 1) and r["btc_board"]["value"] == m["board"]["label"]
+    monkeypatch.setattr(C, "fetch_json", lambda url, ttl, **k: (_ for _ in ()).throw(ConnectionError("offline")))
+    off = C._mood_now()
+    assert off["fng_error"] == "ConnectionError" and off["price_error"] == "ConnectionError" and "board" not in off
+

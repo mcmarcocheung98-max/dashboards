@@ -129,6 +129,73 @@ function zonesCard(Z) {
       "while the buy lines did fire at the Jun 2026 low. Mechanical readings, not a view."));
 }
 
+// ---------- Fear and Greed and our own BTC signal board: the zones painted on the price, streak lengths, bull / bear averages, what came next
+function moodCards(S, o) {
+  if (!S) return [card(o.title, el("div", { class: "muted" }, "Not available right now" + (o.error ? " (" + o.error + ")" : "") + "."))];
+  const N = S.now, names = S.names, fv = v => v == null ? "–" : o.digits ? (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(o.digits) : v.toFixed(0);
+  const zc = z => z > 0 ? "up" : z < 0 ? "down" : "";
+  const cap = t => t === t.toLowerCase() ? t[0].toUpperCase() + t.slice(1) : t;
+  const p0 = v => v == null ? "–" : pct(v, 0), share = v => v == null ? "–" : Math.round(v * 100) + "%";
+  const E = S.extreme, lg = x => x && x.longest ? x.longest.days + " days (" + x.longest.from.slice(0, 7) + ")" : "–";
+  const reg = Object.fromEntries((S.regimes || []).map(r => [r.kind, r]));
+  const kp = el("div", { class: "kpis" },
+    kpi(o.short + " (" + N.date + ")", fv(N.value) + " · " + N.zone_name, zc(N.zone)),
+    kpi("Days in a row in this zone", String(N.zone_days)),
+    kpi(N.side > 0 ? "Days in a row on the " + o.buySide + " side" : N.side < 0 ? "Days in a row on the " + o.sellSide + " side" : "Days in a row neutral", String(N.side_days)),
+    kpi("Average in bull legs / bear legs", reg.bull && reg.bear ? fv(reg.bull.mean) + " / " + fv(reg.bear.mean) : "–"),
+    kpi("Longest " + names["2"] + " spell", lg(E.buy)), kpi("Longest " + names["-2"] + " spell", lg(E.sell)),
+    kpi("Typical spell: " + names["2"] + " / " + names["-2"], (E.buy.median_days ?? "–") + " / " + (E.sell.median_days ?? "–") + " days"));
+  // the price with the extreme zones painted behind it (full-height bars on their own hidden scale) and each long spell's day count on it
+  const host = el("div", { class: "chart", style: "height:380px" });
+  const rows = S.series.filter(r => r[2] != null);
+  setTimeout(() => {
+    const c = newChart(host, { rightPriceScale: { borderVisible: false, mode: 1 } });
+    const up = css("--up"), dn = css("--down"), a = (hex, x) => hex + Math.round(x * 255).toString(16).padStart(2, "0");
+    const paint = c.addHistogramSeries({ priceScaleId: "paint", priceLineVisible: false, lastValueVisible: false, base: 0 });
+    paint.setData(rows.map(r => r[3] === 2 ? { time: r[0], value: 1, color: a(up, 0.3) } : r[3] === -2 ? { time: r[0], value: 1, color: a(dn, 0.3) } : { time: r[0] }));
+    c.priceScale("paint").applyOptions({ scaleMargins: { top: 0, bottom: 0 }, visible: false });
+    const px = c.addLineSeries({ color: css("--s1"), lineWidth: 2, priceLineVisible: false, lastValueVisible: false, priceFormat: { type: "custom", formatter: v => usd(v), minMove: 0.01 } });
+    const pts = rows.map(r => ({ time: r[0], value: r[2] }));
+    px.setData(pts);
+    px.setMarkers((S.marks || []).map(m => ({ time: m.ts_to, position: m.zone > 0 ? "belowBar" : "aboveBar", shape: m.zone > 0 ? "arrowUp" : "arrowDown", color: m.zone > 0 ? up : dn, size: 0.6, text: m.days + "d" })));
+    syncAdd(c, px, pts);
+  });
+  const legend = el("div", { class: "legend" }, el("button", {}, el("span", { class: "sw", style: "background:" + css("--s1") }), "BTC (log)"),
+    el("button", {}, el("span", { class: "sw", style: "background:" + css("--up") + "55" }), cap(names["2"])), el("button", {}, el("span", { class: "sw", style: "background:" + css("--down") + "55" }), cap(names["-2"])));
+  const line = linesChart([{ name: o.short, points: S.series.map(r => [r[0], r[1]]) }], fv, { small: true, hlines: o.hlines });
+  const th = (H, right) => el("tr", {}, ...H.map((h, i) => el("th", { style: "text-align:" + (i >= right ? "right" : "left") + ";vertical-align:bottom" }, h)));
+  const td = (v, c2) => el("td", { style: "text-align:right", class: c2 || "" }, v);
+  const regRow = r => el("tr", { style: r.label.startsWith("All ") || r.label.startsWith("BTC ") ? "font-weight:600" : "" }, el("td", {}, r.label), el("td", { class: "muted" }, r.from.slice(0, 7) + " to " + r.to.slice(0, 7)), td(num(r.days)),
+    td(fv(r.mean)), td(fv(r.median)), td(share(r.buy_extreme), "up"), td(share(r.buy_side)), td(share(r.sell_side)), td(share(r.sell_extreme), "down"));
+  const regimes = el("div", { class: "scroll" }, el("table", {}, th(["Period", "Dates", "Days", "Average", "Median", "% days " + names["2"], "% " + o.buySide + " side", "% " + o.sellSide + " side", "% days " + names["-2"]], 2),
+    ...(S.regimes || []).map(regRow), ...(S.legs || []).map(regRow), ...(S.trend || []).map(regRow)));
+  const H = S.horizons || [30, 90, 180];
+  const fwdRow = r => el("tr", { style: r.label.startsWith("All") ? "font-style:italic" : "" }, el("td", { class: zc(r.zone || 0) }, cap(r.label)), td(num(r.days)), td(r.spells == null ? "" : String(r.spells)),
+    ...H.flatMap(h => [td(p0(r["med_" + h]), cls(r["med_" + h])), td(r["up_" + h] == null ? "–" : share(r["up_" + h]), "muted")]));
+  const fwdHead = th(["After a day in", "Days", "Separate spells", ...H.flatMap(h => ["Median, next " + h + " days", "% higher"])], 1);
+  const fwd = t => el("div", { class: "scroll", style: "margin-top:8px" }, el("table", {}, fwdHead, ...t.map(fwdRow)));
+  const longest = el("div", { class: "scroll" }, el("table", {}, th(["Spell", "From", "To", "Days", "BTC during it", "BTC 90 days after it ended"], 3),
+    ...(S.longest || []).map(r => el("tr", {}, el("td", { class: zc(r.zone) }, cap(names[String(r.zone)])), el("td", {}, r.from), el("td", {}, r.open ? "still running" : r.to), td(String(r.days)), td(p0(r.move), cls(r.move)), td(p0(r.after_90), cls(r.after_90))))));
+  const ic = S.ic || {};
+  const out = [card(o.title, kp, el("div", { style: "margin-top:8px" }, legend, host),
+      note("Green shading = " + names["2"] + ", red = " + names["-2"] + ". The arrows mark where a spell of " + S.min_mark + " days or more ended, with its length in days. " + o.chartNote),
+      el("div", { style: "margin-top:8px" }, ...line), note(o.lineNote)),
+    card(o.short + ": what the record says (" + num(S.days) + " days since " + S.since + ")", el("ul", { style: "margin:0;padding-left:18px" }, ...(S.reads || []).map(t => el("li", { style: "margin:4px 0" }, t))),
+      note("One reading per UTC day, fixed at midnight UTC (the evening before in New York; neither score exists intraday, so there is no 9am reading to choose), paired with that day's closing price. " +
+        "Bull and bear legs are the doc's: peak to the next low is a bear leg, low to the next peak a bull leg; the leg since the Jun 2026 low is open. Days inside one spell are not independent: read the spell counts.")),
+    fold(o.short + " in each bull and bear leg", true, regimes, note("% days in each zone. Bottom two rows: the same split by BTC above or below its 200-day average, which needs no hindsight (a leg is only known once its peak or low has passed).")),
+    fold(o.short + ": BTC after each zone", true, fwd(S.forward || []), el("div", { style: "margin-top:10px" }, el("b", {}, "Split by the leg it happened in")), fwd(S.forward_by_regime || []),
+      el("div", { style: "margin-top:10px" }, el("b", {}, "Does a long spell mean more than a short one?")), fwd(S.depth || []),
+      note("Median close-to-close move of BTC from the day of the reading; '% higher' = share of those days followed by a higher price. Rank correlation of the reading with the next " +
+        H.map(h => h + " days: " + (ic[h] && ic[h].ic != null ? (ic[h].ic > 0 ? "+" : "") + ic[h].ic.toFixed(2) + " (t " + ic[h].t + ")" : "–")).join(", ") + "; t allows for overlapping windows, and beyond ±2 would be notable.")),
+    fold(o.short + ": the longest spells", false, longest)];
+  if (S.gauges) out.push(fold("The gauges behind today's board score (" + S.label + ", " + S.n + " gauges)", false, el("div", { class: "scroll" }, el("table", {}, th(["Gauge", "Reading", "Buy zone (+1 at)", "Sell zone (−1 at)", "Score", "Weight"], 1),
+      ...S.gauges.map(g => el("tr", { title: g.source }, el("td", {}, g.name), td(g.value == null ? "–" : String(g.value)), td(g.buy || "–", "up"), td(g.sell || "–", "down"), td(fv(g.score), cls(g.score)), td(String(g.weight)))))),
+    (S.missing || []).length ? note("Without data today: " + S.missing.join(", ") + ".") : null,
+    note("The trading bot's BTC spot signal rebuilt from free data: weighted average of the gauge scores, on-chain valuation counting double. The bot's funding-rate and hash-ribbon gauges are not rebuilt here, so its own score can differ a little.")));
+  return out;
+}
+
 // mNAV strategies and the exit window: today's checklist, the rule backtests (recomputed from the live data), and how people value MSTR
 function strategiesCards(S) {
   if (!S) return [];
@@ -269,7 +336,13 @@ const VIEWS = {
       tre.length ? card("UK and Hong Kong bitcoin treasury companies", el("div", { class: "muted" }, "Holdings hand-entered in data/btc-cycles/treasuries.csv from each company's announcements; share prices from Yahoo, else CNBC, else holdings only.")) : null, ...tre];
   },
   async signals() {
-    const d = await api("signals"), R = d.research;
+    const [d, M] = await Promise.all([api("signals"), api("mood").catch(e => ({ fng_error: e.message, board_error: e.message }))]);
+    const R = d.research;
+    const mood = [...moodCards(M.fng, { title: "Fear and Greed, painted on the BTC price", short: "Fear and Greed", digits: 0, buySide: "fear", sellSide: "greed", hlines: [25, 75], error: M.fng_error,
+        chartNote: "alternative.me's index, 0-100, daily since Feb 2018.", lineNote: "Below 25 extreme fear, 25-46 fear, 47-54 neutral, 55-75 greed, above 75 extreme greed." }),
+      ...moodCards(M.board, { title: "Our BTC signal board, painted on the BTC price", short: "BTC signal board", digits: 2, buySide: "buy", sellSide: "sell", hlines: [0.5, 0.2, -0.2, -0.5], error: M.board_error || M.price_error,
+        chartNote: "The trading bot's BTC spot signal, rebuilt here from free data" + (M.onchain_error ? " (on-chain data not available right now: price-based gauges only)" : "") + ".",
+        lineNote: "Score from +1 (every gauge in its buy zone) to −1 (every gauge in its sell zone): ≥ +0.5 STRONG BUY, ≥ +0.2 BUY, ≤ −0.2 SELL, ≤ −0.5 STRONG SELL." })];
     const rows = d.status.map((s, i) => el("tr", {}, el("td", { style: "text-align:left" }, i + 1), el("td", { class: "wrap" }, s.signal), el("td", { style: "text-align:left" }, pill(s.state)), el("td", { class: "wrap" }, s.reading), el("td", { class: "wrap" }, s.note)));
     const status = card("The six signals, read mechanically today (" + d.as_of + ")", el("div", { class: "scroll" }, el("table", {}, el("tr", {}, ...["#", "Signal", "Status", "Reading", "How"].map(h => el("th", { style: "text-align:left;vertical-align:bottom" }, h))), ...rows)),
       note("Firing = the doc's condition is met on today's data. These are rules applied to public data, not a recommendation."));
@@ -282,7 +355,7 @@ const VIEWS = {
     const hd = [d.volume && d.volume.length ? { label: "BTC spot volume, 30-day average", points: d.volume, fmt: usdBig, delta: { lag: "90d" } } : null,
       d.dominance_log && d.dominance_log.length > 1 ? { label: "BTC dominance", points: d.dominance_log, fmt: v => v.toFixed(1) + "%", delta: { lag: "30d", abs: true, fmt: v => (v > 0 ? "+" : "") + v.toFixed(1) + " pts" } } : null].filter(Boolean);
     const head = hd.length ? card(null, followHead(hd, { latest: "Latest" })) : null;
-    return [head, status, ...charts, doc, timing, breakers];
+    return [head, status, ...mood, ...charts, doc, timing, breakers];
   },
 };
 

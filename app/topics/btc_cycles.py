@@ -5,7 +5,8 @@ reads the endpoints below.
 cycles      BTC price since 2010 (Coin Metrics community API), the published buy / sell zone models, each cycle overlaid from its halving,
             drawdown from the running high, and the doc's cycle-anatomy table and bottom line
 etf, mstr   US spot ETF flows and Strategy (btc_flows.py)
-signals     the doc's six signals, each with a computed or hand-entered status
+signals     the doc's six signals, each with a computed or hand-entered status; mood: Fear and Greed and our own BTC signal board,
+            each with its zones painted on the price, streaks, bull / bear averages and what BTC did afterwards (_btc_mood.py)
 sectors     (served to /altcoins) the doc's per-cycle sector tables (coins, low -> peak, multiple, burst window, metric), the cross-cycle
             comparison; rotation: the four cycles' bursts and each 2026-27 sector's status today
 metrics     (served to /altcoins) the doc's "common metrics of cycle winners" table with live versions of the measurable ones: DeFi TVL,
@@ -51,7 +52,9 @@ PACE = 13.0                                # seconds between CoinGecko downloads
 SOURCES = [{"name": "The research doc (BTC Cycles & Sector Rotation)", "url": "https://claude.ai/artifact/5Z9ca6X7eka9R3XdxZKcb3", "cadence": "as revised"},
            {"name": "BTC price (Coin Metrics community data)", "url": "https://coinmetrics.io/community-network-data/", "cadence": "daily"},
            {"name": "DeFi TVL, stablecoin supply, Hyperliquid TVL, fees and revenue, DEX volume (DefiLlama free API)", "url": "https://defillama.com", "cadence": "daily"},
-           {"name": "BTC dominance and spot volume (CoinGecko)", "url": "https://www.coingecko.com/en/global-charts", "cadence": "daily"}]
+           {"name": "BTC dominance and spot volume (CoinGecko)", "url": "https://www.coingecko.com/en/global-charts", "cadence": "daily"},
+           {"name": "Fear and Greed index (alternative.me)", "url": "https://alternative.me/crypto/fear-and-greed-index/", "cadence": "daily, 00:00 UTC"},
+           {"name": "BTC market cap, MVRV, miner issuance and fees for the signal board (Coin Metrics community data)", "url": "https://coinmetrics.io/community-network-data/", "cadence": "daily"}]
 NOTES = ("Research, not investment advice. Pre-2024 cycle figures in the tables are approximate, as the doc says. Live series are free public data; "
          "the signal statuses are mechanical readings of the doc's rules, not a view.")
 HALVINGS = [pd.Timestamp(d) for d in ("2012-11-28", "2016-07-09", "2020-05-11", "2024-04-19")]
@@ -1069,6 +1072,76 @@ def _rotation_now() -> dict:
             "as_of": now.strftime("%Y-%m-%d"), "stale": {}, "updated": int(time.time())}
 
 
+# ------------------------------------------------------------------ Fear and Greed and our own BTC signal board (_btc_mood.py)
+CM_BOARD = ("https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=PriceUSD,CapMrktCurUSD,CapMVRVCur,IssTotUSD,FeeTotNtv"
+            "&start_time=2010-07-18&page_size=10000&frequency=1d")
+FNG = "https://api.alternative.me/fng/?limit=0&format=json"
+
+
+def cm_board() -> pd.DataFrame:
+    """Coin Metrics' daily on-chain frame for the board's valuation gauges (market cap, MVRV, miner issuance and fees)."""
+    d = pd.DataFrame(fetch_json(CM_BOARD, TTL, min_bytes=1000).get("data", []))
+    d.index = pd.to_datetime(d["time"]).dt.tz_localize(None).dt.normalize()
+    return d.drop(columns=[c for c in ("time", "asset") if c in d]).apply(pd.to_numeric, errors="coerce").sort_index()
+
+
+def fear_greed() -> pd.Series:
+    """alternative.me's Fear and Greed index, one value per UTC day since Feb 2018."""
+    rows = fetch_json(FNG, TTL, min_bytes=100).get("data", [])
+    s = pd.Series({pd.to_datetime(int(r["timestamp"]), unit="s").normalize(): float(r["value"]) for r in rows if r.get("value") not in (None, "")})
+    return s[~s.index.duplicated()].sort_index()
+
+
+def _mood_now() -> dict:
+    """Both daily scores studied the same way: zones, streaks, bull / bear averages, what BTC did afterwards."""
+    from . import _btc_mood as MD
+    R = research()
+    out: dict = {"as_of": time.strftime("%Y-%m-%d"), "stale": {}, "updated": int(time.time()), "levels": MD.LEVELS}
+    fng = None
+    try:
+        fng = fear_greed()
+    except Exception as e:
+        out["fng_error"] = type(e).__name__
+    try:
+        c = cm_board()
+    except Exception as e:                                # the on-chain frame failed: the price-only gauges still give a score
+        out["onchain_error"] = type(e).__name__
+        try:
+            c = pd.DataFrame({"PriceUSD": price()})
+        except Exception as e2:
+            out["price_error"] = type(e2).__name__
+            return out
+    px = c["PriceUSD"].dropna()
+    if fng is not None and len(fng) > 200:
+        try:
+            out["fng"] = MD.study(fng, MD.fng_zone(fng), px, R["markers"], MD.FNG_NAMES, digits=0, min_mark=7)
+        except Exception as e:
+            out["fng_error"] = f"{type(e).__name__}: {e}"[:160]
+    try:
+        st = None
+        try:
+            st = stablecoins()
+        except Exception:
+            pass
+        d = MD.indicators(c, fng, st)
+        sc = MD.board(d)
+        agg = sc["aggregate"].dropna()
+        out["board"] = MD.study(agg, MD.board_zone(agg), px, R["markers"], MD.BOARD_NAMES, digits=2, min_mark=14)
+        out["board"]["gauges"] = MD.board_today(d, sc)
+        out["board"]["label"] = MD.label(float(agg.iloc[-1]))
+        out["board"]["n"] = int(sc["n"].loc[agg.index[-1]])
+        out["board"]["missing"] = [g[1] for g in MD.GAUGES if g[0] not in sc or not np.isfinite(sc[g[0]].loc[agg.index[-1]])]
+    except Exception as e:
+        out["board_error"] = f"{type(e).__name__}: {e}"[:160]
+    return out
+
+
+def _mood_stats() -> dict:
+    """Not a tab: the mood payload without its long series, small enough to read in a log (Actions > show-json)."""
+    m = ENDPOINTS["mood"]()
+    return {k: ({kk: vv for kk, vv in v.items() if kk not in ("series", "marks")} if isinstance(v, dict) and "series" in v else v) for k, v in m.items()}
+
+
 # ------------------------------------------------------------------ diagnostic: what the server sees at the per-coin fundamentals sources
 PROBE_URLS = {
     "protocol (TVL)": "https://api.llama.fi/protocol/ethena",
@@ -1138,6 +1211,18 @@ def READINGS() -> list[dict]:
     except Exception:
         pass
     try:
+        m = ENDPOINTS["mood"]()
+        f, b = m.get("fng"), m.get("board")
+        if f:
+            n = f["now"]
+            add("signals", "fng", "Fear and Greed index", n["value"], 1 if n["zone"] == 2 else -1 if n["zone"] == -2 else 0,
+                f"{n['zone_name']}, {n['zone_days']} days in a row; contrarian: +1 in extreme fear, -1 in extreme greed")
+        if b:
+            n = b["now"]
+            add("signals", "btc_board", "BTC signal board", b["label"], 1 if n["zone"] > 0 else -1 if n["zone"] < 0 else 0, f"score {n['value']:+.2f}, {n['zone_days']} days in a row")
+    except Exception:
+        pass
+    try:
         e = _flows.ENDPOINTS["etf"]()
         d = e.get("daily_usd_m") or []
         if d:
@@ -1168,7 +1253,7 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 ENDPOINTS = {"cycles": _cached_ep("cycles", _cycles_now), "sectors": _cached_ep("sectors", _sectors_now, 600), "metrics": _cached_ep("metrics", _metrics_now),
              "candidates": _cached_ep("candidates", _candidates_now), "signals": _cached_ep("signals", _signals_now, 3600),
              "coins": _cached_ep("coins", _coins_now), "rotation": _cached_ep("rotation", _rotation_now, 3600),
-             "fund-probe": _cached_ep("fund-probe", _fund_probe, 1800)}
+             "fund-probe": _cached_ep("fund-probe", _fund_probe, 1800), "mood": _cached_ep("mood", _mood_now), "mood-stats": _mood_stats}
 from . import btc_flows as _flows                                    # ETF and MSTR tabs
 ENDPOINTS.update(_flows.ENDPOINTS)
 BACKGROUND = [fill_coins]                    # slow, rate-limited downloads the server runs outside page requests

@@ -29,6 +29,8 @@ A dashboard built on the research doc "BTC Cycles & Sector Rotation: 2013–2026
 | | UK and HK treasury companies | The Smarter Web Company and Boyaa Interactive: price, correlation with BTC, holdings (hand-entered) |
 | Signals | Status table | The doc's six signals, each with a mechanical status on today's data, or "hand-entered" |
 | | Volume and dominance | BTC spot volume vs the $10bn line; dominance logged daily since deploy |
+| | Fear and Greed, painted on the BTC price | alternative.me's index since Feb 2018: the BTC price with extreme fear shaded green and extreme greed red, each long spell's length in days marked on it; today's zone and days in a row; the index averaged over the doc's bull and bear legs; BTC's median move 30 / 90 / 180 days after each zone, split by leg and by how deep into a spell the day was |
+| | Our BTC signal board, painted on the BTC price | The trading bot's BTC spot signal rebuilt from free data (ten gauges), studied the same way, with today's gauges |
 | | The doc's text | Signals in order, timing on the halving clock, what could break the pattern |
 
 ## The altcoin half (Altcoin Study, `/altcoins`)
@@ -72,6 +74,32 @@ Coin Metrics community data is free for non-commercial use with attribution. Def
 - **Beta to BTC** is the slope of the coin's daily log returns on BTC's over the last 365 days, clipped to 0.5–3.0.
 - **Projection** for each scenario: price now × (BTC scenario ÷ BTC now) ^ beta. The BTC levels and the reasoning are in `scenarios.json`: end-2027 as the "2019 / 2023" year (bear = the doc's NYDIG retest depth, base = June 2026 low × 1.95, bull = × 2.55), end-2028 as the halving year (× 2, × 4, × 6.5). Implied market cap = projected price × today's circulating supply. It is mechanical and says nothing about a coin's own fundamentals, unlocks or survival.
 - **Signal statuses** apply the doc's rule to today's data: launches per day > 1,000 (hand-entered); stablecoin supply up for 8 or more consecutive weeks; Hyperliquid revenue over the last 90 days above the 90 days before while BTC is down over 90 days; BTC spot volume 30-day average ≥ $10bn; dominance 3 points below the highest logged reading when that high was ≥ 58%; Google Trends is hand-entered and marked "watch". Statuses are mechanical and say nothing about what to do.
+
+### Fear and Greed and the BTC signal board (`app/topics/_btc_mood.py`)
+
+- **Fear and Greed**: `api.alternative.me/fng/?limit=0`, one value per UTC day since 1 Feb 2018. Zones: below 25 extreme fear, 25-46 fear,
+  47-54 neutral, 55-75 greed, above 75 extreme greed.
+- **BTC signal board**: the trading bot's spot signal (`trading-system: src/hl/signal_board.py`) rebuilt here. Each gauge scores a day
+  from +1 (buy zone) to -1 (sell zone) with a straight ramp through the zone; the score is the weighted average of the gauges with data
+  (MVRV Z-score, NUPL and thermocap count double; at least five gauges or no score). Gauges and zones are the bot's: MVRV Z-score
+  (0 / 1 ; 5 / 7), NUPL (0 / 0.25 ; 0.5 / 0.75), Puell (0.5 / 0.8 ; 2 / 4), Mayer (0.8 / 1.0 ; 1.8 / 2.4), 2-year MA multiplier
+  (1.0 / 1.3 ; 3 / 5), price / 200-week average (1.0 / 1.5 ; 3 / 5), Pi Cycle Top (sell only, 0.9 / 1.0), thermocap multiple
+  (5 / 8 ; 25 / 40), Fear and Greed (10 / 25 ; 75 / 90), stablecoin supply ratio as a 1-year percentile (0.1 / 0.3 ; 0.7 / 0.9).
+  >= +0.5 STRONG BUY, >= +0.2 BUY, <= -0.2 SELL, <= -0.5 STRONG SELL. Inputs: Coin Metrics community data (price, market cap, MVRV,
+  miner issuance and fees), alternative.me, DefiLlama stablecoin supply. Not rebuilt: the bot's funding-rate and hash-ribbon gauges, so
+  the bot's own score can differ a little.
+- **The day's reading**: both are one figure per UTC day, fixed at midnight UTC (7-8pm New York the evening before). Neither exists
+  intraday, so a "9am New York" reading would be the same number; it is paired with that UTC day's closing price and forward returns run
+  from that close.
+- **Spells**: consecutive days in a zone (a gap of up to three missing days keeps the last reading). The chart marks the end of each
+  extreme spell of 7+ days (Fear and Greed) or 14+ days (board) with its length.
+- **Bull and bear legs**: the doc's markers in `research.json`: peak to the next low is a bear leg, low to the next peak a bull leg, the
+  leg after the last marker is open. The same averages are also given by BTC above / below its 200-day average, which needs no hindsight.
+- **What came next**: BTC's median close-to-close move 30 / 90 / 180 days after each zone, with the number of separate spells (days in
+  one spell are one episode), split by leg and by depth into the spell; and the rank correlation of the reading with the forward
+  return, its t-value shrunk for overlapping windows (n / horizon independent observations).
+- Caveat: Fear and Greed covers three bear legs and two and a half bull legs; the board's zones were set by people looking back at the
+  same cycles it is scored on. `/api/btc-cycles/mood-stats` is the payload without its long series, for reading in a log.
 
 ## Keeping it up to date
 
