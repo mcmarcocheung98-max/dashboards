@@ -13,7 +13,7 @@ permissions:
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40             # two passes over 150+ tabs; a slow dashboard must not cut the run before the PROBLEMS list prints
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
