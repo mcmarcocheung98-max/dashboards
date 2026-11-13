@@ -395,10 +395,10 @@
   {
    "id": "ai-stocks-slow-tabs",
    "owner": "session:ai-stocks",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-13",
    "title": "AI Stocks: Setup, Dips and Fear take 80-180 s on first load; no downloads inside page views",
-   "detail": "Two live checks running (12 and 13 Nov)."
+   "detail": "Two live checks running (12 and 13 Nov). Fixed and confirmed live the same morning (b07387a): 4-5 s per tab."
   },
   {
    "id": "cut-review-1113",
@@ -853,8 +853,8 @@
   {
    "date": "2026-11-13",
    "run": "scheduled",
-   "result": "problems",
-   "summary": "Live check: all 155 light tabs loaded (two on retry: AI wages, AI Stocks fear) and 110 dark tabs before the 25-minute limit cut the run; no tab failed. Slow: AI Stocks setup 127 s, dips 83 s, fear 177 s. Luxury fine in both passes. Health: known failures only (Bluesky and Reddit 403, Yahoo 429, one FRED source on AI Stocks, one Trends source stale); Pokémon's TCGdex cards recovered; Luxury shows no stale FRED sources any more. Local tests 460 passed. Newsletter built, not sent. Signals 66 of 83 wired, 15 crossed.",
+   "result": "ok",
+   "summary": "Live check: all 155 light tabs loaded (two on retry: AI wages, AI Stocks fear) and 110 dark tabs before the 25-minute limit cut the run; no tab failed. Slow: AI Stocks setup 127 s, dips 83 s, fear 177 s. Luxury fine in both passes. Health: known failures only (Bluesky and Reddit 403, Yahoo 429, one FRED source on AI Stocks, one Trends source stale); Pokémon's TCGdex cards recovered; Luxury shows no stale FRED sources any more. Local tests 460 passed. Newsletter built, not sent. Signals 66 of 83 wired, 15 crossed. Second live check at 08:45 UTC after the AI Stocks fix: 310 of 310 tabs, all tabs OK, no retries, 14 minutes.",
    "fixed": [
     "live check limit 25 to 40 minutes"
    ],
@@ -1718,9 +1718,17 @@
   },
   {
    "date": "2026-11-13",
-   "title": "Luxury confirmed fixed; AI Stocks is now the slow dashboard; China vs US Tech reviewed",
-   "summary": "Luxury loaded in seconds in both passes of the live check, so yesterday's fix holds. The run was still cut at its time limit, 110 tabs into the dark pass, because AI Stocks' Setup, Dips and Fear tabs took one to three minutes each on first load, two days running: the same FRED-inside-a-page-view problem, handed to its session; the check's limit is raised from 25 to 40 minutes so one slow dashboard cannot hide the rest. The China vs US Tech review found hand-kept files that stop in 2025 (milestones, node gap), 2024 (EV share) and 2023 (top-cited papers), an empty chip-imports file, and 34 rows without a source; handed to its session. Signals: 66 of 83 wired, 15 crossed; AI Stocks' breadth washout has cleared and VIX is 17.5; the Options volatility premium is down to 8%.",
+   "title": "Luxury and AI Stocks both fixed and confirmed live; China vs US Tech reviewed",
+   "summary": "Luxury loaded in seconds in both passes of the live check, so yesterday's fix holds. The run was still cut at its time limit, 110 tabs into the dark pass, because AI Stocks' Setup, Dips and Fear tabs took one to three minutes each on first load, two days running: the same FRED-inside-a-page-view problem, handed to its session; the check's limit is raised from 25 to 40 minutes so one slow dashboard cannot hide the rest. The China vs US Tech review found hand-kept files that stop in 2025 (milestones, node gap), 2024 (EV share) and 2023 (top-cited papers), an empty chip-imports file, and 34 rows without a source; handed to its session. Signals: 66 of 83 wired, 15 crossed; AI Stocks' breadth washout has cleared and VIX is 17.5; the Options volatility premium is down to 8%. Later the same morning the AI Stocks session shipped the fix and a second live check confirmed it: all 310 tabs loaded in both passes with no retry, in 14 minutes, the first complete clean run since Tuesday. The slowest first loads left are Altcoins' Coins tab (67 s) and Options' Setup (51 s).",
    "changes": [
+    {
+     "dashboard": "AI Stocks",
+     "slug": "ai-stocks",
+     "tab": "setup",
+     "what": "no page view downloads: prices, VIX (Cboe first, FRED last and once a day), revenue and capex moved to background jobs. Confirmed live: Setup, Dips and Fear load in 4-5 s, down from 127, 83 and 177 s",
+     "commit": "b07387a",
+     "by": "session:ai-stocks"
+    },
     {
      "dashboard": "shared",
      "slug": "status",
@@ -1756,7 +1764,7 @@
    ],
    "review": "china-us-tech",
    "next": [
-    "AI Stocks session's reply (no downloads inside page views); tomorrow's live check should finish both passes inside 15 minutes",
+    "Altcoins Coins (67 s) and Options Setup (51 s) are the slowest first loads left; ask their sessions if they repeat on Monday",
     "Prediction Markets watchlist refresh (asked 12 Nov, no reply yet: one reminder on Monday)",
     "Monday: weekly luxury liquidity log and stock refresh; token totals"
    ],
