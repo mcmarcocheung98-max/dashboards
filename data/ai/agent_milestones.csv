@@ -28,6 +28,6 @@ date,event,company,kind,source,note
 2026-04-08,Claude Managed Agents (public beta),Anthropic,tools,https://claude.com/resources/articles/claude-managed-agents,hosted agent runtime; Anthropic's article dated 8 Apr 2026 ("available today in public beta on the Claude Platform")
 2026-05-14,Grok Build (early beta),xAI,coding agents,https://www.eweek.com/news/xai-grok-build-coding-agent/,terminal coding agent
 2026-05-19,Gemini Spark,Google,agents,https://www.tomsguide.com/ai/google-gemini/google-unveils-gemini-spark-a-24-7-personal-ai-agent-that-could-be-a-game-changer-for-agentic-ai,I/O 2026; always-on personal agent
-2026-09-09,Muse personal agent,Meta,agents,https://www.thestar.com.my/tech/tech-news/2026/09/09/meta-launches-ai-agent-that-can-access-other-apps-to-send-emails-make-payments,Reuters report; may be 8 Sep US time - verify date
+2026-09-08,Muse personal agent,Meta,agents,https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/,"Meta newsroom post dated 8 Sep 2026: rolling out in the US on iOS, Android and muse.ai"
 2026-09-29,Dots always-on agents,OpenAI,agents,https://thenextweb.com/news/openai-dots-always-on-ai-agents-cloud-computers-devday,DevDay 2026; agents with their own cloud computers
-2026-10-21,Claude Duet (research preview),Anthropic,agents,https://dealroom.co/news/164918-anthropic-launches-claude-duet-a-proactive-agent-app-taking-on-metas-mus/,proactive agent app; press report - verify against Anthropic's announcement
+2026-10-21,Claude Duet (research preview),Anthropic,agents,https://claude.com/resources/articles/claude-duet,"proactive agent app; Anthropic's article dated 21 Oct 2026: research preview by waitlist, US Pro, Max and Ultra subscribers first"
