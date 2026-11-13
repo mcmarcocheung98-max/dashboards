@@ -62,7 +62,13 @@ const VIEWS = {
       ...doyLines(dy.years, [{ name: "1991–2020 average", points: dy.normal, color: "--hold" }], v => deg(v), { hline: 1.5 }),
       note("ERA5 reanalysis, two days behind real time (latest " + dy.last + "). Thick red: this year. Dashed: the 1991–2020 average for each day, which is itself about 0.9 °C above pre-industrial."),
       ask("5 years: is this year tracking the record years or falling back toward the trend? 10 and 20 years: the 1991–2020 line will look cold within a decade. That is what a 0.25 °C-a-decade trend means.")) : card("Copernicus ERA5, daily", missing(d, "daily", "ERA5 daily series"));
-    return [head, mon, roll, ann, daily];
+    const src3 = (d.monthly || {})[d.main] || Object.values(d.monthly || {})[0] || [], byY = new Map();
+    src3.forEach(([t, v]) => { const dt = new Date(t * 1000), y = dt.getUTCFullYear(); if (y >= 1950) { if (!byY.has(y)) byY.set(y, Array(12).fill(null)); byY.get(y)[dt.getUTCMonth()] = v; } });
+    const warm3 = byY.size > 10 ? card("Warming in 3D: every month of every year since 1950" + (d.main ? " (" + d.main + ")" : ""),
+      ...chart3d({ x: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], rows: [...byY.keys()].sort((a, b) => a - b).map(y => ({ name: String(y), z: byY.get(y) })), mode: "surface", zero: false, h: 480,
+        zFmt: v => deg(v), xHead: "month", csvName: "warming 3d", note: "1950 at the front, this year at the back; January to December left to right. Drag to turn; hover for a month's anomaly." }),
+      note("The same monthly anomalies as the first chart, laid out as a field: the ground rising towards the back is the warming, and the ridge of the last three years stands above everything before it. Ripples across a single year are that year's weather (El Niño, La Niña).")) : null;
+    return [head, mon, roll, ann, warm3, daily].filter(Boolean);
   },
 
   async co2() {

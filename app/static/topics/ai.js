@@ -68,7 +68,12 @@ const VIEWS = {
         ...Object.entries(d.ai_share_latest || {}).sort((a, b) => b[1].share - a[1].share).map(([k, v]) => el("tr", {}, el("td", {}, k), el("td", {}, sh(v.share)), el("td", {}, sh(v.year_ago)))))),
       note("Indeed AI Tracker: postings whose text includes AI terms (machine learning, data science, generative AI...), as % of all postings, monthly average."));
     const hk = card("Hong Kong", el("div", { class: "muted" }, "Indeed's postings index does not cover Hong Kong. Hong Kong headcount is on the Headcount tab; AI mentions in postings are shown above for the countries Indeed tracks."));
-    return [head, lines, share, hk];
+    const sec3 = [...AI, ...PRO].filter(n => c.sectors[n] && c.sectors[n].length > 10).sort((a, b) => lastY(c.sectors[a]) - lastY(c.sectors[b]));
+    const lines3 = sec3.length > 2 ? card("Job postings in 3D: one ribbon per sector (1 February 2020 = 100)",
+      ...chart3d({ ...grid3d(sec3.map(n => ({ name: n, points: c.sectors[n], color: css(COL[n]) }))), mode: "ribbons", zero: false, h: 460, xFmt: d3mon, zFmt: v => v == null ? "–" : v.toFixed(0), xHead: "week", csvName: "postings 3d",
+        note: "The sector with the fewest postings against its 2020 level at the front, the most at the back. Drag to turn; hover for a week." }),
+      note("The same Indeed indices as the chart above. The 2021–22 hiring boom is the ridge every ribbon shares; where each ribbon lands after it is the story: software and data well below 100, the professions near or above it.")) : null;
+    return [head, lines, lines3, share, hk].filter(Boolean);
   },
   async headcount() {
     const d = await api("headcount"), u = d.US;

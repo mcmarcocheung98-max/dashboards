@@ -42,7 +42,11 @@ const VIEWS = {
     const hl = has(d.healthy) ? card("England healthy life expectancy (ONS, years)", ...bySeries(d.healthy, f1, { small: true }),
       note("ONS health state life expectancies at birth, from the Annual Population Survey's self-reported health. Falling since 2017–19. 5 years: does it turn up? 10 years: is it back above 63? 20 years: the state pension age rises toward 68 while healthy life expectancy sits near 62.")) : null;
     const rows = card("National figures", rowsTable(d.rows || []), note("Kept in data/longevity/life_expectancy.csv and healthy.csv. Rows marked 'verify' were entered from memory: check them against the cited page."));
-    return [head, ans, le, el("div", { class: "grid2" }, hale, gap), el("div", { class: "grid2" }, nat, hl), rows];
+    const le3 = has(d.le) && Object.keys(d.le).length > 2 ? card("Life expectancy in 3D: years at birth, one ribbon per place",
+      ...chart3d({ ...grid3d(Object.entries(d.le).map(([k, p]) => ({ name: k, points: p })).sort((a, b) => lastY(a.points) - lastY(b.points))), mode: "ribbons", zero: false, h: 440, xFmt: d3year, zFmt: v => f1(v) + " years",
+        xHead: "year", csvName: "life expectancy 3d", note: "The shortest-lived place at the front, the longest-lived at the back. Drag to turn; hover for a year." }),
+      note("The same series as the chart above. The notch that cuts across every ribbon is 2020–21; how deep it is and how fast each ribbon recovers differs by place.")) : null;
+    return [head, ans, le, le3, el("div", { class: "grid2" }, hale, gap), el("div", { class: "grid2" }, nat, hl), rows];
   },
   async causes() {
     const d = await api("causes"), U = (d.us || {}).kpi || {}, NM = { heart: "Heart disease", cancer: "Cancer", alzheimer: "Alzheimer disease", overdose: "Drug overdose", all: "All causes" };

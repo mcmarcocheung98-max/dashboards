@@ -50,7 +50,11 @@ const VIEWS = {
       note(projNote + " Log scale so China and Hong Kong fit one chart. 20 years: births now are the workers of the 2040s; 50+ years: the projection after 2050 assumes fertility drifts back up, which none of the four has yet shown.")) : null;
     const rows = card("National figures", rowsTable(d.rows || [], (v, r) => +v > 100 ? num(+v) : num(+v, 3)),
       note("Kept in data/demographics/births.csv and tfr.csv. Rows marked 'verify' were written from memory or press reports: check them against the agency's table."));
-    return [head, tfr, el("div", { class: "grid2" }, nt, ni), wb, rows];
+    const tfr3 = d.tfr && Object.keys(d.tfr).length > 1 ? card("Fertility in 3D: children per woman, 1950 to 2100",
+      ...chart3d({ ...grid3d(Object.entries(d.tfr).map(([k, v]) => ({ name: k, points: [...(v.est || []), ...(v.proj || [])] })).sort((a, b) => lastY(a.points) - lastY(b.points))), mode: "ribbons", zero: false, h: 440,
+        xFmt: d3year, zFmt: f2, xHead: "year", csvName: "fertility 3d", note: "UN estimates, then the UN's medium projection after 2023. Drag to turn; hover for a country's rate in a year." }),
+      note("One ribbon per place. Every ribbon falls from the left; what differs is how far and how early, and how little the projections on the right climb back.")) : null;
+    return [head, tfr, tfr3, el("div", { class: "grid2" }, nt, ni), wb, rows];
   },
   async ageing() {
     const d = await api("ageing"), K = d.kpi || {}, dep = d.dependency;

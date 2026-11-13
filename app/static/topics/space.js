@@ -60,7 +60,12 @@ const VIEWS = {
       : card("Payload mass", missing(d, "mass", "GCAT's satellite catalog"));
     const sr = (L.success_rate || []).length ? card("Share of orbital attempts that reached orbit", ...linesChart([{ name: "Success rate", points: L.success_rate, color: css("--s3") }], v => pct(v, 0).replace("+", ""), { small: true }),
       note("GCAT launch code (success means the rocket worked). 5 years: new rockets fail often; does the rate hold above 95% as new entrants fly? 10 and 20 years: routine freight needs airline-like reliability.")) : null;
-    return [ans, head, ctry, el("div", { class: "grid2" }, roll, share), mass, el("div", { class: "grid2" }, prov, sr)];
+    const g3 = has(L.countries) ? GROUPS.filter(g => (L.countries[g] || []).length > 5).sort((a, b) => lastY(L.countries[a]) - lastY(L.countries[b])) : [];
+    const ctry3 = g3.length > 2 ? card("The launch race in 3D: orbital launch attempts per year, one ribbon per country",
+      ...chart3d({ ...grid3d(g3.map(g => ({ name: g, points: L.countries[g], color: C(g) }))), mode: "ribbons", h: 460, xFmt: d3year, zFmt: v => num(v, 0), xHead: "year", csvName: "launches 3d",
+        note: "The country with the fewest launches last year at the front, the most at the back. Drag to turn; hover for a year's count." }),
+      note("The same counts as the chart above. The Soviet ridge of the 1970s and 80s, its collapse, and the US and Chinese climbs since 2018 each read as their own piece of ground.")) : null;
+    return [ans, head, ctry, ctry3, el("div", { class: "grid2" }, roll, share), mass, el("div", { class: "grid2" }, prov, sr)];
   },
   async cost() {
     const d = await api("cost"), K = d.kpi || {}, V = d.vehicles || [];

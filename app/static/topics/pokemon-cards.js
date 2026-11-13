@@ -135,7 +135,12 @@ const VIEWS = {
       note("The same average, computed each month from what each signal read then against its own previous three years. Past peaks (early 2021) show what overheated looked like; " +
         "the score turning down from a peak is the cooling signal to watch.")) : null;
     const words = card("What each signal means", el("div", {}, ...S.map(c => el("div", { style: "margin:6px 0" }, el("b", {}, c.label + ": "), el("span", { class: "muted" }, c.words)))));
-    return [head, tbl, hist, signalCards(S.filter(c => c.heat != null)), words];
+    const zs3 = S.filter(c => (d.z || {})[c.key] && d.z[c.key].length > 12);
+    const heat3 = zs3.length > 2 ? card("The heat signals in 3D: each signal's z-score, month by month",
+      ...chart3d({ ...grid3d(zs3.map(c => ({ name: c.label, points: d.z[c.key].map(p => [p[0], p[1] * (c.sign || 1)]) })), true), mode: "ribbons", h: 480, xFmt: d3mon, zFmt: v => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(2),
+        xHead: "month", csvName: "heat signals 3d", note: "One ribbon per signal, each turned so that up means hotter; the floor each ribbon hangs from is zero, its own norm. Drag to turn; hover for a value." }),
+      note("The heat score is the average height of these ribbons in a month. Every ribbon standing above its floor at once is a broad boom (2020–21); one ribbon up alone is a single signal running ahead of the rest.")) : null;
+    return [head, tbl, hist, heat3, signalCards(S.filter(c => c.heat != null)), words];
   },
   async prices() {
     const d = await api("prices"), K = d.kpi || {};

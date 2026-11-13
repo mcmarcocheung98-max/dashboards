@@ -47,7 +47,12 @@ const VIEWS = {
     const themes = T.length ? card("Themes and their dashboards", table(["Theme", "Index now", "Average z of its topics", "Topics"],
       T.map(t => el("tr", {}, el("td", {}, THEME_LINK(t.label, t.dashboard)), el("td", { class: icls(t.index) }, f0(t.index)), el("td", {}, zpill(t.z)), el("td", {}, t.n)))),
       note("Each theme links to the dashboard that tracks it; the Attention vs reality tab sets the two side by side."), problems(d)) : problems(d) && card(null, problems(d));
-    return [head, idx, bars, tbl, themes];
+    const th3 = T.filter(t => t.points && t.points.length > 20).sort((a, b) => lastY(a.points) - lastY(b.points));
+    const att3 = th3.length > 2 ? card("Attention in 3D: every theme's index, week by week (log height, 100 = usual)",
+      ...chart3d({ ...grid3d(th3.map(t => ({ name: t.label, points: t.points }))), mode: "ribbons", log: true, h: 480, xFmt: d3mon, zFmt: v => num(v, 0), xHead: "week", csvName: "attention 3d",
+        note: "The quietest theme this week at the front, the loudest at the back. Drag to turn; hover for a theme's index in a week." }),
+      note("The same indices as the chart above, one ribbon per theme. A wall that rises across every ribbon at once is a week the whole site's subjects were in the news; a single spike is one theme's story.")) : null;
+    return [head, idx, att3, bars, tbl, themes];
   },
   async search() {
     const d = await api("search"), top = d.top || [];

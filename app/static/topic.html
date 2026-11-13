@@ -498,6 +498,9 @@ function chart3d(o) {
   return [legend, read, box];
 }
 
+const d3mon = t => new Date(t * 1000).toLocaleDateString([], { month: "short", year: "2-digit", timeZone: "UTC" }), d3year = t => String(new Date(t * 1000).getUTCFullYear());
+const lastY = p => p && p.length ? p[p.length - 1][1] : 0;
+
 // bars by category, one or more groups side by side, negative values below a zero line; marks = dashed lines at a category position
 function svgBars(cats, groups, o = {}) {
   const fy = o.yFmt || (v => v);

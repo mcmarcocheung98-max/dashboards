@@ -192,7 +192,11 @@ const VIEWS = {
       (d.listings || []).map(r => el("tr", {}, el("td", {}, dateOf(r.date)), el("td", {}, r.market), el("td", { class: "wrap" }, r.event), srcCell(r)))),
       ask("Listing decisions and rule changes. London keeps losing tech listings to New York; Hong Kong became the main venue for Chinese tech as US delisting risk rose.",
         "does London's 2024 rule reform bring tech back?", "does Hong Kong stay the world's top IPO venue?", "are there two separate capital markets for tech, one US and one Chinese?"));
-    return [head, px, ra, yr, li].filter(Boolean);
+    const bk3 = d.baskets && Object.keys(d.baskets).length > 2 ? card("The baskets in 3D: US tech, China tech ADRs and KWEB (log height)",
+      ...chart3d({ ...grid3d(Object.entries(d.baskets).map(([k, p]) => ({ name: k, points: p })).sort((a, b) => lastY(a.points) - lastY(b.points)), true), mode: "ribbons", log: true, h: 420, xFmt: d3mon, zFmt: v => num(v, 0), xHead: "date", csvName: "baskets 3d",
+        note: "The weakest basket at the front. Drag to turn; hover for a level on a date." }),
+      note("The same rebased series as the first chart, pulled apart by depth: the 2021 peak and the 2022 fall of the Chinese baskets sit in front of the US ribbon's climb.")) : null;
+    return [head, px, bk3, ra, yr, li].filter(Boolean);
   },
 };
 window.TOPIC = { VIEWS };

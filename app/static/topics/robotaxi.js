@@ -138,7 +138,11 @@ const VIEWS = {
       ...(d.checks || []).map(r => el("tr", {}, el("td", {}, r.date.slice(0, 4)), el("td", {}, r.market), el("td", { class: "wrap" }, r.measure), el("td", {}, r.value + "%"),
         el("td", { class: "wrap" }, link(host(r.source), r.source), r.note ? " · " + r.note : ""))))),
       note("EIA (US), DESNZ Energy Trends (UK), Ember's Global Electricity Review (China) and the Hong Kong government, which publishes a zero-carbon share rather than wind and solar. Kept in data/robotaxi/power_checks.csv."));
-    return [head, evm, ev, pw, monthly, checks];
+    const ev3 = mr.length > 2 ? card("Electric share of new cars in 3D: rolling 12 months, one ribbon per market (%)",
+      ...chart3d({ ...grid3d(mr.map(([m, pts]) => ({ name: m, points: pts })).sort((a, b) => lastY(a.points) - lastY(b.points))), mode: "ribbons", h: 440, xFmt: d3mon, zFmt: v => v == null ? "–" : v.toFixed(1) + "%",
+        xHead: "month", csvName: "ev share 3d", note: "The market with the lowest share at the front, the highest at the back. Drag to turn; hover for a month." }),
+      note("The same Ember series as the chart above. The step up from one ribbon to the next is the gap between markets; the slope along each ribbon is how fast that market is switching.")) : null;
+    return [head, evm, ev3, ev, pw, monthly, checks];
   },
 };
 window.TOPIC = { VIEWS };

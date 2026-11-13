@@ -78,7 +78,11 @@ const VIEWS = {
       ask("Bars: the five companies' capex in each quarter. Line (left axis): the rolling four-quarter total.",
         "does the four-quarter total keep growing faster than Nvidia's and TSMC's revenue (chips binding) or slower (demand binding)?", "how much of this spend is power and buildings rather than chips?", "does AI infrastructure capex end up larger than oil and gas capex?"))
       : card("All five combined", el("div", { class: "muted" }, "Shown when every company's filings answer (" + (d.total_error || "no data") + ")."));
-    return [head, by, tot];
+    const cap3 = d.companies && Object.keys(d.companies).length > 2 ? card("The capex race in 3D: cash spent on property and equipment per quarter, one ribbon per company (USD bn)",
+      ...chart3d({ ...grid3d(Object.entries(d.companies).map(([k, p]) => ({ name: k, points: p })).sort((a, b) => lastY(a.points) - lastY(b.points))), mode: "ribbons", h: 460, xFmt: d3mon, zFmt: v => v == null ? "–" : "$" + num(v, 1) + "bn",
+        xHead: "quarter", csvName: "capex 3d", note: "The smallest spender last quarter at the front, the largest at the back. Drag to turn; hover for a quarter." }),
+      note("The same series as the chart above. Flat ground until 2023, then every ribbon turns up at once: the build-out is one move made by all five, not one company's bet.")) : null;
+    return [head, by, cap3, tot].filter(Boolean);
   },
 
   async compute() {
