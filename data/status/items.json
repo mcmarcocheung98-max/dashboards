@@ -1719,7 +1719,7 @@
   {
    "date": "2026-11-13",
    "title": "Luxury and AI Stocks both fixed and confirmed live; China vs US Tech reviewed",
-   "summary": "Luxury loaded in seconds in both passes of the live check, so yesterday's fix holds. The run was still cut at its time limit, 110 tabs into the dark pass, because AI Stocks' Setup, Dips and Fear tabs took one to three minutes each on first load, two days running: the same FRED-inside-a-page-view problem, handed to its session; the check's limit is raised from 25 to 40 minutes so one slow dashboard cannot hide the rest. The China vs US Tech review found hand-kept files that stop in 2025 (milestones, node gap), 2024 (EV share) and 2023 (top-cited papers), an empty chip-imports file, and 34 rows without a source; handed to its session. Signals: 66 of 83 wired, 15 crossed; AI Stocks' breadth washout has cleared and VIX is 17.5; the Options volatility premium is down to 8%. Later the same morning the AI Stocks session shipped the fix and a second live check confirmed it: all 310 tabs loaded in both passes with no retry, in 14 minutes, the first complete clean run since Tuesday. The slowest first loads left are Altcoins' Coins tab (67 s) and Options' Setup (51 s).",
+   "summary": "Luxury loaded in seconds in both passes of the live check, so yesterday's fix holds. The run was still cut at its time limit, 110 tabs into the dark pass, because AI Stocks' Setup, Dips and Fear tabs took one to three minutes each on first load, two days running: the same FRED-inside-a-page-view problem, handed to its session; the check's limit is raised from 25 to 40 minutes so one slow dashboard cannot hide the rest. The China vs US Tech review found hand-kept files that stop in 2025 (milestones, node gap), 2024 (EV share) and 2023 (top-cited papers), an empty chip-imports file, and 34 rows without a source; handed to its session. Signals: 66 of 83 wired, 15 crossed; AI Stocks' breadth washout has cleared and VIX is 17.5; the Options volatility premium is down to 8%. Later the same morning the AI Stocks session shipped the fix and a second live check confirmed it: all 310 tabs loaded in both passes with no retry, in 14 minutes, the first complete clean run since Tuesday. The slowest first loads left are Altcoins' Coins tab (67 s) and Options' Setup (51 s). In the afternoon the owner asked for 3D views: 19 were added on 16 dashboards with one shared helper (29b4a9f, 52dda32, 2dcfa29, d1f55a8); 464 tests and all 324 tab checks pass locally.",
    "changes": [
     {
      "dashboard": "AI Stocks",
@@ -1776,12 +1776,21 @@
      "what": "watchlist renewed to 16 open questions; 7 resolved ones retired with their outcome and shown on the Accuracy tab; every row cites its market page; biggest_move ignores markets in their last day or priced at 1% or 99%",
      "commit": "519b008",
      "by": "session:prediction-markets"
+    },
+    {
+     "dashboard": "shared",
+     "slug": "status",
+     "tab": "log",
+     "what": "3D views across the site, asked for by the owner: a shared chart3d helper (ribbons, surface, bars; drag to turn, hover, CSV, both themes, no new library) and 19 views on 16 dashboards, in the order BTC and Altcoins, stocks, finance, the rest. Debt & Rates gained the whole Treasury curve in its payload for the yield-curve surface",
+     "commit": "d1f55a8",
+     "by": "agent"
     }
    ],
    "review": "china-us-tech",
    "next": [
     "Altcoins Coins (67 s) and Options Setup (51 s) are the slowest first loads left; ask their sessions if they repeat on Monday",
-    "Monday: weekly luxury liquidity log and stock refresh; token totals"
+    "Monday: weekly luxury liquidity log and stock refresh; token totals",
+    "Saturday's live check is the first on the 3D views; AI Models has none yet (its series are step data that a surface would misread)"
    ],
    "asks": [
     "Debt & Rates: allow the government hosts its 122 remaining rows need, or accept them staying marked verify",
