@@ -282,11 +282,16 @@ def main() -> int:
                             cnl, text = True, f"Could not load (check: {type(e).__name__})"
                             sync, follow, askp = {"n": "-", "ok": None}, None, {"ok": True, "skipped": "check failed"}
                     ask_first = ask_first or askp
+                    try:               # 3D cards: every canvas that is on screen must have drawn something
+                        c3 = pg.evaluate("""() => { let n = 0, blank = 0; for (const c of document.querySelectorAll('#view .c3d canvas')) { if (!c.offsetWidth) continue; n++;
+                            const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let ink = 0; for (let i = 3; i < d.length; i += 4 * 97) if (d[i]) ink++; if (ink < 20) blank++; } return { n, blank }; }""") if not cnl else {"n": 0, "blank": 0}
+                    except Exception:
+                        c3 = {"n": 0, "blank": 0}
                     line = (f"{theme:5} {slug:12} {key:11} cards={pg.locator('#view .card').count():3} charts={pg.locator('#view .chart').count():3} "
-                            f"unavailable={text.count('not available'):2} could-not-load={cnl} sync={sync}" + (f" follow={follow}" if follow else "") + ("" if askp["ok"] else f" ask={askp}")
+                            f"unavailable={text.count('not available'):2} could-not-load={cnl} sync={sync}" + (f" 3d={c3['n']}" + (f" BLANK={c3['blank']}" if c3["blank"] else "") if c3["n"] else "") + (f" follow={follow}" if follow else "") + ("" if askp["ok"] else f" ask={askp}")
                             + (" (loaded on retry)" if retried and not cnl else " (failed twice)" if retried else ""))
                     print(line, flush=True)
-                    if cnl or sync.get("ok") is False or (follow and follow.get("ok") is False) or not askp["ok"]:
+                    if cnl or sync.get("ok") is False or (follow and follow.get("ok") is False) or not askp["ok"] or c3["blank"]:
                         bad.append(line)
                     if theme == "light" and slug not in private:      # the repo is public: a private page's screenshot must not land in a downloadable artifact
                         pg.screenshot(path=str(out / f"{slug}-{key}.png"), full_page=True)
