@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-13",
+ "updated": "2026-11-14",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -407,6 +407,14 @@
    "since": "2026-11-13",
    "title": "China vs US Tech: bring milestones, node gap, EV share, top-cited and listings up to date; fill or drop ic_imports_monthly; source 34 verify rows",
    "detail": "From the 13 Nov review. Done the same day (f129773, 4acc0d9, 07480b7)."
+  },
+  {
+   "id": "chips-review-1114",
+   "owner": "session:compute-chips",
+   "status": "waiting",
+   "since": "2026-11-14",
+   "title": "Compute & Chips: Ember file moved (stale since 2 Nov), wire the five signals, update fabs, export controls and power files, source 34 verify rows",
+   "detail": "From the 14 Nov review."
   }
  ],
  "roadmap": [
@@ -866,6 +874,23 @@
     "date": "2026-11-12",
     "minutes": 104,
     "runs": 32
+   }
+  },
+  {
+   "date": "2026-11-14",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Live check: 310 of 310 tabs, all tabs OK, no retries, 14 minutes; 20 tabs carry a 3D view and none was blank. Slowest first load: Altcoins Coins, 67 s. Health: Bluesky, Reddit and Yahoo failing but handled; Hyperliquid stale on Altcoins since 07:28 today; Ember stale on Compute & Chips since 2 Nov (alert); no FRED failures left on AI Stocks or Luxury. Local tests 464 passed. Newsletter built, not sent. Signals 68 of 83 wired, 17 crossed (62 and 14 when read eight minutes after the deploy).",
+   "fixed": [
+    "smoke checks 3D canvases (8db7be3)"
+   ],
+   "handed": [
+    "session:compute-chips (review)"
+   ],
+   "actions": {
+    "date": "2026-11-13",
+    "minutes": 136,
+    "runs": 23
    }
   }
  ],
@@ -1791,6 +1816,50 @@
     "Altcoins Coins (67 s) and Options Setup (51 s) are the slowest first loads left; ask their sessions if they repeat on Monday",
     "Monday: weekly luxury liquidity log and stock refresh; token totals",
     "Saturday's live check is the first on the 3D views; AI Models has none yet (its series are step data that a surface would misread)"
+   ],
+   "asks": [
+    "Debt & Rates: allow the government hosts its 122 remaining rows need, or accept them staying marked verify",
+    "approve or skip r-fred-via-actions, r-climate-disasters, r-watch-recalibrate, r-private-signals",
+    "Broker for the options trading portal",
+    "Gmail newsletter secrets (built, not sent again), eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback",
+    "Say go in the Pokémon session"
+   ]
+  },
+  {
+   "date": "2026-11-14",
+   "title": "The 3D views drew on live data; Compute & Chips reviewed",
+   "summary": "The first live check on yesterday's 3D views is clean: all 310 tabs loaded with no retry in 14 minutes, and each of the 20 3D views that is on screen drew on real data (the smoke check now fails a blank 3D canvas). The Compute & Chips review found a source stale for twelve days (Ember moved its yearly file), none of its five signals wired, hand-kept files that stop in 2024-25 and 34 rows without a source; handed to its session. The signals board read 62 wired eight minutes after a deploy and 68 ten minutes later: after every restart some dashboards' signals read empty until their payloads are computed again, which makes the count and the newsletter depend on when they are read; the agent will make the board fall back to the kept copy.",
+   "changes": [
+    {
+     "dashboard": "shared",
+     "slug": "status",
+     "tab": "log",
+     "what": "smoke: every 3D canvas on screen must have drawn something (3d=N on the tab's line; a blank one is a problem)",
+     "commit": "8db7be3",
+     "by": "agent"
+    },
+    {
+     "dashboard": "BTC Cycles",
+     "slug": "btc-cycles",
+     "tab": "signals",
+     "what": "Fear and Greed and the BTC signal board on the Signals tab: zones painted on the price, streaks, bull and bear averages",
+     "commit": "edcf857",
+     "by": "session:btc-cycles"
+    },
+    {
+     "dashboard": "Altcoins",
+     "slug": "altcoins",
+     "tab": "sectors",
+     "what": "cycle clock and rotation map on the Sectors tab",
+     "commit": "ced567c",
+     "by": "session:altcoins"
+    }
+   ],
+   "review": "compute-chips",
+   "next": [
+    "Signals board: read each dashboard's signals from the kept copy when its payload is not in memory yet, so the count does not dip after a deploy (agent, shared code)",
+    "Monday: weekly luxury log, token totals, a proper per-file count of unsourced rows",
+    "Altcoins' Coins tab still takes 67 s on first load: ask its session on Monday"
    ],
    "asks": [
     "Debt & Rates: allow the government hosts its 122 remaining rows need, or accept them staying marked verify",
