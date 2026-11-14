@@ -125,7 +125,7 @@ fresh when any of its downloads worked in the last run, stale (since its last go
 - `repos.csv`: `repo,label,source,note`, the GitHub repositories whose stars are logged.
 - `subreddits.csv`: `subreddit,theme,source,note`.
 - `reddit.csv`: hand-entered Reddit counts, `date,series,value,source,note` with series `<subreddit>|subscribers` or `<subreddit>|active`. They fill in days the server could not read.
-- `gtrends.csv`: hand-entered Google Trends points, `date,series,value,source,note` with series `<keyword>|<geo>` (`world`, `US`, `GB`, `HK`, …). The source is the Google Trends explore page the value was read from (its window decides what 100 means). Rows written from memory say `verify` in the note.
+- `gtrends.csv`: hand-entered Google Trends points, `date,series,value,source,note` with series `<keyword>|<geo>` (`world`, `US`, `GB`, `HK`, …). The source is the Google Trends explore page the value was read from (its window decides what 100 means). Rows written from memory say `verify` in the note. The one seed row (`bitcoin|world`, December 2017 = 100) was checked on 14 Nov 2026 against Cointelegraph's readings of Google Trends (Nov 2020 and Jun 2023) and no longer says `verify`.
 - `reality.csv`: `theme,slug,endpoint,path,label,log,source,note`. `path` is a dotted path into that endpoint's JSON to a list of `[unix seconds, value]` points; `*` takes the longest series under what came before (`monthly.*`). `log=y` draws the series on a log scale. A wrong path shows the series that do exist on the card and in `/layout`.
 
 ## Adding a topic
