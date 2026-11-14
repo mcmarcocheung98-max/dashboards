@@ -183,7 +183,7 @@ def test_universe_and_events():
     evs = M.events(date(2026, 11, 8))
     kinds = {e["kind"] for e in evs}
     assert {"earnings", "fomc", "opex"} <= kinds and all(e["source"] for e in evs) and evs == sorted(evs, key=lambda e: e["date"])
-    assert M.next_earnings("NVDA", evs, date(2026, 11, 8))["date"] == "2026-11-19"
+    assert M.next_earnings("NVDA", evs, date(2026, 11, 8))["date"] == "2026-11-17"
     for e in evs:
         if e["kind"] == "opex":
             d = pd.Timestamp(e["date"]).date()
@@ -288,7 +288,7 @@ def test_symbol_model_saves_today_and_ranks_on_history(mocked, frozen):
     s = M.symbol_model(SMALL_UNIVERSE[2], evs, TODAY)                                   # NVDA, no history yet
     assert s["sym"] == "NVDA" and s["spot"] == SPOTS["NVDA"] and s["trade_date"] == "2026-11-06" and s["history_days"] == 1
     assert s["rank"]["rank"] is None and s["rank"]["days"] == 1 and s["front"]["exp"] == "2026-11-20"
-    assert s["rv30"] and s["rv10"] and s["rv"]["rv30"] and s["earnings"]["date"] == "2026-11-19" and s["earnings"]["verify"]
+    assert s["rv30"] and s["rv10"] and s["rv"]["rv30"] and s["earnings"]["date"] == "2026-11-17" and not s["earnings"]["verify"]
     assert "2026-11-06" in M.load_daily("NVDA") and M.load_daily("NVDA")["2026-11-06"]["exp"]["2026-11-20"]["atm_iv"] == s["front"]["atm_iv"]
     seed_history(15, ["NVDA"])
     s2 = M.symbol_model(SMALL_UNIVERSE[2], evs, TODAY)
@@ -308,7 +308,7 @@ def test_setup_payload_head_table_fallbacks_and_where_line(mocked, frozen):
     spy = next(r for r in T if r["sym"] == "SPY")
     assert spy["rank_basis"] == "VIX fallback" and spy["rank"] is not None and spy["rank_days"] == 1          # an index with thin history reads the VIX's rank
     nv = next(r for r in T if r["sym"] == "NVDA")
-    assert nv["rank_basis"] == "thin history" and nv["rank_days"] == 16 and nv["earnings"] == "2026-11-19" and nv["em_exp"] == "2026-11-20"
+    assert nv["rank_basis"] == "thin history" and nv["rank_days"] == 16 and nv["earnings"] == "2026-11-17" and nv["em_exp"] == "2026-11-20"
     assert nv["atm_iv"] > spy["atm_iv"] and nv["skew"] is not None and nv["pc_oi"] is not None and nv["vrp"] is not None
     assert Bk["history_days"] == 16 and Bk["min_history"] == 60 and "NVDA" in Bk["thin"] and Bk["vrp_n"] == 6
     assert len(d["vix"]) > 200 and len(d["vix_term"]) > 200 and d["ai_rank_hist"] and d["vrp_hist"] and len(d["ai_iv_hist"]) == 16
@@ -339,7 +339,7 @@ def test_chains_vol_skew_moves_lab_payloads(mocked, frozen):
     m = M.ENDPOINTS["moves"]()
     B.json_safe(m)
     nv = m["symbols"]["NVDA"]
-    assert nv["cone"] and nv["cone"][0]["em_iv"] < nv["cone"][-1]["em_iv"] and nv["earnings"]["date"] == "2026-11-19" and nv["spot_hist"]
+    assert nv["cone"] and nv["cone"][0]["em_iv"] < nv["cone"][-1]["em_iv"] and nv["earnings"]["date"] == "2026-11-17" and nv["spot_hist"]
     assert nv["past_n"] > 0 and all(p["exp"] <= "2026-11-08" for p in nv["past"]) and nv["past_inside"] is not None        # the seeded weeklies have expired
     assert any(e["kind"] == "fomc" for e in m["events"])
     l = M.ENDPOINTS["lab"]()
