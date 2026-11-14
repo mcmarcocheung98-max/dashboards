@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 
 from . import topics
 from .cache import _cached
+from . import config
 from .config import DATA_DIR
 
 WATCHLIST = DATA_DIR / "signals" / "watchlist.json"
@@ -38,26 +39,80 @@ def _rows(slug: str, fn_name: str) -> list[dict]:
         return []
 
 
+KEEP_HOURS = 36          # how long a kept reading may stand in for one the dashboard has not recomputed since a restart
+FIELDS = ("tab", "value", "unit", "lean", "crossed", "note")
+
+
+def _kept_path():
+    return config.SNAP_DIR / "signals_kept.json"
+
+
+def _kept_load() -> dict:
+    try:
+        return json.loads(_kept_path().read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def _kept_save(kept: dict) -> None:
+    try:
+        p = _kept_path()
+        p.parent.mkdir(parents=True, exist_ok=True)
+        tmp = p.with_suffix(".tmp")
+        tmp.write_text(json.dumps(kept))
+        tmp.replace(p)
+    except OSError:
+        pass
+
+
 def collect() -> dict:
-    """Every public dashboard: its watchlist rows (wired or not), any extra SIGNALS, and its first readings as a fallback."""
+    """Every public dashboard: its watchlist rows (wired or not), any extra SIGNALS, and its first readings as a fallback.
+
+    Signals are read from each dashboard's payloads in memory, which are empty for some minutes after every restart. So each reading
+    with a value is also kept on the volume, and a signal that reads nothing now shows its kept reading (marked `kept`, with the
+    time it was read) for up to KEEP_HOURS. A signal that stays empty longer than that shows as empty: the dashboard means it."""
     wl = watchlist()
     out = []
+    now = datetime.now(timezone.utc)
+    kept = _kept_load()
+    before = json.dumps(kept, sort_keys=True)
+
+    def fresh_enough(k: dict) -> bool:
+        try:
+            return (now - datetime.fromisoformat(k["t"])).total_seconds() <= KEEP_HOURS * 3600
+        except (KeyError, ValueError, TypeError):
+            return False
     for slug, t in topics.public().items():
         if slug in SKIP:
             continue
         sig = {s.get("key"): s for s in _rows(slug, "SIGNALS")}
         rows = []
+        mine = kept.setdefault(slug, {})
         for w in wl.get(slug, []):
             s = sig.pop(w["key"], None)
-            rows.append({"slug": slug, "key": w["key"], "label": w["signal"], "watch": w["watch"], "wired": bool(s),
-                         **({k: s.get(k) for k in ("tab", "value", "unit", "lean", "crossed", "note")} if s else {"lean": 0, "crossed": False, "value": None})})
+            row = {"slug": slug, "key": w["key"], "label": w["signal"], "watch": w["watch"], "wired": bool(s),
+                   **({k: s.get(k) for k in FIELDS} if s else {"lean": 0, "crossed": False, "value": None})}
+            if row.get("value") is not None:
+                mine[w["key"]] = {**{k: row.get(k) for k in FIELDS}, "t": now.isoformat(timespec="seconds")}
+            elif fresh_enough(mine.get(w["key"]) or {}):                     # nothing in memory yet (a restart): the last reading stands in
+                k = mine[w["key"]]
+                row.update({f: k.get(f) for f in FIELDS})
+                row.update(wired=True, kept=datetime.fromisoformat(k["t"]).strftime("%Y-%m-%d %H:%M UTC"))
+            rows.append(row)
         for s in sig.values():                               # signals a module adds beyond the approved list
             rows.append({"slug": slug, "wired": True, "label": s.get("label"), "watch": s.get("watch", ""), **{k: s.get(k) for k in ("key", "tab", "value", "unit", "lean", "crossed", "note")}})
         readings = _rows(slug, "READINGS")[:3]
         out.append({"slug": slug, "title": t.title, "category": topics.category(slug), "url": f"{SITE}/{slug}", "signals": rows,
                     "readings": readings, "wired": sum(1 for r in rows if r.get("wired")), "crossed": sum(1 for r in rows if r.get("crossed"))})
-    return {"updated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"), "dashboards": out,
-            "totals": {"dashboards": len(out), "signals": sum(len(d["signals"]) for d in out), "wired": sum(d["wired"] for d in out), "crossed": sum(d["crossed"] for d in out)}}
+    for slug in list(kept):                                                  # forget readings too old to stand in, and dashboards no longer listed
+        kept[slug] = {k: v for k, v in kept[slug].items() if fresh_enough(v)}
+        if not kept[slug]:
+            del kept[slug]
+    if json.dumps(kept, sort_keys=True) != before:
+        _kept_save(kept)
+    return {"updated": now.strftime("%Y-%m-%d %H:%M UTC"), "dashboards": out,
+            "totals": {"dashboards": len(out), "signals": sum(len(d["signals"]) for d in out), "wired": sum(d["wired"] for d in out), "crossed": sum(d["crossed"] for d in out),
+                       "kept": sum(1 for d in out for r in d["signals"] if r.get("kept"))}}
 
 
 def board() -> dict:

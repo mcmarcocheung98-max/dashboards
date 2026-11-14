@@ -5,7 +5,7 @@ const arrow = l => { const [t, c] = AR[String(l || 0)] || AR[0]; return el("span
 const fmt = (v, u) => v == null ? "–" : typeof v === "boolean" ? (v ? "yes" : "no") : typeof v === "number" ? num(v, Math.abs(v) >= 100 || Number.isInteger(v) ? 0 : 2) + (u || "") : String(v) + (u || "");
 const crossedPill = () => el("span", { class: "pill bad", style: "font-weight:600" }, "watch point crossed");
 const sigRow = r => el("div", { style: "display:grid;grid-template-columns:1fr auto;gap:6px 12px;padding:7px 0;border-top:1px solid var(--line);align-items:baseline" },
-  el("div", {}, arrow(r.lean), r.label, el("div", { class: "muted", style: "font-size:12.5px" }, "watch: " + (r.watch || "–"), r.note ? " · " + r.note : "")),
+  el("div", {}, arrow(r.lean), r.label, el("div", { class: "muted", style: "font-size:12.5px" }, "watch: " + (r.watch || "–"), r.note ? " · " + r.note : "", r.kept ? " · read " + r.kept + ", being recomputed after a restart" : "")),
   el("div", { style: "text-align:right;white-space:nowrap" }, r.wired ? el("b", { style: `color:var(${(AR[String(r.lean || 0)] || AR[0])[1]})` }, fmt(r.value, r.unit)) : el("span", { class: "pill" }, "not wired yet"), r.crossed ? el("div", {}, crossedPill()) : null));
 
 const VIEWS = {

@@ -14,10 +14,38 @@ def smoke_patch():
 
 
 @pytest.fixture
-def clean():
+def clean(tmp_path, monkeypatch):
+    from app import config
+    monkeypatch.setattr(config, "SNAP_DIR", tmp_path / "snaps")          # the kept readings (signals_kept.json) stay out of the repo
     _cache.clear()
     yield
     _cache.clear()
+
+
+def test_a_restart_keeps_the_last_reading(clean, monkeypatch):
+    """After a restart a dashboard's payloads are not in memory, so its SIGNALS read nothing: the board shows the kept reading, marked."""
+    import datetime as dt
+    from app.topics import housing
+    row = {"key": "price_yoy", "tab": "prices", "label": "London price change on a year", "value": -2.2, "unit": "%", "lean": -1, "watch": "turns negative", "crossed": True}
+    monkeypatch.setattr(housing, "SIGNALS", lambda: [row], raising=False)
+    first = S.collect()
+    h = next(d for d in first["dashboards"] if d["slug"] == "housing")
+    r = next(x for x in h["signals"] if x["key"] == "price_yoy")
+    assert r["value"] == -2.2 and r["crossed"] and "kept" not in r and first["totals"]["kept"] == 0
+    for cold in (lambda: [], lambda: [{**row, "value": None, "crossed": False}]):          # the module returns nothing, or the row without a value
+        monkeypatch.setattr(housing, "SIGNALS", cold, raising=False)
+        again = S.collect()
+        h2 = next(d for d in again["dashboards"] if d["slug"] == "housing")
+        r2 = next(x for x in h2["signals"] if x["key"] == "price_yoy")
+        assert r2["value"] == -2.2 and r2["crossed"] and r2["wired"] and r2["kept"].endswith("UTC") and again["totals"]["kept"] == 1
+        assert again["totals"]["wired"] == first["totals"]["wired"] and again["totals"]["crossed"] == first["totals"]["crossed"]
+    # a reading older than KEEP_HOURS no longer stands in: an empty signal then shows as empty, and the old reading is forgotten
+    kept = S._kept_load()
+    kept["housing"]["price_yoy"]["t"] = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=S.KEEP_HOURS + 1)).isoformat(timespec="seconds")
+    S._kept_save(kept)
+    late = S.collect()
+    r3 = next(x for x in next(d for d in late["dashboards"] if d["slug"] == "housing")["signals"] if x["key"] == "price_yoy")
+    assert r3["value"] is None and "kept" not in r3 and late["totals"]["kept"] == 0 and "price_yoy" not in S._kept_load().get("housing", {})
 
 
 def test_watchlist_covers_the_approved_dashboards():
