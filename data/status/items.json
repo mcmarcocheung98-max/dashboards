@@ -414,7 +414,7 @@
    "status": "waiting",
    "since": "2026-11-14",
    "title": "Compute & Chips: Ember file moved (stale since 2 Nov), wire the five signals, update fabs, export controls and power files, source 34 verify rows",
-   "detail": "From the 14 Nov review."
+   "detail": "From the 14 Nov review. The session found the Ember fix (the address Robotaxi uses) and waits for the owner's go in its own conversation."
   }
  ],
  "roadmap": [
@@ -1831,6 +1831,14 @@
    "summary": "The first live check on yesterday's 3D views is clean: all 310 tabs loaded with no retry in 14 minutes, and each of the 20 3D views that is on screen drew on real data (the smoke check now fails a blank 3D canvas). The Compute & Chips review found a source stale for twelve days (Ember moved its yearly file), none of its five signals wired, hand-kept files that stop in 2024-25 and 34 rows without a source; handed to its session. The signals board read 62 wired eight minutes after a deploy and 68 ten minutes later: after every restart some dashboards' signals read empty until their payloads are computed again, which makes the count and the newsletter depend on when they are read; the agent will make the board fall back to the kept copy.",
    "changes": [
     {
+     "dashboard": "Signals",
+     "slug": "signals",
+     "tab": "board",
+     "what": "the board keeps each reading on the volume and shows it, marked with its time, when a signal reads empty after a restart (up to 36 hours); the count no longer dips after a deploy",
+     "commit": "88bc197",
+     "by": "agent"
+    },
+    {
      "dashboard": "shared",
      "slug": "status",
      "tab": "log",
@@ -1857,7 +1865,6 @@
    ],
    "review": "compute-chips",
    "next": [
-    "Signals board: read each dashboard's signals from the kept copy when its payload is not in memory yet, so the count does not dip after a deploy (agent, shared code)",
     "Monday: weekly luxury log, token totals, a proper per-file count of unsourced rows",
     "Altcoins' Coins tab still takes 67 s on first load: ask its session on Monday"
    ],
@@ -1866,7 +1873,8 @@
     "approve or skip r-fred-via-actions, r-climate-disasters, r-watch-recalibrate, r-private-signals",
     "Broker for the options trading portal",
     "Gmail newsletter secrets (built, not sent again), eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback",
-    "Say go in the Pokémon session"
+    "Say go in the Pokémon session",
+    "Say go in the Compute & Chips session: it has the Ember fix and the rest of today's review ready and waits for you there"
    ]
   }
  ]
