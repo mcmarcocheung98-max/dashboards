@@ -1,4 +1,4 @@
-// AI Compute, Power & Chips: tabs and cards. Data from /api/compute-chips/<overview|power|capex|compute|chips|supply>; helpers from topic.html.
+// AI Compute, Power & Chips: tabs and cards. Data from /api/compute-chips/<overview|power|capex|compute|chips|gpus|supply>; helpers from topic.html.
 (() => {
 const dateOf = s => new Date(s).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 const yearOf = ts => new Date(ts * 1000).getUTCFullYear();
@@ -120,6 +120,61 @@ const VIEWS = {
     const rows = card("Hand-entered revenue", table(["Quarter end", "Company", "Revenue (bn)", "Source"], (d.rows || []).map(r => el("tr", {}, el("td", {}, r.date), el("td", {}, r.series), el("td", {}, num(+r.value, 2)), srcCell(r)))),
       note("Add each quarter from the company's results release. Rows marked verify were entered from memory."));
     return [head, px, rev, yoy, rows];          // the daily price chart first: it drives the shared date axis, the quarterly charts follow
+  },
+
+  async gpus() {
+    const d = await api("gpus"), C = d.chips || [], M = d.models || [], by = Object.fromEntries(C.map(c => [c.chip, c]));
+    const tf = v => v == null ? "–" : v >= 1000 ? num(v / 1000, 2) + " PFLOPS" : num(v, v < 100 ? 1 : 0) + " TFLOPS";
+    const times = v => v == null ? "–" : (v >= 10 ? num(v, 0) : v >= 1 ? num(v, 1) : num(v, 2)) + "×";
+    const dur = y => y == null ? "–" : y >= 1e6 ? num(y / 1e6, 1) + "m years" : y >= 1000 ? num(y / 1000, 1) + "k years" : y >= 2 ? num(y, y < 20 ? 1 : 0) + " years"
+      : y * 365.25 >= 2 ? num(y * 365.25, 0) + " days" : y * 8766 >= 1 ? num(y * 8766, 1) + " hours" : num(y * 525960, 0) + " min";
+    const money = v => v == null ? "–" : v >= 1e9 ? "$" + num(v / 1e9, 1) + "bn" : v >= 1e6 ? "$" + num(v / 1e6, 0) + "m" : usd(v);
+    const yr = s => s.slice(0, 4), ref = by[d.ref], gi = M.findIndex(m => m.model === "GPT-4"), g4 = gi >= 0 ? M[gi] : M[M.length - 1];
+    const yrs = (chip, m) => (d.years[chip] || [])[M.indexOf(m)], fl = (chip, m) => ((d.fleet[m.model] || {})[chip]) || {};
+    const best = C.slice().sort((a, b) => b.tflops16 - a.tflops16)[0];
+    const head = card("One gaming card against the chips that train frontier models", el("div", { class: "kpis" },
+      kpi(d.ref + ", peak 16-bit throughput", tf(ref && ref.tflops16)), kpi("H100 = this many " + d.ref + "s", times(by.H100 && by.H100.vs_ref)),
+      kpi(best.chip + " = this many", times(best.vs_ref)), kpi(g4.model + " on one " + d.ref, dur(yrs(d.ref, g4))),
+      kpi(d.ref + "s to train " + g4.model + " in " + d.run_days + " days", num(fl(d.ref, g4).chips)), kpi("their power draw", mw(fl(d.ref, g4).mw))), asOf(d), stale(d));
+    // 3D 1: every chip against the RTX 5090 on four measures (log heights, 5090 = 1)
+    const rel = (k, c) => ref && ref[k] && c[k] ? c[k] / ref[k] : null;
+    const spec = card("Chip against chip in 3D: each measure as a multiple of the " + d.ref,
+      ...chart3d({ x: C.map(c => c.chip), mode: "bars", log: true, h: 480, xHead: "chip", csvName: "chips vs " + d.ref, zFmt: v => v == null ? "–" : times(v),
+        rows: [{ name: "Throughput per watt", z: C.map(c => rel("gflops_per_w", c)), color: css("--s3") }, { name: "Power draw", z: C.map(c => rel("power_w", c)), color: css("--s2") },
+          { name: "Memory", z: C.map(c => rel("memory_gb", c)), color: css("--s4") }, { name: "16-bit throughput", z: C.map(c => rel("tflops16", c)), color: css("--s1") }],
+        note: "Chips in launch order, left to right; rows front to back: throughput per watt, power, memory, throughput. Drag to turn; hover a bar." }),
+      ask("Bar height (log scale) is the chip's figure divided by the " + d.ref + "'s, so the " + d.ref + " is 1× on every row. Throughput is the peak for dense 16-bit maths, what training uses; the table below says which figures are the maker's and which are estimates.",
+        "does a consumer card stay within 10× of a data-centre chip?", "does memory, not arithmetic, decide which chips can train?", "does throughput per watt keep doubling every two to three years, or does power cap it?"));
+    // 3D 2: years one chip would need for each reference model
+    const order = C.slice().sort((a, b) => b.tflops16 - a.tflops16);
+    const train = card("How long one chip would take to train each model",
+      ...chart3d({ x: M.map(m => m.model), mode: "bars", log: true, heat: true, h: 480, xHead: "model", csvName: "years on one chip", zFmt: v => dur(v),
+        rows: order.map(c => ({ name: c.chip, z: d.years[c.chip] })),
+        note: "Models smallest to largest, left to right; the fastest chip at the front, the slowest at the back. Drag to turn; hover a bar." }),
+      ask("Training compute of each model (Epoch AI's estimate, in FLOP) divided by what one chip delivers running flat out at " + Math.round(d.util * 100) + "% of its peak. Log scale: each gridline is a large step. " +
+        "It is a measure of arithmetic only: one card cannot hold a large model in memory, so real runs spread the work across thousands of chips.",
+        "does a single top chip train a GPT-3-scale model within a year?", "does a GPT-4-scale run fit on a few hundred chips?", "is today's frontier run a one-rack job?"));
+    // fleet for one model, picked with the buttons
+    let pick = g4.model;
+    const fleetBox = el("div", {});
+    const drawFleet = () => { const m = M.find(x => x.model === pick);
+      fleetBox.replaceChildren(el("div", { class: "seg" }, ...M.map(x => el("button", { class: x.model === pick ? "on" : "", onclick: () => { pick = x.model; drawFleet(); } }, x.model))),
+        el("div", { class: "muted", style: "margin-bottom:6px" }, m.model + " (" + yr(m.date) + "): " + flop(m.flop) + " · " + m.from + (m.note ? " · " + m.note : "")),
+        table(["Chip", "One chip alone", "Chips for a " + d.run_days + "-day run", "Power, chips only", "Chips at list or street price"],
+          order.map(c => { const f = fl(c.chip, m); return el("tr", {}, el("td", {}, c.chip), el("td", {}, dur(yrs(c.chip, m))), el("td", {}, num(f.chips)), el("td", {}, mw(f.mw)), el("td", {}, money(f.cost_usd))); }))); };
+    drawFleet();
+    const fleet = card("What it takes to train a model in " + d.run_days + " days, chip by chip", fleetBox,
+      ask("Chips needed to finish the run in " + d.run_days + " days at " + Math.round(d.util * 100) + "% utilisation, their combined power draw (before cooling and networking) and what the chips alone would cost. " +
+        "This is where the dashboard's question shows: a faster chip cuts the megawatts for the same run, so chips and power trade off.",
+        "do export-limited chips (H20, Ascend) leave China needing several times the power for the same run?", "is the fleet for a frontier run limited by megawatts or by chip supply?", "does a GPT-4-scale run become a hobbyist's job?"));
+    const list = card("The chips compared", table(["Chip", "Launch", "Kind", "Memory", "Power", "16-bit throughput", "Basis", "× " + d.ref, "GFLOPS per watt", "Price", "TFLOPS per $1,000", "Source"],
+      C.slice().reverse().map(c => el("tr", {}, el("td", {}, c.chip + " (" + c.maker + ")"), el("td", {}, yr(c.date)), el("td", {}, c.kind), el("td", {}, c.memory_gb == null ? "–" : num(c.memory_gb) + " GB"),
+        el("td", {}, c.power_w == null ? "–" : num(c.power_w) + " W"), el("td", {}, tf(c.tflops16)), el("td", {}, c.basis), el("td", {}, times(c.vs_ref)), el("td", {}, c.gflops_per_w == null ? "–" : num(c.gflops_per_w, 0)),
+        el("td", {}, c.price_usd == null ? "–" : usd(c.price_usd)), el("td", {}, c.tflops_per_k == null ? "–" : num(c.tflops_per_k, 1)), srcCell(c)))),
+      note("Basis: maker = the maker's tensor-core figure; estimate = twice the card's FP32 figure, because GeForce cards have no published 16-bit number; reported = press or analyst figure. " +
+        "Spec-sheet peaks overstate the gap in practice: on one measured ResNet-50 run an H100 was about 1.8× an RTX 4090, not 6×. Prices: launch list price for GeForce, reported street prices for data-centre chips. " +
+        "Kept in data/compute-chips/gpus.csv and train_models.csv; rows marked verify were entered from memory."));
+    return [head, spec, train, fleet, list];
   },
 
   async supply() {

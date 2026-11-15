@@ -7,6 +7,8 @@ power      data-centre electricity (TWh) for the US, China, UK and the world (IE
 capex      quarterly capital expenditure of Microsoft, Alphabet, Amazon, Meta and Oracle from their 10-Q/10-K filings (SEC EDGAR companyfacts)
 compute    training compute of notable AI models (Epoch AI notable models CSV): the frontier, its growth per year, models over 1e25 FLOP by country
 chips      quarterly revenue of Nvidia and AMD (EDGAR) and TSMC, ASML, SMIC (IR pages, hand-entered: chip_revenue.csv); share prices from Nasdaq
+gpus       chip against chip: memory, power and peak 16-bit throughput of GPUs from the GTX 1080 Ti to the RTX 5090, H100 and B200 (hand-entered:
+           gpus.csv), and how long one of each would take, or how many it takes, to train reference models (train_models.csv, Epoch's figures)
 supply     leading-edge (<10nm) capacity share by country (SIA/BCG, hand-entered), fab milestones (TSMC Arizona, Kumamoto, Dresden...) and the
            export-control timeline (US, Netherlands, Japan, China; Hong Kong under the China rules)
 
@@ -31,7 +33,7 @@ SLUG = "compute-chips"
 TOPIC = Topic(SLUG, "AI Compute, Power & Chips",
               "Is power or chips the binding limit on AI? Data-centre electricity, hyperscaler capex, frontier training compute, chip revenue and "
               "where leading-edge chips are made, for the US, UK, Hong Kong and China.",
-              "compute_chips", (("overview", "Overview"), ("power", "Power"), ("capex", "Capex"), ("compute", "Compute"), ("chips", "Chips"),
+              "compute_chips", (("overview", "Overview"), ("power", "Power"), ("capex", "Capex"), ("compute", "Compute"), ("chips", "Chips"), ("gpus", "Chip vs chip"),
                                 ("supply", "Supply chain")),
               ("overview", "power", "capex", "compute", "chips"), icon="chip")
 
@@ -54,6 +56,7 @@ SOURCES = [{"name": "IEA Energy & AI, LBNL US Data Center Energy Usage Report, N
            {"name": "Ember yearly electricity data", "url": "https://ember-energy.org/data/yearly-electricity-data/", "cadence": "yearly"},
            {"name": "SEC EDGAR companyfacts (10-Q, 10-K)", "url": "https://www.sec.gov/edgar/sec-api-documentation", "cadence": "quarterly"},
            {"name": "Epoch AI: notable AI models, GPU clusters", "url": "https://epoch.ai/data", "cadence": "weekly"},
+           {"name": "Nvidia, AMD product pages; Epoch AI ML hardware (chip specifications, hand-entered)", "url": "https://epoch.ai/data/machine-learning-hardware", "cadence": "as chips launch"},
            {"name": "TSMC, ASML, SMIC investor relations (hand-entered)", "url": "https://investor.tsmc.com/english/quarterly-results", "cadence": "quarterly"},
            {"name": "Nasdaq quote API (share prices)", "url": "https://www.nasdaq.com/market-activity/stocks/nvda", "cadence": "daily"},
            {"name": "SIA/BCG, BIS, company announcements (hand-entered)", "url": "https://www.semiconductors.org/emerging-resilience-in-the-semiconductor-supply-chain/", "cadence": "as published"}]
@@ -400,6 +403,67 @@ def _supply_now() -> dict:
     return out
 
 
+# ------------------------------------------------------------------ chip against chip
+UTIL = 0.33          # share of a chip's peak throughput a training run really uses (Epoch AI's working assumption is 30-40%)
+RUN_DAYS = 90        # the length of run the fleet sizes are worked out for
+REF_CHIP = "RTX 5090"
+
+
+def _f(x):
+    v = pd.to_numeric(x, errors="coerce")
+    return float(v) if pd.notna(v) else None
+
+
+def gpu_rows() -> list[dict]:
+    """data/compute-chips/gpus.csv as numbers, oldest first, with throughput per watt, per $1,000 and against the RTX 5090."""
+    rows = []
+    for r in sorted(manual_rows(SLUG, "gpus"), key=lambda r: r["date"]):
+        t = _f(r.get("tflops16"))
+        if not t or t <= 0:
+            continue
+        w, usd, mem = _f(r.get("power_w")), _f(r.get("price_usd")), _f(r.get("memory_gb"))
+        rows.append({"chip": r["chip"], "maker": r.get("maker", ""), "kind": r.get("kind", ""), "date": r["date"], "memory_gb": mem, "power_w": w, "tflops16": t,
+                     "basis": r.get("basis", ""), "price_usd": usd, "gflops_per_w": _r(1000 * t / w, 1) if w else None,
+                     "tflops_per_k": _r(1000 * t / usd, 1) if usd else None, "source": r.get("source", ""), "note": r.get("note", "")})
+    ref = next((c["tflops16"] for c in rows if c["chip"] == REF_CHIP), None)
+    for c in rows:
+        c["vs_ref"] = _r(c["tflops16"] / ref, 3) if ref else None
+    return rows
+
+
+def train_models() -> list[dict]:
+    """The reference models of train_models.csv, smallest first; a model Epoch's live file knows by epoch_name takes Epoch's figure."""
+    try:
+        live = {m: f for m, f in zip(*(lambda x: (x["model"], x["flop"]))(epoch_models()))}
+    except Exception:
+        live = {}
+    out = []
+    for r in manual_rows(SLUG, "train_models"):
+        hand, name = _f(r.get("flop")), r.get("epoch_name", "")
+        flop = float(live[name]) if name in live else hand
+        if flop and flop > 0:
+            out.append({"model": r["model"], "date": r["date"], "flop": flop, "from": "Epoch AI, live file" if name in live else "hand-entered",
+                        "source": r.get("source", ""), "note": "" if name in live else r.get("note", "")})
+    return sorted(out, key=lambda m: m["flop"])
+
+
+def _gpus_now() -> dict:
+    chips, models = gpu_rows(), train_models()
+    if not chips or not models:
+        raise LookupError("no chips or no models")
+    rate = lambda c: c["tflops16"] * 1e12 * UTIL                      # FLOP a second one chip really delivers
+    year, run = 365.25 * 86400, RUN_DAYS * 86400
+    years = {c["chip"]: [m["flop"] / rate(c) / year for m in models] for c in chips}
+
+    def fleet(c, m):
+        n = max(1, int(np.ceil(m["flop"] / (rate(c) * run))))
+        return {"chips": n, "mw": _r(n * c["power_w"] / 1e6, 3) if c["power_w"] else None, "cost_usd": _r(n * c["price_usd"], 0) if c["price_usd"] else None}
+    out = {"chips": chips, "models": models, "years": years, "fleet": {m["model"]: {c["chip"]: fleet(c, m) for c in chips} for m in models},
+           "ref": REF_CHIP, "util": UTIL, "run_days": RUN_DAYS, "stale": stale_info([EPOCH]), "updated": int(time.time())}
+    out["as_of"] = max(c["date"] for c in chips)
+    return out
+
+
 # ------------------------------------------------------------------ overview: one number from each tab
 def _overview_now() -> dict:
     out = {"updated": int(time.time()), "stale": {}}
@@ -429,4 +493,5 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 
 _power, _capex, _compute, _chips, _supply = (_cached_ep("power", _power_now), _cached_ep("capex", _capex_now), _cached_ep("compute", _compute_now),
                                              _cached_ep("chips", _chips_now), _cached_ep("supply", _supply_now, 600))
-ENDPOINTS = {"overview": _cached_ep("overview", _overview_now, 600), "power": _power, "capex": _capex, "compute": _compute, "chips": _chips, "supply": _supply}
+ENDPOINTS = {"overview": _cached_ep("overview", _overview_now, 600), "power": _power, "capex": _capex, "compute": _compute, "chips": _chips, "supply": _supply,
+             "gpus": _cached_ep("gpus", _gpus_now, 600)}

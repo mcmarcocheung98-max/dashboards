@@ -1,0 +1,16 @@
+date,chip,maker,kind,memory_gb,power_w,tflops16,basis,price_usd,source,note
+# one row per chip, dated at launch. tflops16 = peak dense 16-bit (FP16/BF16) throughput in TFLOPS: the maker's tensor-core figure for data-centre chips ("maker");
+# GeForce cards have no published 16-bit figure, so theirs is 2 x the FP32 figure ("estimate"); "reported" = press or analyst figure, not the maker's.
+# price_usd = launch list price for GeForce, reported street price for data-centre chips. Every row was entered from memory: verify against the cited page.
+2017-03-10,GTX 1080 Ti,Nvidia,Consumer,11,250,11.3,estimate,699,https://www.nvidia.com/en-gb/geforce/products/10series/geforce-gtx-1080-ti/,FP32 figure used as is (no fast 16-bit mode); verify
+2017-06-21,Tesla V100,Nvidia,Data centre,32,300,125,maker,10000,https://www.nvidia.com/en-us/data-center/v100/,price is a reported street price; verify
+2020-09-24,RTX 3090,Nvidia,Consumer,24,350,71.2,estimate,1499,https://www.nvidia.com/en-us/geforce/graphics-cards/30-series/rtx-3090-3090ti/,2 x 35.6 TFLOPS FP32; verify
+2020-11-16,A100 80GB,Nvidia,Data centre,80,400,312,maker,15000,https://www.nvidia.com/en-us/data-center/a100/,price is a reported street price; verify
+2022-10-12,RTX 4090,Nvidia,Consumer,24,450,165.2,estimate,1599,https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4090/,2 x 82.6 TFLOPS FP32; verify
+2022-10-01,H100,Nvidia,Data centre,80,700,989.5,maker,30000,https://www.nvidia.com/en-us/data-center/h100/,SXM version; price is a reported street price; verify
+2023-12-06,Instinct MI300X,AMD,Data centre,192,750,1307,maker,15000,https://www.amd.com/en/products/accelerators/instinct/mi300/mi300x.html,price is a reported street price; verify
+2024-03-01,H20 (China export),Nvidia,Data centre,96,400,148,reported,12000,https://epoch.ai/data/machine-learning-hardware,cut-down Hopper sold to China under the Oct 2023 rules; reported figures; verify
+2024-06-01,H200,Nvidia,Data centre,141,700,989.5,maker,35000,https://www.nvidia.com/en-us/data-center/h200/,same compute as the H100 with more and faster memory; price reported; verify
+2025-01-30,RTX 5090,Nvidia,Consumer,32,575,209.5,estimate,1999,https://www.nvidia.com/en-us/geforce/graphics-cards/50-series/rtx-5090/,2 x 104.8 TFLOPS FP32; verify
+2025-02-01,B200,Nvidia,Data centre,192,1000,2250,maker,40000,https://www.nvidia.com/en-us/data-center/technologies/blackwell-architecture/,2.25 PFLOPS dense (4.5 with sparsity); price is a reported street price; verify
+2025-05-01,Ascend 910C,Huawei,Data centre,96,,800,reported,,https://epoch.ai/data/machine-learning-hardware,China's leading domestic AI chip; no maker datasheet: reported figures; power and price not published; verify

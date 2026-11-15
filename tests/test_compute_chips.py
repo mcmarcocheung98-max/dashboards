@@ -256,3 +256,23 @@ def test_live_sources():
     assert M.clusters()["largest"]
     assert len(M.edgar_series(789019, M.CAPEX_TAGS)) > 20
     assert len(M.nasdaq("NVDA")) > 200
+
+
+def test_gpus_chip_against_chip(mocked):
+    g = B.json_safe(M._gpus_now())
+    chips = {c["chip"]: c for c in g["chips"]}
+    assert g["ref"] == "RTX 5090" and chips["RTX 5090"]["vs_ref"] == 1 and chips["H100"]["vs_ref"] > 4 > chips["RTX 4090"]["vs_ref"]
+    assert [m["flop"] for m in g["models"]] == sorted(m["flop"] for m in g["models"]) and all(m["from"] == "hand-entered" for m in g["models"])
+    c, i = chips["A100 80GB"], next(k for k, m in enumerate(g["models"]) if m["model"] == "GPT-4")
+    flop = g["models"][i]["flop"]
+    assert g["years"]["A100 80GB"][i] == pytest.approx(flop / (c["tflops16"] * 1e12 * M.UTIL) / (365.25 * 86400))
+    f = g["fleet"]["GPT-4"]["A100 80GB"]
+    assert 20000 < f["chips"] < 35000 and f["mw"] == pytest.approx(f["chips"] * c["power_w"] / 1e6, abs=1e-3)       # GPT-4 is reported at about 25,000 A100s for three months
+    assert g["fleet"]["GPT-4"]["Ascend 910C"]["mw"] is None                                                       # no published power: no made-up megawatts
+    assert all(len(v) == len(g["models"]) for v in g["years"].values())
+
+
+def test_gpus_take_epochs_live_figure(mocked, monkeypatch):
+    monkeypatch.setattr(M, "epoch_models", lambda: pd.DataFrame({"model": ["GPT-4", "Other"], "flop": [3e25, 1e20]}))
+    m = {x["model"]: x for x in M.train_models()}
+    assert m["GPT-4"]["flop"] == 3e25 and m["GPT-4"]["from"].startswith("Epoch") and m["GPT-3"]["from"] == "hand-entered"
