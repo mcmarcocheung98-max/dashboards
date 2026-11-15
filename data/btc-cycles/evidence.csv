@@ -7,7 +7,9 @@ date,series,value,source,note
 2026-07-01,Prediction-market monthly volume (USD),50600000000,https://tangem.com/en/blog/post/prediction-markets-record/,Kalshi $37.7bn + Polymarket $12.9bn
 2025-11-01,x402 cumulative payment volume (USD),600000000,https://www.mexc.com/,per the doc (MEXC / Coinedition)
 2024-11-15,Launchpad launches per day,1300,https://decrypt.co/,Virtuals peak per the doc
-2024-11-15,Perp-DEX share of global futures (%),0.1,https://defillama.com,2023 level per the doc - verify date
+2024-02-29,Perp-DEX share of global futures (%),5.18,https://www.theblock.co/post/321615/dexs-struggle-to-compete-with-cexs-as-futures-trading-volumes-shift-back,"The Block Data, DEX-to-CEX futures volume ratio for Feb 2024 (its peak at the time), article of 17 Oct 2024; replaces the doc's unsourced 0.1% '2023 level'"
+2024-09-30,Perp-DEX share of global futures (%),3.26,https://www.theblock.co/post/321615/dexs-struggle-to-compete-with-cexs-as-futures-trading-volumes-shift-back,"The Block Data, DEX-to-CEX futures volume ratio for Sep 2024, article of 17 Oct 2024"
+2025-06-30,Perp-DEX share of global futures (%),8.0,https://www.theblock.co/post/360377/dex-to-cex-futures-trade-volume-ratio-hits-all-time-high-of-8,"The Block Data, DEX-to-CEX futures volume ratio for Jun 2025 (all-time high then; May 2025 6.84%), article of 1 Jul 2025"
 2026-10-01,Perp-DEX share of global futures (%),12.3,https://castlelabs.xyz/,Castle Labs 14 Oct 2026 per the doc
 2025-12-01,Hyperliquid TVL (USD),4100000000,https://defillama.com/protocol/hyperliquid,per the doc
 2026-09-01,Hyperliquid TVL (USD),7400000000,https://defillama.com/protocol/hyperliquid,per the doc
