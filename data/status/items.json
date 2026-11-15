@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-14",
+ "updated": "2026-11-15",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -415,6 +415,14 @@
    "since": "2026-11-14",
    "title": "Compute & Chips: Ember file moved (stale since 2 Nov), wire the five signals, update fabs, export controls and power files, source 34 verify rows",
    "detail": "From the 14 Nov review. The session found the Ember fix (the address Robotaxi uses) and waits for the owner's go in its own conversation."
+  },
+  {
+   "id": "longevity-review-1115",
+   "owner": "session:longevity",
+   "status": "waiting",
+   "since": "2026-11-15",
+   "title": "Longevity: add SIGNALS() for its five approved signals, source 146 verify rows, bring seven hand-kept files up to date",
+   "detail": "From the 15 Nov review. The session confirms with the owner in its own conversation before pushing."
   }
  ],
  "roadmap": [
@@ -891,6 +899,21 @@
     "date": "2026-11-13",
     "minutes": 136,
     "runs": 23
+   }
+  },
+  {
+   "date": "2026-11-15",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Live check: 312 of 312 tabs, all tabs OK, no retries, under 12 minutes, no tab slower than 20 s; 42 tabs carry 44 3D canvases, none blank. Health: Bluesky, Reddit and Yahoo failing but handled; Ember stale on Compute & Chips since 2 Nov (alert); everything else fresh. Local tests 467 passed. Newsletter built, not sent. Signals 66 of 83 wired, 15 crossed, none from kept copies.",
+   "fixed": [],
+   "handed": [
+    "session:longevity (review)"
+   ],
+   "actions": {
+    "date": "2026-11-14",
+    "minutes": 65,
+    "runs": 16
    }
   }
  ],
@@ -1875,6 +1898,34 @@
     "Gmail newsletter secrets (built, not sent again), eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback",
     "Say go in the Pokémon session",
     "Say go in the Compute & Chips session: it has the Ember fix and the rest of today's review ready and waits for you there"
+   ]
+  },
+  {
+   "date": "2026-11-15",
+   "title": "A clean Sunday: every tab loads fast; Longevity reviewed; Compute & Chips gained a chip-against-chip tab",
+   "summary": "The live check was the fastest yet: all 312 tabs loaded with no retry in under 12 minutes, no tab took more than 20 seconds (Altcoins' Coins tab, 67 s on Saturday, is no longer slow), and all 44 3D canvases drew. The signals board held 66 wired and 15 crossed, with the Trends signals back. The Longevity review found that it has no signals at all (the five approved ones have read not wired since 3 Nov), that 146 of its hand-entered rows are still marked verify and that several files stop between 2022 and 2025; put to its session, which confirms with the owner first. Overnight the Compute & Chips session added a Chip vs chip tab at the owner's request.",
+   "changes": [
+    {
+     "dashboard": "Compute & Chips",
+     "slug": "compute-chips",
+     "tab": "gpus",
+     "what": "new Chip vs chip tab: twelve GPUs from the GTX 1080 Ti to the B200 and Ascend 910C compared in 3D, and what each would take to train six reference models; every chip row is marked verify",
+     "commit": "b74b583",
+     "by": "session:compute-chips"
+    }
+   ],
+   "review": "longevity",
+   "next": [
+    "Monday: weekly luxury liquidity log and stock refresh, token totals, a proper per-file count of unsourced rows",
+    "Compute & Chips: yesterday's four review items (the Ember address, five signals, stale files, verify rows) are still open; its new tab adds twelve verify rows",
+    "Not yet reviewed: pokemon-cards, altcoins, btc-cycles, luxury, ai-models, options, demographics"
+   ],
+   "asks": [
+    "Debt & Rates: allow the government hosts its 122 remaining rows need, or accept them staying marked verify",
+    "approve or skip r-fred-via-actions, r-climate-disasters, r-watch-recalibrate, r-private-signals",
+    "Say go in three sessions that wait for you in their own conversations: Pokémon (test speed-up and two older items), Compute & Chips (yesterday's review), Longevity (today's review)",
+    "Broker for the options trading portal",
+    "Gmail newsletter secrets (built, not sent again), eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
    ]
   }
  ]
