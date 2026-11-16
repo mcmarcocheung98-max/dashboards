@@ -775,3 +775,22 @@ def test_no_view_downloads_on_a_cold_server(mocked, monkeypatch, tmp_path):
     assert out["midterms"]["seeded"] and out["midterms"]["rows"]                # history from the committed seed
     assert {"fill_prices", "fill_market", "fill_midterms"} <= set(kicked)
     B.json_safe(out)
+
+
+def test_fred_served_from_an_old_snapshot_is_marked_handled(mocked, monkeypatch):
+    """fetch returns the last snapshot when FRED fails (status stale, no exception): that must not raise an alert either."""
+    monkeypatch.setattr(M, "_kick_midterms", lambda: None)
+    assert set(M.fill_midterms().values()) == {"ok"}                       # snapshots kept
+    from app import cache
+    cache._cache.clear()
+
+    def down(url, *a, **k):
+        if "fredgraph" in url and "VIXCLS" not in url:
+            raise RuntimeError("curl exit 28, HTTP 000")
+        return fixture_download(url)
+    monkeypatch.setattr(B, "_download", down)
+    (B.SNAP_DIR / "ai-stocks-midterms-fred-try.txt").write_text("0")
+    assert set(M.fill_midterms().values()) == {"stale"}
+    h = B.health({"ai_stocks": "ai-stocks"})["dashboards"]["ai-stocks"]
+    sp = next(x for x in h["sources"] if "id=SP500" in x["url"])
+    assert sp["status"] == "stale" and sp.get("handled") and not sp["alert"]

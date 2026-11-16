@@ -1433,6 +1433,10 @@ def fill_midterms() -> dict:
         def one(sid):
             try:
                 fred_series(sid)
+                url = FRED_CSV.format(sid=sid)
+                if url in B.STALE and (FRED_SEED / f"{sid}.csv").exists():   # fetch served its old snapshot: FRED failed all the same
+                    handled(url, "FRED does not answer the server; history from the committed copy, the current cycle from SPY and QQQ")
+                    return sid, "stale"
                 return sid, "ok"
             except Exception as e:
                 if (FRED_SEED / f"{sid}.csv").exists():                 # the page reads the seed and the ETFs: no alert for this
