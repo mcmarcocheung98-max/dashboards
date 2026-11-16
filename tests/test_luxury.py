@@ -241,7 +241,7 @@ def test_payloads_readings_and_signals(mocked):
     assert len(A["baskets"]["watch"]["points"]) > 120 and A["last_full_month"] == "2026-10-01"
     assert L["ebay"]["set_up"] is False and "EBAY_APP_ID" in L["ebay"]["message"] and len(L["ebay"]["items"]) == 13
     LG = L["log"]
-    assert LG["n_rows"] >= 15 and {x["metric"] for x in LG["latest"]} >= {"chrono24_listings", "stockx_last_sale", "watchcharts_days_to_sell"} and LG["chrono24_total"][0][1] > 3000
+    assert LG["n_rows"] >= 15 and {x["metric"] for x in LG["latest"]} >= {"chrono24_listings", "stockx_last_sale", "watchcharts_days_to_sell"} and LG["chrono24_index"][0][1] == 100.0 and all(st["n_common"] >= 1 for st in LG["chrono24_steps"])
     assert all(x["source"].startswith("http") and x["metric"] in M.LOG_METRICS for x in LG["latest"])
     assert O["kpi"]["n_watches"] == 8 and O["kpi"]["n_bags"] == 5 and len(O["items"]) == 13 and O["where"]
     by = {i["id"]: i for i in O["items"]}
@@ -382,7 +382,7 @@ def test_auction_lots_estimates_and_sell_through(mocked, monkeypatch):
 
 def test_liquidity_log_spreads_and_totals(mocked, monkeypatch):
     log_rows = [{"date": "2026-11-07", "item": "hermes-birkin25-togo", "platform": "stockx", "metric": "stockx_bid", "value": "10000", "currency": "USD", "source": "https://x/1", "note": "verify"},
-                {"date": "2026-11-05", "item": "hermes-birkin25-togo", "platform": "stockx", "metric": "stockx_ask", "value": "13000", "currency": "USD", "source": "https://x/2", "note": ""},
+                {"date": "2026-11-05", "item": "hermes-birkin25-togo", "platform": "stockx", "metric": "stockx_ask", "value": "13000", "currency": "USD", "source": "https://x/1", "note": ""},
                 {"date": "2026-11-07", "item": "sub-126610ln", "platform": "chrono24", "metric": "chrono24_listings", "value": "800", "currency": "", "source": "https://x/3", "note": ""},
                 {"date": "2026-11-07", "item": "daytona-126500ln", "platform": "chrono24", "metric": "chrono24_listings", "value": "700", "currency": "", "source": "https://x/4", "note": ""},
                 {"date": "2026-10-31", "item": "sub-126610ln", "platform": "chrono24", "metric": "chrono24_listings", "value": "850", "currency": "", "source": "https://x/5", "note": ""},
@@ -396,10 +396,21 @@ def test_liquidity_log_spreads_and_totals(mocked, monkeypatch):
     sp = L["spreads"]["hermes-birkin25-togo"]
     assert sp["spread"] == 0.3 and sp["bid"] == round(10000 / 1.3) and sp["date"] == "2026-11-07"
     assert L["chrono24_total"] == [[int(pd.Timestamp("2026-11-01").timestamp()), 850], [int(pd.Timestamp("2026-11-08").timestamp()), 1500]] and L["chrono24_items"] == ["daytona-126500ln", "sub-126610ln"]
+    # the raw total jumps because the Daytona joined; the index moves only on the Submariner, read both weeks: 850 -> 800
+    assert L["chrono24_index"] == [[int(pd.Timestamp("2026-11-01").timestamp()), 100.0], [int(pd.Timestamp("2026-11-08").timestamp()), 94.12]]
+    assert L["chrono24_steps"] == [{"week": "2026-11-08", "n_common": 1, "items": ["sub-126610ln"], "change": round(800 / 850 - 1, 4)}]
     lat = {(x["item"], x["metric"]): x for x in L["latest"]}
     assert lat[("sub-126610ln", "chrono24_listings")]["value"] == 800 and lat[("sub-126610ln", "watchcharts_days_to_sell")]["kind"] == "days"
     r = {x["key"]: x for x in M.readings(lambda n: {"liquidity": {"log": L}}.get(n, {}))}
     assert r["stockx_spread"]["value"] == 30.0 and r["stockx_spread"]["lean"] == 0
+    # a bid and an ask from different colourway pages, or an ask read off another product's panel: no spread, and the page says why
+    log_rows[1]["source"] = "https://x/other-colour"
+    L = M.liquidity_log(M.fx())
+    assert L["spreads"] == {} and L["spread_skipped"]["hermes-birkin25-togo"]["why"].startswith("bid and ask from different pages")
+    log_rows[1]["source"], log_rows[1]["note"] = "https://x/1", "lowest ask from a related-products panel"
+    assert M.liquidity_log(M.fx())["spread_skipped"]["hermes-birkin25-togo"]["why"].startswith("a quote read from another")
+    log_rows[1]["note"], log_rows[1]["date"] = "", "2026-10-20"
+    assert "3 days" in M.liquidity_log(M.fx())["spread_skipped"]["hermes-birkin25-togo"]["why"]
 
 
 def test_liquidity_score_and_signal(monkeypatch):
@@ -409,7 +420,7 @@ def test_liquidity_score_and_signal(monkeypatch):
     day = 86400
     counts = [[int(TODAY.timestamp()) - (400 - i) * day, 100 if i < 399 else 300] for i in range(400)]     # a year of eBay days flat at 100, today far above
     ebay = {"categories": {"watch": {"count": counts}, "bag": {"count": []}}}
-    log = {"spreads": {"b": {"spread": 0.30}}, "chrono24_total": [], "latest": [{"category": "watch", "metric": "watchcharts_days_to_sell", "value": 20.0, "date": "2026-11-01"},
+    log = {"spreads": {"b": {"spread": 0.30}}, "chrono24_index": [], "latest": [{"category": "watch", "metric": "watchcharts_days_to_sell", "value": 20.0, "date": "2026-11-01"},
                                                                                  {"category": "watch", "metric": "watchcharts_days_to_sell", "value": 60.0, "date": "2026-01-01"}]}
     w = M.liquidity_score("watch", att, auc, ebay, log)
     c = {k["key"]: k["value"] for k in w["components"]}

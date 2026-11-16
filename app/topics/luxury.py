@@ -966,28 +966,47 @@ def liquidity_log(FX: dict | None = None) -> dict:
         k = (x["item"], x["metric"])
         if k not in newest or x["date"] > newest[k]["date"]:
             newest[k] = x
-    spreads = {}
-    for item, ms in series.items():
-        bid, ask = ms.get("stockx_bid"), ms.get("stockx_ask")
-        if bid and ask:
-            tb, ta = max(bid), max(ask)
-            if abs((tb - ta).days) <= 14 and bid[tb] > 0:
-                spreads[item] = {"name": its[item]["name"], "bid": _r(bid[tb], 0), "ask": _r(ask[ta], 0), "spread": _r(ask[ta] / bid[tb] - 1, 4), "date": str(max(tb, ta).date())}
-    c24 = {}
+    spreads, spread_skipped = {}, {}
+    for item in series:                                 # the newest bid and ask must come from the same page (colourway), within 3 days
+        quotes = {mt: max((x for x in latest if x["item"] == item and x["metric"] == mt), key=lambda x: x["date"], default=None) for mt in ("stockx_bid", "stockx_ask")}
+        b, a = quotes["stockx_bid"], quotes["stockx_ask"]
+        if not (b and a):
+            continue
+        why = ("bid and ask from different pages (colourways)" if b["source"] != a["source"] else
+               "bid and ask more than 3 days apart" if abs((pd.Timestamp(b["date"]) - pd.Timestamp(a["date"])).days) > 3 else
+               "a quote read from another product's panel" if any("panel" in (x["note"] or "").lower() for x in (b, a)) else
+               "no bid" if not b["value"] else None)
+        if why:
+            spread_skipped[item] = {"name": its[item]["name"], "why": why, "date": max(b["date"], a["date"])}
+            continue
+        bv, av = series[item]["stockx_bid"][pd.Timestamp(b["date"])], series[item]["stockx_ask"][pd.Timestamp(a["date"])]   # unrounded GBP
+        spreads[item] = {"name": its[item]["name"], "bid": b["value"], "ask": a["value"], "spread": _r(av / bv - 1, 4), "date": max(b["date"], a["date"]), "source": b["source"]}
+    # Chrono24 supply: chain-linked over the references read in both weeks, so a week that found fewer references never moves it
+    c24: dict = {}
     for item, ms in series.items():
         for t, v in (ms.get("chrono24_listings") or {}).items():
             c24.setdefault(t.to_period("W").to_timestamp("W"), {})[item] = v
+    weeks = sorted(c24)
+    c24_index, c24_steps, level = [], [], 100.0
+    for k, w in enumerate(weeks):
+        if k:
+            common = sorted(set(c24[w]) & set(c24[weeks[k - 1]]))
+            prev = sum(c24[weeks[k - 1]][i] for i in common)
+            if common and prev:
+                level *= sum(c24[w][i] for i in common) / prev
+            c24_steps.append({"week": str(w.date()), "n_common": len(common), "items": common, "change": _r(sum(c24[w][i] for i in common) / prev - 1, 4) if common and prev else None})
+        c24_index.append([int(w.timestamp()), _r(level, 2)])
     c24_pts = [[int(w.timestamp()), int(sum(d.values()))] for w, d in sorted(c24.items())]
     return {"series": {i: {m: _pts(pd.Series(d, dtype=float).sort_index(), 1) for m, d in ms.items()} for i, ms in series.items()},
-            "latest": sorted(newest.values(), key=lambda x: (x["category"], x["name"], x["metric"])), "spreads": spreads,
-            "chrono24_total": c24_pts, "chrono24_items": sorted({i for d in c24.values() for i in d}), "metrics": {k: {"label": v[0], "kind": v[1], "words": v[2]} for k, v in LOG_METRICS.items()},
+            "latest": sorted(newest.values(), key=lambda x: (x["category"], x["name"], x["metric"])), "spreads": spreads, "spread_skipped": spread_skipped,
+            "chrono24_total": c24_pts, "chrono24_index": c24_index, "chrono24_steps": c24_steps, "chrono24_items": sorted({i for d in c24.values() for i in d}), "metrics": {k: {"label": v[0], "kind": v[1], "words": v[2]} for k, v in LOG_METRICS.items()},
             "n_rows": len(latest), "n_verify": sum(1 for x in latest if x["verify"]), "weeks": len({x["date"][:7] + str(pd.Timestamp(x["date"]).week) for x in latest}),
             "first": min((x["date"] for x in latest), default=None), "last": max((x["date"] for x in latest), default=None)}
 
 
 # ------------------------------------------------------------------ the liquidity score
-LIQ = {"supply": ("Supply: listings vs own history", "The basket's listing count (eBay UK daily once 60 days exist, else the Chrono24 weekly total once 8 weeks exist) as a z-score against its own history, sign flipped: more listings than usual scores negative (a looser market)."),
-       "spread": ("Bid-ask spread (StockX)", "Median StockX lowest-ask / highest-bid spread across the bags with both: 0% scores +2, 10% +1, 20% 0, 30% -1."),
+LIQ = {"supply": ("Supply: listings vs own history", "The basket's listing count (eBay UK daily once 60 days exist, else the Chrono24 weekly index, chain-linked over the references read in both weeks, once 8 weeks exist) as a z-score against its own history, sign flipped: more listings than usual scores negative (a looser market)."),
+       "spread": ("Bid-ask spread (StockX)", "Median StockX lowest-ask / highest-bid spread across the bags whose newest bid and ask come from the same page within 3 days: 0% scores +2, 10% +1, 20% 0, 30% -1."),
        "sell_through": ("Auction sell-through", "The latest sale's lots sold / offered: 95% scores +1, 85% 0, 75% -1."),
        "days_to_sell": ("Days to sell (WatchCharts)", "Median days on market across the references logged in the last 60 days: 20 days scores +1, 30 days 0, 40 days -1."),
        "attention": ("Attention (Wikipedia, 12-month z)", "The basket's attention z: people looking the items up is demand looking for supply.")}
@@ -1007,7 +1026,7 @@ def liquidity_score(cat: str, att: dict, auc: dict, ebay: dict, log: dict) -> di
     counts = ((ebay.get("categories") or {}).get(cat) or {}).get("count") or []
     src = "eBay UK"
     if len(counts) < 60 and cat == "watch":
-        counts, src = log.get("chrono24_total") or [], "Chrono24"
+        counts, src = log.get("chrono24_index") or [], "Chrono24"         # chain-linked: like-for-like references week to week
     if (len(counts) >= 60 and src == "eBay UK") or (len(counts) >= 8 and src == "Chrono24"):
         c = pd.Series({pd.Timestamp(t, unit="s"): v for t, v in counts}, dtype=float)
         sd = float(c.std(ddof=0))
