@@ -124,6 +124,65 @@ def events(today: date | None = None) -> list[dict]:
     return sorted(out, key=lambda e: e["date"])
 
 
+def past_earnings(today: date | None = None, days: int = 400) -> list[dict]:
+    """Earnings rows of events.csv already reported (date before today, within `days`), newest first, with their timing:
+    "bmo" when the note says before the open, else "amc" (after the close, the usual case)."""
+    today = today or date.today()
+    out = []
+    for r in manual_rows(SLUG, "events"):
+        if (r.get("kind") or "") != "earnings" or not r.get("symbol"):
+            continue
+        try:
+            d = pd.Timestamp(r["date"]).date()
+        except (ValueError, TypeError):
+            continue
+        if today - timedelta(days=days) <= d < today:
+            note = (r.get("note") or "").lower()
+            out.append({"date": str(d), "sym": r["symbol"].upper(), "label": r.get("label") or "", "source": r.get("source") or "",
+                        "timing": "bmo" if "before the" in note and "open" in note else "amc", "verify": (r.get("verify") or "").lower() in ("yes", "y", "true", "1", "verify")})
+    return sorted(out, key=lambda e: e["date"], reverse=True)
+
+
+def earnings_moves(s: dict, past: list[dict]) -> list[dict]:
+    """Priced against realised for each reported earnings date of this symbol: the move the options priced at the close before the report
+    (the daily entry of that session: the straddle and the IV move to the first expiry on or after the first session that trades on the news)
+    against the close-to-close move across it (before the open: the prior close to that day's close; after the close: that day's close to the
+    next). Needs a daily entry on the session before, so it starts with the dashboard's own history."""
+    closes = {str(pd.Timestamp(t, unit="s").date()): v for t, v in (s.get("rv") or {}).get("close") or []}
+    for d, v in (s.get("daily") or {}).items():
+        if v.get("spot") and d not in closes:
+            closes[d] = v["spot"]                                     # the store's own end-of-day spot where the closes do not reach yet
+    days = sorted(closes)
+    out = []
+    for e in past:
+        if e["sym"] != s.get("sym"):
+            continue
+        if e["timing"] == "bmo":
+            pre = max((d for d in days if d < e["date"]), default=None)
+            post = min((d for d in days if d >= e["date"]), default=None)
+        else:
+            pre = max((d for d in days if d <= e["date"]), default=None)
+            post = min((d for d in days if d > e["date"]), default=None)
+        near = lambda d: d is not None and abs((pd.Timestamp(d) - pd.Timestamp(e["date"])).days) <= 4      # a close days away is not "the close before"
+        pre, post = (pre if near(pre) else None), (post if near(post) else None)
+        entry_day = max((d for d in (s.get("daily") or {}) if pre and d <= pre and (pd.Timestamp(pre) - pd.Timestamp(d)).days <= 4), default=None)
+        row = {"date": e["date"], "label": e["label"], "timing": e["timing"], "source": e["source"], "pre": pre, "post": post, "priced_on": entry_day,
+               "exp": None, "em_straddle": None, "em_iv": None, "realised": None, "ratio": None, "inside": None}
+        if entry_day:
+            exps = s["daily"][entry_day].get("exp") or {}
+            first = min((x for x in exps if post and x >= post), default=None) if post else min((x for x in exps if x >= e["date"]), default=None)
+            if first:
+                row.update(exp=first, em_straddle=exps[first].get("em_straddle"), em_iv=exps[first].get("em_iv"))
+        if pre and post:
+            row["realised"] = _r(closes[post] / closes[pre] - 1, 4)
+            row["pre_close"], row["post_close"] = _r(closes[pre], 2), _r(closes[post], 2)
+        if row["realised"] is not None and row["em_straddle"]:
+            row["ratio"] = _r(abs(row["realised"]) / row["em_straddle"], 2)
+            row["inside"] = abs(row["realised"]) <= row["em_straddle"]
+        out.append(row)
+    return out
+
+
 def next_earnings(sym: str, evs: list[dict], today: date | None = None) -> dict | None:
     today = today or date.today()
     for e in evs:
@@ -542,7 +601,7 @@ def _model_now() -> dict:
             idx[name] = index_history(name.upper())
         except Exception as e:
             idx[name + "_error"] = type(e).__name__
-    return {"syms": syms, "errors": errors, "idx": idx, "events": evs, "universe": universe(), "today": str(today),
+    return {"syms": syms, "errors": errors, "idx": idx, "events": evs, "past_earnings": past_earnings(today), "universe": universe(), "today": str(today),
             "sources": [chain_url(u["cboe"]) for u in universe()] + [VIX_URL, VIX3M_URL, VVIX_URL, SKEW_URL]}
 
 
@@ -751,15 +810,22 @@ def past_moves(s: dict, today: str) -> list[dict]:
 def _moves_now() -> dict:
     M = _cached_model()
     S = M["syms"]
-    per = {}
+    per, record = {}, []
     for sym, s in S.items():
         cone = [{"exp": r["exp"], "dte": r["dte"], "monthly": r["monthly"], "em_iv": r["em_iv"], "em_straddle": r["em_straddle"], "straddle": r["straddle"], "atm_iv": r["atm_iv"]}
                 for r in s["expiries"] if r["em_iv"]]
         past = past_moves(s, M["today"])
-        per[sym] = {"name": s["name"], "group": s["group"], "spot": s["spot"], "trade_date": s["trade_date"], "cone": cone, "events": s["events"], "earnings": s["earnings"],
+        em = earnings_moves(s, M["past_earnings"])
+        record.extend({"sym": sym, **r} for r in em)
+        per[sym] = {"earnings_moves": em, "name": s["name"], "group": s["group"], "spot": s["spot"], "trade_date": s["trade_date"], "cone": cone, "events": s["events"], "earnings": s["earnings"],
                     "past": past[:40], "past_n": len(past), "past_inside": _r(100 * sum(p["inside"] for p in past) / len(past), 0) if past else None,
                     "spot_hist": s["rv"].get("close") or s["hist"]["spot"]}
-    return payload({"symbols": lambda: per, "order": lambda: [u["sym"] for u in M["universe"]], "events": lambda: M["events"]}, sources=M["sources"], as_of=M["today"])
+    record.sort(key=lambda r: r["date"], reverse=True)
+    done = [r for r in record if r["ratio"] is not None]
+    return payload({"symbols": lambda: per, "order": lambda: [u["sym"] for u in M["universe"]], "events": lambda: M["events"],
+                    "earnings_record": lambda: record, "earnings_summary": lambda: {"n": len(done), "inside": sum(bool(r["inside"]) for r in done),
+                                                                                     "median_ratio": _r(float(np.median([r["ratio"] for r in done])), 2) if done else None}},
+                   sources=M["sources"], as_of=M["today"])
 
 
 def _lab_now() -> dict:

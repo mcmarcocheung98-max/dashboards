@@ -16,7 +16,7 @@ const money = v => v == null ? "–" : (v < 0 ? "−$" : "$") + big(Math.abs(v))
 const SEL = "padding:5px 7px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);font:inherit";
 const sel = (opts, cur, onchange, style) => el("select", { style: style || SEL, onchange }, ...opts.map(([v, l]) => { const o = el("option", { value: v }, l); if (String(v) === String(cur)) o.selected = true; return o; }));
 const numIn = (v, step, onchange, w) => el("input", { type: "number", step, value: v, style: "width:" + (w || 90) + "px;" + SEL, onchange });
-const verify = e => e && e.verify ? el("span", { class: "pill", title: "entered from the company's usual cadence, not yet confirmed on its investor-relations page", style: "margin-left:4px;font-size:11px" }, "verify") : null;
+const verify = e => e && e.verify ? el("span", { class: "pill", title: "expected: the company's usual reporting cadence; the company has not announced the date yet", style: "margin-left:4px;font-size:11px" }, "expected") : null;
 const ctl = (label, control) => el("label", { style: "display:inline-flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)" }, label, control);
 const errs = (d, what) => d && d.errors && Object.keys(d.errors).length ? el("div", { class: "muted" }, what + " not available right now: " + Object.entries(d.errors).map(([k, v]) => k + " (" + v + ")").join(", ") + ".") : null;
 const rankCls = v => v == null ? "" : v > 80 ? "down" : v < 20 ? "up" : "";
@@ -82,7 +82,7 @@ const VIEWS = {
           td(ptsf(r.skew), r.skew > 0.08 ? "down" : ""), td(num(r.pc_oi, 2), r.pc_oi > 2 ? "down" : ""), td(num(r.pc_vol, 2)),
           td(r.earnings ? [shortDate(r.earnings), verify({ verify: r.earnings_verify })] : el("span", { class: "muted" }, "–"))))),
       note("ATM IV: the mean of the call and put implied volatility at the strike nearest spot, for the front month (the nearest standard monthly expiry at least 5 days out). IV rank: where that IV sits between its lowest and highest over the accrued history (up to a year); IV percentile: the share of days it was lower. " +
-        "Expected move to the next monthly: the ATM straddle's mid as a share of spot, and spot × IV × √T (one standard deviation). 25Δ skew: 25-delta put IV minus 25-delta call IV, in volatility points; higher = puts richer. P/C: put/call ratios over every listed expiry within 400 days, by open interest and by the day's volume. Earnings dates marked verify come from the company's usual cadence. " + SMALL));
+        "Expected move to the next monthly: the ATM straddle's mid as a share of spot, and spot × IV × √T (one standard deviation). 25Δ skew: 25-delta put IV minus 25-delta call IV, in volatility points; higher = puts richer. P/C: put/call ratios over every listed expiry within 400 days, by open interest and by the day's volume. Earnings dates marked expected come from the company's usual cadence and are not yet announced. " + SMALL));
     return [head, ...vixCards(d), T];
   },
 
@@ -259,8 +259,17 @@ const VIEWS = {
     const E = d.events || [];
     const cal = card("Event calendar (data/options/events.csv)", table(["Date", "Symbol", "Kind", "Event", "Note", "Source"],
       E.map(e => el("tr", {}, td(dateOf(e.date)), td(e.sym ? el("b", {}, e.sym) : el("span", { class: "muted" }, "all")), td(KIND[e.kind] || e.kind), td([e.label, verify(e)]), el("td", { class: "wrap", style: "font-size:12px" }, e.note || ""), td(link(host(e.source), e.source))))),
-      note("Earnings dates marked verify are entered from each company's usual reporting cadence and not yet confirmed on its investor-relations page; FOMC dates from the Federal Reserve's calendar (2027 provisional); OPEX is the third Friday."));
-    return [pick, cal];
+      note("Earnings dates marked expected are entered from each company's usual reporting cadence and not yet announced by the company; the rest cite the company's own announcement. FOMC dates from the Federal Reserve's calendar (2027 tentative); OPEX is the third Friday."));
+    const R = d.earnings_record || [], RS = d.earnings_summary || {};
+    const rec = card("Earnings: the move the options priced against the move that came" + (RS.n ? " (" + RS.inside + " of " + RS.n + " inside the straddle; median realised ÷ priced " + num(RS.median_ratio, 2) + ")" : ""),
+      R.length ? table(["Reported", "Symbol", "When", "Priced on", "To expiry", "Priced (straddle)", "Priced (IV, 1σ)", "Close before", "Close after", "Realised", "Realised ÷ priced"],
+        R.map(r => el("tr", {}, td([shortDate(r.date), " ", link("↗", r.source)]), td(el("b", {}, r.sym)), td(r.timing === "bmo" ? "before the open" : "after the close"), td(r.priced_on ? shortDate(r.priced_on) : el("span", { class: "muted" }, "no entry")),
+          td(r.exp ? shortDate(r.exp) : "–"), td(r.em_straddle == null ? "–" : "±" + ivf(r.em_straddle)), td(r.em_iv == null ? "–" : "±" + ivf(r.em_iv)),
+          td(r.pre_close == null ? "–" : usd(r.pre_close, 2)), td(r.post_close == null ? el("span", { class: "muted" }, "awaiting the next close") : usd(r.post_close, 2)),
+          td(r.realised == null ? "–" : pct(r.realised, 1), cls(r.realised)), td(r.ratio == null ? "–" : num(r.ratio, 2) + "×", r.inside == null ? "" : r.inside ? "up" : "down"))))
+        : el("div", { class: "muted" }, "No earnings reported since the dashboard began keeping daily entries."),
+      note("Filled automatically from the daily entries and the closes, no hand entry: for each reported date in the calendar, the straddle priced at the close before the report (to the first expiry on or after the first session that trades on the news; it includes the ordinary days to that expiry, so it slightly overstates the event alone) against the close-to-close move across the report. Realised ÷ priced below 1: the options priced more than came; above 1: less. A report before the dashboard kept an entry for the session before it shows 'no entry'. " + SMALL));
+    return [pick, rec, cal];
   },
 
   async lab() {

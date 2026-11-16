@@ -417,3 +417,40 @@ def test_routes(mocked, frozen):
     assert st == 200 and ss == 200 and vix and cs == 200 and spot == SPOTS["NVDA"]
     assert meta["category"] == "Money & markets" and meta["method"] and "Not investment advice" in meta["footer"] and len(meta["tabs"]) == 6
     assert any("Method" in s["title"] for s in method["sections"])
+
+
+def test_earnings_priced_against_realised():
+    """The record fills from the daily entries and the closes: after the close (that day's close to the next) and before the open (the prior
+    close to that day's), priced = the straddle of the session before to the first expiry on or after the first session trading on the news."""
+    ts = lambda d: int(pd.Timestamp(d).timestamp())
+    s = {"sym": "NVDA", "rv": {"close": [[ts("2026-11-16"), 100.0], [ts("2026-11-17"), 102.0], [ts("2026-11-18"), 94.86]]},
+         "daily": {"2026-11-17": {"spot": 102.0, "exp": {"2026-11-18": {"em_straddle": 0.05, "em_iv": 0.06}, "2026-11-20": {"em_straddle": 0.08, "em_iv": 0.10}}},
+                   "2026-11-11": {"spot": 50.0, "exp": {"2026-11-13": {"em_straddle": 0.09, "em_iv": 0.11}}}}}
+    past = [{"date": "2026-11-17", "sym": "NVDA", "label": "Q3", "source": "x", "timing": "amc", "verify": False},
+            {"date": "2026-11-16", "sym": "NVDA", "label": "early", "source": "x", "timing": "bmo", "verify": False},
+            {"date": "2026-10-01", "sym": "NVDA", "label": "old", "source": "x", "timing": "amc", "verify": False},
+            {"date": "2026-11-12", "sym": "NBIS", "label": "other", "source": "x", "timing": "bmo", "verify": False}]
+    r = {x["label"]: x for x in M.earnings_moves(s, past)}
+    q3 = r["Q3"]
+    assert q3["pre"] == "2026-11-17" and q3["post"] == "2026-11-18" and q3["priced_on"] == "2026-11-17" and q3["exp"] == "2026-11-18"
+    assert q3["em_straddle"] == 0.05 and q3["realised"] == pytest.approx(-0.07) and q3["ratio"] == 1.4 and q3["inside"] is False
+    assert r["early"]["pre"] is None and r["early"]["realised"] is None                     # before the open with no close the day before
+    assert r["old"]["priced_on"] is None and r["old"]["ratio"] is None                       # no daily entry then: shown, not invented
+    assert "other" not in r
+    rows = M.past_earnings(date(2026, 11, 16))
+    nb = next(x for x in rows if x["sym"] == "NBIS")
+    assert nb["date"] == "2026-11-12" and nb["timing"] == "bmo" and all(x["date"] < "2026-11-16" for x in rows)
+    assert next(x for x in rows if x["sym"] == "RKLB")["timing"] == "amc"
+
+
+def test_moves_payload_carries_the_earnings_record(mocked, frozen):
+    seed_history(15)
+    m = M.ENDPOINTS["moves"]()
+    B.json_safe(m)
+    assert isinstance(m["earnings_record"], list) and set(m["earnings_summary"]) == {"n", "inside", "median_ratio"}
+    assert all("earnings_moves" in v for v in m["symbols"].values())
+    ev = {}
+    for e in M.events(TODAY):
+        if e["kind"] == "earnings":
+            ev.setdefault(e["sym"], e)                                                       # each symbol's next report
+    assert ev["ORCL"]["verify"] and ev["MU"]["verify"] and not ev["NVDA"]["verify"]
