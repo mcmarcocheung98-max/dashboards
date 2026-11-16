@@ -180,7 +180,8 @@ funding not included; also long-only. A short that loses more than 100% in one d
 - **Schedule**: `data/altcoins/unlocks/ENA.csv`, one row per tranche (`date, ena_m, pct_supply, category, kind, confidence, use, source, note`).
   Same-day tranches are summed into one unlock day. Rows with `use=0` are listed for completeness and never counted: the StablecoinX lock-up
   waiver (sales still need the Foundation's consent), the season-3 airdrop (amount unpublished) and the 275M item some trackers show for
-  1 Nov 2026. `confidence` is high (two independent sources agree), medium (one source, or an inferred date) or low; the study uses medium and high.
+  1 Nov 2026 (checked 16 Nov 2026: it repeats every month and equals the pre-acceleration monthly contributor + investor + Foundation + ecosystem
+  sum, so it re-states tranches already listed rather than adding a new one; the ecosystem stream itself has no monthly rows yet). `confidence` is high (two independent sources agree), medium (one source, or an inferred date) or low; the study uses medium and high.
 - **% of circulating** = the day's amount against everything unlocked before it: what the market has to absorb relative to what already trades.
   Big = 5% or more (the 5 Mar 2025 cliff, the season-2 airdrop, the 5 Oct 2026 investor acceleration); the monthly team + investor tranches are
   1-5%; the Foundation's 40.6M a month is under 1%.
