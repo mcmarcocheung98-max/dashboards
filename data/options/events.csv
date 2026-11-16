@@ -15,7 +15,7 @@ date,symbol,kind,label,source,note,verify
 2026-12-18,,opex,Monthly expiration (December),https://www.cboe.com/about/hours/us-options/,third Friday; quarterly,
 2027-01-14,TSM,earnings,TSMC Q4 2026 results,https://investor.tsmc.com/,usual cadence: mid January before the US open,yes
 2027-01-15,,opex,Monthly expiration (January),https://www.cboe.com/about/hours/us-options/,third Friday,
-2027-01-27,,fomc,FOMC decision,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,meeting 26-27 January 2027; statement 14:00 ET,yes
+2027-01-27,,fomc,FOMC decision,https://www.federalreserve.gov/newsevents/pressreleases/monetary20250905a.htm,meeting 26-27 January 2027; statement 14:00 ET (Fed release of 5 Sep 2025; tentative until confirmed at the meeting before it),
 2027-01-27,ASML,earnings,ASML Q4 2026 results,https://www.asml.com/en/investors,usual cadence: late January before the US open,yes
 2027-01-27,MSFT,earnings,Microsoft Q2 FY27 results,https://www.microsoft.com/en-us/investor,usual cadence: last week of January after the close,yes
 2027-01-27,META,earnings,Meta Q4 2026 results,https://investor.atmeta.com/,usual cadence: last week of January after the close,yes
@@ -29,10 +29,10 @@ date,symbol,kind,label,source,note,verify
 2027-02-11,BE,earnings,Bloom Energy Q4 2026 results,https://investor.bloomenergy.com/,usual cadence: second week of February after the close,yes
 2027-02-19,,opex,Monthly expiration (February),https://www.cboe.com/about/hours/us-options/,third Friday,
 2027-02-25,NVDA,earnings,Nvidia Q4 FY27 results,https://investor.nvidia.com/,usual cadence: last Wednesday of February after the close,yes
-2027-03-17,,fomc,FOMC decision,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,meeting 16-17 March 2027; statement 14:00 ET,yes
+2027-03-17,,fomc,FOMC decision,https://www.federalreserve.gov/newsevents/pressreleases/monetary20250905a.htm,meeting 16-17 March 2027; statement 14:00 ET (Fed release of 5 Sep 2025; tentative until confirmed at the meeting before it),
 2027-03-19,,opex,Monthly expiration (March),https://www.cboe.com/about/hours/us-options/,third Friday; quarterly,
 2027-04-16,,opex,Monthly expiration (April),https://www.cboe.com/about/hours/us-options/,third Friday,
-2027-04-28,,fomc,FOMC decision,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,meeting 27-28 April 2027; statement 14:00 ET,yes
+2027-04-28,,fomc,FOMC decision,https://www.federalreserve.gov/newsevents/pressreleases/monetary20250905a.htm,meeting 27-28 April 2027; statement 14:00 ET (Fed release of 5 Sep 2025; tentative until confirmed at the meeting before it),
 2027-05-21,,opex,Monthly expiration (May),https://www.cboe.com/about/hours/us-options/,third Friday,
-2027-06-16,,fomc,FOMC decision,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,meeting 15-16 June 2027; statement 14:00 ET,yes
+2027-06-09,,fomc,FOMC decision,https://www.federalreserve.gov/newsevents/pressreleases/monetary20250905a.htm,meeting 8-9 June 2027 (was entered as 15-16 June); statement 14:00 ET (Fed release of 5 Sep 2025; tentative until confirmed at the meeting before it),
 2027-06-18,,opex,Monthly expiration (June),https://www.cboe.com/about/hours/us-options/,third Friday; quarterly,
