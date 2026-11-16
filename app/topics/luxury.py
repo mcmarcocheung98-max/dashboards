@@ -204,6 +204,22 @@ def fred_kept(key: str) -> tuple[pd.Series, str | None]:
     return s, str(s.index[-1].date())
 
 
+def kept_on(url: str) -> str | None:
+    """The date the kept copy of `url` was downloaded (its snapshot's time), for labelling a live source against a seed."""
+    try:
+        return pd.Timestamp(B._snap(url).stat().st_mtime, unit="s").strftime("%Y-%m-%d")
+    except OSError:
+        return None
+
+
+def fred_label(key: str, seed: str | None) -> str:
+    """'FRED (copy to <date>)' for the committed seed, 'FRED (downloaded <date>)' for a copy the background job fetched."""
+    if seed:
+        return f"FRED (copy to {seed})"
+    on = kept_on(FRED.format(id=FRED_IDS[key]))
+    return f"FRED (downloaded {on})" if on else "FRED (downloaded)"
+
+
 def kept(url: str, parser):
     """A non-FRED source's kept copy (memory, then snapshot), parsed; LookupError when never fetched."""
     return parser(B.cached_only(url))
@@ -240,29 +256,31 @@ def cpi_uk() -> tuple[pd.Series, str]:
         return kept(ONS_CPI, parse_ons), "ONS"
     except Exception:
         s, seed = fred_kept("cpi_uk")
-        return s, "FRED" + (f" (copy to {seed})" if seed else "")
+        return s, fred_label("cpi_uk", seed)
 
 
 def sp500() -> tuple[pd.Series, str]:
-    """S&P 500 closes from kept copies only: FRED (snapshot, else the seed), else Nasdaq's index quote if the background job fetched it."""
-    try:
-        s, seed = fred_kept("sp500")
-        if not seed:
-            return s, "FRED"
-        fred_s, fred_src = s, f"FRED (copy to {seed})"
-    except LookupError:
-        fred_s, fred_src = None, None
+    """S&P 500 closes from kept copies only: Nasdaq's index quote first (fresher than FRED, which lags a day), FRED when its copy is
+    newer or Nasdaq was never fetched; the label says whether FRED's copy was downloaded or is the committed seed."""
+    nas = None
     try:
         j = __import__("json").loads(B.cached_only(NASDAQ_SPX_KEY))
         rows = (((j or {}).get("data") or {}).get("tradesTable") or {}).get("rows") or []
         n = pd.Series({pd.to_datetime(r["date"], format="%m/%d/%Y"): float(str(r["close"]).replace("$", "").replace(",", "")) for r in rows if r.get("close")}).sort_index()
-        if len(n) >= 20 and (fred_s is None or n.index[-1] > fred_s.index[-1]):
-            return n, "Nasdaq"
+        if len(n) >= 20:
+            nas = n
     except Exception:
         pass
+    try:
+        fred_s, seed = fred_kept("sp500")
+    except LookupError:
+        fred_s, seed = None, None
+    if nas is not None and (fred_s is None or nas.index[-1] >= fred_s.index[-1]):
+        on = kept_on(NASDAQ_SPX_KEY)
+        return nas, "Nasdaq" + (f" (downloaded {on})" if on else "")
     if fred_s is None:
         raise LookupError("not fetched yet")
-    return fred_s, fred_src
+    return fred_s, fred_label("sp500", seed)
 
 
 def fx() -> dict:
@@ -286,7 +304,7 @@ def fx() -> dict:
                     seeds += [sd] if sd else []
                 except Exception:
                     out[cur] = None
-            src = "FRED" + (f" (copy to {max(seeds)})" if seeds else "")
+            src = fred_label("gbpusd", max(seeds) if seeds else None)
         except Exception:
             fallback = True
     for k, v in FX_FALLBACK.items():
@@ -1070,7 +1088,7 @@ def _context() -> dict:
 
     def cpi_us():
         s, seed = fred_kept("cpi_us")
-        return s, "FRED" + (f" (copy to {seed})" if seed else "")
+        return s, fred_label("cpi_us", seed)
     B._part(out, "cpi_us", cpi_us)
     B._part(out, "cpi_uk", cpi_uk)
     B._part(out, "sp500", sp500)

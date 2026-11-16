@@ -131,7 +131,7 @@ ECB = "KEY,FREQ,CURRENCY,CURRENCY_DENOM,EXR_TYPE,EXR_SUFFIX,TIME_PERIOD,OBS_VALU
 
 def test_fx_and_conversion(mocked):
     FX = M.fx()                                                                # the fixture's fill ran: FRED copies in the snapshot
-    assert not FX["fallback"] and FX["source"] == "FRED" and not FX["seed"] and abs(M.to_gbp(1300, "USD", pd.Timestamp("2022-06-15"), FX) - 1000) < 1
+    assert not FX["fallback"] and FX["source"].startswith("FRED (downloaded 20") and not FX["seed"] and abs(M.to_gbp(1300, "USD", pd.Timestamp("2022-06-15"), FX) - 1000) < 1
     assert abs(M.to_gbp(100, "GBP", pd.Timestamp("2022-06-15"), FX) - 100) < 1e-9
     chf = M.to_gbp(117, "CHF", pd.Timestamp("2022-06-15"), FX)
     assert abs(chf - 100) < 1
@@ -252,7 +252,7 @@ def test_payloads_readings_and_signals(mocked):
     assert {r["platform"] for r in by["sub-126610ln"]["resale_stock"]} == {"Chrono24"} and by["sub-126610ln"]["resale_stock"][0]["count"] > 0   # the newest weekly Chrono24 row, whatever it reads
     assert len(W["items"]) == 8 and len(G["items"]) == 5 and "calendar" in G and G["retail_rise"]["brand"]
     assert len(O["rolex_premium"]) > 24 and len(G["ratio"]) >= 3, "the committed points must give both baskets a monthly history (the bag basket starts in 2026: three of its five bags have no earlier resale record)"
-    assert R["sp500_source"].startswith("FRED") and R["cpi_uk_source"].startswith("FRED") and R["rows"] and all(r["net"] <= r["gross"] for r in R["rows"])
+    assert R["sp500_source"].startswith("FRED (downloaded 20") and R["sources"]["cpi_us"].startswith("FRED (downloaded 20") and R["cpi_uk_source"].startswith("FRED") and R["rows"] and all(r["net"] <= r["gross"] for r in R["rows"])
     assert M.BACKGROUND == [M.fill_context, M.EBAY.fill]
     assert H["watch"]["score"] is not None and H["bag"]["score"] is not None and H["score"] is not None and F["fees"]
     r = {x["key"]: x for x in M.READINGS()}
@@ -461,3 +461,13 @@ def test_card_extras_photo_stock_and_resale_stock(mocked, monkeypatch, tmp_path)
     rs = M.resale_stock("a", log, ebay)
     assert [(r["platform"], r["count"]) for r in rs] == [("Chrono24", 12), ("eBay UK", 7)] and rs[0]["verify"] and "ebay.co.uk" in rs[1]["url"]
     assert M.resale_stock("b", log, ebay) == [] and M.resale_stock("a", None, None) == []
+
+
+def test_sp500_prefers_nasdaq_and_labels_sources(mocked, monkeypatch):
+    rows = [{"date": d.strftime("%m/%d/%Y"), "close": f"{6000 + i:,.2f}"} for i, d in enumerate(pd.date_range("2026-09-01", "2026-11-13", freq="B"))]
+    nas = json.dumps({"data": {"tradesTable": {"rows": rows}}})
+    monkeypatch.setattr(B, "_download", lambda url, *a, **k: nas if "nasdaq.com" in url else fake_fetch(url))
+    B.fetch(M.NASDAQ_SPX.format(a="2016-01-01", b="2026-11-13"), 60, key=M.NASDAQ_SPX_KEY, min_bytes=10)
+    s, src = M.sp500()
+    assert src.startswith("Nasdaq (downloaded 20") and s.index[-1] == pd.Timestamp("2026-11-13")
+    assert M.fred_label("cpi_us", "2026-10-01") == "FRED (copy to 2026-10-01)" and M.fred_label("cpi_us", None).startswith("FRED (downloaded 20")
