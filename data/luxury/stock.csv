@@ -25,3 +25,16 @@ date,item,channel,status,quantity,source,note
 2026-11-09,lv-alma-bb-mono,retail,unknown,,https://uk.louisvuitton.com/eng-gb/products/alma-bb-bag-monogram-nvprod5190086v/M46990,"the eng-gb page is live in search excerpts at GBP 1,450 (US$2,000) but no excerpt shows the button state (add to cart / call to purchase); verify"
 2026-11-09,hermes-birkin25-togo,retail,boutique only (allocation),,https://www.hermes.com/uk/en/,Hermes does not sell the Birkin online; no stock state to read
 2026-11-09,chanel-cf-medium-caviar,retail,boutique only,,https://www.chanel.com/gb/fashion/p/A01112Y01864C3906/classic-handbag-grained-calfskin-gold-tone-metal/,"the gb page did not surface in search; US pages for the A01112 Classic 11.12 show prices (grained shiny calfskin $11,700) and 'find in boutique'; no online stock state; verify"
+2026-11-16,sub-126610ln,retail,retailer only (waitlist),,https://www.rolex.com/en-gb/watches/submariner/m126610ln-0001,Rolex sells only through retailers; no change reported this week; verify
+2026-11-16,gmt-126710blnr,retail,retailer only (waitlist),,https://www.rolex.com/en-gb/watches/gmt-master-ii/m126710blnr-0002,no change reported this week; verify
+2026-11-16,gmt-126710blro,retail,discontinued (April 2026),,https://www.rolex.com/en-gb/watches/gmt-master-ii/,WatchCharts marks it discontinued; verify
+2026-11-16,daytona-126500ln,retail,retailer only (long waitlist),,https://www.rolex.com/en-gb/watches/cosmograph-daytona/m126500ln-0002,no change reported this week; verify
+2026-11-16,dj41-126334,retail,retailer only,,https://www.rolex.com/en-gb/watches/datejust/m126334-0001,verify
+2026-11-16,explorer-124270,retail,retailer only,,https://www.rolex.com/en-gb/watches/explorer/m124270-0001,verify
+2026-11-16,op41-124300,retail,retailer only,,https://www.rolex.com/en-gb/watches/oyster-perpetual/m124300-0001,verify
+2026-11-16,daydate-228238,retail,retailer only,,https://www.rolex.com/en-gb/watches/day-date/m228238-0006,verify
+2026-11-16,celine-ava-triomphe,retail,out of stock online,,https://www.celine.com/en-gb/celine-shop-women/handbags/essential-bags/ava-bag-in-triomphe-canvas-and-calfskin-193952BZJ.04LU.html,"en-gb excerpt: £1,250, 'this item is currently unavailable' (last week's excerpt showed £1,300); verify"
+2026-11-16,ysl-le57-smooth,retail,out of stock online,,https://www.ysl.com/en-gb/shoulder-bags/le-5-a-7-in-smooth-leather-6572282R20W1000.html,"en-gb page: black £1,755 with 'notify me when the item becomes available again', no add-to-bag; verify"
+2026-11-16,lv-alma-bb-mono,retail,in stock online,,https://uk.louisvuitton.com/eng-gb/products/alma-bb-bag-monogram-nvprod5190086v/M46990,"structured data marks InStock at £1,480 (the product excerpt still shows £1,450: a recent price rise?); no button text seen; verify"
+2026-11-16,hermes-birkin25-togo,retail,boutique only (allocation),,https://www.hermes.com/uk/en/story/106191-birkin,no Birkin product page on hermes.com; sold in boutiques only
+2026-11-16,chanel-cf-medium-caviar,retail,unknown,,https://www.chanel.com/gb/fashion/classic/c/1x3x14x1/handbags/,no GB product page for the medium in black caviar surfaced (A01112 seen only in lambskin and seasonal grained colours); boutique sale assumed but not seen; verify

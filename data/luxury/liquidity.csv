@@ -41,3 +41,28 @@ date,item,platform,metric,value,currency,source,note
 2026-11-09,celine-ava-triomphe,stockx,stockx_last_sale,1628,USD,https://stockx.com/celine-ava-bag-triomphe-tan,"tan Triomphe canvas; Last Sale $1,628 (12-month range $800-$1,000, 2 sales in 3 months on an older snapshot); verify"
 2026-11-09,celine-ava-triomphe,stockx,stockx_bid,1207,USD,https://stockx.com/celine-ava-bag-triomphe-tan,"highest offer $1,207 on the product page; verify"
 2026-11-09,celine-ava-triomphe,stockx,stockx_ask,1285,USD,https://stockx.com/celine-ava-bag-triomphe-tan,"Lowest Ask $1,285 in a category page; verify"
+2026-11-16,sub-126610ln,chrono24,chrono24_listings,913,,https://www.chrono24.com/rolex/ref-126610ln.htm,913 listings incl. promoted; no page date; verify
+2026-11-16,gmt-126710blro,chrono24,chrono24_listings,909,,https://www.chrono24.com/rolex/ref-126710blro.htm,incl. promoted; no page date; verify
+2026-11-16,daytona-126500ln,chrono24,chrono24_listings,772,,https://www.chrono24.com/rolex/ref-126500ln.htm,about 772; no page date; verify
+2026-11-16,daydate-228238,chrono24,chrono24_listings,959,,https://www.chrono24.com/rolex/ref-228238.htm,about 959 incl. promoted; no page date; verify
+2026-11-16,gmt-126710blro,chrono24,chrono24_price,41241,USD,https://www.chrono24.com/rolex/ref-126710blro.htm,"'currently costs around $41,241' after the spring-2026 discontinuation; far above WatchCharts' $22,118, possibly unworn/full-set asks; verify"
+2026-11-13,sub-126610ln,watchcharts,watchcharts_days_to_sell,17.0,,https://watchcharts.com/watch_model/21817-rolex-submariner-date-126610/overview,"5,125 sales in the past year; market $13,437"
+2026-11-16,gmt-126710blnr,watchcharts,watchcharts_days_to_sell,20.0,,https://watchcharts.com/watch_model/1525-rolex-gmt-master-ii-batgirl-126710blnr/overview,"page 'as of November 2026', day not shown; 5,662 sales; market $17,251; verify"
+2026-11-13,gmt-126710blro,watchcharts,watchcharts_days_to_sell,18.9,,https://watchcharts.com/watch_model/733-rolex-gmt-master-ii-pepsi-126710blro/overview,"3,974 sales; market $22,118; discontinued"
+2026-11-07,daytona-126500ln,watchcharts,watchcharts_days_to_sell,12.3,,https://watchcharts.com/watch_model/46426-rolex-cosmograph-daytona-126500/overview,"model level; 3,637 sales; market $31,950"
+2026-11-02,dj41-126334,watchcharts,watchcharts_days_to_sell,29.6,,https://watchcharts.com/watch_model/727-rolex-datejust-41-126334/overview,"11,008 sales; market $14,151; unchanged since last week's reading (same page date)"
+2026-11-02,explorer-124270,watchcharts,watchcharts_days_to_sell,18.0,,https://watchcharts.com/watch_model/33629-rolex-explorer-124270/overview,"1,812 sales; market $8,104; same page date as last week"
+2026-11-08,daydate-228238,watchcharts,watchcharts_days_to_sell,39.0,,https://watchcharts.com/watch_model/659-rolex-day-date-40-228238/overview,"1,331 sales; market $50,857"
+2026-11-16,lv-alma-bb-mono,stockx,stockx_last_sale,2200,USD,https://stockx.com/louis-vuitton-alma-monogram-bb-brown,"unchanged from last week ($2,300 with fee; 'only 2 left'); verify"
+2026-11-16,ysl-le57-smooth,stockx,stockx_last_sale,2044,USD,https://stockx.com/saint-laurent-le-5-a-7-hobo-bag-in-smooth-leather-noir,"noir smooth; 'around $2,044'; verify"
+2026-11-16,ysl-le57-smooth,stockx,stockx_ask,1649,USD,https://stockx.com/saint-laurent-le-5-a-7-hobo-bag-in-smooth-leather-noir,"noir smooth, lowest ask about $1,649 (the mini excluded); verify"
+2026-11-16,celine-ava-triomphe,stockx,stockx_last_sale,1628,USD,https://stockx.com/celine-ava-bag-triomphe-tan,tan; same as last week; verify
+2026-11-16,celine-ava-triomphe,stockx,stockx_bid,561,USD,https://stockx.com/celine-ava-bag-triomphe-tan,"tan, highest offer (last week $1,207: a different snapshot); verify"
+2026-11-16,celine-ava-triomphe,stockx,stockx_ask,1175,USD,https://stockx.com/celine-ava-bag-triomphe-tan,"tan, lowest ask from a related-products panel; verify"
+2026-11-16,hermes-birkin25-togo,stockx,stockx_last_sale,13587,USD,https://stockx.com/hermes-birkin-togo-25-orange,orange Togo GHW (the noir page shows no sales yet); verify
+2026-11-16,hermes-birkin25-togo,stockx,stockx_ask,27543,USD,https://stockx.com/hermes-birkin-togo-25-orange,orange Togo GHW lowest ask (related-products panel); a different colour from the bid; verify
+2026-11-16,hermes-birkin25-togo,stockx,stockx_bid,11500,USD,https://stockx.com/hermes-birkin-togo-25-etoupe,"étoupe PHW highest offer, no asks; verify"
+2026-11-16,chanel-cf-medium-caviar,stockx,stockx_last_sale,8000,USD,https://stockx.com/chanel-classic-double-flap-quilted-medium-black-caviar-goldtone,black caviar GHW; 'only 3 left'; verify
+2026-11-16,chanel-cf-medium-caviar,stockx,stockx_ask,10225,USD,https://stockx.com/chanel-classic-double-flap-quilted-medium-black-caviar-goldtone,"black caviar GHW lowest ask (other cached panels show $18,498-18,779; last week's $18,559 was one of those); verify"
+2026-11-16,hermes-birkin25-togo,fashionphile,fashionphile_listings,10,,https://www.fashionphile.com/products/hermes-togo-birkin-25-black-1994484,"10 Togo Birkin 25 product pages surfaced by search, $25,645-$32,995; a lower bound, not the site's count; verify"
+2026-11-16,chanel-cf-medium-caviar,fashionphile,fashionphile_listings,10,,https://www.fashionphile.com/products/chanel-caviar-quilted-medium-double-flap-black-1974521,"10 black caviar medium flap pages surfaced, $5,895-$9,125; a lower bound, not the site's count; verify"
