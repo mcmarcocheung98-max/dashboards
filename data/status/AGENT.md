@@ -91,6 +91,11 @@ with the day's status commit.
   running counts, so a skipped day loses nothing: the next collection carries it, put on that day.
 - Commit `data/graphify/usage.json` with the day's status commit. Keep this cheap: never read whole transcripts of other sessions.
 
+## 5c. Unsourced rows (Mondays)
+
+`python scripts/verify_count.py data` counts the hand-entered rows still marked verify, per dashboard and file. Put the totals in the
+note's `verify_rows` and in the r-verify-rows detail; brief the dashboard with the most rows, once, if it has not been asked in a week.
+
 ## 6. Write the note and update the page
 
 Append one entry to `notes` in `data/status/items.json`:
