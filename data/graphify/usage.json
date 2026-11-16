@@ -386,6 +386,50 @@
    "source": "transcript"
   },
   {
+   "date": "2026-11-12",
+   "session": "luxury",
+   "input": 928,
+   "cache_write": 634042,
+   "cache_read": 10774388,
+   "output": 38906,
+   "cost_usd": 17.33,
+   "source": "totals",
+   "since": "2026-11-08T13:28"
+  },
+  {
+   "date": "2026-11-13",
+   "session": "ai-stocks",
+   "input": 555,
+   "cache_write": 387349,
+   "cache_read": 11209743,
+   "output": 28085,
+   "cost_usd": 5.9,
+   "source": "totals",
+   "since": "2026-11-11T11:29"
+  },
+  {
+   "date": "2026-11-13",
+   "session": "btc-cycles",
+   "input": 1598,
+   "cache_write": 461412,
+   "cache_read": 18109516,
+   "output": 41523,
+   "cost_usd": 12.68,
+   "source": "totals",
+   "since": "2026-11-11T10:30"
+  },
+  {
+   "date": "2026-11-13",
+   "session": "china-us-tech",
+   "input": 1418985,
+   "cache_write": 1096070,
+   "cache_read": 13937124,
+   "output": 144971,
+   "cost_usd": 12.94,
+   "source": "totals",
+   "since": "2026-11-05T23:52"
+  },
+  {
    "date": "2026-11-13",
    "session": "dev-agent",
    "input": 250,
@@ -394,6 +438,17 @@
    "output": 78182,
    "lookups": 2,
    "source": "transcript"
+  },
+  {
+   "date": "2026-11-13",
+   "session": "prediction-markets",
+   "input": 602,
+   "cache_write": 1360470,
+   "cache_read": 34358317,
+   "output": 40468,
+   "cost_usd": 18.57,
+   "source": "totals",
+   "since": "2026-11-03T19:04"
   },
   {
    "date": "2026-11-14",
@@ -407,13 +462,56 @@
   },
   {
    "date": "2026-11-15",
+   "session": "compute-chips",
+   "input": 44524,
+   "cache_write": 1094776,
+   "cache_read": 8805419,
+   "output": 26617,
+   "cost_usd": 14.58,
+   "source": "totals",
+   "since": "2026-11-05T17:34"
+  },
+  {
+   "date": "2026-11-15",
    "session": "dev-agent",
-   "input": 32,
-   "cache_write": 750078,
-   "cache_read": 10400683,
-   "output": 6600,
+   "input": 34,
+   "cache_write": 751965,
+   "cache_read": 11150761,
+   "output": 7344,
    "lookups": 0,
    "source": "transcript"
+  },
+  {
+   "date": "2026-11-15",
+   "session": "longevity",
+   "input": 510,
+   "cache_write": 355966,
+   "cache_read": 839851,
+   "output": 708,
+   "cost_usd": 3.03,
+   "source": "totals",
+   "since": "2026-11-05T08:09"
+  },
+  {
+   "date": "2026-11-16",
+   "session": "dev-agent",
+   "input": 30,
+   "cache_write": 1430341,
+   "cache_read": 10050146,
+   "output": 11437,
+   "lookups": 0,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-11-16",
+   "session": "options",
+   "input": 508,
+   "cache_write": 290346,
+   "cache_read": 426882,
+   "output": 32,
+   "cost_usd": 5.92,
+   "source": "totals",
+   "since": "2026-11-10T07:50"
   }
  ],
  "snapshots": {
@@ -424,7 +522,7 @@
    "cache_write": 6326540,
    "cache_read": 101796577,
    "output": 180366,
-   "cost_usd": 74.632816
+   "cost_usd": 74.6328165
   },
   "ai": {
    "id": "session_01V4gwm4gpbgR2T3g3neGZfo",
@@ -433,7 +531,7 @@
    "cache_write": 8644285,
    "cache_read": 114020768,
    "output": 224774,
-   "cost_usd": 95.744437
+   "cost_usd": 95.7444369
   },
   "robotaxi": {
    "id": "session_015aqbbZFdfXcibzEC7yT94z",
@@ -442,25 +540,25 @@
    "cache_write": 5004327,
    "cache_read": 103747088,
    "output": 441068,
-   "cost_usd": 66.881
+   "cost_usd": 66.8809621
   },
   "btc-cycles": {
    "id": "session_01AgBzbLd5WvgunSFvXxYQJW",
-   "as_of": "2026-11-11T10:30:44.343338Z",
-   "input": 3555602,
-   "cache_write": 7728193,
-   "cache_read": 231771878,
-   "output": 687310,
-   "cost_usd": 165.448419
+   "as_of": "2026-11-13T18:45:48.725887Z",
+   "input": 3557200,
+   "cache_write": 8189605,
+   "cache_read": 249881394,
+   "output": 728833,
+   "cost_usd": 178.1266178
   },
   "compute-chips": {
    "id": "session_01VySeUhZQDQ5Q3LRA2F2Br4",
-   "as_of": "2026-11-05T17:34:28.757126Z",
-   "input": 3778,
-   "cache_write": 2335380,
-   "cache_read": 26630611,
-   "output": 79650,
-   "cost_usd": 25.617274
+   "as_of": "2026-11-15T01:26:29.391628Z",
+   "input": 48302,
+   "cache_write": 3430156,
+   "cache_read": 35436030,
+   "output": 106267,
+   "cost_usd": 40.1967982
   },
   "demographics": {
    "id": "session_017FZw3HVNpap7DPqmrSzp9Y",
@@ -487,25 +585,25 @@
    "cache_write": 1726031,
    "cache_read": 73936172,
    "output": 137966,
-   "cost_usd": 31.4111
+   "cost_usd": 31.4111224
   },
   "china-us-tech": {
    "id": "session_015gcf1pJ9RbvZdFmKtFDJmc",
-   "as_of": "2026-11-05T23:52:02.285547Z",
-   "input": 120703,
-   "cache_write": 2633681,
-   "cache_read": 41320965,
-   "output": 118208,
-   "cost_usd": 31.6839
+   "as_of": "2026-11-13T18:15:09.026097Z",
+   "input": 1539688,
+   "cache_write": 3729751,
+   "cache_read": 55258089,
+   "output": 263179,
+   "cost_usd": 44.6269844
   },
   "longevity": {
    "id": "session_018wSWDkkykdb9BRc5pT72HC",
-   "as_of": "2026-11-05T08:09:43.341525Z",
-   "input": 22115,
-   "cache_write": 1605500,
-   "cache_read": 35580178,
-   "output": 99975,
-   "cost_usd": 21.9904
+   "as_of": "2026-11-15T07:42:21.969448Z",
+   "input": 22625,
+   "cache_write": 1961466,
+   "cache_read": 36420029,
+   "output": 100683,
+   "cost_usd": 25.0223068
   },
   "space": {
    "id": "session_01NWRBg9G3RhsJj6HU51qjDD",
@@ -514,7 +612,7 @@
    "cache_write": 2925403,
    "cache_read": 52518247,
    "output": 140066,
-   "cost_usd": 36.320096
+   "cost_usd": 36.3200957
   },
   "pokemon-cards": {
    "id": "session_01E2rgzyuaUHsMjB6PAC9UoM",
@@ -523,16 +621,16 @@
    "cache_write": 4762945,
    "cache_read": 119255891,
    "output": 237049,
-   "cost_usd": 66.732498
+   "cost_usd": 66.7324982
   },
   "prediction-markets": {
    "id": "session_01J3ZVbej7kofN2W2QvFMciM",
-   "as_of": "2026-11-03T19:04:50.436316Z",
-   "input": 12373,
-   "cache_write": 2814174,
-   "cache_read": 82141303,
-   "output": 144471,
-   "cost_usd": 41.8806
+   "as_of": "2026-11-13T18:15:30.166787Z",
+   "input": 12975,
+   "cache_write": 4174644,
+   "cache_read": 116499620,
+   "output": 184939,
+   "cost_usd": 60.447756
   },
   "trends": {
    "id": "session_01DDQTR7e3Cpv1twBcXdfFFq",
@@ -541,7 +639,7 @@
    "cache_write": 3429622,
    "cache_read": 77964714,
    "output": 173518,
-   "cost_usd": 46.518243
+   "cost_usd": 46.5182428
   },
   "nba-odds": {
    "id": "session_01HgurtzQez3NndAMfZFsyAp",
@@ -554,12 +652,12 @@
   },
   "ai-stocks": {
    "id": "session_01Hguru33HhMq9DoqY2C26R6",
-   "as_of": "2026-11-11T11:29:47.369853Z",
-   "input": 2922,
-   "cache_write": 809890,
-   "cache_read": 40140845,
-   "output": 124724,
-   "cost_usd": 17.013457
+   "as_of": "2026-11-13T08:44:47.205301Z",
+   "input": 3477,
+   "cache_write": 1197239,
+   "cache_read": 51350588,
+   "output": 152809,
+   "cost_usd": 22.9181176
   },
   "daily-check": {
    "id": "session_01Hguru4ZnmwKFghzbQZHzmL",
@@ -581,12 +679,12 @@
   },
   "luxury": {
    "id": "session_01Hguru15vQ5yfAZ9A1uCCyE",
-   "as_of": "2026-11-08T13:28:33.385828Z",
-   "input": 3782164,
-   "cache_write": 2282072,
-   "cache_read": 73195570,
-   "output": 658037,
-   "cost_usd": 81.98421
+   "as_of": "2026-11-12T08:29:27.215935Z",
+   "input": 3783092,
+   "cache_write": 2916114,
+   "cache_read": 83969958,
+   "output": 696943,
+   "cost_usd": 99.3132267
   },
   "ai-models": {
    "id": "session_01Hguru1tHBCffh5BwqSs3mk",
@@ -595,19 +693,19 @@
    "cache_write": 1709682,
    "cache_read": 16949588,
    "output": 225351,
-   "cost_usd": 46.047737
+   "cost_usd": 46.0477368
   },
   "options": {
    "id": "session_01Hguru26F1zDdmAxFa5sdbA",
-   "as_of": "2026-11-10T07:50:58.190988Z",
-   "input": 3048,
-   "cache_write": 834839,
-   "cache_read": 21296040,
-   "output": 123152,
-   "cost_usd": 28.20887
+   "as_of": "2026-11-16T07:50:53.925798Z",
+   "input": 3556,
+   "cache_write": 1125185,
+   "cache_read": 21722922,
+   "output": 123184,
+   "cost_usd": 34.1291905
   }
  },
  "saving_per_lookup": 112958,
  "saving_measured": "2026-10-31",
- "updated": "2026-11-15 07:56 UTC"
+ "updated": "2026-11-16 15:53 UTC"
 }

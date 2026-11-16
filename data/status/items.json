@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-15",
+ "updated": "2026-11-16",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -496,7 +496,7 @@
    "horizon": "next",
    "status": "in_progress",
    "area": "Data",
-   "detail": "Roadmap phase 0 step 4: every hand-entered row either cites its source or goes. The sessions clear their own; the routine counts what is left. Count on 10 Nov: 417 rows (debt-rates 292, demographics 56, ai-models 32, compute-chips 25, trends 10, climate 1, options 1)."
+   "detail": "Roadmap phase 0 step 4: every hand-entered row either cites its source or goes. The sessions clear their own; the routine counts what is left. Count on 16 Nov (scripts/verify_count.py): 786 rows (luxury 171, longevity 146, debt-rates 127, ai-models 119, pokemon-cards 78, compute-chips 52, space 37, housing 33, options 15, memecoins 6, altcoins 1, robotaxi 1)."
   },
   {
    "id": "r-phase1",
@@ -914,6 +914,23 @@
     "date": "2026-11-14",
     "minutes": 65,
     "runs": 16
+   }
+  },
+  {
+   "date": "2026-11-16",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Live check 07:43: 312 of 312 tabs, all tabs OK, no retries, no tab slower than 20 s; 44 3D canvases drawn. Health 07:43: Treasury fiscal-data API 502/503 on five Debt & Rates sources (weekend outage, recovered by 15:53); TCGdex 503 on three Pokémon cards; FRED SP500 stale on AI Stocks raised its alert (handed); Ember on Compute & Chips still stale. Local tests 467 passed. Newsletter built, not sent. Signals 67 of 83 wired, 17 crossed (Trends' rising topic at +11 and a 14.5-point prediction-market move). The run stalled for eight hours after its tests; the note was written at 16:00.",
+   "fixed": [],
+   "handed": [
+    "session:luxury (weekly log)",
+    "session:options (review)",
+    "session:ai-stocks (SP500 handled)"
+   ],
+   "actions": {
+    "date": "2026-11-15",
+    "minutes": 67,
+    "runs": 13
    }
   }
  ],
@@ -1926,6 +1943,73 @@
     "Say go in three sessions that wait for you in their own conversations: Pokémon (test speed-up and two older items), Compute & Chips (yesterday's review), Longevity (today's review)",
     "Broker for the options trading portal",
     "Gmail newsletter secrets (built, not sent again), eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
+   ]
+  },
+  {
+   "date": "2026-11-16",
+   "title": "Clean check; the real count of unsourced rows is 786; Options reviewed",
+   "summary": "The live check was clean again: 312 tabs, no retries, no slow tab, 44 3D canvases drawn. The proper count of hand-entered rows still marked verify, which last week's quick text match got wrong, is 786 across 12 dashboards (luxury 171, longevity 146, debt-rates 127, ai-models 119, pokemon-cards 78, compute-chips 52, space 37, housing 33, options 15, memecoins 6, altcoins 1, robotaxi 1); it now comes from scripts/verify_count.py, which reads every marking the files use. The Options review found earnings and FOMC dates that were guesses; its session confirmed the 2027 FOMC dates on the Fed's release the same morning and corrected June. A weekend outage at the US Treasury's data service left five Debt & Rates sources stale on Sunday; they recovered on their own by the afternoon. This run stalled for eight hours after its tests (a safety-check outage on the agent's side), so the note was written in the afternoon.",
+   "changes": [
+    {
+     "dashboard": "shared",
+     "slug": "status",
+     "tab": "roadmap",
+     "what": "scripts/verify_count.py counts rows still marked verify per dashboard and file, reading every convention the files use (a verify column, verify at the start or end of a note)",
+     "commit": "4287055",
+     "by": "agent"
+    },
+    {
+     "dashboard": "Options Setup",
+     "slug": "options",
+     "tab": "moves",
+     "what": "2027 FOMC dates confirmed on the Fed's release; June corrected to 8-9 June",
+     "commit": "ac51d15",
+     "by": "session:options"
+    },
+    {
+     "dashboard": "Trends",
+     "slug": "trends",
+     "tab": "search",
+     "what": "last verify rows cleared: the ten Wikipedia titles written from memory",
+     "commit": "be06787",
+     "by": "session:trends"
+    },
+    {
+     "dashboard": "BTC Cycles",
+     "slug": "btc-cycles",
+     "tab": "signals",
+     "what": "last verify row cleared: the perp-DEX share now cites a source",
+     "commit": "4aacb84",
+     "by": "session:btc-cycles"
+    }
+   ],
+   "review": "options",
+   "verify_rows": {
+    "luxury": 171,
+    "longevity": 146,
+    "debt-rates": 127,
+    "ai-models": 119,
+    "pokemon-cards": 78,
+    "compute-chips": 52,
+    "space": 37,
+    "housing": 33,
+    "options": 15,
+    "memecoins": 6,
+    "altcoins": 1,
+    "robotaxi": 1,
+    "total": 786
+   },
+   "next": [
+    "Luxury session: this week's liquidity, auction and stock rows (asked this morning)",
+    "AI Stocks: mark the stale FRED SP500 entry handled (asked)",
+    "Not yet reviewed: pokemon-cards, altcoins, btc-cycles, luxury, ai-models, demographics"
+   ],
+   "asks": [
+    "Debt & Rates: allow the government hosts its remaining rows need, or accept them staying marked verify",
+    "approve or skip r-fred-via-actions, r-climate-disasters, r-watch-recalibrate, r-private-signals",
+    "Say go in three sessions that wait for you in their own conversations: Pokémon, Compute & Chips, Longevity",
+    "Broker for the options trading portal",
+    "Gmail newsletter secrets, eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
    ]
   }
  ]
