@@ -140,7 +140,7 @@ GBP and EUR come from TCGdex's Cardmarket prices; Cardmarket itself refuses the 
 - `trends.csv`: quarterly values read off the Google Trends chart from memory; replace with the monthly CSV export (Explore → "pokemon cards", United States, 2004–present → download) and keep adding a row a month;
 - `basket.csv`: pokemontcg.io ids and PriceCharting paths (a wrong path falls back to PriceCharting search; check `/api/pokemon-cards/basket` → `resolved`), the 2025 release dates and every MSRP (36 packs × $3.99 for Sword & Shield boxes, × $4.49 for Scarlet & Violet, $49.99 ETBs, Base Set at $3.29 a pack);
 - `events.csv`: the March 2021 reprint statement and the June 2023 Japanese 151 dates are approximate;
-- `pop.csv`: one row (1st Edition Base Charizard PSA 10 = 121).
+- `pop.csv`: cleared 17 Nov 2026. Its one row (1st Edition Base Charizard PSA 10 = 121) is now dated 20 Mar 2022 and cites the sale listing that states the count; PSA's pop page keeps no history, so past counts come from dated listings and new rows from the pop page on the day read.
 
 Empty and waiting for rows: `psa.csv` (monthly PSA Pokémon cards graded, e.g. from GemRate, and turnaround), `japan.csv`, `hk.csv`, `newset.csv`. Until `psa.csv` has 8 points, the PSA volume signal shows "no data yet" and is left out of the score. `trends.csv` stops in May 2025, so the search signal shows "last reading … days old" and is left out of the score until newer rows are added.
 
