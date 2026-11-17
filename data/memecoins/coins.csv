@@ -1,8 +1,8 @@
 ticker,name,coingecko_id,chain,launched,note
-# The memecoin basket: the largest memecoins by market cap across the main chains. coingecko_id drives the data. 'verify' = id copied from memory, confirm with pytest -m network tests/test_memecoins.py.
-DOGE,Dogecoin,dogecoin,Dogecoin,2013,verify
-SHIB,Shiba Inu,shiba-inu,Ethereum,2020,verify
-PEPE,Pepe,pepe,Ethereum,2023,verify
-BONK,Bonk,bonk,Solana,2022,verify
-WIF,dogwifhat,dogwifcoin,Solana,2023,verify
-TRUMP,Official Trump,official-trump,Solana,2025,verify
+# The memecoin basket: the largest memecoins by market cap across the main chains. coingecko_id drives the data. 'verify' = id copied from memory, confirm with pytest -m network tests/test_memecoins.py or the coin's CoinGecko page (its "API ID" line; the page slug can differ, e.g. dogwifhat -> dogwifcoin). All six ids checked 2026-11-17.
+DOGE,Dogecoin,dogecoin,Dogecoin,2013,API ID dogecoin as shown on https://www.coingecko.com/en/coins/dogecoin (checked 2026-11-17)
+SHIB,Shiba Inu,shiba-inu,Ethereum,2020,API ID shiba-inu as shown on https://www.coingecko.com/en/coins/shiba-inu (checked 2026-11-17)
+PEPE,Pepe,pepe,Ethereum,2023,API ID pepe as shown on https://www.coingecko.com/en/coins/pepe (checked 2026-11-17)
+BONK,Bonk,bonk,Solana,2022,API ID bonk as shown on https://www.coingecko.com/en/coins/bonk (checked 2026-11-17)
+WIF,dogwifhat,dogwifcoin,Solana,2023,API ID dogwifcoin as shown on https://www.coingecko.com/en/coins/dogwifhat (checked 2026-11-17)
+TRUMP,Official Trump,official-trump,Solana,2025,API ID official-trump as shown on https://www.coingecko.com/en/coins/official-trump (checked 2026-11-17)
