@@ -29,4 +29,4 @@ RSI is under 50. In between otherwise. `HOT` and `COLD` in `app/topics/memecoins
 | Each coin's daily price and market cap, 365 days | [CoinGecko](https://www.coingecko.com/en/categories/meme-token) `coins/{id}/market_chart` | Daily | Automated, paced with the BTC Cycles fill (one CoinGecko call at a time) |
 | BTC daily price and market cap | CoinGecko `coins/bitcoin/market_chart` (shared with BTC Cycles) | Daily | Automated |
 | Meme sector and total crypto market cap | CoinGecko `coins/categories` (`meme-token`) and `global` | Logged once a day | Automated; no free history, so the log starts at first deploy |
-| The basket | `coins.csv` | As edited | Hand-maintained. `verify` = CoinGecko id copied from memory; confirm with `pytest -m network tests/test_memecoins.py` and clear the mark |
+| The basket | `coins.csv` | As edited | Hand-maintained. `verify` = CoinGecko id copied from memory; confirm with `pytest -m network tests/test_memecoins.py` (or the "API ID" line on the coin's CoinGecko page, whose URL slug can differ: dogwifhat's id is `dogwifcoin`) and clear the mark. All six ids checked on their CoinGecko pages on 17 Nov 2026 |
