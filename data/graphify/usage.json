@@ -495,10 +495,10 @@
   {
    "date": "2026-11-16",
    "session": "dev-agent",
-   "input": 30,
-   "cache_write": 1430341,
-   "cache_read": 10050146,
-   "output": 11437,
+   "input": 102,
+   "cache_write": 1468797,
+   "cache_read": 34281159,
+   "output": 24587,
    "lookups": 0,
    "source": "transcript"
   },
@@ -512,6 +512,16 @@
    "cost_usd": 5.92,
    "source": "totals",
    "since": "2026-11-10T07:50"
+  },
+  {
+   "date": "2026-11-17",
+   "session": "dev-agent",
+   "input": 28,
+   "cache_write": 771587,
+   "cache_read": 9812513,
+   "output": 7909,
+   "lookups": 0,
+   "source": "transcript"
   }
  ],
  "snapshots": {
@@ -707,5 +717,5 @@
  },
  "saving_per_lookup": 112958,
  "saving_measured": "2026-10-31",
- "updated": "2026-11-16 15:53 UTC"
+ "updated": "2026-11-17 07:57 UTC"
 }

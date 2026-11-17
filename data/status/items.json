@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-16",
+ "updated": "2026-11-17",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -423,6 +423,14 @@
    "since": "2026-11-15",
    "title": "Longevity: add SIGNALS() for its five approved signals, source 146 verify rows, bring seven hand-kept files up to date",
    "detail": "From the 15 Nov review. The session confirms with the owner in its own conversation before pushing."
+  },
+  {
+   "id": "ai-models-review-1117",
+   "owner": "session:ai-models",
+   "status": "waiting",
+   "since": "2026-11-17",
+   "title": "AI Models: clear 119 verify rows (benchmarks, index and openrouter_share fully unverified; prices, arena, releases)",
+   "detail": "From the 17 Nov review."
   }
  ],
  "roadmap": [
@@ -684,7 +692,7 @@
    "horizon": "now",
    "size": "small",
    "detail": "A small workflow runs once a day on a GitHub runner (which reaches FRED), downloads the eleven fredgraph.csv series the site uses (AI Stocks: SPASTT01USM661N, SP500, NASDAQCOM, NASDAQ100, VIXCLS; Luxury: CPIAUCSL, DEXSZUS, DEXUSEU, DEXUSUK; Options and Debt & Rates where they fall back to FRED) into data/fred/ and commits them with [skip ci]; _base's FRED fetch reads the committed file when the live call fails. About one runner minute a day.",
-   "why": "FRED has answered the Railway server with resets or timeouts since at least 7 Nov; HTTP/1.1 did not help (curl exit 28 on every series at 11:15 today). Nine FRED series on two dashboards are stale or failing, and the new Midterms tab can only move its 2026 line from a seed. A GitHub runner fetched FRED in 0.5 s this week."
+   "why": "FRED has answered the Railway server with resets or timeouts since at least 7 Nov; HTTP/1.1 did not help (curl exit 28 on every series at 11:15 today). Nine FRED series on two dashboards are stale or failing, and the new Midterms tab can only move its 2026 line from a seed. A GitHub runner fetched FRED in 0.5 s this week. Update 17 Nov: Luxury's source labels read 'FRED (downloaded 2026-11-07)' for US CPI and the S&P 500, so FRED has not answered the server for ten days."
   }
  ],
  "log": [
@@ -931,6 +939,21 @@
     "date": "2026-11-15",
     "minutes": 67,
     "runs": 13
+   }
+  },
+  {
+   "date": "2026-11-17",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Live check: 312 of 312 tabs, all tabs OK, no retries, no slow tab; 44 3D canvases drawn. Health: HKMA blocking Housing again (4 stale since 16 Nov 16:12); BTC Cycles' CoinGecko (429), Coin Metrics (526) and Farside (522) stale since 16 Nov, Yahoo failing but handled; TCGdex stale on five Pokémon cards; Ember on Compute & Chips. Local tests 471 passed. Newsletter built, not sent. Signals 68 of 83 wired, 18 crossed: Waymo at 500k paid rides a week, AI Stocks breadth at 8% (washout).",
+   "fixed": [],
+   "handed": [
+    "session:ai-models (review)"
+   ],
+   "actions": {
+    "date": "2026-11-16",
+    "minutes": 86,
+    "runs": 17
    }
   }
  ],
@@ -2007,6 +2030,59 @@
    "asks": [
     "Debt & Rates: allow the government hosts its remaining rows need, or accept them staying marked verify",
     "approve or skip r-fred-via-actions, r-climate-disasters, r-watch-recalibrate, r-private-signals",
+    "Say go in three sessions that wait for you in their own conversations: Pokémon, Compute & Chips, Longevity",
+    "Broker for the options trading portal",
+    "Gmail newsletter secrets, eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
+   ]
+  },
+  {
+   "date": "2026-11-17",
+   "title": "Clean check; FRED has not answered the server since 7 Nov; AI Models reviewed",
+   "summary": "The live check was clean for the third day running: 312 tabs, no retries, no slow tab, all 44 3D canvases drawn. Luxury's new source labels settle the FRED question: US inflation and the S&P 500 read 'FRED (downloaded 2026-11-07)', so FRED has not answered the Railway server for ten days, and the case for r-fred-via-actions stands. Exchange rates come from the ECB and UK inflation from ONS. Late on Monday the sessions shipped: Options compares the move the options priced with the move that happened after each report (Nebius priced ±16.6%, moved −16.8%; Rocket Lab ±14.6%, +6.5%); Luxury's supply index now chains like for like and bag spreads need matching quotes; AI Stocks marks its seeded FRED series handled. The unsourced-row count rose from 786 to 818 because Monday's luxury log added 54 rows from undated excerpts; AI Models, holding 119, was reviewed and asked to clear them.",
+   "changes": [
+    {
+     "dashboard": "Options Setup",
+     "slug": "options",
+     "tab": "moves",
+     "what": "earnings: the move the options priced against the move that happened, filled from the closes; unannounced dates shown as expected",
+     "commit": "970009e",
+     "by": "session:options"
+    },
+    {
+     "dashboard": "Luxury",
+     "slug": "luxury",
+     "tab": "liquidity",
+     "what": "weekly log (25 liquidity, 13 stock, 3 auction rows); Chrono24 supply as a like-for-like chained index; spreads only from matching quotes; every FRED label says downloaded or copy, Nasdaq first for the S&P 500",
+     "commit": "57eeccb",
+     "by": "session:luxury"
+    },
+    {
+     "dashboard": "AI Stocks",
+     "slug": "ai-stocks",
+     "tab": "midterms",
+     "what": "a FRED series served from its old snapshot is marked handled too (cleared Monday's alert)",
+     "commit": "f583d04",
+     "by": "session:ai-stocks"
+    },
+    {
+     "dashboard": "Altcoins",
+     "slug": "altcoins",
+     "tab": "coins",
+     "what": "last verify row cleared",
+     "commit": "45a916f",
+     "by": "session:altcoins"
+    }
+   ],
+   "review": "ai-models",
+   "next": [
+    "AI Models: reply on its 119 verify rows",
+    "Wednesday: NVDA reports after the close; the Options priced-against-realised card should fill on Thursday",
+    "Not yet reviewed: pokemon-cards, altcoins, btc-cycles, luxury, demographics"
+   ],
+   "asks": [
+    "approve r-fred-via-actions: FRED has not answered the server since 7 Nov (Luxury's labels now show it), and AI Stocks and Luxury run on saved copies",
+    "Debt & Rates: allow the government hosts its remaining rows need, or accept them staying marked verify",
+    "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
     "Say go in three sessions that wait for you in their own conversations: Pokémon, Compute & Chips, Longevity",
     "Broker for the options trading portal",
     "Gmail newsletter secrets, eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
