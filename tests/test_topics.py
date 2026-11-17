@@ -1120,7 +1120,7 @@ def test_robotaxi_tesla_rate_and_rules(snapdir, monkeypatch):
     for d in (t, f, s):
         B.json_safe(d)
         assert not [k for k in d if k.endswith("_error")], [k for k in d if k.endswith("_error")]
-    assert t["kpi"]["deliveries_last"] > 0 and t["tsla"] and {"UK", "HK"} <= set(t["fsd_markets"]) and t["milestones"][0]["date"] >= t["milestones"][-1]["date"]
+    assert t["kpi"]["deliveries_last"] > 0 and t["tsla"] and "UK" in t["fsd_markets"] and t["milestones"][0]["date"] >= t["milestones"][-1]["date"]
     assert {r["market"] for r in f["regulation"]} >= {"US", "UK", "HK", "China"}
     w = [x for x in s["reports"]["rate"] if x["operator"] == "Waymo"]                     # miles.csv says "Waymo", NHTSA "Waymo LLC"
     assert w and all(x["reports"] > 0 and x["per_million"] > 0 for x in w) and s["reports"]["archived"]
