@@ -113,6 +113,8 @@ Signals (`data/signals/watchlist.json`, approved by the owner on 7 Nov 2026): `r
 
 A row whose note contains `verify` was entered from an article or a search excerpt, not confirmed on the cited page (in the session that built this, the brand sites and platforms were not reachable from the server, so every fee row and many price rows are marked). Check each against its cited page, then fix the value or drop `verify`. The overview's top card counts them. Least certain: the day a current list price took effect (rows dated the day they were seen), undated resale listings (dated the day seen, "date approximate"), the Hermès UK list (conflicting reports), the Saint Laurent UK list between 2022 and 2025 (no rows found), and the Rebag 2023 brand figures implied from the 2024 report.
 
+Launch dates in `items.csv` (checked 18 Nov 2026): the Celine Ava in Triomphe canvas came out in April 2020, at first only in Celine's Asian stores (Hypebae, 29 Apr 2020), so its row moves from September 2021 to 29 Apr 2020. The Saint Laurent Le 5 à 7 launched for the Spring 2021 season (WWD; Bustle), so 1 Feb 2021 stays as an approximate day. The Louis Vuitton Alma BB is still marked `verify`: Louis Vuitton's pages list M46990 now and M53152 before it, but none of them says when the code changed, so the 2024 date is unconfirmed.
+
 ## Upkeep
 
 - A new list price: one row in `retail.csv` dated the day it took effect.
