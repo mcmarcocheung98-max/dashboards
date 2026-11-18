@@ -49,7 +49,7 @@ const VIEWS = {
     const wb = d.wpp_births ? card("Births per year, 1950–2100 (UN, thousands)", ...projChart(d.wpp_births, v => big(v * 1000), { small: true, log: true }),
       note(projNote + " Log scale so China and Hong Kong fit one chart. 20 years: births now are the workers of the 2040s; 50+ years: the projection after 2050 assumes fertility drifts back up, which none of the four has yet shown.")) : null;
     const rows = card("National figures", rowsTable(d.rows || [], (v, r) => +v > 100 ? num(+v) : num(+v, 3)),
-      note("Kept in data/demographics/births.csv and tfr.csv. Rows marked 'verify' were written from memory or press reports: check them against the agency's table."));
+      note("Kept in data/demographics/births.csv and tfr.csv. Each national figure cites the release it comes from; China's are NBS figures as reported by the press (Xinhua, China Daily, AP, Caixin); NBS's own pages could not be opened when the rows were checked."));
     const tfr3 = d.tfr && Object.keys(d.tfr).length > 1 ? card("Fertility in 3D: children per woman, 1950 to 2100",
       ...chart3d({ ...grid3d(Object.entries(d.tfr).map(([k, v]) => ({ name: k, points: [...(v.est || []), ...(v.proj || [])] })).sort((a, b) => lastY(a.points) - lastY(b.points))), mode: "ribbons", zero: false, h: 440,
         xFmt: d3year, zFmt: f2, xHead: "year", csvName: "fertility 3d", note: "UN estimates, then the UN's medium projection after 2023. Drag to turn; hover for a country's rate in a year." }),
@@ -81,7 +81,11 @@ const VIEWS = {
       : card("Net migration", missing(d, "rate", "The UN series"), stale(d));
     const net = d.net ? card("Net migration, 1950–2100 (UN, thousands a year)", ...projChart(d.net, v => big(v * 1000), { small: true }), note(projNote)) : null;
     const natl = Object.entries(d.national || {}).filter(([, p]) => p.length);
-    const nat = natl.length ? card("National counts (12 months to each date)", ...linesChart(natl.map(([k, p], i) => ({ name: k, points: p, color: css(SERIES[i % SERIES.length]) })), v => big(v), { small: true }),
+    // the owner's signal watches UK net migration below 200k a year: say how far the latest ONS figure is from that line
+    const ukp = (natl.find(([k]) => k.startsWith("UK net migration")) || [])[1], uk = ukp && ukp[ukp.length - 1];
+    const ukLine = uk ? note("UK net migration, latest ONS figure: " + big(uk[1]) + " in the 12 months to " + dayLabel(uk[0]) + ". The watch point is below 200k a year: " +
+      (uk[1] < 200000 ? "crossed, " + big(200000 - uk[1]) + " under it." : big(uk[1] - 200000) + " above it.")) : null;
+    const nat = natl.length ? card("National counts (12 months to each date)", ...linesChart(natl.map(([k, p], i) => ({ name: k, points: p, color: css(SERIES[i % SERIES.length]) })), v => big(v), { small: true }), ukLine,
       note("ONS long-term international migration (UK), Census Bureau net international migration (US), C&SD net movement and one-way permit holders (Hong Kong). Definitions differ, so read each line on its own. " +
         "Hong Kong's one-way permits (up to 150 a day from the mainland) are its steady inflow: 32,000 in the year to mid-2025 against a natural decrease of 14,800."), cite(d.cited)) : null;
     const rows = card("National figures", rowsTable(d.rows || [], v => num(+v)), note("Kept in data/demographics/migration.csv."));

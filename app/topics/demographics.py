@@ -45,7 +45,7 @@ SOURCES = [{"name": "UN World Population Prospects 2024 (estimates 1950-2023, me
             "cadence": "as published"}]
 NOTES = ("UN WPP 2024 is the one source that covers all four places the same way from 1950 to 2100: lines are estimates to 2023 and the UN's medium "
          "projection after (dashed). The national figures (CDC, ONS, C&SD, NBS) are the agencies' own and can differ from the UN's: the UK series from ONS "
-         "is England and Wales, and the UN's China excludes Hong Kong, Macao and Taiwan. Rows marked 'verify' were entered from memory or press reports.")
+         "is England and Wales, and the UN's China excludes Hong Kong, Macao and Taiwan. Every hand-entered national figure cites its release; China's are NBS figures as reported by the press.")
 CUT = 2023                            # last WPP 2024 estimate year; later years are the projection
 
 
