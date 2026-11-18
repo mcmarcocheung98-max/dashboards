@@ -1,10 +1,18 @@
 date,meeting,source,note
-# FOMC scheduled meetings: date = the decision day (second day). Add the next year's dates when the Fed publishes them (usually in the summer before).
-2026-01-28,January 27-28,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,verify: 2026 calendar from memory
-2026-03-18,March 17-18 (projections),https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,verify: 2026 calendar from memory
-2026-04-29,April 28-29,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,verify: 2026 calendar from memory
-2026-06-17,June 16-17 (projections),https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,verify: 2026 calendar from memory
-2026-07-29,July 28-29,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,verify: 2026 calendar from memory
-2026-09-16,September 15-16 (projections),https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,verify: 2026 calendar from memory
-2026-10-28,October 27-28,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,verify: 2026 calendar from memory
-2026-12-09,December 8-9 (projections),https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,verify: 2026 calendar from memory
+# FOMC scheduled meetings: date = the decision day (second day). 2026 from the Fed's release of 9 Aug 2024, 2027 from its revised schedule of 12 Nov 2026 (which moved December 7-8 to November 16-17 and made October 26-27 a strategy meeting with no policy decision). Add the next year's dates when the Fed publishes them (usually in the summer before).
+2026-01-28,January 27-28,https://www.federalreserve.gov/newsevents/pressreleases/monetary20240809a.htm,
+2026-03-18,March 17-18 (projections),https://www.federalreserve.gov/newsevents/pressreleases/monetary20240809a.htm,
+2026-04-29,April 28-29,https://www.federalreserve.gov/newsevents/pressreleases/monetary20240809a.htm,
+2026-06-17,June 16-17 (projections),https://www.federalreserve.gov/newsevents/pressreleases/monetary20240809a.htm,
+2026-07-29,July 28-29,https://www.federalreserve.gov/newsevents/pressreleases/monetary20240809a.htm,
+2026-09-16,September 15-16 (projections),https://www.federalreserve.gov/newsevents/pressreleases/monetary20240809a.htm,
+2026-10-28,October 27-28,https://www.federalreserve.gov/newsevents/pressreleases/monetary20240809a.htm,
+2026-12-09,December 8-9 (projections),https://www.federalreserve.gov/newsevents/pressreleases/monetary20240809a.htm,
+2027-01-27,January 26-27,https://www.federalreserve.gov/newsevents/pressreleases/monetary20261112a.htm,tentative
+2027-03-17,March 16-17,https://www.federalreserve.gov/newsevents/pressreleases/monetary20261112a.htm,tentative
+2027-04-28,April 27-28,https://www.federalreserve.gov/newsevents/pressreleases/monetary20261112a.htm,tentative
+2027-06-09,June 8-9,https://www.federalreserve.gov/newsevents/pressreleases/monetary20261112a.htm,tentative
+2027-07-28,July 27-28,https://www.federalreserve.gov/newsevents/pressreleases/monetary20261112a.htm,tentative
+2027-09-15,September 14-15,https://www.federalreserve.gov/newsevents/pressreleases/monetary20261112a.htm,tentative
+2027-10-27,October 26-27,https://www.federalreserve.gov/newsevents/pressreleases/monetary20261112a.htm,strategy discussion; no policy decision
+2027-11-17,November 16-17,https://www.federalreserve.gov/newsevents/pressreleases/monetary20261112a.htm,tentative
