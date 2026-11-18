@@ -63,13 +63,18 @@ TOPIC = Topic(SLUG, "Luxury Tracker: watches & bags",
 FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={id}"
 FRED_IDS = {"cpi_us": "CPIAUCSL", "cpi_uk": "GBRCPIALLMINMEI", "gbpusd": "DEXUSUK", "chfusd": "DEXSZUS", "eurusd": "DEXUSEU", "sp500": "SP500"}
 ONS_CPI = "https://www.ons.gov.uk/generator?format=csv&uri=/economy/inflationandpriceindices/timeseries/d7bt/mm23"   # UK CPI index (2015=100)
-NASDAQ_SPX = "https://api.nasdaq.com/api/quote/SPX/historical?assetclass=index&fromdate={a}&todate={b}&limit=9999"
-NASDAQ_SPX_KEY = "https://api.nasdaq.com/api/quote/SPX/historical?assetclass=index"                      # stable snapshot address
+# Nasdaq's quote API carries Nasdaq's own indices only (SPX and INX answer "Symbol not exists", 18 Nov 2026): the S&P 500 comes from SPY,
+# the ETF that tracks it. The ROI tab only uses its change over a period, which matches the index's price change less the 0.09% fee.
+NASDAQ_SPX = "https://api.nasdaq.com/api/quote/SPY/historical?assetclass=etf&fromdate={a}&todate={b}&limit=9999"
+NASDAQ_SPX_KEY = "https://api.nasdaq.com/api/quote/SPY/historical?assetclass=etf"                        # stable snapshot address
 ECB_FX = "https://data-api.ecb.europa.eu/service/data/EXR/D.USD+GBP+CHF.EUR.SP00.A?format=csvdata&startPeriod=2015-01-01"   # daily reference rates per EUR
 FRED_SEED = B.MANUAL_DIR / "luxury" / "fred"       # committed copies, cut to what the charts need, for when FRED has never answered this server
 CONTEXT_TIMEOUT = 30
 CONTEXT_RETRY_S = DAY                               # the context sources are tried at most once a day (FRED times out from Railway)
 _CTX_RUNNING = threading.Lock()
+HANDLED_BY = {"ecb": (ECB_FX, "the ECB does not answer the server; exchange rates from FRED's copy"),
+              "ons": (ONS_CPI, "ONS does not answer the server; UK CPI from FRED's copy"),
+              "nasdaq_spx": (NASDAQ_SPX_KEY, "Nasdaq does not answer the server; the S&P 500 from FRED's copy")}
 PLAIN_UA = {"User-Agent": "dashboards/1.0 (+https://github.com/mcmarcocheung98-max/dashboards)"}   # FRED answers a plain client at once where the browser UA stalls
 NASDAQ_HEADERS = {"Accept": "application/json, text/plain, */*", "Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"}
 WIKI_MONTHLY = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/{title}/monthly/2015070100/{b}"
@@ -176,15 +181,31 @@ def parse_ons(text: str) -> pd.Series:
     return pd.Series(out).sort_index()
 
 
+class StaleServed(RuntimeError):
+    """fetch could not download and served its last snapshot instead (it does not raise when a snapshot exists)."""
+
+
+def fresh(url: str, *, key: str | None = None, **kw) -> str:
+    """BACKGROUND only: fetch, but raise StaleServed when the download failed and fetch fell back to its snapshot, so a caller can try
+    its next route and mark the failure handled. The memory copy is dropped first, so a retry really downloads."""
+    from ..cache import _cache
+    k = key or url
+    _cache.pop(f"topic:{k}", None)
+    text = fetch(url, DAY, key=key, **kw)
+    if k in B.STALE:
+        raise StaleServed(f"download failed; served the snapshot of {pd.Timestamp(B.STALE[k], unit='s').date()} ({(B.HEALTH.get(k) or {}).get('error') or 'no error kept'})")
+    return text
+
+
 def fred_download(key: str) -> pd.Series:
-    """BACKGROUND only: FRED's CSV through curl (what works from Railway when FRED answers at all), then requests with a plain user-agent;
-    the snapshot is written on success."""
+    """BACKGROUND only: FRED's CSV through curl, then (when curl fails or only the old snapshot came back) requests with a plain user-agent;
+    raises when neither downloaded, even if a snapshot was served."""
     url = FRED.format(id=FRED_IDS[key])
     try:
-        return parse_fred(fetch(url, DAY, curl=True, timeout=CONTEXT_TIMEOUT, min_bytes=300))
+        return parse_fred(fresh(url, curl=True, timeout=CONTEXT_TIMEOUT, min_bytes=300))
     except Exception as e:
         try:
-            return parse_fred(fetch(url, DAY, curl=False, timeout=CONTEXT_TIMEOUT, min_bytes=300, headers=PLAIN_UA))
+            return parse_fred(fresh(url, curl=False, timeout=CONTEXT_TIMEOUT, min_bytes=300, headers=PLAIN_UA))
         except Exception:
             raise e
 
@@ -259,16 +280,25 @@ def cpi_uk() -> tuple[pd.Series, str]:
         return s, fred_label("cpi_uk", seed)
 
 
+def parse_nasdaq_closes(text: str) -> pd.Series:
+    """Nasdaq's historical quote JSON -> daily closes; ValueError (with Nasdaq's own message) when it answered an error."""
+    j = __import__("json").loads(text)
+    rows = (((j or {}).get("data") or {}).get("tradesTable") or {}).get("rows") or []
+    if not rows:
+        msg = "; ".join(m.get("errorMessage", "") for m in (((j or {}).get("status") or {}).get("bCodeMessage") or []))
+        raise ValueError("Nasdaq: " + (msg or "no rows"))
+    n = pd.Series({pd.to_datetime(r["date"], format="%m/%d/%Y"): float(str(r["close"]).replace("$", "").replace(",", "")) for r in rows if r.get("close")}).sort_index()
+    if len(n) < 20:
+        raise ValueError(f"Nasdaq: {len(n)} rows")
+    return n
+
+
 def sp500() -> tuple[pd.Series, str]:
-    """S&P 500 closes from kept copies only: Nasdaq's index quote first (fresher than FRED, which lags a day), FRED when its copy is
+    """S&P 500 closes from kept copies only: SPY's closes from Nasdaq first (fresher than FRED, which lags a day), FRED when its copy is
     newer or Nasdaq was never fetched; the label says whether FRED's copy was downloaded or is the committed seed."""
     nas = None
     try:
-        j = __import__("json").loads(B.cached_only(NASDAQ_SPX_KEY))
-        rows = (((j or {}).get("data") or {}).get("tradesTable") or {}).get("rows") or []
-        n = pd.Series({pd.to_datetime(r["date"], format="%m/%d/%Y"): float(str(r["close"]).replace("$", "").replace(",", "")) for r in rows if r.get("close")}).sort_index()
-        if len(n) >= 20:
-            nas = n
+        nas = parse_nasdaq_closes(B.cached_only(NASDAQ_SPX_KEY))
     except Exception:
         pass
     try:
@@ -277,7 +307,7 @@ def sp500() -> tuple[pd.Series, str]:
         fred_s, seed = None, None
     if nas is not None and (fred_s is None or nas.index[-1] >= fred_s.index[-1]):
         on = kept_on(NASDAQ_SPX_KEY)
-        return nas, "Nasdaq" + (f" (downloaded {on})" if on else "")
+        return nas, "SPY via Nasdaq" + (f" (downloaded {on})" if on else "")
     if fred_s is None:
         raise LookupError("not fetched yet")
     return fred_s, fred_label("sp500", seed)
@@ -316,7 +346,7 @@ def fx() -> dict:
 
 def fill_context() -> dict:
     """BACKGROUND job: the context sources at most once a day (a marker on the volume, so a restart does not reset it): the ECB's rates, ONS,
-    Nasdaq's S&P quote, each FRED series, and each Wikipedia article's pageviews and summary (its lead image), each CONTEXT_TIMEOUT seconds,
+    SPY's closes from Nasdaq (for the S&P 500), each FRED series, and each Wikipedia article's pageviews and summary (its lead image), each CONTEXT_TIMEOUT seconds,
     six at a time; a FRED failure is marked handled while the seed serves; then the cached payloads are dropped so the next view reads the
     new copies. Also started by a view that finds only seeds or an article never fetched."""
     from concurrent.futures import ThreadPoolExecutor
@@ -331,6 +361,7 @@ def fill_context() -> dict:
             last = 0.0
         missing = [t for t in all_wiki_titles() if not (B._snap(wiki_key(t)).exists())]
         if time.time() - last < CONTEXT_RETRY_S and not missing:
+            renew_handled()                              # keep /api/health quiet between the daily tries (handled lasts two days)
             return {"context": "tried less than a day ago"}
         B.SNAP_DIR.mkdir(parents=True, exist_ok=True)
         mark.write_text(str(time.time()))
@@ -344,19 +375,23 @@ def fill_context() -> dict:
                         pass                                   # a stub with months of history: fetched and kept, the view falls through it
                     wiki_image_download(name[5:])
                 elif name == "ecb":
-                    parse_ecb(fetch(ECB_FX, DAY, timeout=CONTEXT_TIMEOUT, min_bytes=500, headers=PLAIN_UA))
+                    parse_ecb(fresh(ECB_FX, timeout=CONTEXT_TIMEOUT, min_bytes=500, headers=PLAIN_UA))
                 elif name == "ons":
-                    parse_ons(fetch(ONS_CPI, DAY, timeout=CONTEXT_TIMEOUT, min_bytes=300))
+                    parse_ons(fresh(ONS_CPI, timeout=CONTEXT_TIMEOUT, min_bytes=300))
                 elif name == "nasdaq_spx":
                     url = NASDAQ_SPX.format(a="2016-01-01", b=pd.Timestamp.now().strftime("%Y-%m-%d"))
-                    fetch(url, DAY, timeout=CONTEXT_TIMEOUT, headers=NASDAQ_HEADERS, key=NASDAQ_SPX_KEY, min_bytes=500)
+                    parse_nasdaq_closes(fresh(url, timeout=CONTEXT_TIMEOUT, headers=NASDAQ_HEADERS, key=NASDAQ_SPX_KEY, min_bytes=500))
                 else:
                     fred_download(name)
                 return name, "ok"
             except Exception as e:
+                # every route here has another behind it (the seed, FRED, the ECB's or ONS's FRED copy): a failure, or a download that only
+                # served the old snapshot, is marked handled so /api/health raises no alert while the page reads the other copy
                 if name in FRED_IDS and (FRED_SEED / f"{FRED_IDS[name]}.csv").exists():
                     handled(FRED.format(id=FRED_IDS[name]), "FRED does not answer the server; the committed copy serves (data/luxury/fred)")
-                return name, f"{type(e).__name__}: {str(e)[:80]}"
+                elif name in HANDLED_BY:
+                    handled(HANDLED_BY[name][0], HANDLED_BY[name][1])
+                return name, ("stale: " if isinstance(e, StaleServed) else "") + f"{type(e).__name__}: {str(e)[:80]}"
         with ThreadPoolExecutor(max_workers=6) as ex:
             res = dict(ex.map(one, ["ecb", "ons", "nasdaq_spx", *FRED_IDS, *("wiki:" + t for t in all_wiki_titles())]))
         for k in ("fx", "overview", "watches", "bags", "roi", "liquidity"):
@@ -364,6 +399,21 @@ def fill_context() -> dict:
         return res
     finally:
         _CTX_RUNNING.release()
+
+
+def renew_handled() -> int:
+    """Mark handled again every context source this server has tried that is still failing or serving its snapshot, where another copy
+    serves the page (the seed for FRED; FRED's copy for the ECB, ONS and SPY). Returns how many were renewed."""
+    n = 0
+    routes = {FRED.format(id=sid): (FRED_SEED / f"{sid}.csv").exists() and "FRED does not answer the server; the committed copy serves (data/luxury/fred)"
+              for sid in FRED_IDS.values()}
+    routes.update({url: why for url, why in HANDLED_BY.values()})
+    for url, why in routes.items():
+        h = B.HEALTH.get(url)
+        if why and h and (url in B.STALE or not h.get("ok") or (h.get("fail") or 0) > (h.get("ok") or 0)):
+            handled(url, why)
+            n += 1
+    return n
 
 
 def _kick_context() -> None:

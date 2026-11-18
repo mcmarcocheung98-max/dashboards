@@ -469,5 +469,37 @@ def test_sp500_prefers_nasdaq_and_labels_sources(mocked, monkeypatch):
     monkeypatch.setattr(B, "_download", lambda url, *a, **k: nas if "nasdaq.com" in url else fake_fetch(url))
     B.fetch(M.NASDAQ_SPX.format(a="2016-01-01", b="2026-11-13"), 60, key=M.NASDAQ_SPX_KEY, min_bytes=10)
     s, src = M.sp500()
-    assert src.startswith("Nasdaq (downloaded 20") and s.index[-1] == pd.Timestamp("2026-11-13")
+    assert src.startswith("SPY via Nasdaq (downloaded 20") and s.index[-1] == pd.Timestamp("2026-11-13")
     assert M.fred_label("cpi_us", "2026-10-01") == "FRED (copy to 2026-10-01)" and M.fred_label("cpi_us", None).startswith("FRED (downloaded 20")
+
+
+def test_fill_marks_a_stale_served_snapshot_handled_and_tries_the_fallback(mocked, monkeypatch):
+    """FRED answered once (the fixture's fill), then times out: fetch would serve the old snapshot without raising. The fill must still try
+    requests after curl, report the series as stale, and mark it handled so /api/health raises no alert."""
+    tried = []
+
+    def dead(url, timeout=60, curl=False, *a, **k):
+        tried.append(("curl" if curl else "requests", url))
+        raise TimeoutError("curl exit 28")
+    monkeypatch.setattr(B, "_download", dead)
+    (B.SNAP_DIR / "luxury-context-try.txt").unlink()
+    B.HEALTH.clear()
+    res = M.fill_context()
+    for key, sid in M.FRED_IDS.items():
+        url = M.FRED.format(id=sid)
+        assert res[key].startswith("stale: StaleServed"), res[key]
+        assert ("curl", url) in tried and ("requests", url) in tried                   # the requests route really ran
+        assert B.HEALTH[url].get("handled"), sid
+    assert res["ecb"].startswith(("stale", "TimeoutError")) and B.HEALTH[M.ECB_FX].get("handled") and B.HEALTH[M.NASDAQ_SPX_KEY].get("handled")
+    s, seed = M.fred_kept("cpi_us")
+    assert seed is None and len(s) > 100                                                # the page still reads the snapshot
+    for h in B.HEALTH.values():
+        h.pop("handled", None)
+    assert M.fill_context() == {"context": "tried less than a day ago"}                  # within the day: no download, but the flags are renewed
+    assert all(B.HEALTH[M.FRED.format(id=sid)].get("handled") for sid in M.FRED_IDS.values())
+
+
+def test_parse_nasdaq_closes_reports_nasdaqs_error():
+    with pytest.raises(ValueError, match="Symbol not exists"):
+        M.parse_nasdaq_closes('{"data":null,"message":null,"status":{"rCode":400,"bCodeMessage":[{"code":1001,"errorMessage":"Symbol not exists."}]}}')
+    assert "assetclass=etf" in M.NASDAQ_SPX and "/SPY/" in M.NASDAQ_SPX
