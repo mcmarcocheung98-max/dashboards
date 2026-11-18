@@ -64,7 +64,7 @@ All rows carry a `source` URL. Rows whose `note` says **verify** were written fr
 - `fomc_events.csv`: `date,event,source,note,emergency`: what the Fed was reacting to (crises, data, QE announcements), each linked to its source; `emergency = yes` marks a move between scheduled meetings. A decision shows every event from 45 days before it. The September 2026 hike has no context yet: add the FOMC statement's reason.
 - `qe_programs.csv`: `date,end,name,kind,what,source,note`: QE1-3, Twist, QT1-2, reserve-management purchases and Treasury buybacks. Rows marked verify (end of QE1, Covid QE size, end of QT2, the 2025 bill purchases, the buyback start) are from memory.
 - `maturity.csv`: average maturity by country (US, UK, China, HK), all **verify**.
-- `fomc.csv`: `date,meeting,source,note`, one row per scheduled FOMC meeting, dated the decision day (second day). 2026 entered from memory (**verify**); add the next year's dates when the Fed publishes them.
+- `fomc.csv`: `date,meeting,source,note`, one row per scheduled FOMC meeting, dated the decision day (second day). 2026 from the Fed's release of 9 Aug 2024; 2027 from its revised schedule of 12 Nov 2026 (no December meeting; October 26-27 is a strategy meeting with no decision, kept with that note). Add the next year's dates when the Fed publishes them.
 - `cn_cpi.csv`: China CPI, annual average year-on-year %, NBS data as carried in the IMF WEO (`PCPIPCH`), copied from the IMF SDMX API on 2026-11-11. Monthly rows can be added (date = the month).
 - `stress_events.csv`: `date,country,event,source,note`, notable auction tails, downgrades and market stress. Add a row when an auction tails noticeably (the TreasuryDirect result against the when-issued yield) or a rating changes.
 
