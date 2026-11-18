@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-17",
+ "updated": "2026-11-18",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -431,6 +431,22 @@
    "since": "2026-11-17",
    "title": "AI Models: clear 119 verify rows (benchmarks, index and openrouter_share fully unverified; prices, arena, releases)",
    "detail": "From the 17 Nov review."
+  },
+  {
+   "id": "luxury-alerts-1118",
+   "owner": "session:luxury",
+   "status": "waiting",
+   "since": "2026-11-18",
+   "title": "Luxury: FRED series no longer marked handled (6 alerts since 57eeccb); Nasdaq SPX route returns 142 bytes",
+   "detail": "Seen on /api/health 18 Nov 07:41."
+  },
+  {
+   "id": "demo-review-1118",
+   "owner": "session:demographics",
+   "status": "waiting",
+   "since": "2026-11-18",
+   "title": "Demographics: footer copy about verify rows; note the UK migration signal is 4k from its watch point",
+   "detail": "From the 18 Nov review."
   }
  ],
  "roadmap": [
@@ -954,6 +970,22 @@
     "date": "2026-11-16",
     "minutes": 86,
     "runs": 17
+   }
+  },
+  {
+   "date": "2026-11-18",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Live check: 312 of 312 tabs, all tabs OK, 17 minutes; two first loads needed a retry (Housing boroughs 51 s, China vs US Tech overview 80 s); 44 3D canvases drawn. Health: Luxury 6 alerts (FRED no longer handled since 57eeccb, Nasdaq SPX short response); arXiv rate-limited on Trends; known items elsewhere. Local tests 471 passed. Newsletter built, not sent. Signals 68 of 83 wired, 18 crossed: AI Stocks basket drawdown -20.4% (bear market), breadth 8%, Waymo 500k rides a week.",
+   "fixed": [],
+   "handed": [
+    "session:luxury (alerts regression)",
+    "session:demographics (review)"
+   ],
+   "actions": {
+    "date": "2026-11-17",
+    "minutes": 62,
+    "runs": 12
    }
   }
  ],
@@ -2081,6 +2113,51 @@
    ],
    "asks": [
     "approve r-fred-via-actions: FRED has not answered the server since 7 Nov (Luxury's labels now show it), and AI Stocks and Luxury run on saved copies",
+    "Debt & Rates: allow the government hosts its remaining rows need, or accept them staying marked verify",
+    "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
+    "Say go in three sessions that wait for you in their own conversations: Pokémon, Compute & Chips, Longevity",
+    "Broker for the options trading portal",
+    "Gmail newsletter secrets, eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
+   ]
+  },
+  {
+   "date": "2026-11-18",
+   "title": "AI Stocks basket in a bear market; Luxury alerts regressed; Demographics reviewed",
+   "summary": "The AI Stocks basket is 20.4% below its peak, crossing the bear-market watch point, with breadth at 8% and Nvidia reporting after today's close. The live check passed every tab (two loaded on retry: Housing boroughs at 51 s and China vs US Tech overview at 80 s, both first loads). Luxury shows six alerts again: since Monday's label change its FRED series are no longer marked handled, and its new Nasdaq S&P 500 route returns an empty answer; handed back to its session. Demographics, reviewed today, has no unsourced rows left and current files; only a stale footer line and a note on the UK migration signal, 4k from its 200k watch point.",
+   "changes": [
+    {
+     "dashboard": "Robotaxi",
+     "slug": "robotaxi",
+     "tab": "tesla",
+     "what": "last verify row removed (Hong Kong FSD status)",
+     "commit": "0b106d0",
+     "by": "session:robotaxi"
+    },
+    {
+     "dashboard": "Pokémon Cards",
+     "slug": "pokemon-cards",
+     "tab": "psa9",
+     "what": "last population verify row cleared (1st Edition Base Charizard PSA 10 = 121, dated)",
+     "commit": "1b6cf19",
+     "by": "session:pokemon-cards"
+    },
+    {
+     "dashboard": "Memecoins",
+     "slug": "altcoins",
+     "tab": "memes",
+     "what": "last memecoin verify rows cleared (the six CoinGecko ids)",
+     "commit": "fdf647c",
+     "by": "session:altcoins"
+    }
+   ],
+   "review": "demographics",
+   "next": [
+    "Thursday: the Options priced-against-realised card should show Nvidia's move",
+    "Luxury: the FRED handled flag and the Nasdaq SPX route (asked)",
+    "Not yet reviewed: pokemon-cards, altcoins, btc-cycles, luxury"
+   ],
+   "asks": [
+    "approve r-fred-via-actions: FRED has not answered the server since 7 Nov",
     "Debt & Rates: allow the government hosts its remaining rows need, or accept them staying marked verify",
     "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
     "Say go in three sessions that wait for you in their own conversations: Pokémon, Compute & Chips, Longevity",
