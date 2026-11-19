@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-18",
+ "updated": "2026-11-19",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -435,10 +435,11 @@
   {
    "id": "luxury-alerts-1118",
    "owner": "session:luxury",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-18",
    "title": "Luxury: FRED series no longer marked handled (6 alerts since 57eeccb); Nasdaq SPX route returns 142 bytes",
-   "detail": "Seen on /api/health 18 Nov 07:41."
+   "detail": "Seen on /api/health 18 Nov 07:41. Fixed in 7f29680: a download that only served its old snapshot counts as failed, so the requests fallback runs; S&P 500 from SPY. 19 Nov: Luxury 36 fresh, 0 alerts, ROI labels read 'FRED (downloaded 2026-11-18)'.",
+   "done": "2026-11-19"
   },
   {
    "id": "demo-review-1118",
@@ -708,7 +709,17 @@
    "horizon": "now",
    "size": "small",
    "detail": "A small workflow runs once a day on a GitHub runner (which reaches FRED), downloads the eleven fredgraph.csv series the site uses (AI Stocks: SPASTT01USM661N, SP500, NASDAQCOM, NASDAQ100, VIXCLS; Luxury: CPIAUCSL, DEXSZUS, DEXUSEU, DEXUSUK; Options and Debt & Rates where they fall back to FRED) into data/fred/ and commits them with [skip ci]; _base's FRED fetch reads the committed file when the live call fails. About one runner minute a day.",
-   "why": "FRED has answered the Railway server with resets or timeouts since at least 7 Nov; HTTP/1.1 did not help (curl exit 28 on every series at 11:15 today). Nine FRED series on two dashboards are stale or failing, and the new Midterms tab can only move its 2026 line from a seed. A GitHub runner fetched FRED in 0.5 s this week. Update 17 Nov: Luxury's source labels read 'FRED (downloaded 2026-11-07)' for US CPI and the S&P 500, so FRED has not answered the server for ten days."
+   "why": "FRED has answered the Railway server with resets or timeouts since at least 7 Nov; HTTP/1.1 did not help (curl exit 28 on every series at 11:15 today). Nine FRED series on two dashboards are stale or failing, and the new Midterms tab can only move its 2026 line from a seed. A GitHub runner fetched FRED in 0.5 s this week. Update 17 Nov: Luxury's source labels read 'FRED (downloaded 2026-11-07)' for US CPI and the S&P 500, so FRED has not answered the server for ten days. Update 19 Nov: after 7f29680 Luxury reads 'FRED (downloaded 2026-11-18)', so FRED does answer the server through the requests fallback; AI Stocks still fails because its fetch serves the old snapshot first. Try r-shared-fresh before this."
+  },
+  {
+   "status": "proposed",
+   "by": "agent",
+   "horizon": "now",
+   "size": "small",
+   "id": "r-shared-fresh",
+   "title": "Move Luxury's fresh()/StaleServed into _base so every FRED reader (AI Stocks first) can fall back like Luxury does",
+   "detail": "AI Stocks still shows three FRED sources failing (curl exit 28 since 18 Nov 17:25) and serves its snapshot silently, so its requests fallback never runs. Luxury fixed the same trap in 7f29680 and now downloads FRED again. Proposed: put fresh() in _base, use it in ai_stocks (and options/debt-rates where they read FRED), one push per dashboard via its session. If it works, r-fred-via-actions can be withdrawn.",
+   "why": "AI Stocks has served its FRED series from an old snapshot since at least 7 Nov; Luxury's identical fix brought FRED back on 18 Nov at no runner cost."
   }
  ],
  "log": [
@@ -986,6 +997,21 @@
     "date": "2026-11-17",
     "minutes": 62,
     "runs": 12
+   }
+  },
+  {
+   "date": "2026-11-19",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Live check: all tabs OK in light and dark, no retries, 16 minutes; every 3D canvas drawn. Health: Luxury 0 alerts (fixed in 7f29680); AI Stocks three FRED sources failing (curl 28); known items elsewhere (Bluesky and Reddit 403, arXiv 429, Yahoo 429, TCGdex 503, World Bank and NOAA stale, Ember 14 bytes). Local tests 473 passed. Unsourced rows 798. Newsletter built, not sent. Signals 66 of 83 wired, 17 crossed.",
+   "fixed": [],
+   "handed": [
+    "session:btc-cycles (review)"
+   ],
+   "actions": {
+    "date": "2026-11-18",
+    "minutes": 64,
+    "runs": 15
    }
   }
  ],
@@ -2158,6 +2184,59 @@
    ],
    "asks": [
     "approve r-fred-via-actions: FRED has not answered the server since 7 Nov",
+    "Debt & Rates: allow the government hosts its remaining rows need, or accept them staying marked verify",
+    "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
+    "Say go in three sessions that wait for you in their own conversations: Pokémon, Compute & Chips, Longevity",
+    "Broker for the options trading portal",
+    "Gmail newsletter secrets, eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
+   ]
+  },
+  {
+   "date": "2026-11-19",
+   "title": "Luxury alerts cleared and FRED back on Luxury; AI Stocks needs the same fix; BTC Cycles reviewed",
+   "summary": "The live check passed every tab in light and dark mode with every 3D canvas drawn and no retries. Luxury is clean again (36 fresh, 0 alerts): its fix 7f29680 lets the requests fallback run when a download only served its snapshot, and FRED answered it on 18 Nov, the first time since 7 Nov. AI Stocks still serves three FRED series from its snapshot (curl timeouts since 18 Nov 17:25); the same fix moved into _base should cure it, which may make the FRED-by-Actions proposal unnecessary. Signals 66 of 83 wired, 17 crossed; new crossings: VIX term -0.48, London prices -3.5% a year, price-to-pay 10.98, boroughs rising 10 of 33, AI breadth 15%, a prediction-market move of -12.8 points; the AI basket is back above its -20% bear line. BTC Cycles, reviewed today, got its Signals tab and Hong Kong card labels fixed by its session (0156aae).",
+   "review": "btc-cycles",
+   "changes": [
+    {
+     "dashboard": "Luxury",
+     "slug": "luxury",
+     "tab": "roi",
+     "what": "a snapshot-only download counts as failed so FRED's fallback runs; S&P 500 from SPY",
+     "commit": "7f29680",
+     "by": "session:luxury"
+    },
+    {
+     "dashboard": "Luxury",
+     "slug": "luxury",
+     "tab": "items",
+     "what": "two bag launch-date verify rows cleared (Celine Ava date moved to 2020-04-29)",
+     "commit": "6b0bef2",
+     "by": "session:luxury"
+    },
+    {
+     "dashboard": "BTC Cycles",
+     "slug": "btc-cycles",
+     "tab": "signals",
+     "what": "Signals tab says when its inputs are a saved copy; Hong Kong holdings marked as a single 2024 reading",
+     "commit": "0156aae",
+     "by": "session:btc-cycles"
+    },
+    {
+     "dashboard": "Debt & Rates",
+     "slug": "debt-rates",
+     "tab": "fed",
+     "what": "FOMC calendar and QE programme verify rows cleared; 2027 meetings added",
+     "commit": "76ae37e, 9c6b6b5",
+     "by": "session:debt-rates"
+    }
+   ],
+   "next": [
+    "Options: the priced-against-realised card should show Nvidia's move after today's close",
+    "Not yet reviewed: pokemon-cards, altcoins, luxury",
+    "Monday 23 Nov: token totals, verify count, Luxury weekly log"
+   ],
+   "asks": [
+    "approve or skip r-shared-fresh (Luxury's FRED fix for AI Stocks and the others); r-fred-via-actions may then be withdrawn",
     "Debt & Rates: allow the government hosts its remaining rows need, or accept them staying marked verify",
     "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
     "Say go in three sessions that wait for you in their own conversations: Pokémon, Compute & Chips, Longevity",
