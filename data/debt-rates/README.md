@@ -66,7 +66,7 @@ All rows carry a `source` URL. Rows whose `note` says **verify** were written fr
 - `maturity.csv`: average maturity by country (US, UK, China, HK), all **verify**.
 - `fomc.csv`: `date,meeting,source,note`, one row per scheduled FOMC meeting, dated the decision day (second day). 2026 from the Fed's release of 9 Aug 2024; 2027 from its revised schedule of 12 Nov 2026 (no December meeting; October 26-27 is a strategy meeting with no decision, kept with that note). Add the next year's dates when the Fed publishes them.
 - `cn_cpi.csv`: China CPI, annual average year-on-year %, NBS data as carried in the IMF WEO (`PCPIPCH`), copied from the IMF SDMX API on 2026-11-11. Monthly rows can be added (date = the month).
-- `stress_events.csv`: `date,country,event,source,note`, notable auction tails, downgrades and market stress. Add a row when an auction tails noticeably (the TreasuryDirect result against the when-issued yield) or a rating changes.
+- `stress_events.csv`: `date,country,event,source,note`, notable auction tails, downgrades and market stress. Add a row when an auction tails noticeably (the TreasuryDirect result against the when-issued yield) or a rating changes. Every row cites its source (the nine dated from memory checked 19 Nov 2026: gilt crisis 130 bp in three days and £19.3bn bought, 30-year tail 5.3 bp on 9 Nov 2023, Moody's and Fitch China outlook cuts 5 Dec 2023 and 10 Apr 2024, 30-year gilt high moved to 7 Jan 2025, tariff sell-off moved to the week ending 11 Apr 2025, Moody's US downgrade 16 May 2025, 20-year tail 1.2 bp, 30-year gilt about 5.7% on 2 Sep 2025).
 
 ## Tabs
 
