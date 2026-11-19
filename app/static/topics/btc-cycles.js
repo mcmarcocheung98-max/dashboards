@@ -297,6 +297,7 @@ const VIEWS = {
       d.table.map(r => [r.ticker, r.issuer, m(r.since_launch), m(r.last_30d), m(r.last_day), m(r.best_day), m(r.worst_day)])), note("US$; Farside's daily table, net of creations and redemptions.")) : null;
     const intl = Object.keys(d.intl || {}).length ? card("Hong Kong ETFs and UK ETNs: BTC held (hand-entered)", ...linesChart(Object.entries(d.intl).map(([k, pts]) => ({ name: k, points: pts })), v => num(v) + " BTC", { small: true }),
       table(["Date", "Market", "BTC", "Source"], d.intl_rows.map(r => [r.date, r.series, num(+r.value), "[" + host(r.source) + "](" + r.source + ")" + (r.note ? " · " + r.note : "")])),
+      d.intl_rows.length < 4 ? el("div", { class: "warn", style: "margin-top:6px" }, d.intl_rows.length === 1 ? "A single reading, from " + d.intl_rows[0].date + ": not a current figure and not a trend." : "Only " + d.intl_rows.length + " readings, the latest from " + d.intl_rows[0].date + ".") : null,
       note("No free daily feed for these: add a row to data/btc-cycles/etf_holdings.csv from the issuers' holdings pages.")) : null;
     const ms = fold("Milestones", true, table(["Date", "Market", "What happened", "Source"], (d.milestones || []).map(r => [r.date, r.market, r.event, "[" + host(r.source) + "](" + r.source + ")"])));
     const day3 = t => new Date(t * 1000).toLocaleDateString([], { month: "short", year: "2-digit", timeZone: "UTC" });
@@ -366,7 +367,7 @@ const VIEWS = {
     const hd = [d.volume && d.volume.length ? { label: "BTC spot volume, 30-day average", points: d.volume, fmt: usdBig, delta: { lag: "90d" } } : null,
       d.dominance_log && d.dominance_log.length > 1 ? { label: "BTC dominance", points: d.dominance_log, fmt: v => v.toFixed(1) + "%", delta: { lag: "30d", abs: true, fmt: v => (v > 0 ? "+" : "") + v.toFixed(1) + " pts" } } : null].filter(Boolean);
     const head = hd.length ? card(null, followHead(hd, { latest: "Latest" })) : null;
-    return [head, status, ...mood, ...charts, doc, timing, breakers];
+    return [head, status, stale(d), ...mood, stale(M), ...charts, doc, timing, breakers];
   },
 };
 

@@ -99,7 +99,8 @@ Coin Metrics community data is free for non-commercial use with attribution. Def
   one spell are one episode), split by leg and by depth into the spell; and the rank correlation of the reading with the forward
   return, its t-value shrunk for overlapping windows (n / horizon independent observations).
 - Caveat: Fear and Greed covers three bear legs and two and a half bull legs; the board's zones were set by people looking back at the
-  same cycles it is scored on. `/api/btc-cycles/mood-stats` is the payload without its long series, for reading in a log.
+  same cycles it is scored on. `/api/btc-cycles/mood-stats` is the payload without its long series, for reading in a log;
+  `/api/btc-cycles/source-health` lists this dashboard's and Altcoin Study's sources that are not fresh.
 
 ## Keeping it up to date
 
@@ -158,7 +159,7 @@ Local preview: `python -m app.server`, then open `/btc-cycles`.
 - Google Trends has no stable free API; the sixth signal is hand-entered.
 - Spot + ETF volume (the doc's signal 4) is approximated by CoinGecko's all-exchange spot volume.
 - Pre-2024 sector figures are the doc's approximations and are labelled so.
-- After a deploy the background fill takes about 7 minutes (30 coins, 13 s apart, longer after a 429); until a coin is reached its row says "loading in the background". Live check 25 Oct 2026 23:21 UTC (Actions > live-check, then show-json on `/api/health` and `/api/btc-cycles/coins`): all 28 coins filled, every CoinGecko source fresh, every tab OK; the only "not available" cards were the two UK/HK treasury prices on the MSTR tab.
+- After a deploy the background fill takes about 7 minutes (30 coins, 13 s apart, longer after a 429); until a coin is reached its row says "loading in the background". Live check 25 Oct 2026 23:21 UTC (Actions > live-check, then show-json on `/api/health` and `/api/btc-cycles/coins`): all 28 coins filled, every CoinGecko source fresh, every tab OK; the only cards without data were the two UK/HK treasury prices on the MSTR tab.
 - Prediction markets (rank 4) have no liquid token and no row; ASTER, LIT, XPL, SKY, SYRUP and PLUME ids are marked `verify`.
 
 ## Requests for shared code

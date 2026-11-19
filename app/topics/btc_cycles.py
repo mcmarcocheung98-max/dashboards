@@ -874,6 +874,8 @@ def _signals_now() -> dict:
         out["volume"] = _pts(btc_volume().rolling(30).mean().dropna(), 0)
     except Exception:
         pass
+    from ._base import stale_info
+    out["stale"] = stale_info([LLAMA_STABLES, LLAMA_HL_REV, CM, CG_VOLUME, CG_GLOBAL])
     return out
 
 
@@ -1133,7 +1135,17 @@ def _mood_now() -> dict:
         out["board"]["missing"] = [g[1] for g in MD.GAUGES if g[0] not in sc or not np.isfinite(sc[g[0]].loc[agg.index[-1]])]
     except Exception as e:
         out["board_error"] = f"{type(e).__name__}: {e}"[:160]
+    from ._base import stale_info
+    out["stale"] = stale_info([FNG, CM_BOARD, CM, LLAMA_STABLES])        # which inputs are a saved copy, and from when
     return out
+
+
+def _source_health() -> dict:
+    """Not a tab: this dashboard's and Altcoin Study's sources that are not fresh, from /api/health, small enough to read in a log."""
+    from . import health
+    d = health()["dashboards"]
+    return {slug: {**{k: d[slug][k] for k in ("fresh", "stale", "failing", "alerts")}, "not_fresh": [x for x in d[slug]["sources"] if x.get("status") != "fresh"]}
+            for slug in (SLUG, "altcoins") if slug in d}
 
 
 def _mood_stats() -> dict:
@@ -1253,7 +1265,7 @@ def _cached_ep(name, fn, ttl=6 * 3600):
 ENDPOINTS = {"cycles": _cached_ep("cycles", _cycles_now), "sectors": _cached_ep("sectors", _sectors_now, 600), "metrics": _cached_ep("metrics", _metrics_now),
              "candidates": _cached_ep("candidates", _candidates_now), "signals": _cached_ep("signals", _signals_now, 3600),
              "coins": _cached_ep("coins", _coins_now), "rotation": _cached_ep("rotation", _rotation_now, 3600),
-             "fund-probe": _cached_ep("fund-probe", _fund_probe, 1800), "mood": _cached_ep("mood", _mood_now), "mood-stats": _mood_stats}
+             "fund-probe": _cached_ep("fund-probe", _fund_probe, 1800), "mood": _cached_ep("mood", _mood_now), "mood-stats": _mood_stats, "source-health": _source_health}
 from . import btc_flows as _flows                                    # ETF and MSTR tabs
 ENDPOINTS.update(_flows.ENDPOINTS)
 BACKGROUND = [fill_coins]                    # slow, rate-limited downloads the server runs outside page requests
