@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-19",
+ "updated": "2026-11-20",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -448,6 +448,30 @@
    "since": "2026-11-18",
    "title": "Demographics: footer copy about verify rows; note the UK migration signal is 4k from its watch point",
    "detail": "From the 18 Nov review."
+  },
+  {
+   "id": "options-cboe-403-1120",
+   "owner": "session:options",
+   "status": "waiting",
+   "since": "2026-11-20",
+   "title": "Options: Cboe delayed-quote chains answer 403 since 19 Nov 21:57 (24 stale)",
+   "detail": "cdn.cboe.com now redirects to cdn-api.cboe.com, which returns 403 from Railway and elsewhere. The page serves the 19 Nov snapshot. Asked for a permitted source, or plain labelling of the saved copy."
+  },
+  {
+   "id": "luxury-wiki-1120",
+   "owner": "session:luxury",
+   "status": "waiting",
+   "since": "2026-11-20",
+   "title": "Luxury: Wikipedia summaries and Wikimedia pageviews fail with ConnectionError since 18 Nov 23:44 (17 stale)",
+   "detail": "Attention tab inputs. Asked to check the fetch path after 7f29680 and fix or label."
+  },
+  {
+   "id": "pokemon-review-1120",
+   "owner": "session:pokemon-cards",
+   "status": "waiting",
+   "since": "2026-11-20",
+   "title": "Pokémon: empty hand files (psa, japan, hk, newset), trends.csv to May 2025 and events.csv to Jan 2025, 77 verify rows",
+   "detail": "From the 20 Nov review. Waits on the owner's go in that session."
   }
  ],
  "roadmap": [
@@ -704,12 +728,13 @@
   {
    "id": "r-fred-via-actions",
    "title": "FRED series fetched by a daily GitHub Action and committed, since Railway cannot reach FRED",
-   "status": "proposed",
+   "status": "done",
    "by": "agent",
-   "horizon": "now",
+   "horizon": "done",
    "size": "small",
    "detail": "A small workflow runs once a day on a GitHub runner (which reaches FRED), downloads the eleven fredgraph.csv series the site uses (AI Stocks: SPASTT01USM661N, SP500, NASDAQCOM, NASDAQ100, VIXCLS; Luxury: CPIAUCSL, DEXSZUS, DEXUSEU, DEXUSUK; Options and Debt & Rates where they fall back to FRED) into data/fred/ and commits them with [skip ci]; _base's FRED fetch reads the committed file when the live call fails. About one runner minute a day.",
-   "why": "FRED has answered the Railway server with resets or timeouts since at least 7 Nov; HTTP/1.1 did not help (curl exit 28 on every series at 11:15 today). Nine FRED series on two dashboards are stale or failing, and the new Midterms tab can only move its 2026 line from a seed. A GitHub runner fetched FRED in 0.5 s this week. Update 17 Nov: Luxury's source labels read 'FRED (downloaded 2026-11-07)' for US CPI and the S&P 500, so FRED has not answered the server for ten days. Update 19 Nov: after 7f29680 Luxury reads 'FRED (downloaded 2026-11-18)', so FRED does answer the server through the requests fallback; AI Stocks still fails because its fetch serves the old snapshot first. Try r-shared-fresh before this."
+   "why": "FRED has answered the Railway server with resets or timeouts since at least 7 Nov; HTTP/1.1 did not help (curl exit 28 on every series at 11:15 today). Nine FRED series on two dashboards are stale or failing, and the new Midterms tab can only move its 2026 line from a seed. A GitHub runner fetched FRED in 0.5 s this week. Update 17 Nov: Luxury's source labels read 'FRED (downloaded 2026-11-07)' for US CPI and the S&P 500, so FRED has not answered the server for ten days. Update 19 Nov: after 7f29680 Luxury reads 'FRED (downloaded 2026-11-18)', so FRED does answer the server through the requests fallback; AI Stocks still fails because its fetch serves the old snapshot first. Try r-shared-fresh before this. Withdrawn 20 Nov by the agent: superseded by r-shared-fresh (Luxury reaches FRED again without a runner).",
+   "withdrawn": "2026-11-20"
   },
   {
    "status": "proposed",
@@ -1011,6 +1036,23 @@
    "actions": {
     "date": "2026-11-18",
     "minutes": 64,
+    "runs": 15
+   }
+  },
+  {
+   "date": "2026-11-20",
+   "run": "scheduled",
+   "result": "problems",
+   "summary": "Live check: 312 of 312 tabs, all tabs OK, 17 minutes, one retry (Prediction Markets categories, dark). Health: Options 24 stale (Cboe 403), Luxury 17 stale (Wikipedia ConnectionError), AI Stocks three FRED failing; known items elsewhere (Bluesky and Reddit 403, Yahoo 429, ONS 429, one TCGdex card, Ember 14 bytes). Local tests 473 passed. Unsourced rows 779. Newsletter built, not sent. Signals 68 of 83 wired, 18 crossed.",
+   "fixed": [],
+   "handed": [
+    "session:options (Cboe 403)",
+    "session:luxury (Wikipedia)",
+    "session:pokemon-cards (review)"
+   ],
+   "actions": {
+    "date": "2026-11-19",
+    "minutes": 76,
     "runs": 15
    }
   }
@@ -2240,6 +2282,35 @@
     "Debt & Rates: allow the government hosts its remaining rows need, or accept them staying marked verify",
     "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
     "Say go in three sessions that wait for you in their own conversations: Pokémon, Compute & Chips, Longevity",
+    "Broker for the options trading portal",
+    "Gmail newsletter secrets, eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
+   ]
+  },
+  {
+   "date": "2026-11-20",
+   "title": "Nvidia moved inside its priced range; Cboe blocks Options' chains; Pokémon reviewed",
+   "summary": "Options priced Nvidia's results at ±3.9% (straddle); the stock fell 2.9%, inside the range (ratio 0.74), and all three recorded reports so far stayed inside (median ratio 0.65). The AI basket is back below its bear line at -22.3% with breadth 15%. The live check passed all 312 tabs (one dark tab loaded on retry). New source problems: Cboe's delayed-quote chains answer 403 since 19 Nov evening, so Options serves a saved copy (24 stale), and Luxury's Wikipedia attention inputs fail since 18 Nov night (17 stale); both handed to their sessions. Pokémon Cards, reviewed today, loads well but its overheat inputs are thin: four hand files are empty, Google Trends stops in May 2025, and all 77 hand rows are marked verify. The FRED-by-Actions proposal is withdrawn in favour of r-shared-fresh.",
+   "review": "pokemon-cards",
+   "changes": [
+    {
+     "dashboard": "Debt & Rates",
+     "slug": "debt-rates",
+     "tab": "fed",
+     "what": "FOMC event, stress event and CBO projection verify rows cleared",
+     "commit": "fa278fa, 9681490, b26772d",
+     "by": "session:debt-rates"
+    }
+   ],
+   "next": [
+    "Options: Cboe chains (asked)",
+    "Luxury: Wikipedia attention inputs (asked)",
+    "Monday 23 Nov: token totals, verify count, Luxury weekly log"
+   ],
+   "asks": [
+    "approve or skip r-shared-fresh (Luxury's FRED fix for AI Stocks and others)",
+    "Say go in the Pokémon session for its review fixes, and in Compute & Chips and Longevity",
+    "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
+    "Debt & Rates: allow the government hosts its remaining rows need, or accept them staying marked verify",
     "Broker for the options trading portal",
     "Gmail newsletter secrets, eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
    ]
