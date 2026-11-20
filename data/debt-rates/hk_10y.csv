@@ -1,6 +1,6 @@
 date,value,source,note
 # Hong Kong 10-year yield, %. To Feb 2015: Exchange Fund Note 10-year, month-end, copied from the HKMA API through a GitHub runner on 2026-10-26
-# (the HKMA API refuses the Railway server, HTTP 405). After 2015: HKGB 10-year institutional bond yields.
+# (the HKMA API refuses the Railway server, HTTP 405). After 2015: HKGB 10-year tender average accepted yields (10-year tenor only) from HKMA press releases, checked 20 Nov 2026.
 1996-10-01,7.45,https://api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/efbn/efbn-yield-endperiod,EFN 10-year month-end (HKMA API copy)
 1996-11-01,7.1,https://api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/efbn/efbn-yield-endperiod,EFN 10-year month-end (HKMA API copy)
 1996-12-01,7.27,https://api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/efbn/efbn-yield-endperiod,EFN 10-year month-end (HKMA API copy)
@@ -222,8 +222,11 @@ date,value,source,note
 2014-12-01,1.859,https://api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/efbn/efbn-yield-endperiod,EFN 10-year month-end (HKMA API copy)
 2015-01-01,1.361,https://api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/efbn/efbn-yield-endperiod,EFN 10-year month-end (HKMA API copy)
 2015-02-01,1.533,https://api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/efbn/efbn-yield-endperiod,EFN 10-year month-end (HKMA API copy)
-2020-12-31,0.70,https://www.hkgb.gov.hk/en/statistics/index.html,verify: approximate year-end secondary yield from memory
-2022-12-31,3.20,https://www.hkgb.gov.hk/en/statistics/index.html,verify: approximate year-end secondary yield from memory
-2023-12-31,3.20,https://www.hkgb.gov.hk/en/statistics/index.html,verify: approximate year-end secondary yield from memory
-2024-12-31,3.50,https://www.hkgb.gov.hk/en/statistics/index.html,verify: approximate year-end secondary yield from memory
-2026-08-12,3.58,https://www.info.gov.hk/gia/general/202608/12/P2026081200501p.htm,verify: tender of HKGB 3.17 3507 (10-year) as summarised by a search result
+2020-02-12,1.478,https://www.hkma.gov.hk/eng/news-and-media/press-releases/2020/02/20200212-3/,"HKMA tender result: 10GB2901 new issue, average price 104.15; average accepted yield"
+2025-01-15,4.044,https://www.hkma.gov.hk/eng/news-and-media/press-releases/2025/01/20250115-8/,"HKMA tender result: 10GB3501001 (HKGB 3.84 3501) new issue, average price 98.66; average accepted yield"
+2025-07-23,3.144,https://www.hkma.gov.hk/eng/news-and-media/press-releases/2025/07/20250723-5/,"HKMA tender result: 10GB3507001 (HKGB 3.17 3507) new issue, average price 100.43; average accepted yield"
+2025-11-05,2.888,https://www.hkma.gov.hk/eng/news-and-media/press-releases/2025/11/20251105-5/,"HKMA tender result: 10GB3507001 re-opening, average price 102.55; average accepted yield"
+2026-01-14,3.190,https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/01/20260114-4/,"HKMA tender result: 10GB3507001 re-opening, average price 100.04; average accepted yield"
+2026-06-24,3.371,https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/06/20260624-5/,"HKMA tender result: 10GB3507001 re-opening, average price 98.65; average accepted yield"
+2026-08-12,3.580,https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/08/20260812-6/,"HKMA tender result: 10GB3507001 re-opening, average price 97.12, bid-to-cover 5.49; average accepted yield"
+2026-10-21,4.164,https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/10/20261021-4/,"HKMA tender result: 10GB3507001 re-opening, average price 93.06; average accepted yield"
