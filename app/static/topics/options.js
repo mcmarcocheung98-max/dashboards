@@ -356,5 +356,20 @@ const VIEWS = {
     return [card("Strategy lab: a payoff calculator on the live chain", warn, controls, box, asOf(d), stale(d))];
   },
 };
+// every tab: a plain banner while the chains are a saved copy (Cboe refusing automated requests, or any other failure)
+const savedBanner = st => {
+  if (!st || !st.stale) return null;
+  const when = st.session ? "from the " + dateOf(st.session) + " session" : st.saved_on ? "saved on " + st.saved_on : "from an earlier session";
+  return card(null, el("div", { class: "warn", style: "font-size:14px;line-height:1.5" },
+    el("b", {}, "Option chains are a saved copy " + when + (st.stale < st.of ? " for " + st.stale + " of " + st.of + " symbols" : "") + ". "),
+    st.blocked ? "Cboe's delayed-quotes service has refused this site's automated requests since " + (st.since || "the last download") + "; the page asks again every 3 hours" + (st.retry ? " (next: " + st.retry + ")" : "") + " and returns to live chains when Cboe answers. "
+      : "The last download failed; the page will use live chains again when Cboe answers. ",
+    "Everything read off the chains (IV, skew, put/call, gamma, expected moves, the lab's prices) is as of that copy. " +
+    (st.histories_stale ? "" : "VIX, VIX3M, VVIX and SKEW are current. ") + "Realised volatility keeps updating, so implied against realised compares the saved IV with newer movement; no daily entry is written from a saved chain."));
+};
+for (const k of Object.keys(VIEWS)) {
+  const view = VIEWS[k];
+  VIEWS[k] = async () => { const [st, nodes] = await Promise.all([api("status").catch(() => null), view()]); return [savedBanner(st), ...[].concat(nodes)].filter(Boolean); };
+}
 window.TOPIC = { VIEWS, presets: [["1m", "1M", 30], ["3m", "3M", 91], ["6m", "6M", 182], ["1y", "1Y", 365], ["3y", "3Y", 1096], ["all", "All", 0]] };
 })();

@@ -234,9 +234,44 @@ def reduce_chain(sym: str):
     return go
 
 
+BLOCK_S = 3 * HOUR                 # after Cboe refuses (403), chains come from the saved copy and Cboe is asked again only after this
+_BLOCK: dict = {"until": 0.0, "since": None}
+BLOCK_HOW = "Cboe's delayed-quotes CDN refuses automated requests (403); the page shows the saved chain and says so"
+
+
 def chain_text(sym: str, cboe_sym: str | None = None) -> str:
+    """The reduced chain: fresh from Cboe, else the saved copy. Cboe's Cloudflare answered 403 to every chain from 19 Nov 2026 21:57 UTC (the
+    index histories on the same host still answer); after a 403 the saved copies are served without asking again for BLOCK_S, so a block is
+    not prolonged by 24 refused requests every quarter hour. No attempt is made to get around the block."""
     url = chain_url(cboe_sym or sym)
-    return fetch(url, ttl_now(), min_bytes=400, timeout=90, reduce=reduce_chain(sym))
+    if time.time() < _BLOCK["until"]:
+        snap = B._snap(url)
+        text = B.cached_only(url)                                  # LookupError when this symbol was never saved
+        if snap.exists():
+            B.STALE[url] = snap.stat().st_mtime
+        handled(url, BLOCK_HOW)
+        return text
+    text = fetch(url, ttl_now(), min_bytes=400, timeout=90, reduce=reduce_chain(sym))
+    h = B.HEALTH.get(url) or {}
+    if url in B.STALE and "403" in str(h.get("error") or ""):
+        _BLOCK.update(until=time.time() + BLOCK_S, since=_BLOCK["since"] or h.get("fail"))
+        handled(url, BLOCK_HOW)
+    elif url not in B.STALE:
+        _BLOCK.update(until=0.0, since=None)
+    return text
+
+
+def chain_status() -> dict:
+    """For the page's banner: whether the chains are a saved copy, since when Cboe refuses, when it is asked again, and the session of the saved chains."""
+    from ..cache import _cache
+    urls = [chain_url(u["cboe"]) for u in universe()]
+    stale = {u: B.STALE[u] for u in urls if u in B.STALE}
+    model = (_cache.get(f"topic:{SLUG}:model") or (0, {}))[1] or {}
+    dates = sorted({v["trade_date"] for v in (model.get("syms") or {}).values() if v.get("trade_date")})
+    iso = lambda t: time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(t)) if t else None
+    return {"blocked": time.time() < _BLOCK["until"], "since": iso(_BLOCK["since"]), "retry": iso(_BLOCK["until"]) if time.time() < _BLOCK["until"] else None,
+            "stale": len(stale), "of": len(urls), "saved_on": iso(min(stale.values())) if stale else None,
+            "sessions": dates, "session": dates[-1] if dates else None, "histories_stale": VIX_URL in B.STALE}
 
 
 # ------------------------------------------------------------------ parsing
@@ -541,7 +576,7 @@ def symbol_model(u: dict, evs: list[dict], today: date | None = None) -> dict:
              "skew": front["skew"] if front else None, "rr": front["rr"] if front else None, "pc_oi": pc["pc_oi"], "pc_vol": pc["pc_vol"], "oi": pc["oi"],
              "rv10": rv10, "rv30": rv30, "gex": gex_total,
              "exp": {r["exp"]: {k: r[k] for k in ("dte", "atm_iv", "put25", "call25", "skew", "pc_oi", "pc_vol", "oi", "em_straddle", "em_iv", "straddle", "max_pain")} for r in rows}}
-    if chain["trade_date"]:
+    if chain["trade_date"] and chain_url(u["cboe"]) not in B.STALE:     # a saved chain is not a new day: its IV against today's realised would mislead
         try:
             save_daily(sym, chain["trade_date"], entry)
         except OSError:
@@ -930,7 +965,7 @@ def _cached_ep(name, fn):
     return lambda: _cached(f"topic:{SLUG}:{name}", ttl_now(), fn)
 
 
-ENDPOINTS = {"setup": _cached_ep("setup", _setup_now), "chains": _cached_ep("chains", _chains_now), "vol": _cached_ep("vol", _vol_now),
+ENDPOINTS = {"status": chain_status, "setup": _cached_ep("setup", _setup_now), "chains": _cached_ep("chains", _chains_now), "vol": _cached_ep("vol", _vol_now),
              "skew": _cached_ep("skew", _skew_now), "moves": _cached_ep("moves", _moves_now), "lab": _cached_ep("lab", _lab_now)}
 for _u in universe():
     ENDPOINTS[f"chain-{_u['sym']}"] = _chain_ep(_u)

@@ -3,6 +3,7 @@ the AI Stocks closes, no network. smoke_patch() points the module at the same fi
 import asyncio
 import json
 import math
+import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -454,3 +455,45 @@ def test_moves_payload_carries_the_earnings_record(mocked, frozen):
         if e["kind"] == "earnings":
             ev.setdefault(e["sym"], e)                                                       # each symbol's next report
     assert ev["ORCL"]["verify"] and ev["MU"]["verify"] and not ev["NVDA"]["verify"]
+
+
+def test_cboe_403_serves_the_saved_chain_says_so_and_backs_off(tmp_path, monkeypatch):
+    """Cboe's Cloudflare refusing (403): the saved chain is served, the failure is handled in /api/health, Cboe is not asked again for
+    BLOCK_S, the status endpoint says the chains are a saved copy, and no daily entry is written from it."""
+    import requests
+    from app import cache
+    monkeypatch.setattr(B, "SNAP_DIR", tmp_path / "snaps")
+    monkeypatch.setattr(M, "DIR", tmp_path / "options")
+    monkeypatch.setattr(M, "fetch", B.fetch)
+    monkeypatch.setattr(M, "closes", fake_closes)
+    monkeypatch.setattr(M, "universe", lambda: SMALL_UNIVERSE[2:3])
+    monkeypatch.setattr(M, "_BLOCK", {"until": 0.0, "since": None})
+    cache._cache.clear(); B.STALE.clear(); B.HEALTH.clear()
+    calls = []
+
+    class R:
+        status_code, headers = 403, {}
+
+    def dl(url, *a, **k):
+        calls.append(url)
+        if len(calls) == 1:
+            return json.dumps(chain_json("NVDA"))
+        raise requests.HTTPError("403 Client Error: Forbidden for url", response=R())
+    monkeypatch.setattr(B, "_download", dl)
+    url = M.chain_url("NVDA")
+    first = M.chain_text("NVDA")                                         # live: saved to disk
+    assert url not in B.STALE and not M.chain_status()["blocked"] and M.chain_status()["stale"] == 0
+    cache._cache.clear()
+    second = M.chain_text("NVDA")                                        # 403: the saved copy, and the block starts
+    assert second == first and url in B.STALE and M._BLOCK["until"] > time.time() and len(calls) == 2
+    assert B.HEALTH[url]["handled_how"] == M.BLOCK_HOW
+    cache._cache.clear()
+    assert M.chain_text("NVDA") == first and len(calls) == 2              # within BLOCK_S: Cboe not asked again
+    s = M.symbol_model(SMALL_UNIVERSE[2], [], TODAY)
+    assert s["spot"] == SPOTS["NVDA"] and M.load_daily("NVDA") == {}     # no daily entry from a saved chain
+    st = M.ENDPOINTS["status"]()
+    assert st["blocked"] and st["stale"] == 1 and st["of"] == 1 and st["since"] and st["retry"]
+    h = topics.health()["dashboards"]["options"]["sources"]
+    assert next(x for x in h if x["url"] == url).get("handled") == M.BLOCK_HOW and not next(x for x in h if x["url"] == url)["alert"]
+    monkeypatch.setattr(M, "_BLOCK", {"until": 0.0, "since": None})
+    cache._cache.clear(); B.STALE.clear(); B.HEALTH.clear()
