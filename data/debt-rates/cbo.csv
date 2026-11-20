@@ -1,8 +1,8 @@
 date,series,value,source,note
 # CBO The Budget and Economic Outlook: 2025 to 2035 (January 2025), % of GDP, US fiscal years
-2025-09-30,Net interest (CBO),3.2,https://www.cbo.gov/publication/60870,verify: from memory
-2030-09-30,Net interest (CBO),3.6,https://www.cbo.gov/publication/60870,verify: from memory
-2035-09-30,Net interest (CBO),4.1,https://www.cbo.gov/publication/60870,verify: from memory
-2025-09-30,Defense discretionary (CBO),2.9,https://www.cbo.gov/publication/60870,verify: from memory
-2030-09-30,Defense discretionary (CBO),2.6,https://www.cbo.gov/publication/60870,verify: from memory
-2035-09-30,Defense discretionary (CBO),2.5,https://www.cbo.gov/publication/60870,verify: from memory
+# Checked 20 Nov 2026 against the CBO report PDF. Defense % of GDP is published only for 2024, 2025, 2026 and 2035 (By the Numbers table), so there is no 2030 defense point.
+2025-09-30,Net interest (CBO),3.2,https://www.cbo.gov/system/files/2025-01/60870-Outlook-2025.pdf,"checked: By the Numbers table, Net interest 3.2% in 2025"
+2030-09-30,Net interest (CBO),3.6,https://www.cbo.gov/system/files/2025-01/60870-Outlook-2025.pdf,"checked: Table B-1, Net interest 3.6% of GDP in 2030"
+2035-09-30,Net interest (CBO),4.1,https://www.cbo.gov/system/files/2025-01/60870-Outlook-2025.pdf,"checked: By the Numbers table, Net interest 4.1% in 2035"
+2025-09-30,Defense discretionary (CBO),2.9,https://www.cbo.gov/system/files/2025-01/60870-Outlook-2025.pdf,"checked: By the Numbers table, Discretionary: Defense 2.9% in 2025 ($859bn)"
+2035-09-30,Defense discretionary (CBO),2.4,https://www.cbo.gov/system/files/2025-01/60870-Outlook-2025.pdf,"checked: By the Numbers table, Discretionary: Defense 2.4% in 2035 ($1,053bn)"
