@@ -369,11 +369,21 @@ def fill_context() -> dict:
         def one(name):
             try:
                 if name.startswith("wiki:"):
-                    try:
-                        wiki_views_download(name[5:])
-                    except ValueError:
-                        pass                                   # a stub with months of history: fetched and kept, the view falls through it
-                    wiki_image_download(name[5:])
+                    t, errs = name[5:], []
+                    for part, fn in (("pageviews", wiki_views_download), ("summary", wiki_image_download)):
+                        try:
+                            fn(t)
+                        except ValueError as e:
+                            if "recent article" not in str(e):       # a stub with months of history is fetched and kept, not an error
+                                errs.append((part, e))
+                        except Exception as e:
+                            errs.append((part, e))
+                    for part, e in errs:                             # a saved copy serves the page: no alert while it is renewed
+                        url = wiki_key(t) if part == "pageviews" else wiki_summary_url(t)
+                        if B._snap(url).exists():
+                            handled(url, "Wikimedia does not answer the server; the saved copy serves")
+                    if errs:
+                        raise errs[0][1]
                 elif name == "ecb":
                     parse_ecb(fresh(ECB_FX, timeout=CONTEXT_TIMEOUT, min_bytes=500, headers=PLAIN_UA))
                 elif name == "ons":
@@ -408,6 +418,9 @@ def renew_handled() -> int:
     routes = {FRED.format(id=sid): (FRED_SEED / f"{sid}.csv").exists() and "FRED does not answer the server; the committed copy serves (data/luxury/fred)"
               for sid in FRED_IDS.values()}
     routes.update({url: why for url, why in HANDLED_BY.values()})
+    for t in all_wiki_titles():
+        for url in (wiki_key(t), wiki_summary_url(t)):
+            routes[url] = B._snap(url).exists() and "Wikimedia does not answer the server; the saved copy serves"
     for url, why in routes.items():
         h = B.HEALTH.get(url)
         if why and h and (url in B.STALE or not h.get("ok") or (h.get("fail") or 0) > (h.get("ok") or 0)):
@@ -770,7 +783,7 @@ def wiki_summary_url(title: str) -> str:
 
 def wiki_image_download(title: str) -> dict | None:
     """BACKGROUND only: the article's summary (its lead image), snapshotted for the views."""
-    return parse_summary(__import__("json").loads(fetch(wiki_summary_url(title), DAY, headers=WIKI_BOT, timeout=CONTEXT_TIMEOUT, min_bytes=40)))
+    return parse_summary(__import__("json").loads(fresh(wiki_summary_url(title), headers=WIKI_BOT, timeout=CONTEXT_TIMEOUT, min_bytes=40)))
 
 
 def wiki_image(title: str) -> dict | None:
@@ -792,7 +805,9 @@ def photo(item: dict, used_title: str | None = None) -> dict | None:
         except Exception:
             im = None
         if im:
-            return {**im, "credit": f"Wikipedia: {t} (free licence; the article's lead image, not this exact reference)", "exact": False, "title": t}
+            saved = B.STALE.get(wiki_summary_url(t))
+            note = f"; saved copy from {pd.Timestamp(saved, unit='s').date()}, Wikipedia not reachable now" if saved else ""
+            return {**im, "credit": f"Wikipedia: {t} (free licence; the article's lead image, not this exact reference{note})", "exact": False, "title": t, "saved": bool(saved)}
     return None
 
 
@@ -847,7 +862,7 @@ def _wiki_series(text: str, title: str) -> pd.Series:
 
 def wiki_views_download(title: str) -> pd.Series:
     """BACKGROUND only: an article's monthly pageviews since July 2015, snapshotted under a stable key for the views."""
-    return _wiki_series(fetch(wiki_url(title), DAY, headers=WIKI_BOT, timeout=CONTEXT_TIMEOUT, min_bytes=40, key=wiki_key(title)), title)
+    return _wiki_series(fresh(wiki_url(title), headers=WIKI_BOT, timeout=CONTEXT_TIMEOUT, min_bytes=40, key=wiki_key(title)), title)
 
 
 def wiki_views(title: str) -> pd.Series:

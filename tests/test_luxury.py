@@ -503,3 +503,33 @@ def test_parse_nasdaq_closes_reports_nasdaqs_error():
     with pytest.raises(ValueError, match="Symbol not exists"):
         M.parse_nasdaq_closes('{"data":null,"message":null,"status":{"rCode":400,"bCodeMessage":[{"code":1001,"errorMessage":"Symbol not exists."}]}}')
     assert "assetclass=etf" in M.NASDAQ_SPX and "/SPY/" in M.NASDAQ_SPX
+
+
+def test_wikipedia_down_serves_saved_copies_labelled_and_handled(mocked, monkeypatch):
+    """Wikimedia answered once (the fixture's fill), then every connection fails: the fill reports it, marks each article handled, the
+    pages keep the saved pageviews and photos, and both say they are a saved copy."""
+    from app import cache
+    real = B._download
+
+    def down(url, *a, **k):
+        if "wikimedia.org" in url or "wikipedia.org" in url:
+            raise ConnectionError("Wikimedia unreachable")
+        return real(url, *a, **k)
+    monkeypatch.setattr(B, "_download", down)
+    (B.SNAP_DIR / "luxury-context-try.txt").unlink()
+    B.HEALTH.clear()
+    res = M.fill_context()
+    wiki = {k: v for k, v in res.items() if k.startswith("wiki:")}
+    assert wiki and all(v.startswith("stale: StaleServed") for v in wiki.values()), wiki
+    sub = "Rolex Submariner"
+    assert B.HEALTH[M.wiki_key(sub)].get("handled") and B.HEALTH[M.wiki_summary_url(sub)].get("handled")
+    cache._cache.clear()
+    L = M.ENDPOINTS["liquidity"]()
+    assert L["attention"]["baskets"]["watch"]["points"] and M.wiki_key(sub) in L["stale"]
+    O = M.ENDPOINTS["overview"]()
+    p = next(i["photo"] for i in O["items"] if i["id"] == "sub-126610ln")
+    assert p["saved"] and "saved copy from" in p["credit"]
+    for h in B.HEALTH.values():
+        h.pop("handled", None)
+    M.fill_context()                                                   # skipped within the day: the flags are renewed
+    assert B.HEALTH[M.wiki_key(sub)].get("handled")

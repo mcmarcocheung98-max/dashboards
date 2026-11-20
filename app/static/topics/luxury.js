@@ -202,7 +202,8 @@ const VIEWS = {
         el("div", { class: "muted", style: "margin-top:4px" }, (x.listings_1y == null ? "No year of listings yet" : "Listings " + pct(x.listings_1y, 0) + " on a year (" + x.listings_source + ")") + (x.sell_through_latest == null ? "" : "; latest auction sell-through " + (x.sell_through_latest * 100).toFixed(0) + "%") + ".")); })),
       table(["Score", "Words"], (LS.bands || []).map(b => el("tr", {}, el("td", {}, b[0]), el("td", {}, b[1])))),
       note("Like the heat score: each component is scored -2 … +2 and the score is their mean (at least two needed). Supply: the listing count against its own history, sign flipped (eBay UK daily once 60 days exist, else Chrono24's weekly total once 8 weeks exist). Spread: StockX ask / bid - 1 (bags). Sell-through: the latest auction sale. Days to sell: WatchCharts' median days on market (watches). Attention: the Wikipedia 12-month z. The liquidity signal watches listings up 50% on a year with the premium falling, or sell-through under 70%. " + (LS.watch && LS.watch.components || []).map(k => k.label + ": " + k.words).join(" ")));
-    const head = card("Attention: Wikipedia pageviews (a demand proxy)",
+    const savedOn = d.stale && Object.keys(d.stale).length ? [...new Set(Object.values(d.stale))].sort()[0] : null;
+    const head = card("Attention: Wikipedia pageviews (a demand proxy)" + (savedOn ? " · saved copy from " + dateOf(savedOn) : ""),
       followHead([{ label: "Watches basket attention (own-mean = 100)", points: (B.watch || {}).points || [], fmt: v => num(v, 0), delta: { lag: "1y" } },
         { label: "Bags basket attention (own-mean = 100)", points: (B.bag || {}).points || [], fmt: v => num(v, 0), delta: { lag: "1y" } },
         { label: "Watches: 12-month z", points: (B.watch || {}).z_points || [], fmt: z, cls: zc }, { label: "Bags: 12-month z", points: (B.bag || {}).z_points || [], fmt: z, cls: zc }], { latest: "Last full month" }),
