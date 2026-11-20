@@ -62,6 +62,8 @@ def smoke_patch():
     real = B._download
     B._download = lambda url, *a, **k: fake_fetch(url) if any(h in url for h in ("fred.stlouisfed.org", "wikimedia.org", "wikipedia.org")) else real(url, *a, **k)
     M._now = lambda: TODAY
+    M._trends._pace = lambda site: None
+    M.WIKI_RETRY_S = 0
     E.DIR = Path(tempfile.mkdtemp()) / "ebay"
     M.fill_context()
 
@@ -75,6 +77,8 @@ def mocked(tmp_path, monkeypatch):
     monkeypatch.setattr(B, "SNAP_DIR", tmp_path / "snaps")
     monkeypatch.setattr(B, "_download", lambda url, *a, **k: fake_fetch(url))
     monkeypatch.setattr(M, "_now", lambda: TODAY)
+    monkeypatch.setattr(M._trends, "_pace", lambda site: None)          # no 0.3 s waits between fixture calls
+    monkeypatch.setattr(M, "WIKI_RETRY_S", 0)
     monkeypatch.setattr(E, "DIR", tmp_path / "ebay")
     monkeypatch.delenv("EBAY_APP_ID", raising=False)
     monkeypatch.delenv("EBAY_CERT_ID", raising=False)
@@ -516,6 +520,7 @@ def test_wikipedia_down_serves_saved_copies_labelled_and_handled(mocked, monkeyp
             raise ConnectionError("Wikimedia unreachable")
         return real(url, *a, **k)
     monkeypatch.setattr(B, "_download", down)
+    monkeypatch.setattr(M, "WIKI_RETRY_S", 0)
     (B.SNAP_DIR / "luxury-context-try.txt").unlink()
     B.HEALTH.clear()
     res = M.fill_context()
@@ -533,3 +538,37 @@ def test_wikipedia_down_serves_saved_copies_labelled_and_handled(mocked, monkeyp
         h.pop("handled", None)
     M.fill_context()                                                   # skipped within the day: the flags are renewed
     assert B.HEALTH[M.wiki_key(sub)].get("handled")
+
+
+def test_wikimedia_calls_are_sequential_paced_and_retried(mocked, monkeypatch):
+    """No two Wikimedia calls overlap, each goes through Trends' pacer, and a dropped connection is tried once more before the saved copy."""
+    import threading
+    from app.topics import trends as T
+    active, peak, paced, calls = [0], [0], [], {}
+    lock = threading.Lock()
+    real = B._download
+
+    def tracked(url, *a, **k):
+        if "wikimedia.org" in url or "wikipedia.org" in url:
+            with lock:
+                active[0] += 1
+                peak[0] = max(peak[0], active[0])
+                calls[url] = calls.get(url, 0) + 1
+                first = calls[url] == 1
+            try:
+                time.sleep(0.01)
+                if first and "Rolex_Submariner" in url:
+                    raise ConnectionError("dropped")                      # the first try fails, the retry works
+                return real(url, *a, **k)
+            finally:
+                with lock:
+                    active[0] -= 1
+        return real(url, *a, **k)
+    import time
+    monkeypatch.setattr(B, "_download", tracked)
+    monkeypatch.setattr(T, "_pace", lambda site: paced.append(site))
+    monkeypatch.setattr(M, "WIKI_RETRY_S", 0)
+    (B.SNAP_DIR / "luxury-context-try.txt").unlink()
+    res = M.fill_context()
+    assert peak[0] == 1 and paced and set(paced) == {"wiki"} and len(paced) >= 2 * len(M.all_wiki_titles())
+    assert res["wiki:Rolex Submariner"] == "ok" and calls[M.wiki_url("Rolex Submariner")] == 2

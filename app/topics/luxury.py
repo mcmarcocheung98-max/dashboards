@@ -51,6 +51,7 @@ from . import Topic
 from . import _base as B
 from ._base import DAY, _pts, _r, fetch, handled, manual_rows, manual_sources
 from .trends import BOT as WIKI_BOT, parse_wiki
+from . import trends as _trends                 # its Wikipedia pacer, shared so the two dashboards never call Wikimedia at once
 from . import luxury_ebay as EBAY
 
 SLUG = "luxury"
@@ -403,7 +404,11 @@ def fill_context() -> dict:
                     handled(HANDLED_BY[name][0], HANDLED_BY[name][1])
                 return name, ("stale: " if isinstance(e, StaleServed) else "") + f"{type(e).__name__}: {str(e)[:80]}"
         with ThreadPoolExecutor(max_workers=6) as ex:
-            res = dict(ex.map(one, ["ecb", "ons", "nasdaq_spx", *FRED_IDS, *("wiki:" + t for t in all_wiki_titles())]))
+            res = dict(ex.map(one, ["ecb", "ons", "nasdaq_spx", *FRED_IDS]))
+        # Wikimedia one call at a time, WIKI_PACE apart, as the Trends dashboard calls it: a burst of concurrent connections from one
+        # address is cut off at connection level (ConnectionError on every call from 18 Nov while Trends' paced calls stayed fresh)
+        for t in all_wiki_titles():
+            res.update([one("wiki:" + t)])
         for k in ("fx", "overview", "watches", "bags", "roi", "liquidity"):
             _cache.pop(f"topic:{SLUG}:{k}", None)
         return res
@@ -781,9 +786,25 @@ def wiki_summary_url(title: str) -> str:
     return WIKI_SUMMARY.format(title=quote(title.replace(" ", "_"), safe=""))
 
 
+WIKI_RETRY_S = 5.0                 # one more try after this pause when a Wikimedia connection fails
+
+
+def wiki_get(url: str, key: str | None = None) -> str:
+    """BACKGROUND only: one Wikimedia call through Trends' pacer (0.3 s apart, shared with that dashboard), retried once after a pause
+    when the connection fails; raises StaleServed when only the saved copy came back."""
+    for n in range(2):
+        _trends._pace("wiki")
+        try:
+            return fresh(url, key=key, headers=WIKI_BOT, timeout=CONTEXT_TIMEOUT, min_bytes=40)
+        except StaleServed:
+            if n:
+                raise
+            time.sleep(WIKI_RETRY_S)
+
+
 def wiki_image_download(title: str) -> dict | None:
     """BACKGROUND only: the article's summary (its lead image), snapshotted for the views."""
-    return parse_summary(__import__("json").loads(fresh(wiki_summary_url(title), headers=WIKI_BOT, timeout=CONTEXT_TIMEOUT, min_bytes=40)))
+    return parse_summary(__import__("json").loads(wiki_get(wiki_summary_url(title))))
 
 
 def wiki_image(title: str) -> dict | None:
@@ -862,7 +883,7 @@ def _wiki_series(text: str, title: str) -> pd.Series:
 
 def wiki_views_download(title: str) -> pd.Series:
     """BACKGROUND only: an article's monthly pageviews since July 2015, snapshotted under a stable key for the views."""
-    return _wiki_series(fresh(wiki_url(title), headers=WIKI_BOT, timeout=CONTEXT_TIMEOUT, min_bytes=40, key=wiki_key(title)), title)
+    return _wiki_series(wiki_get(wiki_url(title), key=wiki_key(title)), title)
 
 
 def wiki_views(title: str) -> pd.Series:
