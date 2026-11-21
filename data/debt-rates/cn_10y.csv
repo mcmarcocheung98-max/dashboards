@@ -1,14 +1,14 @@
 date,value,source,note
-# China government bond 10-year yield, year-end, % (ChinaBond yield curve)
-2014-12-31,3.62,https://yield.chinabond.com.cn/,verify: year-end from memory
-2015-12-31,2.82,https://yield.chinabond.com.cn/,verify: year-end from memory
-2016-12-31,3.01,https://yield.chinabond.com.cn/,verify: year-end from memory
-2017-12-31,3.88,https://yield.chinabond.com.cn/,verify: year-end from memory
-2018-12-31,3.23,https://yield.chinabond.com.cn/,verify: year-end from memory
-2019-12-31,3.14,https://yield.chinabond.com.cn/,verify: year-end from memory
-2020-12-31,3.14,https://yield.chinabond.com.cn/,verify: year-end from memory
-2021-12-31,2.78,https://yield.chinabond.com.cn/,verify: year-end from memory
-2022-12-31,2.84,https://yield.chinabond.com.cn/,verify: year-end from memory
-2023-12-31,2.56,https://yield.chinabond.com.cn/,verify: year-end from memory
-2024-12-31,1.68,https://yield.chinabond.com.cn/,verify: year-end from memory
-2025-12-31,1.85,https://yield.chinabond.com.cn/,verify: approximate year-end from memory
+# China government bond 10-year yield, year-end, % (ChinaBond curve, as stated in the PBoC's annual financial market report or Q4 Monetary Policy Report), checked 21 Nov 2026
+2014-12-31,3.62,https://www.pbc.gov.cn/eportal/fileDir/image_public/UserFiles/goutongjiaoliu/upload/File/2014%E5%B9%B4%E9%87%91%E8%9E%8D%E5%B8%82%E5%9C%BA%E8%BF%90%E8%A1%8C%E6%83%85%E5%86%B5.pdf,verify: year-end from memory; PBoC 2014 financial market report (this URL) not reachable from here
+2015-12-31,2.82,https://www.gdjr.gov.cn/upload/uploadeditor/20160126/1453793763742603.pdf,"verify: PBoC 2015 financial market report gives only the change (10-year down 80 bp on the year, which matches 3.62 to 2.82), not the level"
+2016-12-31,3.01,https://www.pbc.gov.cn/jinrongshichangsi/147160/147173/c4e4f1ddf597423aad959cad4a9d97f3/2017012217050243373.pdf,verify: year-end from memory; PBoC 2016 financial market report (this URL) not reachable from here
+2017-12-31,3.88,https://jrj.wuhan.gov.cn/ztzl_57/xyrd/dcczbsc/201912/t20191217_172879.shtml,PBoC 2017 financial market report (repost): 10-year 3.88% at end-December
+2018-12-31,3.23,https://jrj.wuhan.gov.cn/ztzl_57/xyrd/dcczbsc/202001/t20200117_888722.shtml,"PBoC 2018 financial market report, as reported by Financial News (PBoC paper): 10-year 3.23% at end-December"
+2019-12-31,3.14,https://jrj.wuhan.gov.cn/ynzx_57/xwzx/202011/t20201119_1506727.shtml,"PBoC 2019 financial market report, as reported by Financial News (PBoC paper): 10-year 3.14% at end-December"
+2020-12-31,3.14,https://dfjrjgj.hunan.gov.cn/dfjrjgj/jrbk/jrsj/202101/t20210128_14300077.html,PBoC 2020 financial market report (repost): 10-year 3.14% at end-December
+2021-12-31,2.78,https://www.gov.cn/xinwen/2022-02/14/5673404/files/0889ac6e21d74f63b6e743bb04ed38dc.pdf,PBoC China Monetary Policy Report Q4 2021: 10-year 2.78% at end-December
+2022-12-31,2.84,https://jrj.beijing.gov.cn/jrgzdt/202301/t20230130_2908560.html,PBoC 2022 financial market report (repost): 10-year 2.84% at end-December
+2023-12-31,2.56,https://cif.mofcom.gov.cn/cif/html/upload/20240130102542259_2023%E5%B9%B4%E9%87%91%E8%9E%8D%E5%B8%82%E5%9C%BA%E8%BF%90%E8%A1%8C%E6%83%85%E5%86%B5.pdf,PBoC 2023 financial market report: 10-year 2.56% at year-end
+2024-12-31,1.68,https://app.www.gov.cn/govdata/gov/202501/29/524175/article.html,PBoC 2024 financial market report (gov.cn): 10-year 1.68% at year-end
+2025-12-31,1.85,https://jrj.sh.gov.cn/SCGK194/20260212/4b38eeb3671641f69fb860a0cb7adee5.html,PBoC 2025 financial market report (repost): 10-year 1.85% at year-end
