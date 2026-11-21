@@ -1,29 +1,29 @@
 date,series,value,source,note
 # PBoC policy rates, %, on the day each change took effect
-2019-08-20,1-year LPR,4.25,https://www.chinamoney.com.cn/english/bmklpr/,verify: first reformed LPR fixing
-2019-09-20,1-year LPR,4.20,https://www.chinamoney.com.cn/english/bmklpr/,verify
-2019-11-20,1-year LPR,4.15,https://www.chinamoney.com.cn/english/bmklpr/,verify
-2020-02-20,1-year LPR,4.05,https://www.chinamoney.com.cn/english/bmklpr/,verify
-2020-04-20,1-year LPR,3.85,https://www.chinamoney.com.cn/english/bmklpr/,verify
-2021-12-20,1-year LPR,3.80,https://www.chinamoney.com.cn/english/bmklpr/,verify
-2022-01-20,1-year LPR,3.70,https://www.chinamoney.com.cn/english/bmklpr/,verify
-2022-08-22,1-year LPR,3.65,https://www.chinamoney.com.cn/english/bmklpr/,verify
+2019-08-20,1-year LPR,4.25,https://english.www.gov.cn/news/topnews/201908/20/content_WS5d5bee0dc6d0c6695ff7f075.html,"checked 21 Nov 2026: first reformed LPR fixing 4.25 (Xinhua via gov.cn; China Services Info ""one-year loan prime rate falls to 4.25"")"
+2019-09-20,1-year LPR,4.20,https://www.caixinglobal.com/2019-09-20/short-term-reference-rate-for-loan-pricing-edges-down-101464256.html,checked 21 Nov 2026 (Caixin; Central Bank News: down 5 bp to 4.20)
+2019-11-20,1-year LPR,4.15,https://www.chinadaily.com.cn/a/201911/20/WS5dd4ac2fa310cf3e35578ae2.html,"checked 21 Nov 2026 (China Daily; ING and Reuters: cut 5 bp, 4.2 to 4.15)"
+2020-02-20,1-year LPR,4.05,https://www.thestar.com.my/news/regional/2020/02/20/china-central-bank-lowers-lending-benchmark,checked 21 Nov 2026 (Reuters via The Star: 4.15 to 4.05)
+2020-04-20,1-year LPR,3.85,https://www.caixinglobal.com/2020-04-20/chinas-benchmark-lending-rate-edges-down-as-expected-101544953.html,checked 21 Nov 2026 (Caixin; CGTN: 4.05 to 3.85)
+2021-12-20,1-year LPR,3.80,https://english.www.gov.cn/statecouncil/ministries/202112/20/content_WS61c03c93c6d09c94e48a27c4.html,"checked 21 Nov 2026 (Xinhua via gov.cn; CNBC: first cut in 20 months, 3.85 to 3.8)"
+2022-01-20,1-year LPR,3.70,https://english.www.gov.cn/statecouncil/ministries/202201/20/content_WS61e91c5cc6d09c94e48a3fbd.html,checked 21 Nov 2026 (Xinhua via gov.cn; FXStreet: 3.8 to 3.7)
+2022-08-22,1-year LPR,3.65,https://english.www.gov.cn/news/topnews/202208/22/content_WS6302f1d8c6d02e533532f92d.html,checked 21 Nov 2026 (Xinhua via gov.cn; Al Jazeera: 3.7 to 3.65)
 2023-06-20,1-year LPR,3.55,https://english.news.cn/20230620/4b1d38dabfd6404bae7b736bc5c861b8/c.html,checked 21 Nov 2026 (Xinhua: 3.65 to 3.55)
 2023-08-21,1-year LPR,3.45,https://english.news.cn/20230821/9304278bc7b140ee9ea876b10f7164ed/c.html,checked 21 Nov 2026 (Xinhua: 3.55 to 3.45)
 2024-07-22,1-year LPR,3.35,https://english.www.gov.cn/news/202407/22/content_WS669dbfabc6d0868f4e8e9540.html,checked 21 Nov 2026 (Xinhua via gov.cn: 3.45 to 3.35)
 2024-10-21,1-year LPR,3.10,https://english.news.cn/20241021/7914144353b34cd7bcca451fc76e8c7f/c.html,checked 21 Nov 2026 (Xinhua: 3.35 to 3.1)
 2025-05-20,1-year LPR,3.00,https://en.people.cn/n3/2025/0521/c90000-20317724.html,checked 21 Nov 2026 (People's Daily: 3.1 to 3.0); unchanged since - 3.0 on 20 Aug and 20 Oct 2026 (Xinhua; gov.cn WS6a8692ec)
-2016-02-18,7-day reverse repo,2.25,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify: rate in force from early 2016
-2017-02-03,7-day reverse repo,2.35,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
-2017-03-16,7-day reverse repo,2.45,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
-2017-12-14,7-day reverse repo,2.50,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
-2018-03-22,7-day reverse repo,2.55,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
-2019-11-18,7-day reverse repo,2.50,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
-2020-02-03,7-day reverse repo,2.40,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
-2020-03-30,7-day reverse repo,2.20,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
-2021-12-20,7-day reverse repo,2.20,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify: unchanged
-2022-01-17,7-day reverse repo,2.10,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
-2022-08-15,7-day reverse repo,2.00,http://www.pbc.gov.cn/en/3688229/3688311/index.html,verify
+2016-02-18,7-day reverse repo,2.25,https://www.caixinglobal.com/2017-02-11/the-million-dollar-question-did-china-raise-interest-rates-101054236.html,"checked 21 Nov 2026: 2.25 was the rate in force until 3 Feb 2017 (Caixin: ""raised ... from 2.25% to 2.35%""); this row only starts the line, the date is not a change"
+2017-02-03,7-day reverse repo,2.35,https://www.caixinglobal.com/2017-02-11/the-million-dollar-question-did-china-raise-interest-rates-101054236.html,checked 21 Nov 2026 (Caixin: 2.25 to 2.35 on 3 Feb 2017)
+2017-03-16,7-day reverse repo,2.45,https://www.caixinglobal.com/2017-03-16/chinas-central-bank-increases-policy-rates-on-strong-economic-data-101066861.html,"checked 21 Nov 2026 (Caixin; Reuters via Business Standard: up 10 bp, 2.35 to 2.45)"
+2017-12-14,7-day reverse repo,2.50,https://www.caixinglobal.com/2017-12-14/following-fed-china-hikes-interbank-rates-101185238.html,"checked 21 Nov 2026 (Caixin; CNBC: up 5 bp, 2.45 to 2.5)"
+2018-03-22,7-day reverse repo,2.55,https://www.caixinglobal.com/2018-03-22/china-follows-us-in-raising-short-term-borrowing-costs-101224740.html,checked 21 Nov 2026 (Caixin; Reuters via FXStreet: up 5 bp to 2.55)
+2019-11-18,7-day reverse repo,2.50,https://www.caixinglobal.com/2019-11-19/china-cuts-7-day-reverse-repo-rate-for-first-time-since-2015-101484695.html,"checked 21 Nov 2026 (Caixin; CNBC: first cut since 2015, 2.55 to 2.5)"
+2020-02-03,7-day reverse repo,2.40,https://www.caixinglobal.com/2020-02-03/pboc-cuts-reverse-repo-rates-amid-coronavirus-101511173.html,checked 21 Nov 2026 (Caixin; Reuters via Malay Mail: 2.5 to 2.4)
+2020-03-30,7-day reverse repo,2.20,https://www.cnbc.com/2020/03/30/china-unexpectedly-cuts-reverse-repo-rate-by-20bp-to-support-economy.html,"checked 21 Nov 2026 (CNBC: cut 20 bp, 2.4 to 2.2)"
+2021-12-20,7-day reverse repo,2.20,https://www.bloomberg.com/news/articles/2021-10-09/pboc-sells-10-billion-yuan-of-7-day-reverse-repo-at-2-2,"checked 21 Nov 2026: no change, still 2.2 (Bloomberg: 7-day sold at 2.2% on 9 Oct 2021); marker row so the line reaches the next cut"
+2022-01-17,7-day reverse repo,2.10,https://english.www.gov.cn/statecouncil/ministries/202201/17/content_WS61e55e08c6d09c94e48a3c92.html,"checked 21 Nov 2026 (Xinhua via gov.cn; Bloomberg: first cut since April 2020, 2.2 to 2.1)"
+2022-08-15,7-day reverse repo,2.00,https://en.people.cn/n3/2022/0817/c90000-10136180.html,"checked 21 Nov 2026 (People's Daily; China Daily: cut 10 bp, 2.1 to 2.0)"
 2023-06-13,7-day reverse repo,1.90,https://english.www.gov.cn/news/202306/13/content_WS6487daa2c6d0868f4e8dccca.html,checked 21 Nov 2026 (Xinhua via gov.cn: 1.9; cut from 2.0 per Xinhua 20 Jun 2023)
 2023-08-15,7-day reverse repo,1.80,https://english.www.gov.cn/news/202308/15/content_WS64db0e47c6d0868f4e8de8fa.html,checked 21 Nov 2026 (Xinhua via gov.cn: 1.9 to 1.8)
 2024-07-22,7-day reverse repo,1.70,https://english.www.gov.cn/news/202407/22/content_WS669dc04ec6d0868f4e8e9543.html,checked 21 Nov 2026 (Xinhua via gov.cn: 1.8 to 1.7)
