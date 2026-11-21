@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-20",
+ "updated": "2026-11-21",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -452,18 +452,20 @@
   {
    "id": "options-cboe-403-1120",
    "owner": "session:options",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-20",
    "title": "Options: Cboe delayed-quote chains answer 403 since 19 Nov 21:57 (24 stale)",
-   "detail": "cdn.cboe.com now redirects to cdn-api.cboe.com, which returns 403 from Railway and elsewhere. The page serves the 19 Nov snapshot. Asked for a permitted source, or plain labelling of the saved copy."
+   "detail": "cdn.cboe.com now redirects to cdn-api.cboe.com, which returns 403 from Railway and elsewhere. The page serves the 19 Nov snapshot. Asked for a permitted source, or plain labelling of the saved copy. 463e87e: every tab says the chains are a saved copy from 19 Nov, Cboe is asked again every 3 hours, failures marked handled. Index histories still answer. A replacement source is the owner's call (Nasdaq's quote API needs browser-like headers and has no IV).",
+   "done": "2026-11-21"
   },
   {
    "id": "luxury-wiki-1120",
    "owner": "session:luxury",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-20",
    "title": "Luxury: Wikipedia summaries and Wikimedia pageviews fail with ConnectionError since 18 Nov 23:44 (17 stale)",
-   "detail": "Attention tab inputs. Asked to check the fetch path after 7f29680 and fix or label."
+   "detail": "Attention tab inputs. Asked to check the fetch path after 7f29680 and fix or label. Fixed in 1aa6984 and 31d3a53: Wikimedia calls one at a time through Trends' pacer, retried once; saved copies labelled. 21 Nov: Luxury 0 stale.",
+   "done": "2026-11-21"
   },
   {
    "id": "pokemon-review-1120",
@@ -1054,6 +1056,19 @@
     "date": "2026-11-19",
     "minutes": 76,
     "runs": 15
+   }
+  },
+  {
+   "date": "2026-11-21",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Live check: 312 of 312 tabs, all tabs OK, no retries, 17 minutes. Health: Luxury clean; Options one stale (handled, Cboe block); AI Stocks three FRED failing; CoinGecko five stale on BTC Cycles; known items elsewhere (Bluesky and Reddit 403, Yahoo 429, ONS 429, one TCGdex card, Ember 14 bytes). Local tests 476 passed. Unsourced rows 770. Newsletter built, not sent. Signals 68 of 83 wired, 18 crossed.",
+   "fixed": [],
+   "handed": [],
+   "actions": {
+    "date": "2026-11-20",
+    "minutes": 84,
+    "runs": 14
    }
   }
  ],
@@ -2312,6 +2327,50 @@
     "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
     "Debt & Rates: allow the government hosts its remaining rows need, or accept them staying marked verify",
     "Broker for the options trading portal",
+    "Gmail newsletter secrets, eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
+   ]
+  },
+  {
+   "date": "2026-11-21",
+   "title": "AI basket 29% off its high with no stock above its 50-day; Luxury's Wikipedia fixed; Altcoins reviewed",
+   "summary": "The AI Stocks basket fell further after Nvidia's results: 29.2% below its high, no member above its 50-day average, fear score 11.8 on 20 Nov (checked against the setup payload, not a fetch error). The live check passed all 312 tabs with no retries. Luxury is clean again: its Wikipedia calls now go one at a time through the same pacer as Trends (31d3a53). Options' chains stay a labelled saved copy from 19 Nov while Cboe blocks automated requests (463e87e); a replacement source is the owner's call. Altcoins, reviewed today, has every tab loading with no empty cards and current sources; its signals stay off the board by the owner's 3 Nov choice (r-crypto-signals).",
+   "review": "altcoins",
+   "changes": [
+    {
+     "dashboard": "Luxury",
+     "slug": "luxury",
+     "tab": "attention",
+     "what": "Wikipedia and Wikimedia calls paced one at a time and retried; saved copies labelled",
+     "commit": "1aa6984, 31d3a53",
+     "by": "session:luxury"
+    },
+    {
+     "dashboard": "Options",
+     "slug": "options",
+     "tab": "all",
+     "what": "banner when the chains are a saved copy; Cboe asked again every 3 hours",
+     "commit": "463e87e",
+     "by": "session:options"
+    },
+    {
+     "dashboard": "Debt & Rates",
+     "slug": "debt-rates",
+     "tab": "debt",
+     "what": "average-maturity and Hong Kong 10-year verify rows cleared",
+     "commit": "253915c, 9b904e2",
+     "by": "session:debt-rates"
+    }
+   ],
+   "next": [
+    "Not yet reviewed: luxury",
+    "Monday 23 Nov: token totals, verify count, Luxury weekly log"
+   ],
+   "asks": [
+    "Options chains: wire Nasdaq's quote API (browser-like headers, IV computed from prices), wait for Cboe, or a paid feed (perhaps the portal's broker)",
+    "approve or skip r-shared-fresh (Luxury's FRED fix for AI Stocks and others)",
+    "Say go in the Pokémon session for its review fixes, and in Compute & Chips and Longevity",
+    "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
+    "Debt & Rates: allow the government hosts its remaining rows need, or accept them staying marked verify",
     "Gmail newsletter secrets, eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
    ]
   }
