@@ -34,13 +34,14 @@ date,series,value,source,note
 2022-12-31,China interest,1136,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
 2023-12-31,China interest,1163,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
 2024-12-31,China interest,1200,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
-2019-12-31,China defence,1190,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: national defence budget from memory
-2020-12-31,China defence,1268,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: national defence budget from memory
-2021-12-31,China defence,1355,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: national defence budget from memory
-2022-12-31,China defence,1450,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: national defence budget from memory
-2023-12-31,China defence,1554,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: national defence budget from memory
-2024-12-31,China defence,1665,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: national defence budget from memory
-2025-12-31,China defence,1781,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: 2025 budget figure from memory
+# China defence: central national defence budget announced at the NPC each March (CNY bn), not the final account; checked 22 Nov 2026.
+2019-12-31,China defence,1190,https://www.andrewerickson.com/?p=24299,"NPC budget: 1.19 trillion yuan, up 7.5% (Global Times text reproduced here; also globalsecurity.org); checked 22 Nov 2026"
+2020-12-31,China defence,1268,https://www.andrewerickson.com/2023/03/beijing-to-raise-official-annual-military-spending-by-7-2-to-224-79-billion-1-5537-trillion-yuan-read-complete-china-defense-budget-bookshelf-here/,"NPC draft budget: 1.268 trillion yuan, up 6.6% (Global Times / Xinhua text reproduced here); checked 22 Nov 2026"
+2021-12-31,China defence,1355,https://www.janes.com/defence-news/news-detail/china-announces-68-increase-in-2021-defence-budget-0503,"NPC budget: CNY1.355 trillion, up 6.8% (Janes); checked 22 Nov 2026"
+2022-12-31,China defence,1450,https://www.andrewerickson.com/2023/03/beijing-to-raise-official-annual-military-spending-by-7-2-to-224-79-billion-1-5537-trillion-yuan-read-complete-china-defense-budget-bookshelf-here/,"NPC budget: 1.45 trillion yuan, up 7.1% (China Daily text reproduced here; also Janes); checked 22 Nov 2026"
+2023-12-31,China defence,1553.7,https://www.andrewerickson.com/2023/03/beijing-to-raise-official-annual-military-spending-by-7-2-to-224-79-billion-1-5537-trillion-yuan-read-complete-china-defense-budget-bookshelf-here/,"NPC budget: 1.5537 trillion yuan, up 7.2% (Xinhua text reproduced here); was 1554; checked 22 Nov 2026"
+2024-12-31,China defence,1665.5,https://www.globalsecurity.org/wmd/library/news/china/2024/03/china-240305-globaltimes01.htm,"NPC draft budget: 1.66554 trillion yuan, up 7.2% (Global Times, 5 Mar 2024); was 1665; checked 22 Nov 2026"
+2025-12-31,China defence,1784.7,https://english.www.gov.cn/news/202503/05/content_WS67c7ba5dc6d0868f4e8f05cf.html,"NPC budget: 1.784665 trillion yuan, up 7.2% (Xinhua on gov.cn; also People's Daily); was 1781 (wrong); checked 22 Nov 2026"
 2019-12-31,China education,3496,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
 2020-12-31,China education,3636,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
 2021-12-31,China education,3768,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
