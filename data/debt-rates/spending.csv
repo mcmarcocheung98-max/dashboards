@@ -1,26 +1,26 @@
 date,series,value,source,note
-# UK: HM Treasury PESA, total managed expenditure by function, GBP bn, fiscal year ending 31 March. Interest = public sector debt interest.
-2016-03-31,UK interest,34.1,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
-2020-03-31,UK interest,41.0,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
-2021-03-31,UK interest,24.0,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: low RPI and Bank Rate in 2020-21
-2022-03-31,UK interest,69.0,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
-2023-03-31,UK interest,107.0,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: index-linked gilts uplifted by RPI
-2024-03-31,UK interest,104.0,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
-2025-03-31,UK interest,105.0,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: outturn estimate
-2016-03-31,UK defence,35.6,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
-2020-03-31,UK defence,42.4,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
-2021-03-31,UK defence,44.6,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
-2022-03-31,UK defence,46.6,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
-2023-03-31,UK defence,51.8,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
-2024-03-31,UK defence,56.5,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
-2025-03-31,UK defence,60.2,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: outturn estimate
-2016-03-31,UK education,85.6,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
-2020-03-31,UK education,95.7,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
-2021-03-31,UK education,99.6,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
-2022-03-31,UK education,107.6,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
-2023-03-31,UK education,107.7,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
-2024-03-31,UK education,116.7,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: from memory of PESA tables
-2025-03-31,UK education,122.5,https://www.gov.uk/government/collections/public-expenditure-statistical-analyses-pesa,verify: outturn estimate
+# UK: HM Treasury PESA 2025 (July 2025), Table 4.2 "Public sector expenditure on services by function", GBP bn outturn, fiscal year ending 31 March. Interest = its "of which: public sector debt interest" line. This is on the expenditure-on-services basis, so it does not match central government gross debt interest in TME (Table 1.1: 82.9bn in 2023-24) or the OBR net-of-APF forecast below.
+2016-03-31,UK interest,54.9,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, of which: public sector debt interest under General public services, 2015-16 outturn"
+2020-03-31,UK interest,55.2,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, of which: public sector debt interest under General public services, 2019-20 outturn"
+2021-03-31,UK interest,42.3,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, of which: public sector debt interest under General public services, 2020-21 outturn"
+2022-03-31,UK interest,72.7,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, of which: public sector debt interest under General public services, 2021-22 outturn"
+2023-03-31,UK interest,130.2,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, of which: public sector debt interest under General public services, 2022-23 outturn"
+2024-03-31,UK interest,126.6,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, of which: public sector debt interest under General public services, 2023-24 outturn"
+2025-03-31,UK interest,124.7,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, of which: public sector debt interest under General public services, 2024-25 outturn"
+2016-03-31,UK defence,36.6,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, 2. Defence, 2015-16 outturn"
+2020-03-31,UK defence,42.2,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, 2. Defence, 2019-20 outturn"
+2021-03-31,UK defence,44.6,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, 2. Defence, 2020-21 outturn"
+2022-03-31,UK defence,48.7,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, 2. Defence, 2021-22 outturn"
+2023-03-31,UK defence,55.5,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, 2. Defence, 2022-23 outturn"
+2024-03-31,UK defence,56.8,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, 2. Defence, 2023-24 outturn"
+2025-03-31,UK defence,63.6,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, 2. Defence, 2024-25 outturn"
+2016-03-31,UK education,84.9,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, 9. Education, 2015-16 outturn"
+2020-03-31,UK education,90.6,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, 9. Education, 2019-20 outturn"
+2021-03-31,UK education,95.5,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, 9. Education, 2020-21 outturn"
+2022-03-31,UK education,100.1,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, 9. Education, 2021-22 outturn"
+2023-03-31,UK education,107.3,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, 9. Education, 2022-23 outturn"
+2024-03-31,UK education,114.2,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, 9. Education, 2023-24 outturn"
+2025-03-31,UK education,118.7,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, 9. Education, 2024-25 outturn"
 # UK forecast: OBR Economic and fiscal outlook, debt interest net of APF, GBP bn
 2026-03-31,UK interest (OBR forecast),111.0,https://obr.uk/efo/economic-and-fiscal-outlook-march-2025/,verify: from memory of the March 2025 EFO
 2030-03-31,UK interest (OBR forecast),132.0,https://obr.uk/efo/economic-and-fiscal-outlook-march-2025/,verify: from memory of the March 2025 EFO
