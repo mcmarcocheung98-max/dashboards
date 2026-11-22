@@ -911,7 +911,28 @@ def READINGS() -> list[dict]:
     row = next((r for r in s.get("table") or [] if r.get("sym") == "SPY" and r.get("em_iv")), None)
     if row:
         add("moves", "spy_em", "SPY expected move to the next monthly expiry (%)", _r(100 * row["em_iv"], 2), 0, "context: spot x IV x sqrt(T), one standard deviation")
-    return out
+    return _saved_chain_guard(out, signals=False)
+
+
+CHAIN_KEYS = {"ai_iv_rank", "skew_ai", "vrp", "pc_oi", "ai_skew", "vrp_share", "spy_pc_oi", "spy_em"}   # read off the chains; vix_term is not
+
+
+def _saved_chain_guard(rows: list[dict], signals: bool) -> list[dict]:
+    """While the chains are a saved copy (Cboe refusing, see chain_text), a figure read off them keeps its value but says as of when, and a
+    signal is not tested against its watch point: an old chain's crossing must not read as today's. Lean goes to 0 for the same reason."""
+    st = chain_status()
+    if not st["stale"]:
+        return rows
+    when = st["session"] or (st["saved_on"] or "an earlier session")[:10]
+    why = f"as of the {when} saved chain (Cboe refusing automated requests" + (f" since {st['since']}" if st.get("since") else "") + ")"
+    for r in rows:
+        if r.get("key") in CHAIN_KEYS:
+            r["note"] = why + ("; not tested against the watch point until live chains return" if signals else "") + (f". {r['note']}" if r.get("note") else "")
+            r["lean"] = 0
+            if signals:
+                r["crossed"] = False
+            r["as_of"] = when
+    return rows
 
 
 def SIGNALS() -> list[dict]:
@@ -956,7 +977,7 @@ def SIGNALS() -> list[dict]:
         v = h["spy_pc_oi"]
         add("pc_oi", "chains", "SPY put/call open-interest ratio", v, "", -1 if v > 2 else 1 if v < 1.2 else 0, "above 2.0 or below 1.0", v > 2 or v < 1,
             "all listed SPY expiries within 400 days, strikes 60-150% of spot")
-    return out
+    return _saved_chain_guard(out, signals=True)
 
 
 # ------------------------------------------------------------------ endpoints

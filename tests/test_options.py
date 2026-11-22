@@ -497,3 +497,20 @@ def test_cboe_403_serves_the_saved_chain_says_so_and_backs_off(tmp_path, monkeyp
     assert next(x for x in h if x["url"] == url).get("handled") == M.BLOCK_HOW and not next(x for x in h if x["url"] == url)["alert"]
     monkeypatch.setattr(M, "_BLOCK", {"until": 0.0, "since": None})
     cache._cache.clear(); B.STALE.clear(); B.HEALTH.clear()
+
+
+def test_signals_from_a_saved_chain_carry_their_date_and_do_not_cross(mocked, frozen, monkeypatch):
+    seed_history(15)
+    M.ENDPOINTS["setup"](); M.ENDPOINTS["skew"]()
+    live = {x["key"]: x for x in M.SIGNALS()}
+    assert all("saved chain" not in (x.get("note") or "") for x in live.values())
+    for u in SMALL_UNIVERSE:                                              # every chain now a saved copy, Cboe refusing
+        monkeypatch.setitem(B.STALE, M.chain_url(u["cboe"]), time.time() - 86400)
+    monkeypatch.setattr(M, "_BLOCK", {"until": time.time() + 3600, "since": time.time() - 86400})
+    s = {x["key"]: x for x in M.SIGNALS()}
+    for k in ("skew_ai", "vrp", "pc_oi"):
+        assert s[k]["value"] == live[k]["value"] and s[k]["crossed"] is False and s[k]["lean"] == 0
+        assert s[k]["note"].startswith("as of the 2026-11-06 saved chain") and "not tested" in s[k]["note"]
+    assert s["vix_term"] == live["vix_term"]                              # from the index histories: unaffected
+    r = {x["key"]: x for x in M.READINGS()}
+    assert r["ai_skew"]["note"].startswith("as of the 2026-11-06 saved chain") and r["ai_skew"]["lean"] == 0 and "saved chain" not in r["vix_term"]["note"]
