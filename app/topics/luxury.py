@@ -362,6 +362,7 @@ def fill_context() -> dict:
             last = 0.0
         missing = [t for t in all_wiki_titles() if not (B._snap(wiki_key(t)).exists())]
         if time.time() - last < CONTEXT_RETRY_S and not missing:
+            restore_status()                             # after a restart: the last results, so /api/health is never empty
             renew_handled()                              # keep /api/health quiet between the daily tries (handled lasts two days)
             return {"context": "tried less than a day ago"}
         B.SNAP_DIR.mkdir(parents=True, exist_ok=True)
@@ -411,21 +412,71 @@ def fill_context() -> dict:
             res.update([one("wiki:" + t)])
         for k in ("fx", "overview", "watches", "bags", "roi", "liquidity"):
             _cache.pop(f"topic:{SLUG}:{k}", None)
+        save_status()
         return res
     finally:
         _CTX_RUNNING.release()
 
 
-def renew_handled() -> int:
-    """Mark handled again every context source this server has tried that is still failing or serving its snapshot, where another copy
-    serves the page (the seed for FRED; FRED's copy for the ECB, ONS and SPY). Returns how many were renewed."""
-    n = 0
+def context_routes() -> dict[str, str | bool]:
+    """Every source the context fill downloads (its /api/health address) -> why a failure is handled (False when nothing stands in)."""
     routes = {FRED.format(id=sid): (FRED_SEED / f"{sid}.csv").exists() and "FRED does not answer the server; the committed copy serves (data/luxury/fred)"
               for sid in FRED_IDS.values()}
     routes.update({url: why for url, why in HANDLED_BY.values()})
     for t in all_wiki_titles():
         for url in (wiki_key(t), wiki_summary_url(t)):
             routes[url] = B._snap(url).exists() and "Wikimedia does not answer the server; the saved copy serves"
+    return routes
+
+
+STATUS_FILE = "luxury-context-status.json"       # on the volume: each source's last result, replayed into /api/health after a restart
+
+
+def save_status() -> int:
+    """After a fill: each source's last download result (ok and fail times, error, whether a saved copy was served), so a restarted server
+    can show it on /api/health before its next daily try."""
+    out = {}
+    for url in context_routes():
+        h = B.HEALTH.get(url)
+        if h:
+            out[url] = {"ok": h.get("ok"), "fail": h.get("fail"), "error": h.get("error"), "stale": B.STALE.get(url)}
+    B.SNAP_DIR.mkdir(parents=True, exist_ok=True)
+    (B.SNAP_DIR / STATUS_FILE).write_text(__import__("json").dumps(out))
+    return len(out)
+
+
+def restore_status() -> int:
+    """For a run skipped by the once-a-day rule: put each source's last result back on /api/health when this process has none for it,
+    from the saved status file, else from its snapshot's age (fresh if downloaded within two days, stale after). Returns how many."""
+    try:
+        saved = __import__("json").loads((B.SNAP_DIR / STATUS_FILE).read_text())
+    except (OSError, ValueError):
+        saved = {}
+    n = 0
+    for url in context_routes():
+        if url in B.HEALTH:
+            continue
+        rec = saved.get(url)
+        if rec is None:
+            snap = B._snap(url)
+            if not snap.exists():
+                continue
+            t = snap.stat().st_mtime
+            fresh_ = time.time() - t < 2 * DAY
+            rec = {"ok": t, "fail": None if fresh_ else time.time(), "error": None if fresh_ else "no download since the restart; serving the saved copy",
+                   "stale": None if fresh_ else t}
+        B.HEALTH[url] = {"module": "luxury", "ok": rec.get("ok"), "fail": rec.get("fail"), "error": rec.get("error")}
+        if rec.get("stale"):
+            B.STALE[url] = rec["stale"]
+        n += 1
+    return n
+
+
+def renew_handled() -> int:
+    """Mark handled again every context source this server has tried that is still failing or serving its snapshot, where another copy
+    serves the page (the seed for FRED; FRED's copy for the ECB, ONS and SPY). Returns how many were renewed."""
+    n = 0
+    routes = context_routes()
     for url, why in routes.items():
         h = B.HEALTH.get(url)
         if why and h and (url in B.STALE or not h.get("ok") or (h.get("fail") or 0) > (h.get("ok") or 0)):

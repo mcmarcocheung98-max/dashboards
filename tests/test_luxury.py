@@ -572,3 +572,33 @@ def test_wikimedia_calls_are_sequential_paced_and_retried(mocked, monkeypatch):
     res = M.fill_context()
     assert peak[0] == 1 and paced and set(paced) == {"wiki"} and len(paced) >= 2 * len(M.all_wiki_titles())
     assert res["wiki:Rolex Submariner"] == "ok" and calls[M.wiki_url("Rolex Submariner")] == 2
+
+
+def test_health_is_restored_after_a_restart(mocked, monkeypatch):
+    """A restarted server whose daily try is not due yet still lists every context source on /api/health: from the saved status file,
+    else from the snapshot's age; a failing one keeps its error and is marked handled."""
+    from app import topics
+    real = B._download
+
+    def fred_down(url, *a, **k):
+        if "fred.stlouisfed.org/graph/fredgraph.csv?id=SP500" in url:
+            raise TimeoutError("curl exit 28")
+        return real(url, *a, **k)
+    monkeypatch.setattr(B, "_download", fred_down)
+    (B.SNAP_DIR / "luxury-context-try.txt").unlink()
+    M.fill_context()
+    assert (B.SNAP_DIR / M.STATUS_FILE).exists()
+    B.HEALTH.clear()                                                   # the restart
+    B.STALE.clear()
+    assert topics.health()["dashboards"]["luxury"]["fresh"] == 0
+    assert M.fill_context() == {"context": "tried less than a day ago"}
+    h = topics.health()["dashboards"]["luxury"]
+    sp = M.FRED.format(id="SP500")
+    assert h["fresh"] >= 20 and h["stale"] >= 1 and h["alerts"] == 0, h
+    row = next(r for r in h["sources"] if r["url"] == sp)
+    assert row["status"] == "stale" and "curl exit 28" in (row["error"] or "") and row.get("handled")
+    # no status file (first run after this change): the snapshots' ages stand in
+    (B.SNAP_DIR / M.STATUS_FILE).unlink()
+    B.HEALTH.clear()
+    B.STALE.clear()
+    assert M.restore_status() >= 20 and topics.health()["dashboards"]["luxury"]["fresh"] >= 20
