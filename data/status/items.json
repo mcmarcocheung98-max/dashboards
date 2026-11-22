@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-21",
+ "updated": "2026-11-22",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -474,6 +474,14 @@
    "since": "2026-11-20",
    "title": "Pokémon: empty hand files (psa, japan, hk, newset), trends.csv to May 2025 and events.csv to Jan 2025, 77 verify rows",
    "detail": "From the 20 Nov review. Waits on the owner's go in that session."
+  },
+  {
+   "id": "luxury-health-empty-1122",
+   "owner": "session:luxury",
+   "status": "waiting",
+   "since": "2026-11-22",
+   "title": "Luxury: /api/health lists no sources after a restart until the daily context try",
+   "detail": "From the 22 Nov review. The skip branch only renews handled flags; asked to record each source's last result so the entry is never empty."
   }
  ],
  "roadmap": [
@@ -1069,6 +1077,22 @@
     "date": "2026-11-20",
     "minutes": 84,
     "runs": 14
+   }
+  },
+  {
+   "date": "2026-11-22",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Live check: 312 of 312 tabs, all tabs OK, no retries, 12 minutes. Health: Luxury lists no sources (nothing fetched since the last restart); AI Stocks FRED failing; Options one stale (handled); CoinGecko five stale on BTC Cycles; known items elsewhere. Local tests 476 passed. Unsourced rows 727. Newsletter built, not sent. Signals 66 of 83 wired, 19 crossed (VIX 35.9).",
+   "fixed": [],
+   "handed": [
+    "session:options (saved-chain signals)",
+    "session:luxury (review)"
+   ],
+   "actions": {
+    "date": "2026-11-21",
+    "minutes": 73,
+    "runs": 13
    }
   }
  ],
@@ -2367,6 +2391,42 @@
    ],
    "asks": [
     "Options chains: wire Nasdaq's quote API (browser-like headers, IV computed from prices), wait for Cboe, or a paid feed (perhaps the portal's broker)",
+    "approve or skip r-shared-fresh (Luxury's FRED fix for AI Stocks and others)",
+    "Say go in the Pokémon session for its review fixes, and in Compute & Chips and Longevity",
+    "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
+    "Debt & Rates: allow the government hosts its remaining rows need, or accept them staying marked verify",
+    "Gmail newsletter secrets, eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
+   ]
+  },
+  {
+   "date": "2026-11-22",
+   "title": "VIX above 30; Options signals stop crossing from a saved chain; Luxury reviewed",
+   "summary": "VIX closed the week at 35.9, crossing the fear watch point, with the AI basket still 29.2% off its high and no member above its 50-day average. Options' skew and IV-versus-realised readings had crossed from the 19 Nov saved chain; its session made those signals carry the chain's date and not cross until live chains return (1e25aa0). The live check passed all 312 tabs with no retries. Luxury, reviewed today, loads all eight tabs with no empty cards and its Wikipedia inputs recovered, but /api/health lists none of its sources after a restart until the once-a-day context try; asked its session to fill that in.",
+   "review": "luxury",
+   "changes": [
+    {
+     "dashboard": "Options",
+     "slug": "options",
+     "tab": "signals",
+     "what": "signals read off a saved chain carry its date and do not cross",
+     "commit": "1e25aa0",
+     "by": "session:options"
+    },
+    {
+     "dashboard": "Debt & Rates",
+     "slug": "debt-rates",
+     "tab": "china",
+     "what": "PBoC 2016-2025 and China defence verify rows cleared",
+     "commit": "d7b12bc, a148bbb, c88ffcc",
+     "by": "session:debt-rates"
+    }
+   ],
+   "next": [
+    "Monday 23 Nov: token totals, verify count, Luxury weekly log",
+    "Every public dashboard has now been reviewed once; the cycle restarts with housing"
+   ],
+   "asks": [
+    "Options chains: Nasdaq's quote API (browser-like headers, IV from prices), wait for Cboe, or a paid feed",
     "approve or skip r-shared-fresh (Luxury's FRED fix for AI Stocks and others)",
     "Say go in the Pokémon session for its review fixes, and in Compute & Chips and Longevity",
     "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
