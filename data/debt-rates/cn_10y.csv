@@ -1,8 +1,8 @@
 date,value,source,note
 # China government bond 10-year yield, year-end, % (ChinaBond curve, as stated in the PBoC's annual financial market report or Q4 Monetary Policy Report), checked 21 Nov 2026
-2014-12-31,3.62,https://www.pbc.gov.cn/eportal/fileDir/image_public/UserFiles/goutongjiaoliu/upload/File/2014%E5%B9%B4%E9%87%91%E8%9E%8D%E5%B8%82%E5%9C%BA%E8%BF%90%E8%A1%8C%E6%83%85%E5%86%B5.pdf,verify: year-end from memory; PBoC 2014 financial market report (this URL) not reachable from here
-2015-12-31,2.82,https://www.gdjr.gov.cn/upload/uploadeditor/20160126/1453793763742603.pdf,"verify: PBoC 2015 financial market report gives only the change (10-year down 80 bp on the year, which matches 3.62 to 2.82), not the level"
-2016-12-31,3.01,https://www.pbc.gov.cn/jinrongshichangsi/147160/147173/c4e4f1ddf597423aad959cad4a9d97f3/2017012217050243373.pdf,verify: year-end from memory; PBoC 2016 financial market report (this URL) not reachable from here
+2014-12-31,3.62,https://www.gov.cn/foot/site1/20150210/48111423567940903.pdf,"PBoC China Monetary Policy Report Q4 2014, p.27: 10-year down 93 bp on the year; level = end-2015 2.82 plus the 80 bp fall the PBoC 2015 financial market report gives for 2015; checked 23 Nov 2026"
+2015-12-31,2.82,https://v.icbc.com.cn/userfiles/Resources/ICBC/FinancialMarket/download/2016/kuaibao_20160104.pdf,"ICBC market weekly for 28-31 Dec 2015, table 6: interbank fixed-rate government bond 10-year closed the year at 2.82%; matches the PBoC 2015 financial market report's 80 bp fall from 3.62; checked 23 Nov 2026"
+2016-12-31,3.01,https://www.gov.cn/xinwen/2017-01/22/5162335/files/1c7ade694a80419bad026dac6ae5fdbd.pdf,"PBoC 2016 financial market report, p.2: 10-year up 19 bp on end-2015 (2.82), so 3.01 at end-December; checked 23 Nov 2026"
 2017-12-31,3.88,https://jrj.wuhan.gov.cn/ztzl_57/xyrd/dcczbsc/201912/t20191217_172879.shtml,PBoC 2017 financial market report (repost): 10-year 3.88% at end-December
 2018-12-31,3.23,https://jrj.wuhan.gov.cn/ztzl_57/xyrd/dcczbsc/202001/t20200117_888722.shtml,"PBoC 2018 financial market report, as reported by Financial News (PBoC paper): 10-year 3.23% at end-December"
 2019-12-31,3.14,https://jrj.wuhan.gov.cn/ynzx_57/xwzx/202011/t20201119_1506727.shtml,"PBoC 2019 financial market report, as reported by Financial News (PBoC paper): 10-year 3.14% at end-December"
