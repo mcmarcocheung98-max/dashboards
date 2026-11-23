@@ -66,3 +66,23 @@ date,item,platform,metric,value,currency,source,note
 2026-11-16,chanel-cf-medium-caviar,stockx,stockx_ask,10225,USD,https://stockx.com/chanel-classic-double-flap-quilted-medium-black-caviar-goldtone,"black caviar GHW lowest ask (other cached panels show $18,498-18,779; last week's $18,559 was one of those); verify"
 2026-11-16,hermes-birkin25-togo,fashionphile,fashionphile_listings,10,,https://www.fashionphile.com/products/hermes-togo-birkin-25-black-1994484,"10 Togo Birkin 25 product pages surfaced by search, $25,645-$32,995; a lower bound, not the site's count; verify"
 2026-11-16,chanel-cf-medium-caviar,fashionphile,fashionphile_listings,10,,https://www.fashionphile.com/products/chanel-caviar-quilted-medium-double-flap-black-1974521,"10 black caviar medium flap pages surfaced, $5,895-$9,125; a lower bound, not the site's count; verify"
+2026-11-23,sub-126610ln,chrono24,chrono24_listings,922,,https://www.chrono24.com/rolex/ref-126610ln.htm,922 listings incl. promoted; no page date; verify
+2026-11-23,gmt-126710blro,chrono24,chrono24_listings,894,,https://www.chrono24.com/rolex/ref-126710blro.htm,894 listings incl. promoted; no page date; verify
+2026-11-23,daytona-126500ln,chrono24,chrono24_listings,810,,https://www.chrono24.com/rolex/ref-126500ln.htm,"810 listings incl. promoted, both dials; no page date; verify"
+2026-11-23,dj41-126334,chrono24,chrono24_listings,4297,,https://www.chrono24.com/rolex/ref-126334.htm,"about 4,297 listings incl. promoted, all dial and bezel variants (4,173 on 9 Nov); no page date; verify"
+2026-11-23,daydate-228238,chrono24,chrono24_listings,963,,https://www.chrono24.com/rolex/ref-228238.htm,963 listings incl. promoted; no page date; verify
+2026-11-13,sub-126610ln,watchcharts,watchcharts_days_to_sell,17.0,,https://watchcharts.com/watch_model/21817-rolex-submariner-date-126610/overview,"model page; market $13,437 as of 13 Nov"
+2026-11-17,gmt-126710blnr,watchcharts,watchcharts_days_to_sell,20.0,,https://watchcharts.com/watch_model/1525-rolex-gmt-master-ii-batgirl-126710blnr/overview,"market $17,222 as of 17 Nov"
+2026-11-13,daytona-126500ln,watchcharts,watchcharts_days_to_sell,12.0,,https://watchcharts.com/watch_variation/1456-rolex-cosmograph-daytona-126500ln-0001/overview,"the white -0001 variation only (the model page did not surface); market $34,866 as of 13 Nov"
+2026-11-19,explorer-124270,watchcharts,watchcharts_days_to_sell,18.0,,https://watchcharts.com/watch_model/33629-rolex-explorer-124270/overview,"market $8,040 as of 19 Nov"
+2026-11-02,op41-124300,watchcharts,watchcharts_days_to_sell,30.0,,https://watchcharts.com/watch_model/21827-rolex-oyster-perpetual-41-124300/overview,"model page (dials 22.2 to 41.0); market $8,927 as of 2 Nov"
+2026-11-22,daydate-228238,watchcharts,watchcharts_days_to_sell,39.0,,https://watchcharts.com/watch_model/659-rolex-day-date-40-228238/overview,"market $51,819 as of 22 Nov"
+2026-11-23,lv-alma-bb-mono,stockx,stockx_last_sale,2200,USD,https://stockx.com/louis-vuitton-alma-monogram-bb-brown,own page; no page date; verify
+2026-11-23,lv-alma-bb-mono,stockx,stockx_ask,1600,USD,https://stockx.com/louis-vuitton-alma-monogram-bb-brown,"own page, a different cached copy from the last sale; no bid on the page; no page date; verify"
+2026-11-23,ysl-le57-smooth,stockx,stockx_last_sale,1443,USD,https://stockx.com/saint-laurent-le-5-a-7-hobo-bag-in-smooth-leather-noir,"own page; 3 sales in 3 months averaging $1,426 (another snapshot shows $2,044); no page date; verify"
+2026-11-23,ysl-le57-smooth,stockx,stockx_ask,1664,USD,https://stockx.com/saint-laurent-le-5-a-7-hobo-bag-in-smooth-leather-noir,own page; no bid on the page; no page date; verify
+2026-11-23,celine-ava-triomphe,stockx,stockx_last_sale,1207,USD,https://stockx.com/celine-ava-bag-triomphe-tan,"own page (its 12-month range of $800-$1,000 does not fit); no page date; verify"
+2026-11-23,celine-ava-triomphe,stockx,stockx_bid,561,USD,https://stockx.com/celine-ava-bag-triomphe-tan,"own page, highest offer; the ask on this page could not be read; no page date; verify"
+2026-11-23,hermes-birkin25-togo,stockx,stockx_bid,11500,USD,https://stockx.com/hermes-birkin-togo-25-etoupe,"étoupe PHW, own page; 'no asks' on it; no page date; verify"
+2026-11-23,chanel-cf-medium-caviar,stockx,stockx_last_sale,8000,USD,https://stockx.com/chanel-classic-double-flap-quilted-medium-black-caviar-goldtone,own page; no page date; verify
+2026-11-23,chanel-cf-medium-caviar,stockx,stockx_ask,10225,USD,https://stockx.com/chanel-classic-double-flap-quilted-medium-black-caviar-goldtone,own page; no bid on the page; no page date; verify
