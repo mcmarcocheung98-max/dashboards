@@ -25,8 +25,8 @@ date,series,value,source,note
 2026-03-31,UK interest (OBR forecast),111.2,https://obr.uk/efo/economic-and-fiscal-outlook-march-2025/,"OBR EFO March 2025 Table 5.12, central government debt interest (net of APF), March 2025 forecast for 2025-26"
 2030-03-31,UK interest (OBR forecast),131.6,https://obr.uk/efo/economic-and-fiscal-outlook-march-2025/,"OBR EFO March 2025 Table 5.12 and para 5.41, central government debt interest (net of APF), March 2025 forecast for 2029-30"
 # Hong Kong: HKSAR Budget, HKD bn, fiscal year ending 31 March. No defence line: the PLA garrison is funded by the central government.
-2025-03-31,Hong Kong education,109.0,https://www.budget.gov.hk/2025/eng/estimates.html,verify: total education expenditure from memory
-2025-03-31,Hong Kong interest,3.0,https://www.budget.gov.hk/2025/eng/estimates.html,verify: interest on government bonds from memory; small next to fiscal reserves
+2025-03-31,Hong Kong education,113.8,https://www.budget.gov.hk/2026/eng/pdf/e_appendices_b.pdf,"2026-27 Budget Appendix B, Section III Total Government Expenditure: Year-on-Year Change, row Education, 2024-25 actual HK$113,783m"
+2025-03-31,Hong Kong interest,7.0,https://budget.gov.hk/2025/eng/pdf/bond.pdf,"2025-26 Budget, Bond Fund (Head G01), subhead 120 Interest payments for bonds, 2024-25 revised estimate HK$6,953m (2023-24 actual 6,977m); Bond Fund (Government Bond Programme) only, small next to fiscal reserves"
 # China: Ministry of Finance, national general public budget final accounts, CNY bn, calendar year. Interest = debt interest payments; excludes LGFV debt.
 2019-12-31,China interest,840,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
 2020-12-31,China interest,979,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
