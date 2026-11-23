@@ -22,8 +22,8 @@ date,series,value,source,note
 2024-03-31,UK education,114.2,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, 9. Education, 2023-24 outturn"
 2025-03-31,UK education,118.7,https://assets.publishing.service.gov.uk/media/6874fa6f92691289bdb7d393/Public_Expenditure_Statistical_Analyses_2025.pdf,"PESA 2025 Table 4.2, 9. Education, 2024-25 outturn"
 # UK forecast: OBR Economic and fiscal outlook, debt interest net of APF, GBP bn
-2026-03-31,UK interest (OBR forecast),111.0,https://obr.uk/efo/economic-and-fiscal-outlook-march-2025/,verify: from memory of the March 2025 EFO
-2030-03-31,UK interest (OBR forecast),132.0,https://obr.uk/efo/economic-and-fiscal-outlook-march-2025/,verify: from memory of the March 2025 EFO
+2026-03-31,UK interest (OBR forecast),111.2,https://obr.uk/efo/economic-and-fiscal-outlook-march-2025/,"OBR EFO March 2025 Table 5.12, central government debt interest (net of APF), March 2025 forecast for 2025-26"
+2030-03-31,UK interest (OBR forecast),131.6,https://obr.uk/efo/economic-and-fiscal-outlook-march-2025/,"OBR EFO March 2025 Table 5.12 and para 5.41, central government debt interest (net of APF), March 2025 forecast for 2029-30"
 # Hong Kong: HKSAR Budget, HKD bn, fiscal year ending 31 March. No defence line: the PLA garrison is funded by the central government.
 2025-03-31,Hong Kong education,109.0,https://www.budget.gov.hk/2025/eng/estimates.html,verify: total education expenditure from memory
 2025-03-31,Hong Kong interest,3.0,https://www.budget.gov.hk/2025/eng/estimates.html,verify: interest on government bonds from memory; small next to fiscal reserves
