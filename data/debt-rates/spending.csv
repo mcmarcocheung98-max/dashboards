@@ -28,12 +28,12 @@ date,series,value,source,note
 2025-03-31,Hong Kong education,113.8,https://www.budget.gov.hk/2026/eng/pdf/e_appendices_b.pdf,"2026-27 Budget Appendix B, Section III Total Government Expenditure: Year-on-Year Change, row Education, 2024-25 actual HK$113,783m"
 2025-03-31,Hong Kong interest,7.0,https://budget.gov.hk/2025/eng/pdf/bond.pdf,"2025-26 Budget, Bond Fund (Head G01), subhead 120 Interest payments for bonds, 2024-25 revised estimate HK$6,953m (2023-24 actual 6,977m); Bond Fund (Government Bond Programme) only, small next to fiscal reserves"
 # China: Ministry of Finance, national general public budget final accounts, CNY bn, calendar year. Interest = debt interest payments; excludes LGFV debt.
-2019-12-31,China interest,840,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
-2020-12-31,China interest,979,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
-2021-12-31,China interest,1045,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
-2022-12-31,China interest,1136,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
-2023-12-31,China interest,1163,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
-2024-12-31,China interest,1200,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
+2019-12-31,China interest,844.3,https://yss.mof.gov.cn/2019qgczjs/202007/t20200731_3559718.htm,"MoF 2019年全国一般公共预算支出决算表, row 债务付息支出, 决算数 8442.53 亿元; was 840 from memory; checked 23 Nov 2026"
+2020-12-31,China interest,981.3,https://yss.mof.gov.cn/2020zyjs/202109/t20210917_3753571.htm,"MoF 2020年全国一般公共预算支出决算表, row 债务付息支出, 决算数 9812.62 亿元; was 979 from memory; checked 23 Nov 2026"
+2021-12-31,China interest,1044.7,https://yss.mof.gov.cn/2021zyjs/202207/t20220728_3830482.htm,"MoF 2021年全国一般公共预算支出决算表, row 债务付息支出, 决算数 10447.25 亿元; was 1045 from memory; checked 23 Nov 2026"
+2022-12-31,China interest,1135.3,https://www.sipri.org/sites/default/files/2024-04/20230000_gov-chi_national_govt_final_accounts_2022.pdf,"MoF 2022年全国一般公共预算支出决算表, row 债务付息支出, 决算数 11352.65 亿元 (SIPRI-hosted copy of the MoF page published 25 Aug 2023; the MoF page redirect-loops from here); was 1136 from memory; checked 23 Nov 2026"
+2023-12-31,China interest,1183.3,https://yss.mof.gov.cn/2023zyjs/202408/t20240830_3942884.htm,"MoF 2023年全国一般公共预算支出决算表, row 债务付息支出, 决算数 11832.84 亿元; was 1163 from memory; checked 23 Nov 2026"
+2024-12-31,China interest,1200,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory; MoF 2024 national final-accounts table (yss.mof.gov.cn/2024zyjs/202509/t20250904_3971520.htm) returned a server error from here on 23 Nov 2026
 # China defence: central national defence budget announced at the NPC each March (CNY bn), not the final account; checked 22 Nov 2026.
 2019-12-31,China defence,1190,https://www.andrewerickson.com/?p=24299,"NPC budget: 1.19 trillion yuan, up 7.5% (Global Times text reproduced here; also globalsecurity.org); checked 22 Nov 2026"
 2020-12-31,China defence,1268,https://www.andrewerickson.com/2023/03/beijing-to-raise-official-annual-military-spending-by-7-2-to-224-79-billion-1-5537-trillion-yuan-read-complete-china-defense-budget-bookshelf-here/,"NPC draft budget: 1.268 trillion yuan, up 6.6% (Global Times / Xinhua text reproduced here); checked 22 Nov 2026"
@@ -42,9 +42,9 @@ date,series,value,source,note
 2023-12-31,China defence,1553.7,https://www.andrewerickson.com/2023/03/beijing-to-raise-official-annual-military-spending-by-7-2-to-224-79-billion-1-5537-trillion-yuan-read-complete-china-defense-budget-bookshelf-here/,"NPC budget: 1.5537 trillion yuan, up 7.2% (Xinhua text reproduced here); was 1554; checked 22 Nov 2026"
 2024-12-31,China defence,1665.5,https://www.globalsecurity.org/wmd/library/news/china/2024/03/china-240305-globaltimes01.htm,"NPC draft budget: 1.66554 trillion yuan, up 7.2% (Global Times, 5 Mar 2024); was 1665; checked 22 Nov 2026"
 2025-12-31,China defence,1784.7,https://english.www.gov.cn/news/202503/05/content_WS67c7ba5dc6d0868f4e8f05cf.html,"NPC budget: 1.784665 trillion yuan, up 7.2% (Xinhua on gov.cn; also People's Daily); was 1781 (wrong); checked 22 Nov 2026"
-2019-12-31,China education,3496,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
-2020-12-31,China education,3636,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
-2021-12-31,China education,3768,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
-2022-12-31,China education,3963,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
-2023-12-31,China education,4124,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
-2024-12-31,China education,4210,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory
+2019-12-31,China education,3479.7,https://yss.mof.gov.cn/2019qgczjs/202007/t20200731_3559718.htm,"MoF 2019年全国一般公共预算支出决算表, row 教育支出, 决算数 34796.94 亿元; was 3496 from memory; checked 23 Nov 2026"
+2020-12-31,China education,3636.0,https://yss.mof.gov.cn/2020zyjs/202109/t20210917_3753571.htm,"MoF 2020年全国一般公共预算支出决算表, row 教育支出, 决算数 36359.94 亿元; checked 23 Nov 2026"
+2021-12-31,China education,3746.9,https://yss.mof.gov.cn/2021zyjs/202207/t20220728_3830482.htm,"MoF 2021年全国一般公共预算支出决算表, row 教育支出, 决算数 37468.85 亿元; was 3768 from memory; checked 23 Nov 2026"
+2022-12-31,China education,3944.8,https://www.sipri.org/sites/default/files/2024-04/20230000_gov-chi_national_govt_final_accounts_2022.pdf,"MoF 2022年全国一般公共预算支出决算表, row 教育支出, 决算数 39447.59 亿元 (SIPRI-hosted copy of the MoF page published 25 Aug 2023; the MoF page redirect-loops from here); was 3963 from memory; checked 23 Nov 2026"
+2023-12-31,China education,4124.8,https://yss.mof.gov.cn/2023zyjs/202408/t20240830_3942884.htm,"MoF 2023年全国一般公共预算支出决算表, row 教育支出, 决算数 41248.29 亿元; was 4124 from memory; checked 23 Nov 2026"
+2024-12-31,China education,4210,https://www.mof.gov.cn/zhengwuxinxi/caizhengshuju/,verify: from memory; MoF 2024 national final-accounts table (yss.mof.gov.cn/2024zyjs/202509/t20250904_3971520.htm) returned a server error from here on 23 Nov 2026
