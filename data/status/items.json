@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-22",
+ "updated": "2026-11-23",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -478,10 +478,19 @@
   {
    "id": "luxury-health-empty-1122",
    "owner": "session:luxury",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-22",
    "title": "Luxury: /api/health lists no sources after a restart until the daily context try",
-   "detail": "From the 22 Nov review. The skip branch only renews handled flags; asked to record each source's last result so the entry is never empty."
+   "detail": "From the 22 Nov review. The skip branch only renews handled flags; asked to record each source's last result so the entry is never empty. Fixed in 512ab82: 23 Nov, 17 minutes after a restart, Luxury lists 37 fresh sources.",
+   "done": "2026-11-23"
+  },
+  {
+   "id": "luxury-weekly-1123",
+   "owner": "session:luxury",
+   "status": "waiting",
+   "since": "2026-11-23",
+   "title": "Luxury: weekly liquidity log for 23 Nov, and clear its 202 verify rows",
+   "detail": "Briefed 23 Nov per AGENT.md 5a and 5c."
   }
  ],
  "roadmap": [
@@ -555,7 +564,7 @@
    "horizon": "next",
    "status": "in_progress",
    "area": "Data",
-   "detail": "Roadmap phase 0 step 4: every hand-entered row either cites its source or goes. The sessions clear their own; the routine counts what is left. Count on 16 Nov (scripts/verify_count.py): 786 rows (luxury 171, longevity 146, debt-rates 127, ai-models 119, pokemon-cards 78, compute-chips 52, space 37, housing 33, options 15, memecoins 6, altcoins 1, robotaxi 1)."
+   "detail": "Roadmap phase 0 step 4: every hand-entered row either cites its source or goes. The sessions clear their own; the routine counts what is left. Count on 16 Nov (scripts/verify_count.py): 786 rows (luxury 171, longevity 146, debt-rates 127, ai-models 119, pokemon-cards 78, compute-chips 52, space 37, housing 33, options 15, memecoins 6, altcoins 1, robotaxi 1). 23 Nov: 697 left (luxury 202, longevity 146, ai-models 119, pokemon-cards 77, compute-chips 50, space 37, housing 33, debt-rates 18, options 15); Luxury briefed."
   },
   {
    "id": "r-phase1",
@@ -1092,6 +1101,21 @@
    "actions": {
     "date": "2026-11-21",
     "minutes": 73,
+    "runs": 13
+   }
+  },
+  {
+   "date": "2026-11-23",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Live check: 312 of 312 tabs, all tabs OK, 15 minutes; a merge at 07:39 restarted the server as it began, so its health step was empty; re-read at 07:56 shows known failures only and Luxury 37 fresh. Local tests 478 passed. Unsourced rows 697. Token totals collected (17 sessions). Newsletter built, not sent. Signals 68 of 83 wired, 19 crossed.",
+   "fixed": [],
+   "handed": [
+    "session:luxury (weekly log, verify rows)"
+   ],
+   "actions": {
+    "date": "2026-11-22",
+    "minutes": 77,
     "runs": 13
    }
   }
@@ -2424,6 +2448,43 @@
    "next": [
     "Monday 23 Nov: token totals, verify count, Luxury weekly log",
     "Every public dashboard has now been reviewed once; the cycle restarts with housing"
+   ],
+   "asks": [
+    "Options chains: Nasdaq's quote API (browser-like headers, IV from prices), wait for Cboe, or a paid feed",
+    "approve or skip r-shared-fresh (Luxury's FRED fix for AI Stocks and others)",
+    "Say go in the Pokémon session for its review fixes, and in Compute & Chips and Longevity",
+    "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
+    "Debt & Rates: allow the government hosts its remaining rows need, or accept them staying marked verify",
+    "Gmail newsletter secrets, eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
+   ]
+  },
+  {
+   "date": "2026-11-23",
+   "title": "Luxury's health fix confirmed; 697 unsourced rows left; Hacker News AI share below 20%",
+   "summary": "A merge at 07:39 restarted the server as the live check began, so its health step saw empty entries; all 312 tabs still loaded. Re-read at 07:56: Luxury lists 37 fresh sources 17 minutes after the restart, so 512ab82 works; known failures elsewhere (Bluesky, Reddit, Yahoo, Ember, Cboe handled). Hacker News' AI story share fell to 19.4%, crossing its below-20% watch point; VIX 35.9 and the AI basket at -29.2% stand. Unsourced rows are 697, down from 798 a week ago, mostly Debt & Rates' work; Luxury now has the most (202) and was briefed with its weekly liquidity log. Token totals collected for 17 sessions. Housing starts the second review cycle: 15 sources fresh, every tab loading, 33 rows still marked verify.",
+   "review": "housing",
+   "verify_rows": 697,
+   "changes": [
+    {
+     "dashboard": "Luxury",
+     "slug": "luxury",
+     "tab": "health",
+     "what": "context sources listed on /api/health after a restart",
+     "commit": "512ab82",
+     "by": "session:luxury"
+    },
+    {
+     "dashboard": "Debt & Rates",
+     "slug": "debt-rates",
+     "tab": "uk",
+     "what": "UK PESA and OBR forecast verify rows cleared",
+     "commit": "d6bc967, 2441135",
+     "by": "session:debt-rates"
+    }
+   ],
+   "next": [
+    "Luxury weekly log and verify rows (asked)",
+    "Pokémon lists no sources after a restart until its fill runs; watch whether it fills in"
    ],
    "asks": [
     "Options chains: Nasdaq's quote API (browser-like headers, IV from prices), wait for Cboe, or a paid feed",

@@ -515,6 +515,17 @@
   },
   {
    "date": "2026-11-17",
+   "session": "ai-models",
+   "input": 506,
+   "cache_write": 743,
+   "cache_read": 507706,
+   "output": 2,
+   "cost_usd": 0.15,
+   "source": "totals",
+   "since": "2026-11-09T09:19"
+  },
+  {
+   "date": "2026-11-17",
    "session": "dev-agent",
    "input": 30,
    "cache_write": 774170,
@@ -546,12 +557,75 @@
   {
    "date": "2026-11-20",
    "session": "dev-agent",
-   "input": 51,
-   "cache_write": 110612,
-   "cache_read": 3816598,
-   "output": 7693,
+   "input": 103,
+   "cache_write": 141973,
+   "cache_read": 8131786,
+   "output": 18874,
    "lookups": 1,
    "source": "transcript"
+  },
+  {
+   "date": "2026-11-20",
+   "session": "pokemon-cards",
+   "input": 3,
+   "cache_write": 590992,
+   "cache_read": 686606,
+   "output": 845,
+   "cost_usd": 4.88,
+   "source": "totals",
+   "since": "2026-11-11T10:31"
+  },
+  {
+   "date": "2026-11-21",
+   "session": "dev-agent",
+   "input": 56,
+   "cache_write": 173540,
+   "cache_read": 6043443,
+   "output": 10280,
+   "lookups": 1,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-11-22",
+   "session": "dev-agent",
+   "input": 47,
+   "cache_write": 202656,
+   "cache_read": 5162957,
+   "output": 8671,
+   "lookups": 0,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-11-22",
+   "session": "options",
+   "input": 43851,
+   "cache_write": 1014814,
+   "cache_read": 18647317,
+   "output": 42304,
+   "cost_usd": 12.69,
+   "source": "totals",
+   "since": "2026-11-16T07:50"
+  },
+  {
+   "date": "2026-11-23",
+   "session": "dev-agent",
+   "input": 5,
+   "cache_write": 211283,
+   "cache_read": 575230,
+   "output": 1473,
+   "lookups": 0,
+   "source": "transcript"
+  },
+  {
+   "date": "2026-11-23",
+   "session": "luxury",
+   "input": 1095472,
+   "cache_write": 4456475,
+   "cache_read": 49422507,
+   "output": 156124,
+   "cost_usd": 58.23,
+   "source": "totals",
+   "since": "2026-11-12T08:29"
   }
  ],
  "snapshots": {
@@ -607,7 +681,7 @@
    "cache_write": 2405128,
    "cache_read": 44493756,
    "output": 159477,
-   "cost_usd": 30.690946
+   "cost_usd": 30.690945965
   },
   "debt-rates": {
    "id": "session_01DjiLHK9jLscwzRAtBrW7hR",
@@ -616,7 +690,7 @@
    "cache_write": 6199382,
    "cache_read": 167783973,
    "output": 356106,
-   "cost_usd": 88.798985
+   "cost_usd": 88.79898493
   },
   "climate": {
    "id": "session_016qhyE8K2Ta61cxezGrnnSf",
@@ -656,12 +730,12 @@
   },
   "pokemon-cards": {
    "id": "session_01E2rgzyuaUHsMjB6PAC9UoM",
-   "as_of": "2026-11-11T10:31:18.015658Z",
-   "input": 9195,
-   "cache_write": 4762945,
-   "cache_read": 119255891,
-   "output": 237049,
-   "cost_usd": 66.7324982
+   "as_of": "2026-11-20T07:53:32.810189Z",
+   "input": 9198,
+   "cache_write": 5353937,
+   "cache_read": 119942497,
+   "output": 237894,
+   "cost_usd": 71.6146674
   },
   "prediction-markets": {
    "id": "session_01J3ZVbej7kofN2W2QvFMciM",
@@ -691,13 +765,13 @@
    "cost_usd": 39.1127
   },
   "ai-stocks": {
-   "id": "session_01Hguru33HhMq9DoqY2C26R6",
-   "as_of": "2026-11-13T08:44:47.205301Z",
-   "input": 3477,
-   "cache_write": 1197239,
-   "cache_read": 51350588,
-   "output": 152809,
-   "cost_usd": 22.9181176
+   "id": "session_01Hguru3NTcATdNFZJk1KsMC",
+   "as_of": "2026-11-06T07:51:49.056749Z",
+   "input": 754,
+   "cache_write": 578090,
+   "cache_read": 30511415,
+   "output": 134268,
+   "cost_usd": 13.415379
   },
   "daily-check": {
    "id": "session_01Hguru4ZnmwKFghzbQZHzmL",
@@ -719,33 +793,33 @@
   },
   "luxury": {
    "id": "session_01Hguru15vQ5yfAZ9A1uCCyE",
-   "as_of": "2026-11-12T08:29:27.215935Z",
-   "input": 3783092,
-   "cache_write": 2916114,
-   "cache_read": 83969958,
-   "output": 696943,
-   "cost_usd": 99.3132267
+   "as_of": "2026-11-23T07:42:13.142710Z",
+   "input": 4878564,
+   "cache_write": 7372589,
+   "cache_read": 133392465,
+   "output": 853067,
+   "cost_usd": 157.543152
   },
   "ai-models": {
    "id": "session_01Hguru1tHBCffh5BwqSs3mk",
-   "as_of": "2026-11-09T09:19:15.619646Z",
-   "input": 760715,
-   "cache_write": 1709682,
-   "cache_read": 16949588,
-   "output": 225351,
-   "cost_usd": 46.0477368
+   "as_of": "2026-11-17T07:41:18.197473Z",
+   "input": 761221,
+   "cache_write": 1710425,
+   "cache_read": 17457294,
+   "output": 225353,
+   "cost_usd": 46.19468333
   },
   "options": {
    "id": "session_01Hguru26F1zDdmAxFa5sdbA",
-   "as_of": "2026-11-16T07:50:53.925798Z",
-   "input": 3556,
-   "cache_write": 1125185,
-   "cache_read": 21722922,
-   "output": 123184,
-   "cost_usd": 34.1291905
+   "as_of": "2026-11-22T07:54:57.161715Z",
+   "input": 47407,
+   "cache_write": 2139999,
+   "cache_read": 40370239,
+   "output": 165488,
+   "cost_usd": 46.8197659
   }
  },
  "saving_per_lookup": 112958,
  "saving_measured": "2026-10-31",
- "updated": "2026-11-20 07:53 UTC"
+ "updated": "2026-11-23 07:49 UTC"
 }
