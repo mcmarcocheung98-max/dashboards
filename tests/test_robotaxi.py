@@ -154,4 +154,14 @@ def test_signals_cover_the_approved_keys():
     pay["footprint"]["rows"].append({"date": "2023-08-10", "operator": "Cruise", "city": "San Francisco", "country": "US", "note": "suspended Oct 2023"})
     c = {x["key"]: x for x in R.signals(lambda n: pay[n])}["cities"]
     assert c["crossed"] and c["lean"] == -1 and "UK" in c["note"] and "Cruise" in c["note"]
-    assert R.signals(lambda n: {}) == [] and isinstance(R.SIGNALS(), list)
+    assert [x["key"] for x in R.signals(lambda n: {})] == ["waymo_rides"] and isinstance(R.SIGNALS(), list)   # Rides is built from its CSVs when not cached
+
+
+def test_waymo_signal_does_not_need_the_rides_tab_cached(monkeypatch):
+    from app import cache
+    monkeypatch.setattr(cache, "_cache", {})                     # just after a restart: no tab built yet (the warmer skips Rides)
+    s = {x["key"]: x for x in R.SIGNALS()}
+    w = s["waymo_rides"]
+    last = R.manual(R.SLUG, "rides")["Waymo"]
+    assert w["value"] == last.iloc[-1] and str(last.index[-1].date()) in w["note"]
+    assert {x["key"] for x in R.READINGS()} >= {"waymo_weekly"}

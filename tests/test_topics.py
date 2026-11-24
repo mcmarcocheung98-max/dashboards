@@ -1404,7 +1404,7 @@ def test_robotaxi_readings(snapdir, monkeypatch):
     assert {r["tab"] for r in rows} == {"rides", "footprint", "safety", "tesla"} and all(r["lean"] in (-1, 0, 1) for r in rows)
     assert keys["waymo_weekly"]["lean"] == 0 and keys["deliveries_yoy"]["lean"] == -1      # 500K repeated in Apr 2026: flat; Q3 2026 below Q3 2025
     assert keys["waymo_per_million"]["note"].endswith("(lower is better)")
-    assert R.readings(lambda n: {}) == [] and R.READINGS() is not None
+    assert {r["key"] for r in R.readings(lambda n: {})} == {"waymo_weekly", "baidu_quarterly"} and R.READINGS() is not None   # Rides from its CSVs
 
 
 def test_btc_rotation_timeline_and_sector_status():

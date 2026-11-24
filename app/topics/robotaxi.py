@@ -408,7 +408,7 @@ def readings(got) -> list[dict]:
     opposite; 0 flat or unknown."""
     out: list[dict] = []
     now = pd.Timestamp.now().normalize()
-    r = got("rides")
+    r = _rides(got)
     for key, op, src in (("waymo_weekly", "Waymo", "weekly"), ("baidu_quarterly", "Baidu Apollo Go", "quarterly")):
         pts = (r.get(src) or {}).get(op) or []
         if pts:
@@ -463,6 +463,18 @@ def _safe(got, name: str) -> dict:
         return {}
 
 
+def _rides(got) -> dict:
+    """The Rides payload: cached if a visit or the warmer built it, else built now. Rides reads only the hand-entered CSVs (no
+    network), and the warmer does not keep it computed, so after a restart the cache can be empty until someone opens the tab."""
+    r = _safe(got, "rides")
+    if not r.get("weekly"):
+        try:
+            r = _rides_now()
+        except Exception:
+            r = {}
+    return r
+
+
 def crash_quarter(rate: list[dict]) -> dict | None:
     """Waymo crash reports per million miles in the latest period between two published mile cut-offs, against the rate over the
     year before that period (from the cut-off about a year earlier to the period's start). None until there are enough cut-offs."""
@@ -482,7 +494,7 @@ def crash_quarter(rate: list[dict]) -> dict | None:
 def signals(got) -> list[dict]:
     """The owner's approved signals for this dashboard (data/signals/watchlist.json), from the cached tab payloads only."""
     out = []
-    pts = ((_safe(got, "rides").get("weekly") or {}).get("Waymo")) or []
+    pts = ((_rides(got).get("weekly") or {}).get("Waymo")) or []
     if pts:
         v = pts[-1][1]
         out.append({"key": "waymo_rides", "tab": "rides", "label": "Waymo paid rides a week", "value": v, "lean": _cmp(v, pts[-2][1] if len(pts) > 1 else None),
