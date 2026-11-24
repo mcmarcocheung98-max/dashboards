@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-23",
+ "updated": "2026-11-24",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -487,10 +487,27 @@
   {
    "id": "luxury-weekly-1123",
    "owner": "session:luxury",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-23",
    "title": "Luxury: weekly liquidity log for 23 Nov, and clear its 202 verify rows",
-   "detail": "Briefed 23 Nov per AGENT.md 5a and 5c."
+   "detail": "Briefed 23 Nov per AGENT.md 5a and 5c. Done 23 Nov: weekly log 047c7ba (Chrono24 counts within 5% of last week, WatchCharts days-to-sell dated, Celine Ava out of stock online), resale.csv verify 47 to 44 (8507ca7). Next: retail.csv, auctions.csv.",
+   "done": "2026-11-24"
+  },
+  {
+   "id": "aistocks-vix-date-1124",
+   "owner": "session:ai-stocks",
+   "status": "waiting",
+   "since": "2026-11-24",
+   "title": "AI Stocks: VIX signal reads 35.89 three days running; confirm its date and show it",
+   "detail": "Board 22-24 Nov unchanged while the basket moved; health fresh."
+  },
+  {
+   "id": "robotaxi-review-1124",
+   "owner": "session:robotaxi",
+   "status": "waiting",
+   "since": "2026-11-24",
+   "title": "Robotaxi: Waymo weekly rides signal often returns no value (board shows it kept)",
+   "detail": "From the 24 Nov review."
   }
  ],
  "roadmap": [
@@ -1117,6 +1134,22 @@
     "date": "2026-11-22",
     "minutes": 77,
     "runs": 13
+   }
+  },
+  {
+   "date": "2026-11-24",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Live check: 312 of 312 tabs, all tabs OK, no retries. Health: known failures only (Bluesky and Reddit 403, Yahoo 429, CoinGecko five stale, Ember 14 bytes, Cboe chains handled); AI Stocks FRED answering. Local tests 478 passed. Unsourced rows 709. Newsletter built, not sent. Signals 68 of 83 wired, 19 crossed.",
+   "fixed": [],
+   "handed": [
+    "session:ai-stocks (VIX date)",
+    "session:robotaxi (review)"
+   ],
+   "actions": {
+    "date": "2026-11-23",
+    "minutes": 71,
+    "runs": 14
    }
   }
  ],
@@ -2485,6 +2518,42 @@
    "next": [
     "Luxury weekly log and verify rows (asked)",
     "Pokémon lists no sources after a restart until its fill runs; watch whether it fills in"
+   ],
+   "asks": [
+    "Options chains: Nasdaq's quote API (browser-like headers, IV from prices), wait for Cboe, or a paid feed",
+    "approve or skip r-shared-fresh (Luxury's FRED fix for AI Stocks and others)",
+    "Say go in the Pokémon session for its review fixes, and in Compute & Chips and Longevity",
+    "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
+    "Debt & Rates: allow the government hosts its remaining rows need, or accept them staying marked verify",
+    "Gmail newsletter secrets, eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
+   ]
+  },
+  {
+   "date": "2026-11-24",
+   "title": "AI basket rebounds to -21.5%; VIX reading may lag; Robotaxi reviewed",
+   "summary": "The AI Stocks basket recovered from -29.2% to -21.5% with breadth at 8%, still inside its bear and washout watch points. The VIX signal has read 35.89 for three days while health shows its sources fresh, so its date is being checked by the AI Stocks session before it is quoted. The live check passed all 312 tabs with no retries; health shows known failures only, and AI Stocks' FRED series answered again. Hacker News' AI share is 18.9%. Luxury finished its weekly log and cut resale.csv's unsourced rows; unsourced rows are 709 (up 12 from new weekly readings). Robotaxi, reviewed today, loads every tab with fresh sources; its Waymo weekly-rides signal keeps falling back to a kept reading, handed to its session.",
+   "review": "robotaxi",
+   "changes": [
+    {
+     "dashboard": "Luxury",
+     "slug": "luxury",
+     "tab": "liquidity",
+     "what": "weekly liquidity log 23 Nov; resale.csv dated sources",
+     "commit": "047c7ba, 8507ca7",
+     "by": "session:luxury"
+    },
+    {
+     "dashboard": "Debt & Rates",
+     "slug": "debt-rates",
+     "tab": "china",
+     "what": "China interest and education verify rows cleared",
+     "commit": "c255848",
+     "by": "session:debt-rates"
+    }
+   ],
+   "next": [
+    "AI Stocks: VIX date (asked)",
+    "Robotaxi: Waymo signal (asked)"
    ],
    "asks": [
     "Options chains: Nasdaq's quote API (browser-like headers, IV from prices), wait for Cboe, or a paid feed",
