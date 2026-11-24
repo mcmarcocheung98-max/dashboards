@@ -12,7 +12,7 @@ date,family,model,developer,country,open,context,modalities,flagship,source,note
 2025-04-16,GPT,o3,OpenAI,US,no,200000,text+image in,yes,https://openai.com/index/introducing-o3-and-o4-mini/,with o4-mini
 2025-08-05,GPT,gpt-oss-120b,OpenAI,US,yes,131072,text,no,https://openai.com/index/introducing-gpt-oss/,Apache 2.0 open weights
 2025-08-07,GPT,GPT-5,OpenAI,US,no,400000,text+image in,yes,https://openai.com/index/introducing-gpt-5/,
-2025-11-12,GPT,GPT-5.1,OpenAI,US,no,400000,text+image in,no,https://openai.com/index/gpt-5-1/,verify
+2025-11-12,GPT,GPT-5.1,OpenAI,US,no,400000,text+image in,no,https://benchlm.ai/model-updates/releases/november-2025,12 Nov 2025 per BenchLM's confirmed-releases list for November 2025; checked 2026-11-24 (secondary)
 2026-04-23,GPT,GPT-5.5,OpenAI,US,no,400000,text+image in,yes,https://openai.com/index/introducing-gpt-5-5/,checked 2026-11-08 (OpenAI launch page dated 23 Apr 2026); context verify
 2026-07-09,GPT,GPT-5.6 Sol,OpenAI,US,no,400000,text+image in,yes,https://www.cometapi.com/gpt-6-revealed-when-will-it-be-released/,date from a secondary summary; verify
 2026-09-03,GPT,GPT-6 Astra,OpenAI,US,no,1050000,text+image in,yes,https://llmgateway.io/models/gpt-6-astra,checked 2026-11-08 (several trackers agree on 3 Sep 2026 and 1.05M context)
@@ -41,12 +41,12 @@ date,family,model,developer,country,open,context,modalities,flagship,source,note
 2024-12-11,Gemini,Gemini 2.0 Flash,Google DeepMind,US,no,1048576,text+image+audio+video,yes,https://blog.google/technology/google-deepmind/google-gemini-ai-update-december-2024/,experimental; GA Feb 2025
 2025-03-25,Gemini,Gemini 2.5 Pro,Google DeepMind,US,no,1048576,text+image+audio+video,yes,https://blog.google/technology/google-deepmind/gemini-model-thinking-updates-march-2025/,experimental; GA June 2025
 2025-06-17,Gemini,Gemini 2.5 Flash,Google DeepMind,US,no,1048576,text+image+audio+video,no,https://blog.google/products/gemini/gemini-2-5-model-family-expands/,
-2025-11-18,Gemini,Gemini 3 Pro,Google DeepMind,US,no,1048576,text+image+audio+video,yes,https://apisrouter.com/gemini-3-release-date,preview 18 Nov 2025 per aggregator; verify
-2025-12-17,Gemini,Gemini 3 Flash,Google DeepMind,US,no,1048576,text+image+audio+video,no,https://presenc.ai/research/google-gemini-model-lineage-2026,December 2025; exact day verify
+2025-11-18,Gemini,Gemini 3 Pro,Google DeepMind,US,no,1048576,text+image+audio+video,yes,https://benchlm.ai/model-updates/releases/november-2025,"preview launched 18 Nov 2025, the day after Grok 4.1; checked 2026-11-24 (secondary)"
+2025-12-17,Gemini,Gemini 3 Flash,Google DeepMind,US,no,1048576,text+image+audio+video,no,https://benchmarklist.com/timeline/,17 Dec 2025 per a dated release timeline (one source); checked 2026-11-24 (secondary)
 2026-02-19,Gemini,Gemini 3.1 Pro,Google DeepMind,US,no,1048576,text+image+audio+video,yes,https://9to5google.com/2026/02/19/google-announces-gemini-3-1-pro-for-complex-problem-solving/,checked 2026-11-08
 2026-09-02,Gemini,Gemini 3.8 Flash,Google DeepMind,US,no,1048576,text+image+audio+video,no,https://docs.cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/3-8-flash,checked 2026-11-08 (Vertex AI model page: GA 2 Sep 2026); fourth Flash in 106 days per Fortune
 2026-09-30,Gemini,Gemini 4 Argon,Google DeepMind,US,no,1048576,text+image+audio+video,yes,https://fourweekmba.com/ai-gemini-4-argon-introductory-price-footnote-4-20/,announced 30 Sep 2026 (restricted); paid API GA 13 Oct 2026; checked 2026-11-08 (secondary)
-2026-10-28,Gemini,Gemini 4 Carbon,Google DeepMind,US,no,1048576,text+image+audio+video,yes,https://af.net/realtime/google-gemini-4-carbon-leads-lmarena-text-leaderboard-with-1528-score/,announced 28 Oct 2026; not generally available on 8 Nov 2026; verify
+2026-10-28,Gemini,Gemini 4 Carbon,Google DeepMind,US,no,1048576,text+image+audio+video,yes,https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-carbon/,Google's post of 28 Oct 2026 (cyber defenders first); generally available from 10 Nov 2026; checked 2026-11-24
 2023-02-24,Llama/Muse,LLaMA,Meta,US,yes,2048,text,yes,https://ai.meta.com/blog/large-language-model-llama-meta-ai/,weights for researchers on request
 2023-07-18,Llama/Muse,Llama 2,Meta,US,yes,4096,text,yes,https://ai.meta.com/blog/llama-2/,
 2024-04-18,Llama/Muse,Llama 3,Meta,US,yes,8192,text,yes,https://ai.meta.com/blog/meta-llama-3/,8B and 70B
@@ -62,7 +62,7 @@ date,family,model,developer,country,open,context,modalities,flagship,source,note
 2025-02-17,Grok,Grok 3,xAI,US,no,131072,text+image in,yes,https://x.ai/news/grok-3,
 2025-07-09,Grok,Grok 4,xAI,US,no,256000,text+image in,yes,https://x.ai/news/grok-4,
 2025-09-19,Grok,Grok 4 Fast,xAI,US,no,2000000,text+image in,no,https://x.ai/news/grok-4-fast,
-2025-11-17,Grok,Grok 4.1,xAI,US,no,256000,text+image in,no,https://x.ai/news/grok-4-1,verify
+2025-11-17,Grok,Grok 4.1,xAI,US,no,256000,text+image in,no,https://venturebeat.com/ai/musks-xai-launches-grok-4-1-with-lower-hallucination-rate-on-the-web-and,17 Nov 2025 (VentureBeat; BenchLM marks the day as exact); checked 2026-11-24 (secondary)
 2026-07-16,Grok,Grok 4.5,xAI,US,no,,text+image in,yes,https://www.basenor.com/blogs/news/grok-4-5-4-6-and-tavily-4-updates-that-matter,8 Jul (Artificial Analysis) or 16 Jul 2026 (xAI announcement page) per secondary reports; verify
 2026-08-12,Grok,Grok 4.6,xAI,US,no,,text+image in,no,https://docs.apiyi.com/en/news/grok-4-6-launch,checked 2026-11-08 (secondary); 1.5T parameters on the Grok 4.5 base
 2026-09-21,Grok,Grok 4.7,xAI,US,no,,text+image in,yes,https://tech-insider.org/grok-4-7-release-terminal-bench-coding-score-2026/,12 or 21 Sep 2026 per secondary reports; verify
@@ -71,8 +71,8 @@ date,family,model,developer,country,open,context,modalities,flagship,source,note
 2024-12-26,DeepSeek,DeepSeek-V3,DeepSeek,China,yes,128000,text,yes,https://github.com/deepseek-ai/DeepSeek-V3,671B MoE; 2048 H800s
 2025-01-20,DeepSeek,DeepSeek-R1,DeepSeek,China,yes,128000,text,yes,https://github.com/deepseek-ai/DeepSeek-R1,MIT licence
 2025-05-28,DeepSeek,DeepSeek-R1-0528,DeepSeek,China,yes,128000,text,no,https://huggingface.co/deepseek-ai/DeepSeek-R1-0528,
-2025-08-21,DeepSeek,DeepSeek-V3.1,DeepSeek,China,yes,128000,text,no,https://huggingface.co/deepseek-ai/DeepSeek-V3.1,hybrid thinking; verify
-2025-12-01,DeepSeek,DeepSeek-V3.2,DeepSeek,China,yes,128000,text,no,https://huggingface.co/deepseek-ai/DeepSeek-V3.2,December 2025; exact day verify
+2025-08-21,DeepSeek,DeepSeek-V3.1,DeepSeek,China,yes,128000,text,no,https://api-docs.deepseek.com/news/news250821,DeepSeek's release note of 21 Aug 2025; hybrid thinking and non-thinking in one model; checked 2026-11-24
+2025-12-01,DeepSeek,DeepSeek-V3.2,DeepSeek,China,yes,128000,text,no,https://api-docs.deepseek.com/news/news250821,"""DeepSeek-V3.2 Release 2025/12/01"" in DeepSeek's news listing; checked 2026-11-24"
 2026-04-24,DeepSeek,DeepSeek V4 (Pro and Flash previews),DeepSeek,China,yes,1000000,text,yes,https://simonwillison.net/2026/apr/24/deepseek-v4,checked 2026-11-08; 1.6T Pro and 284B Flash; MIT licence
 2026-07-31,DeepSeek,DeepSeek-V4-Flash-0731,DeepSeek,China,yes,1000000,text,no,https://www.gradually.ai/en/ai-models/deepseek-deepseek-v4-pro-0813/,per the V4 Pro 0813 coverage; verify
 2026-08-13,DeepSeek,DeepSeek-V4-Pro-0813,DeepSeek,China,yes,1048576,text,yes,https://datanorth.ai/news/deepseek-releases-v4-pro-0813-and-harness-v0-1,checked 2026-11-08 (secondary); open weights reported but conflicting
@@ -105,7 +105,7 @@ date,family,model,developer,country,open,context,modalities,flagship,source,note
 2025-07-28,GLM,GLM-4.5,Zhipu AI (Z.ai),China,yes,128000,text,yes,https://z.ai/blog/glm-4.5,355B MoE; MIT
 2025-09-30,GLM,GLM-4.6,Zhipu AI (Z.ai),China,yes,200000,text,no,https://z.ai/blog/glm-4.6,verify
 2026-02-11,GLM,GLM-5,Zhipu AI (Z.ai),China,yes,200000,text,yes,https://huggingface.co/blog/mlabonne/glm-5,checked 2026-11-08; 744B; MIT
-2026-06-18,GLM,GLM-5.2,Zhipu AI (Z.ai),China,yes,200000,text,no,https://venturebeat.com/technology/z-ais-open-weights-glm-5-2-beats-gpt-5-5-on-multiple-long-horizon-coding-benchmarks-for-1-6th-the-cost,753B; June 2026 (exact day verify)
+2026-06-16,GLM,GLM-5.2,Zhipu AI (Z.ai),China,yes,200000,text,no,https://venturebeat.com/technology/z-ais-open-weights-glm-5-2-beats-gpt-5-5-on-multiple-long-horizon-coding-benchmarks-for-1-6th-the-cost,"753B; Z.ai's announcement dated 16 Jun 2026 (Coding Plan first, open weights the week after); checked 2026-11-24 (secondary)"
 2026-08-14,GLM,GLM-5.3,Zhipu AI (Z.ai),China,yes,200000,text,yes,https://technode.com/2026/08/17/z-ai-launches-glm-5-3-with-claimed-50-gain-on-coding-benchmark/,checked 2026-11-08; weights promised two weeks after launch (open status verify)
 2026-08-05,Llama/Muse,Muse Spark 1.2,Meta,US,no,1000000,text+image in,no,https://datanorth.ai/news/meta-releases-muse-spark-1-2-and-muse-code,coding checkpoint with Muse Code; Meta's first paid API ($1.25/$4.25); checked 2026-11-09 (secondary)
 2026-05-28,Claude,Claude Opus 4.8,Anthropic,US,no,1000000,text+image in,no,https://www.anthropic.com/news/claude-opus-4-8,published 28 May 2026; read on Anthropic's page 2026-11-24
