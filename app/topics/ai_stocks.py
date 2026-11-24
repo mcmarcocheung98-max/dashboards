@@ -34,7 +34,7 @@ import pandas as pd
 from . import Topic
 from . import _base as B
 from . import compute_chips as CC
-from ._base import DAY, _pts, _r, fetch, fetch_json, handled, payload
+from ._base import DAY, HOUR, _pts, _r, fetch, fetch_json, handled, payload
 
 SLUG = "ai-stocks"
 TOPIC = Topic(SLUG, "AI Stocks: the setup after the dip",
@@ -506,15 +506,21 @@ VIX_SEED = B.MANUAL_DIR / SLUG / "fred" / "VIXCLS.csv"     # committed copy (FRE
 
 
 def vix() -> tuple[pd.Series, str]:
-    """For page views, never a download: VIX daily closes from the kept Cboe copy, else the kept FRED copy, else the committed seed;
-    and which one ("Cboe", "FRED", "copy to <date>"). fill_market downloads (Cboe first; FRED only when Cboe fails, once a day)."""
-    for url, name in ((CBOE_VIX, "Cboe"), (FRED_VIX, "FRED")):
+    """For page views, never a download: VIX daily closes from whichever kept copy (Cboe, FRED) has the latest close (Cboe on a tie:
+    FRED posts a day late, and a FRED copy fetched when Cboe failed can be newer than an old Cboe copy), else the committed seed; and
+    which one ("Cboe", "FRED", "copy to <date>"). fill_market downloads (Cboe first; FRED only when Cboe fails, once a day)."""
+    have = []
+    for rank, (url, name) in enumerate(((CBOE_VIX, "Cboe"), (FRED_VIX, "FRED"))):
         text = _snap_text(url)
         if text is not None:
             try:
-                return parse_vix(text), name
+                s = parse_vix(text)
+                have.append((s.index[-1], -rank, s, name))
             except ValueError:
                 pass
+    if have:
+        _, _, s, name = max(have, key=lambda h: (h[0], h[1]))
+        return s, name
     _kick(fill_market)
     if VIX_SEED.exists():
         s = parse_vix(VIX_SEED.read_text(encoding="utf-8"))
@@ -527,7 +533,7 @@ def fill_market() -> dict:
     marked handled while another copy exists), the basket's revenue from EDGAR, and compute_chips' capex (its own cached endpoint)."""
     res = {}
     try:
-        parse_vix(fetch(CBOE_VIX, DAY / 2, min_bytes=500, timeout=30))
+        parse_vix(fetch(CBOE_VIX, VIX_TTL, min_bytes=500, timeout=30))
         res["cboe"] = "ok"
         handled(FRED_VIX, "VIX from Cboe's history file; FRED is the last resort")
     except Exception as e:
@@ -1362,6 +1368,7 @@ def proxy_for(y: int) -> str | None:
 
 FRED_SEED = B.MANUAL_DIR / SLUG / "fred"     # committed copies (cut to the midterm windows) for when FRED has never answered this server
 FRED_TIMEOUT = 30
+VIX_TTL = 3 * HOUR                  # under the 6-hour background cadence, so every run asks Cboe again (12 hours missed Monday's close until Tuesday)
 FRED_RETRY_S = DAY                 # FRED is tried at most once a day (it times out from Railway: /api/health would fill with it)
 _MT_RUNNING = threading.Lock()
 
@@ -1673,16 +1680,21 @@ def SIGNALS() -> list[dict]:
             "washout: the band that has come near past bottoms" if v < 10 else "stretched: the band that has come before drawdowns" if v >= 90
             else f"band: {band_of(v)}")
     vn = f.get("vix_now") or {}
-    v = vn.get("v")
+    v, vdate, vsrc = vn.get("v"), vn.get("date"), f.get("vix_source")
     if v is None and s.get("vix"):
         v = s["vix"][-1][1]
+        vdate, vsrc = str(pd.Timestamp(s["vix"][-1][0], unit="s").date()), s.get("vix_source")
         m = max(x for ts, x in s["vix"] if ts >= s["vix"][-1][0] - 31 * 86400)
     else:
         m = vn.get("max_1m")
     if v is not None:
         calm = v < 20 and m is not None and m > 25
+        what = "fear" if v > 30 else f"back below 20 after {m:.0f} in the last month" if calm else (f"high in the last month {m:.1f}" if m is not None else "")
+        px = f.get("as_of") or s.get("as_of")                       # the latest close of the prices
+        when = (f"close of {pd.Timestamp(vdate).strftime('%-d %b %Y')}" + (f" ({vsrc})" if vsrc else "")) if vdate else ""
+        lag = f"; lags the prices (to {pd.Timestamp(px).strftime('%-d %b')})" if vdate and px and vdate < px else ""
         add("vix", "fear", "VIX", v, "", 1 if v < 20 else -1 if v > 25 else 0, "above 30 (fear), or back below 20 after being above 25 in the last month",
-            v > 30 or calm, "fear" if v > 30 else f"back below 20 after {m:.0f} in the last month" if calm else (f"high in the last month {m:.1f}" if m is not None else None))
+            v > 30 or calm, "; ".join(x for x in (what, when + lag) if x) or None)
     g = ((f.get("relative") or {}).get("AI basket vs QQQ") or {}).get("3m") or {}
     if g.get("gap") is not None:
         add("ai_vs_qqq", "fear", "AI basket minus QQQ, 3-month return", g["gap"], " pts", _band(g["gap"], -3, 3), "a 10-point gap either way", abs(g["gap"]) >= 10,

@@ -624,6 +624,35 @@ def test_signal_tests_at_the_edges(monkeypatch):
     assert not any(sig[k]["crossed"] for k in ("basket_drawdown", "breadth_50d", "setup_score", "vix"))
 
 
+def test_vix_view_takes_the_copy_with_the_latest_close(mocked, monkeypatch):
+    """24 Nov 2026: FRED's copy stopped at Fri 20 Nov while Cboe had Mon 23 Nov; the newer copy is served, whichever source it is."""
+    from app import cache
+    cboe = "DATE,OPEN,HIGH,LOW,CLOSE\n11/19/2026,22.06,29.13,21.84,28.44\n11/20/2026,28.63,40.03,26.94,35.89\n11/23/2026,31.38,35.08,15.39,26.62\n"
+    fred = "observation_date,VIXCLS\n2026-11-19,28.44\n2026-11-20,35.89\n"
+    copies = {M.CBOE_VIX: cboe, M.FRED_VIX: fred}
+    monkeypatch.setattr(M, "_snap_text", lambda url, *a, **k: copies.get(url))
+    monkeypatch.setattr(M, "parse_vix", lambda text: pd.read_csv(__import__("io").StringIO(text)).pipe(
+        lambda d: pd.Series(d.iloc[:, -1].values, index=pd.to_datetime(d.iloc[:, 0], format="mixed"))))
+    s, src = M.vix()
+    assert src == "Cboe" and s.index[-1] == pd.Timestamp("2026-11-23") and s.iloc[-1] == 26.62
+    copies[M.CBOE_VIX] = cboe.rsplit("11/23", 1)[0]                          # an old Cboe copy, a newer FRED one
+    copies[M.FRED_VIX] = fred + "2026-11-23,26.62\n"
+    assert M.vix()[1] == "FRED"
+    copies[M.FRED_VIX] = fred
+    assert M.vix()[1] == "Cboe"                                              # same last date: Cboe
+    assert M.VIX_TTL < 6 * 3600                                              # every 6-hour background run asks Cboe again
+
+
+def test_vix_signal_note_carries_the_date_and_says_when_it_lags(monkeypatch):
+    pay = {"fear": {"vix_now": {"v": 35.89, "date": "2026-11-20", "max_1m": 35.89}, "vix_source": "FRED", "as_of": "2026-11-23"}}
+    monkeypatch.setattr(M, "_cached_payload", lambda n: pay.get(n, {}))
+    vx = next(x for x in M.SIGNALS() if x["key"] == "vix")
+    assert vx["value"] == 35.89 and "close of 20 Nov 2026 (FRED)" in vx["note"] and "lags the prices (to 23 Nov)" in vx["note"]
+    pay["fear"]["vix_now"]["date"] = "2026-11-23"
+    vx = next(x for x in M.SIGNALS() if x["key"] == "vix")
+    assert "close of 23 Nov 2026" in vx["note"] and "lags" not in vx["note"]
+
+
 def test_every_endpoint_through_the_server(mocked):
     from aiohttp.test_utils import TestClient, TestServer
     from app.server import make_app

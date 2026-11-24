@@ -172,6 +172,11 @@ stock on each cycle". Tab `midterms`, endpoint `/api/ai-stocks/midterms`.
 
 ## Caveats and gaps
 
+- **VIX date.** Pages serve whichever kept VIX copy has the latest close: Cboe's file, or FRED's (FRED posts a day late). Cboe's
+  file is asked again on every 6-hourly background run (kept 3 hours); on 24 Nov 2026 a 12-hour keep left Friday's 35.89 on the
+  signals board after Monday's 26.62 was out. The VIX signal's note names the close's date and source, and says so when VIX is
+  older than the latest price close.
+
 - **13F filings are a partial, late view.** US long positions only: no shorts, cash, non-13F assets (most foreign shares, private
   holdings) or full derivative exposure. They are filed up to 45 days after the quarter ends, so read them by quarter end, not by
   filing date. Each fund shows its own latest quarter, and some file late (Pershing Square's latest on 6 Nov 2026 was the quarter
@@ -209,7 +214,7 @@ only the cached tab payloads, and each row's `crossed` comes from its own rule:
 | `basket_drawdown` | basket drawdown from its high (%) | below -20% (a bear market), or back within -5% **after** a dip of 10% or more in the last 3 months (dip repaired; a basket that never left its high is not "repaired") | +1 within 5% of the high, -1 more than 10% below |
 | `breadth_50d` | share of the basket above its 50-day average (%) | below 20% (washout), or above 60% **after** being below 40% in the last 3 months (recovery broadening) | +1 above 60%, -1 below 40% |
 | `setup_score` | AI Setup Score, 0-100 | below 10 (washout) or 90 and above (stretched) | +1 above 80, -1 below 20 |
-| `vix` | VIX | above 30 (fear), or below 20 while it was above 25 at some point in the last month | +1 below 20, -1 above 25 |
+| `vix` | VIX (the note gives the close's date and source, and says when VIX lags the prices) | above 30 (fear), or below 20 while it was above 25 at some point in the last month | +1 below 20, -1 above 25 |
 | `ai_vs_qqq` | AI basket minus QQQ, 3-month return (points) | a gap of 10 points or more either way | +1 when AI leads by more than 3 points, -1 when it lags by more |
 
 ## Readings (what changed since yesterday)
