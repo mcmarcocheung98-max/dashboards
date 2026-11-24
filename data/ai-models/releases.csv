@@ -16,7 +16,7 @@ date,family,model,developer,country,open,context,modalities,flagship,source,note
 2026-04-23,GPT,GPT-5.5,OpenAI,US,no,400000,text+image in,yes,https://openai.com/index/introducing-gpt-5-5/,checked 2026-11-08 (OpenAI launch page dated 23 Apr 2026); context verify
 2026-07-09,GPT,GPT-5.6 Sol,OpenAI,US,no,400000,text+image in,yes,https://www.cometapi.com/gpt-6-revealed-when-will-it-be-released/,date from a secondary summary; verify
 2026-09-03,GPT,GPT-6 Astra,OpenAI,US,no,1050000,text+image in,yes,https://llmgateway.io/models/gpt-6-astra,checked 2026-11-08 (several trackers agree on 3 Sep 2026 and 1.05M context)
-2026-09-22,GPT,GPT-6 Sol,OpenAI,US,no,1050000,text+image in,no,https://runtimewire.com/article/openai-gpt-6-sol-luna-launch,with GPT-6 Luna (small); date from a secondary report; verify
+2026-09-22,GPT,GPT-6 Sol,OpenAI,US,no,1050000,text+image in,no,https://techcrunch.com/2026/09/22/openai-launches-gpt-6-sol-and-luna/,"with GPT-6 Luna (small); OpenAI's launch post and TechCrunch, 22 Sep 2026; checked 2026-11-24"
 2026-10-26,GPT,GPT-6.1 Terra,OpenAI,US,no,1050000,text+image in,no,https://www.digitalapplied.com/blog/ai-model-releases-october-2026-tracker,from a release tracker; verify
 2023-03-14,Claude,Claude 1,Anthropic,US,no,9000,text,yes,https://www.anthropic.com/news/introducing-claude,
 2023-07-11,Claude,Claude 2,Anthropic,US,no,100000,text,yes,https://www.anthropic.com/news/claude-2,
@@ -27,14 +27,14 @@ date,family,model,developer,country,open,context,modalities,flagship,source,note
 2025-05-22,Claude,Claude Opus 4,Anthropic,US,no,200000,text+image in,yes,https://www.anthropic.com/news/claude-4,with Sonnet 4
 2025-08-05,Claude,Claude Opus 4.1,Anthropic,US,no,200000,text+image in,no,https://www.anthropic.com/news/claude-opus-4-1,
 2025-09-29,Claude,Claude Sonnet 4.5,Anthropic,US,no,200000,text+image in,no,https://www.anthropic.com/news/claude-sonnet-4-5,1M context in beta
-2025-11-24,Claude,Claude Opus 4.5,Anthropic,US,no,200000,text+image in,yes,https://www.anthropic.com/news/claude-opus-4-5,verify
-2026-02-12,Claude,Claude Opus 4.6,Anthropic,US,no,1000000,text+image in,no,https://www.iphoneincanada.ca/2026/04/16/anthropic-releases-claude-opus-4-7/,"February 2026 per the Opus 4.7 coverage (""two months ago""); exact day verify"
+2025-11-24,Claude,Claude Opus 4.5,Anthropic,US,no,200000,text+image in,yes,https://www.anthropic.com/news/claude-opus-4-5,published 24 Nov 2025; read on Anthropic's page 2026-11-24
+2026-02-05,Claude,Claude Opus 4.6,Anthropic,US,no,1000000,text+image in,no,https://www.anthropic.com/news/claude-opus-4-6,published 5 Feb 2026 (was entered as 12 Feb); 1M context in beta; read on Anthropic's page 2026-11-24
 2026-04-16,Claude,Claude Opus 4.7,Anthropic,US,no,1000000,text+image in,yes,https://www.helpnetsecurity.com/2026/04/16/claude-opus-4-7-released/,checked 2026-11-08
-2026-06-09,Claude,Claude Fable 5,Anthropic,US,no,1000000,text+image in,yes,https://tech-insider.org/claude-fable-5-1-mythos-5-1-launch-2026/,public version of Mythos 5 (Mythos 5 itself invite-only via Project Glasswing); date from secondary reports; verify
+2026-06-09,Claude,Claude Fable 5,Anthropic,US,no,1000000,text+image in,yes,https://www.anthropic.com/news/claude-fable-5-mythos-5,published 9 Jun 2026 with Mythos 5 (deployed first through Project Glasswing); read on Anthropic's page 2026-11-24
 2026-07-24,Claude,Claude Opus 5,Anthropic,US,no,1000000,text+image in,yes,https://www.axios.com/2026/07/24/anthropic-releases-new-model-opus-5,checked 2026-11-08
 2026-09-01,Claude,Claude Fable 5.1,Anthropic,US,no,1000000,text+image in,yes,https://cryptobriefing.com/anthropic-claude-fable-51-mythos-51-launch/,with Mythos 5.1; checked 2026-11-08 (secondary)
 2026-09-22,Claude,Claude Opus 5.5,Anthropic,US,no,1000000,text+image in,yes,https://www.kdnuggets.com/everything-claude-opus-5-5-actually-ships-with,checked 2026-11-08 (several outlets agree on 22 Sep 2026)
-2026-10-15,Claude,Claude Sonnet 5.5,Anthropic,US,no,1000000,text+image in,no,https://claude.com/pricing,"on Anthropic's pricing page on 8 Nov 2026 (with Haiku 5.5); announced for ""the coming weeks"" after 22 Sep; exact date verify"
+2026-09-28,Claude,Claude Sonnet 5.5,Anthropic,US,no,1000000,text+image in,no,https://www.anthropic.com/news/claude-sonnet-5-5,announced 28 Sep 2026 (was entered as mid-October); read on Anthropic's news page 2026-11-24
 2023-12-06,Gemini,Gemini 1.0 Ultra,Google DeepMind,US,no,32000,text+image+audio,yes,https://blog.google/technology/ai/google-gemini-ai/,Ultra generally available Feb 2024
 2024-02-15,Gemini,Gemini 1.5 Pro,Google DeepMind,US,no,1000000,text+image+audio+video,yes,https://blog.google/technology/ai/google-gemini-next-generation-model-february-2024/,2M context from May 2024
 2024-05-14,Gemini,Gemini 1.5 Flash,Google DeepMind,US,no,1000000,text+image+audio+video,no,https://blog.google/technology/ai/google-gemini-update-flash-ai-assistant-io-2024/,
@@ -76,7 +76,7 @@ date,family,model,developer,country,open,context,modalities,flagship,source,note
 2026-04-24,DeepSeek,DeepSeek V4 (Pro and Flash previews),DeepSeek,China,yes,1000000,text,yes,https://simonwillison.net/2026/apr/24/deepseek-v4,checked 2026-11-08; 1.6T Pro and 284B Flash; MIT licence
 2026-07-31,DeepSeek,DeepSeek-V4-Flash-0731,DeepSeek,China,yes,1000000,text,no,https://www.gradually.ai/en/ai-models/deepseek-deepseek-v4-pro-0813/,per the V4 Pro 0813 coverage; verify
 2026-08-13,DeepSeek,DeepSeek-V4-Pro-0813,DeepSeek,China,yes,1048576,text,yes,https://datanorth.ai/news/deepseek-releases-v4-pro-0813-and-harness-v0-1,checked 2026-11-08 (secondary); open weights reported but conflicting
-2026-10-17,DeepSeek,DeepSeek-V4.1-Flash-1017,DeepSeek,China,yes,1000000,text,no,https://openrouter.ai/rankings,top model by tokens on OpenRouter in Oct-Nov 2026; release date from its name; verify
+2026-09-10,DeepSeek,DeepSeek V4.1 Flash,DeepSeek,China,yes,1000000,text,no,https://api-docs.deepseek.com/news/news260910,formally released 10 Sep 2026 (DeepSeek's news post; TechNode the same day); the 1017 build tops OpenRouter's token rankings; open weights not confirmed; checked 2026-11-24
 2023-08-03,Qwen,Qwen-7B,Alibaba,China,yes,8192,text,no,https://github.com/QwenLM/Qwen,
 2024-02-05,Qwen,Qwen1.5,Alibaba,China,yes,32768,text,no,https://qwenlm.github.io/blog/qwen1.5/,
 2024-06-06,Qwen,Qwen2-72B,Alibaba,China,yes,131072,text,yes,https://qwenlm.github.io/blog/qwen2/,
@@ -107,4 +107,7 @@ date,family,model,developer,country,open,context,modalities,flagship,source,note
 2026-02-11,GLM,GLM-5,Zhipu AI (Z.ai),China,yes,200000,text,yes,https://huggingface.co/blog/mlabonne/glm-5,checked 2026-11-08; 744B; MIT
 2026-06-18,GLM,GLM-5.2,Zhipu AI (Z.ai),China,yes,200000,text,no,https://venturebeat.com/technology/z-ais-open-weights-glm-5-2-beats-gpt-5-5-on-multiple-long-horizon-coding-benchmarks-for-1-6th-the-cost,753B; June 2026 (exact day verify)
 2026-08-14,GLM,GLM-5.3,Zhipu AI (Z.ai),China,yes,200000,text,yes,https://technode.com/2026/08/17/z-ai-launches-glm-5-3-with-claimed-50-gain-on-coding-benchmark/,checked 2026-11-08; weights promised two weeks after launch (open status verify)
-2026-08-05,Llama/Muse,Muse Spark 1.2,Meta,US,no,1000000,text+image in,no,https://datanorth.ai/news/meta-releases-muse-spark-1-2-and-muse-code,"coding checkpoint with Muse Code; Meta's first paid API ($1.25/$4.25); checked 2026-11-09 (secondary)"
+2026-08-05,Llama/Muse,Muse Spark 1.2,Meta,US,no,1000000,text+image in,no,https://datanorth.ai/news/meta-releases-muse-spark-1-2-and-muse-code,coding checkpoint with Muse Code; Meta's first paid API ($1.25/$4.25); checked 2026-11-09 (secondary)
+2026-05-28,Claude,Claude Opus 4.8,Anthropic,US,no,1000000,text+image in,no,https://www.anthropic.com/news/claude-opus-4-8,published 28 May 2026; read on Anthropic's page 2026-11-24
+2026-06-30,Claude,Claude Sonnet 5,Anthropic,US,no,1000000,text+image in,no,https://www.anthropic.com/news/claude-sonnet-5,published 30 Jun 2026; read on Anthropic's page 2026-11-24
+2026-10-07,Claude,Claude Haiku 5.5,Anthropic,US,no,1000000,text+image in,no,https://www.anthropic.com/news/claude-haiku-5-5,announced 7 Oct 2026; read on Anthropic's news page 2026-11-24
