@@ -1,7 +1,12 @@
 date,model,family,developer,country,tokens_t,share,source,note
-2026-10-30,DeepSeek V4.1 Flash 1017,DeepSeek,DeepSeek,China,45.5,29.4,https://www.teamday.ai/blog/top-ai-models-openrouter-2026,week 24-30 Oct 2026; share = % of the top 20's tokens; verify
-2026-11-06,DeepSeek V4.1 Flash 1017,DeepSeek,DeepSeek,China,56.2,,https://openrouter.ai/rankings,OpenRouter top models by tokens (week to about 6 Nov 2026); +23% on the week; verify
-2026-11-06,DeepSeek V4.1 Flash,DeepSeek,DeepSeek,China,17.2,,https://openrouter.ai/rankings,verify
-2026-11-06,GLM 5.3 Flash,GLM,Zhipu AI (Z.ai),China,14.1,,https://openrouter.ai/rankings,verify
-2026-11-06,GPT-6 Luna,GPT,OpenAI,US,7.22,,https://openrouter.ai/rankings,verify
-2026-11-06,Hy4,Other,Tencent,China,7.05,,https://openrouter.ai/rankings,new entry; verify
+2026-10-30,DeepSeek V4.1 Flash 1017,DeepSeek,DeepSeek,China,45.5,29.4,https://www.teamday.ai/blog/top-ai-models-openrouter-2026,TeamDay's copy of OpenRouter's rankings for the week 24-30 Oct 2026; share = % of the top 20's tokens; checked 2026-11-24 (secondary)
+2026-11-07,DeepSeek V4.1 Flash 1017,DeepSeek,DeepSeek,China,56.2,,https://fourweekmba.com/ai-deepseeks-share-of-openrouter-top-10-tokens-rises-to-56/,first in the week to 7 Nov 2026 per FourWeekMBA's dated copy of OpenRouter's rankings (DeepSeek 56.4% of the top 10's tokens); checked 2026-11-24 (secondary)
+2026-11-07,DeepSeek V4.1 Flash,DeepSeek,DeepSeek,China,17.2,,https://openrouter.ai/rankings,second; OpenRouter's rankings page as read through search on 8 Nov 2026
+2026-11-07,GLM 5.3 Flash,GLM,Zhipu AI (Z.ai),China,14.1,,https://fourweekmba.com/ai-deepseeks-share-of-openrouter-top-10-tokens-rises-to-56/,third per FourWeekMBA; checked 2026-11-24 (secondary)
+2026-11-07,GPT-6 Luna,GPT,OpenAI,US,7.22,,https://fourweekmba.com/ai-deepseeks-share-of-openrouter-top-10-tokens-rises-to-56/,fourth per FourWeekMBA; checked 2026-11-24 (secondary)
+2026-11-07,Hy4,Other,Tencent,China,7.05,,https://openrouter.ai/rankings,fifth and new (listed as released 4 Nov 2026); OpenRouter's rankings page as read through search on 8 Nov 2026
+2026-11-22,DeepSeek V4.1 Flash 1017,DeepSeek,DeepSeek,China,66.8,,https://openrouter.ai/rankings,"OpenRouter's rankings page (trailing week) as cached about 24 Nov 2026; another report gives 65T for 16-22 Nov, first for a fifth week; checked 2026-11-24"
+2026-11-22,Hy4 flash,Other,Tencent,China,23.5,,https://openrouter.ai/rankings,same cached page; second within three weeks of release
+2026-11-22,DeepSeek V4.1 Flash,DeepSeek,DeepSeek,China,15.5,,https://openrouter.ai/rankings,same cached page
+2026-11-22,GLM 5.3 Flash,GLM,Zhipu AI (Z.ai),China,12.9,,https://openrouter.ai/rankings,same cached page
+2026-11-22,GPT-6 Luna,GPT,OpenAI,US,8.34,,https://openrouter.ai/rankings,same cached page

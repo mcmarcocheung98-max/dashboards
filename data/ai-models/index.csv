@@ -1,9 +1,8 @@
 date,model,family,developer,country,value,version,open,source,note
-2026-09-30,Claude Opus 5.5 (Max),Claude,Anthropic,US,58,v5,no,https://artificialanalysis.ai/articles/artificial-analysis-intelligence-index-v5,at the v5 launch (late Sep 2026) per Crypto Briefing's summary; verify
-2026-09-30,GPT-6 Astra,GPT,OpenAI,US,57,v5,no,https://cryptobriefing.com/artificial-analysis-intelligence-index-google-anthropic-openai/,verify
-2026-09-30,GPT-6.1 Sol,GPT,OpenAI,US,55,v5,no,https://cryptobriefing.com/artificial-analysis-intelligence-index-google-anthropic-openai/,verify
-2026-11-07,Gemini 4 Carbon (High),Gemini,Google DeepMind,US,60,v5,no,https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index,leaderboard as read on 7-8 Nov 2026 via search; 59 when first posted on 28 Oct 2026; verify
-2026-11-07,Claude Opus 5.5 (Max),Claude,Anthropic,US,59,v5,no,https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index,verify
-2026-11-07,Gemini 4 Carbon (Medium),Gemini,Google DeepMind,US,58,v5,no,https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index,verify
-2026-11-07,GPT-5.6 Sol,GPT,OpenAI,US,58.9,v5,no,https://benchlm.ai/benchmarks/artificialanalysis,BenchLM compiles provider self-reports; verify against artificialanalysis.ai
-2026-11-07,Kimi K3.1 Pro,Kimi,Moonshot AI,China,46,v5,yes,https://artificialanalysis.ai/leaderboards/models,best open-weights model on the index; verify
+2026-09-30,Claude Opus 5.5 (Max),Claude,Anthropic,US,58,v5,no,https://x.com/TheRundownAI/status/2115489453611356402,"first on the rebuilt v5 index at its launch (two secondary reports agree on 58); the launch day is approximate (after Opus 5.5 on 22 Sep 2026); checked 2026-11-24 (secondary)"
+2026-09-30,GPT-6 Astra,GPT,OpenAI,US,57,v5,no,https://cryptobriefing.com/artificial-analysis-intelligence-index-google-anthropic-openai/,second at the v5 launch (57; another copy lists 56.9); launch day approximate; checked 2026-11-24 (secondary)
+2026-11-07,Gemini 4 Carbon (High),Gemini,Google DeepMind,US,60,v5,no,https://www.developersdigest.tech/benchmarks/artificial-analysis,first on the 7 Nov 2026 snapshot of the Artificial Analysis board (59 when first posted on 28 Oct); checked 2026-11-24 (secondary)
+2026-11-07,Claude Opus 5.5 (Max),Claude,Anthropic,US,59.1,v5,no,https://llmlearner.com/rankings/aa-intelligence-index-v5-0,v5.0.1 leaderboard copy (59.1; the official page rounds to 59); checked 2026-11-24 (secondary)
+2026-11-07,Kimi K3.1 Pro,Kimi,Moonshot AI,China,46,v5,yes,https://www.benchleader.com/benchmarks/aa_intelligence_index_v5,"46 to 46.5, rank 23 of 99 and the highest open-weights model per the leaderboard's FAQ (restricted licence); checked 2026-11-24 (secondary)"
+2026-11-24,Claude Fable 5.2,Claude,Anthropic,US,64.6,v5,no,https://www.benchleader.com/benchmarks/aa_intelligence_index_v5,top of the index as listed on 24 Nov 2026 by copies of the Artificial Analysis v5.0.1 board (BenchLeader and modelcap); checked 2026-11-24 (secondary)
+2026-11-24,GPT-6.2 Astra,GPT,OpenAI,US,62.1,v5,no,https://modelcap.ai/benchmarks/aa-intelligence-index,second as listed on 24 Nov 2026; checked 2026-11-24 (secondary)
