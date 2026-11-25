@@ -73,6 +73,8 @@ Code: `app/topics/ai_models.py` (data), `app/static/topics/ai-models.js` (cards)
 
 **Prices, 25 Nov 2026.** `prices.csv` has no `verify` rows left. GPT-5.6 Sol's launch price goes back to $5/$30 (ModelPriceWatch's price history: $4/$20 is the promotional rate from 21 Aug to 30 Nov 2026) with OpenAI's 1,050,000-token context; Grok-2's $2/$10 is grok-2-1212's price of 15 Dec 2024 (the Oct 2024 beta was $5/$15); Qwen3.5-Plus checked on Alibaba's page (context 1M, not 262K); GLM-4.5 checked on Z.ai's pricing page; Muse Spark 1.3 dated 2 Sep 2026 from OpenRouter; the Muse Spark row is kept as a stand-in, since that model had no paid API. Qwen3-235B-A22B was removed: no source for Alibaba's list price could be found. 10 `verify` rows remain, all in `releases.csv`.
 
+**Releases, 25 Nov 2026.** `releases.csv` has no `verify` rows left, so the AI Models dashboard has none. Dates corrected: GPT-5.6 Sol 9 Jul 2026 (Axios), Grok 4.5 8 Jul 2026 (Reuters; x.ai's page is dated 16 Jul). Confirmed: GPT-6.1 Terra 26 Oct, Grok 4.7 21 Sep, DeepSeek-V4-Flash-0731 31 Jul (open, 1M), Qwen3.8-Max 3 Aug (weights now public), Kimi K3.1 Pro 23 Oct (weights out 5 Nov; date from secondary reports), GLM-4.6 30 Sep 2025, GLM-5.3 14 Aug (weights now public). Contexts: GPT-5.5 and GPT-5.6 Sol 1,050,000 (OpenAI), Qwen3.8-Max 1M; Qwen3-Max's context left blank (Alibaba gives no figure).
+
 Weekly upkeep: add the current Arena top 20 to `arena.csv` (one row per model, the same date), the OpenRouter top 10 by tokens to `openrouter_share.csv`, and any new release to `releases.csv` with its launch price in `prices.csv`.
 
 ## Signals (proposed, awaiting the owner's approval)
