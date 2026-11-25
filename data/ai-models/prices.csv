@@ -8,7 +8,7 @@ date,model,family,developer,country,input,output,context,source,note
 2025-04-16,o3,GPT,OpenAI,US,10,40,200000,https://openai.com/index/introducing-o3-and-o4-mini/,cut to $2/$8 in June 2025
 2025-08-07,GPT-5,GPT,OpenAI,US,1.25,10,400000,https://openai.com/index/introducing-gpt-5/,
 2026-04-23,GPT-5.5,GPT,OpenAI,US,5,30,400000,https://developers.openai.com/api/docs/models/gpt-5.5,"OpenAI's model page: $5 input, $0.50 cached, $30 output (double GPT-5.4); checked 2026-11-24"
-2026-07-09,GPT-5.6 Sol,GPT,OpenAI,US,4,20,400000,https://openai.com/index/introducing-gpt-6-sol-and-luna,GPT-5.6 Sol's promotional rate as stated in OpenAI's GPT-6 Sol comparison (was entered as $5/$30); the 9 Jul 2026 launch date is from a secondary summary; verify
+2026-07-09,GPT-5.6 Sol,GPT,OpenAI,US,5,30,1050000,https://modelpricewatch.com/models/openai-gpt-5-6-sol/,"launch list price on 9 Jul 2026 per ModelPriceWatch's price history; OpenAI cut it to a promotional $4/$20 on 21 Aug 2026 (until 30 Nov 2026, per OpenAI's model page); release date also from Artificial Analysis; context 1,050,000 per OpenAI's model page; checked 2026-11-25"
 2026-09-03,GPT-6 Astra,GPT,OpenAI,US,10,50,1050000,https://www.yottalabs.ai/post/gpt-6-astra-pricing-api-cost-2026,verified against OpenAI's pricing page by that guide on 5 Sep 2026; prompts over 272k tokens billed at $20/$75; checked 2026-11-08 (secondary)
 2026-09-22,GPT-6 Sol,GPT,OpenAI,US,2,10,1050000,https://openai.com/index/introducing-gpt-6-sol-and-luna,"half GPT-5.6 Sol's promotional $4/$20, per OpenAI's launch post of 22 Sep 2026 (TechCrunch the same day); checked 2026-11-24"
 2026-09-22,GPT-6 Luna,GPT,OpenAI,US,0.1,0.5,1050000,https://openai.com/index/introducing-gpt-6-sol-and-luna,"down from GPT-5.6 Luna's $0.20/$1.20, per OpenAI's launch post of 22 Sep 2026; checked 2026-11-24"
@@ -33,7 +33,7 @@ date,model,family,developer,country,input,output,context,source,note
 2025-11-18,Gemini 3 Pro,Gemini,Google DeepMind,US,2,12,1048576,https://ai.google.dev/gemini-api/docs/pricing,gemini-3-pro-preview: $2/$12 ($4/$18 above 200k tokens per a secondary table); preview date 18 Nov 2025 from an aggregator; price checked 2026-11-24
 2026-02-19,Gemini 3.1 Pro,Gemini,Google DeepMind,US,2,12,1048576,https://www.aimagicx.com/blog/llm-api-pricing-comparison-2026,$4/$18 above 200k tokens; checked 2026-11-08 (secondary)
 2026-10-13,Gemini 4 Argon,Gemini,Google DeepMind,US,2,10,1048576,https://letsdatascience.com/news/gemini-4-argon-undercuts-claude-on-price-73027210,introductory price to 30 Nov 2026 then $4/$20; checked 2026-11-08 (secondary)
-2024-10-21,Grok-2,Grok,xAI,US,2,10,131072,https://docs.x.ai/docs/models,API beta price; verify
+2024-12-15,Grok-2,Grok,xAI,US,2,10,131072,https://www.testingcatalog.com/grok-ai-slashes-api-costs-boosts-instruction-following-with-grok-2-1212/,"grok-2-1212's price, cut from the $5/$15 beta price, per TestingCatalog (15 Dec 2024); OpenRouter dates the 1212 models 15 Dec 2024; checked 2026-11-25"
 2025-02-17,Grok 3,Grok,xAI,US,3,15,131072,https://docs.x.ai/docs/models,
 2025-07-09,Grok 4,Grok,xAI,US,3,15,256000,https://docs.x.ai/docs/models,
 2025-09-19,Grok 4 Fast,Grok,xAI,US,0.2,0.5,2000000,https://x.ai/news/grok-4-fast,
@@ -47,9 +47,8 @@ date,model,family,developer,country,input,output,context,source,note
 2026-04-24,DeepSeek V4 Flash,DeepSeek,DeepSeek,China,0.14,0.28,1000000,https://simonwillison.net/2026/apr/24/deepseek-v4,checked 2026-11-08 (secondary)
 2026-09-10,DeepSeek V4.1 Flash,DeepSeek,DeepSeek,China,0.3,1.2,1000000,https://api-docs.deepseek.com/news/news260910,"peak rate; off-peak is 50% ($0.15/$0.60); released 10 Sep 2026 (was dated 17 Oct, the date of the 1017 build); figures per DataCamp's table of DeepSeek's price list; aggregators show lower third-party rates; checked 2026-11-24 (secondary)"
 2025-01-28,Qwen2.5-Max,Qwen,Alibaba,China,1.6,6.4,32768,https://www.alibabacloud.com/help/en/model-studio/model-pricing,qwen-max (qwen-max-2025-01-25) on the international deployment; checked 2026-11-24
-2025-04-29,Qwen3-235B-A22B,Qwen,Alibaba,China,0.7,2.8,131072,https://www.alibabacloud.com/help/en/model-studio/models,non-thinking output; verify
 2025-09-24,Qwen3-Max,Qwen,Alibaba,China,1.2,6,262144,https://www.alibabacloud.com/help/en/model-studio/model-pricing,"prompts up to 32k tokens ($2.4/$12 to 128k, $3/$15 to 252k); checked 2026-11-24"
-2026-02-16,Qwen3.5-Plus,Qwen,Alibaba,China,0.4,2.4,262144,https://www.eweek.com/news/alibaba-qwen35-ai-model-launch/,"""60% lower costs"" than Qwen3-Max per eWeek; figures verify"
+2026-02-16,Qwen3.5-Plus,Qwen,Alibaba,China,0.4,2.4,1000000,https://www.alibabacloud.com/help/en/model-studio/qwen3-5-plus,"Alibaba Cloud international (Singapore) price for input up to 256K ($0.5/$3 above); 1M context; snapshot qwen3.5-plus-2026-02-15, released 16 Feb 2026 per OpenRouter; checked 2026-11-25"
 2025-07-11,Kimi K2,Kimi,Moonshot AI,China,0.6,2.5,128000,https://platform.moonshot.ai/docs/pricing,
 2025-11-06,Kimi K2 Thinking,Kimi,Moonshot AI,China,0.6,2.5,256000,https://platform.kimi.ai/docs/pricing/chat-k2,"kimi-k2-thinking: $0.60 input ($0.15 cached), $2.50 output, 262,144 context; effective 6 Nov 2025 per Moonshot's forum; checked 2026-11-24"
 2026-07-16,Kimi K3,Kimi,Moonshot AI,China,3,15,1000000,https://intl.cloud.tencent.com/document/product/1300/78937,Moonshot and Tencent Cloud agree; checked 2026-11-08 (secondary)
@@ -57,14 +56,14 @@ date,model,family,developer,country,input,output,context,source,note
 2025-05-07,Mistral Medium 3,Mistral,Mistral AI,France,0.4,2,128000,https://mistral.ai/news/mistral-medium-3,
 2025-12-02,Mistral Large 3,Mistral,Mistral AI,France,0.5,1.5,256000,https://mistral.ai/pricing/api/,"Mistral's pricing page: $0.5 in, $1.5 out (a 75% cut from Large 2's $2/$6); checked 2026-11-24"
 2026-10-06,Mistral Large 4,Mistral,Mistral AI,France,1.36,4.18,,https://www.usagepricing.com/blueprint/activity/mistral-ai-2026-10-22-large-4-sale-ends,standard rate on Mistral's pricing page as captured on 22 Oct 2026; launched 6 Oct at 50% off ($0.68/$2.09) for two weeks; checked 2026-11-24 (secondary)
-2025-07-28,GLM-4.5,GLM,Zhipu AI (Z.ai),China,0.6,2.2,128000,https://docs.z.ai/guides/overview/pricing,verify
+2025-07-28,GLM-4.5,GLM,Zhipu AI (Z.ai),China,0.6,2.2,128000,https://docs.z.ai/guides/overview/pricing,Z.ai's pricing page and OpenRouter both list $0.6/$2.2 ($0.11 cached); OpenRouter retires it on 31 Dec 2026; checked 2026-11-25
 2026-02-11,GLM-5,GLM,Zhipu AI (Z.ai),China,1,3.2,200000,https://cloudprice.net/models/zai/glm-5,checked 2026-11-08 (secondary)
 2026-06-18,GLM-5.2,GLM,Zhipu AI (Z.ai),China,1.4,4.4,200000,https://venturebeat.com/technology/z-ais-open-weights-glm-5-2-beats-gpt-5-5-on-multiple-long-horizon-coding-benchmarks-for-1-6th-the-cost,checked 2026-11-08 (secondary)
 2026-08-14,GLM-5.3,GLM,Zhipu AI (Z.ai),China,1.4,4.4,200000,https://www.qubrid.com/blog-news/glm-53-is-here-full-benchmark-breakdown-architecture-pricing,checked 2026-11-08 (secondary)
 2026-10-12,Muse Wonder,Llama/Muse,Meta,US,4,20,,https://www.llmreference.com/provider/meta-model-api/muse-wonder,Meta Model API muse-wonder-1.0: $4 in / $20 out ($0.20 cached); Muse Wonder Full has no public API; checked 2026-11-09 (secondary)
 2026-08-05,Muse Spark 1.2,Llama/Muse,Meta,US,1.25,4.25,1000000,https://datanorth.ai/news/meta-releases-muse-spark-1-2-and-muse-code,Meta's first paid model API; checked 2026-11-09 (secondary); one aggregator shows $0.10/$0.20 instead
-2026-08-05,Muse Spark,Llama/Muse,Meta,US,1.25,4.25,1000000,https://datanorth.ai/news/meta-releases-muse-spark-1-2-and-muse-code,the Muse Spark line's API price (Muse Spark 1.2) applied to the Arena entry named Muse Spark; verify
-2026-08-05,Muse Spark 1.3,Llama/Muse,Meta,US,1.25,4.25,1000000,https://datanorth.ai/news/meta-releases-muse-spark-1-2-and-muse-code,"Muse Spark 1.2's price (""unchanged standard pricing"" at 1.2); 1.3 assumed the same; date is 1.2's; verify"
+2026-08-05,Muse Spark,Llama/Muse,Meta,US,1.25,4.25,1000000,https://datanorth.ai/news/meta-releases-muse-spark-1-2-and-muse-code,"stand-in: Muse Spark had no paid API at its 8 Apr 2026 launch (Meta's first paid API came with 1.2), so the Arena entry named Muse Spark carries the line's standard price, $1.25/$4.25 for both 1.2 and 1.3 on OpenRouter; checked 2026-11-25"
+2026-09-02,Muse Spark 1.3,Llama/Muse,Meta,US,1.25,4.25,1048576,https://openrouter.ai/meta/muse-spark-1.3,"standard tier $1.25/$4.25 ($0.15 cached), released 2 Sep 2026, per OpenRouter and TechJack (4 Sep 2026); the Contributor tier is $0.10/$0.20 with prompts used for training; checked 2026-11-25"
 2026-08-03,Qwen3.8-Max,Qwen,Alibaba,China,2,6,262144,https://www.cometapi.com/qwen-3-8-max-api-pricing/,alibabacloud.com list price as of 17 Oct 2026 per the summary ($0.17 cache read); checked 2026-11-09 (secondary)
 2026-10-28,Gemini 4 Carbon,Gemini,Google DeepMind,US,2,10,1048576,https://www.eesel.ai/blog/gemini-4-carbon-pricing,"introductory rate (then $4/$20); cyber defenders first on 28 Oct, generally available from 10 Nov 2026; checked 2026-11-24 (secondary)"
 2026-05-28,Claude Opus 4.8,Claude,Anthropic,US,5,25,1000000,https://www.anthropic.com/news/claude-opus-4-8,"""unchanged from Opus 4.7: $5 per million input tokens and $25 per million output tokens"" (fast mode $10/$50); read on Anthropic's page 2026-11-24"
