@@ -187,9 +187,11 @@ def test_wiki_parser():
 def test_utility_payload(mocked):
     p = B.json_safe(M._utility_now())
     A = p["arena"]
-    assert A["dates"] == ["2024-06-10", "2025-07-17", "2026-11-04"] and A["latest"][0]["rank"] == 1
+    assert A["dates"] == ["2024-06-10", "2025-07-17", "2026-11-04", "2026-11-22"] and A["latest"][0]["rank"] == 1
     s = A["stats"]["2026-11-04"]
-    assert s["top_model"].startswith("Gemini 4") and s["china_share"] is not None and s["open_gap"] > 0 and s["best_open"] == "Kimi K3 (Max)" and s["n_top20"] == 10
+    assert s["top_model"].startswith("Gemini 4") and s["china_share"] is not None and s["open_gap"] > 0 and s["best_open"] == "Kimi K3 (Max)" and s["n_top20"] == 7
+    s = A["stats"]["2026-11-22"]                                                          # full top 20 (ai.info copy of 22 Nov)
+    assert s["n_top20"] == 20 and s["china_top20"] == 1 and s["best_open"] == "Qwen3.8-Max" and s["open_gap"] == 43
     assert A["by_family"]["Gemini"] and A["us_cn"] and p["index"]["by_family"]["Gemini"] and p["benchmarks"]["names"] == ["FrontierMath", "GPQA Diamond", "SWE-bench Verified"]
     assert set(p["wiki"]) >= {"GPT", "DeepSeek"} and p["wiki"]["DeepSeek"][-1][1] > p["wiki"]["GPT"][-1][1]
     assert p["openrouter"]["latest"] and p["openrouter"]["china_share"][-1][1] > 0.5
@@ -214,11 +216,11 @@ def test_cost_payload_prices_and_calculator(mocked):
     p = B.json_safe(M._cost_now())
     assert p["current"] and p["current_error"] is None and p["epoch_cost"]["models"] and p["epoch_cost"]["models"][0]["per_eflop"] > 0
     fp = p["frontier_price"]
-    assert [x["date"] for x in fp] == ["2024-06-10", "2025-07-17", "2026-11-04"] and fp[-1]["n_top20"] == 10
+    assert [x["date"] for x in fp] == ["2024-06-10", "2025-07-17", "2026-11-04", "2026-11-22"] and fp[-1]["n_top20"] == 20 and fp[-2]["n_top20"] == 7
     assert fp[0]["price"] == 15 and fp[0]["model"].startswith("GPT-4o")                   # GPT-4o launch price, within 50 points of the top
     assert fp[-1]["source"] == "openrouter" and fp[-1]["price"] == 3 and fp[-1]["model"] == "Muse Spark"   # OpenRouter's current list (fixture: Muse Spark $3) wins
     pp = {x["model"]: x for x in p["per_point"]}
-    assert pp["Claude Opus 5.5 (Max)"]["output"] == 20 and pp["Claude Opus 5.5 (Max)"]["per_point"] == pytest.approx(20 / 1509, abs=1e-4)
+    assert pp["Claude Opus 5.5 (High)"]["output"] == 20 and pp["Claude Opus 5.5 (High)"]["per_point"] == pytest.approx(20 / 1507, abs=1e-4)
     assert p["launch_by_family"]["Claude"][-1][1] == 0.5 or p["launch_by_family"]["Claude"]        # sorted by date
     assert p["capex"]["ttm"] == 400.0 and len(p["calculator"]) > 60 and all(v["output"] is not None for v in p["calculator"])
     assert p["log_days"] == 1
@@ -237,16 +239,16 @@ def test_overview_readings_and_signals(mocked):
     assert M.READINGS() == [] and M.SIGNALS() == []                      # nothing cached yet: nothing downloaded here
     o = B.json_safe(M.ENDPOINTS["overview"]())
     K = o["kpi"]
-    assert K["frontier_score"] == 1528 and K["record_age_months"] is not None and K["frontier_price"] == 3 and K["china_share"] is not None and K["cadence_12m"]
+    assert K["frontier_score"] == 1527 and K["record_age_months"] is not None and K["frontier_price"] == 3 and K["china_share"] is not None and K["cadence_12m"]
     assert o["series"]["record"] and o["series"]["frontier_score"] and o["timeline"]
     r = {x["key"]: x for x in M.READINGS()}
-    assert {"frontier_score", "frontier_price", "china_share"} <= set(r) and r["frontier_score"]["lean"] == 1
+    assert {"frontier_score", "frontier_price", "china_share"} <= set(r) and r["frontier_score"]["lean"] == -1                 # 1527 on 22 Nov vs 1528 on 4 Nov
     keys = [w["key"] for w in json.loads((B.MANUAL_DIR / "signals" / "watchlist.json").read_text())["ai-models"]]
     sig = {x["key"]: x for x in M.SIGNALS()}
     assert list(sig) == keys == ["frontier_record_age", "price_per_point", "open_gap", "china_share_top20", "release_cadence"]
     assert all(isinstance(x["crossed"], bool) and x["lean"] in (-1, 0, 1) and x["watch"] for x in sig.values())
-    assert sig["price_per_point"]["crossed"] is False and sig["price_per_point"]["lean"] == -1 and sig["price_per_point"]["note"].startswith("partial snapshot (10 of 20")   # rose, but a partial snapshot never counts
-    assert sig["china_share_top20"]["crossed"] is False and "partial" in sig["china_share_top20"]["note"]
+    assert sig["price_per_point"]["crossed"] is True and sig["price_per_point"]["lean"] == -1 and "2026-11-22" in sig["price_per_point"]["note"]   # rose on a full snapshot: counts
+    assert sig["china_share_top20"]["crossed"] is True and sig["china_share_top20"]["value"] == 5.0 and "1 of the 20" in sig["china_share_top20"]["note"]   # 1 of 20, below the 10% line
     B.json_safe(M.SIGNALS())
 
 
