@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-24",
+ "updated": "2026-11-25",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -427,10 +427,11 @@
   {
    "id": "ai-models-review-1117",
    "owner": "session:ai-models",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-17",
    "title": "AI Models: clear 119 verify rows (benchmarks, index and openrouter_share fully unverified; prices, arena, releases)",
-   "detail": "From the 17 Nov review."
+   "detail": "From the 17 Nov review. Verify rows 119 to 21 in 25331e7, 76606de, 70c0163; unsourced rows dropped, not kept.",
+   "done": "2026-11-25"
   },
   {
    "id": "luxury-alerts-1118",
@@ -444,10 +445,11 @@
   {
    "id": "demo-review-1118",
    "owner": "session:demographics",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-18",
    "title": "Demographics: footer copy about verify rows; note the UK migration signal is 4k from its watch point",
-   "detail": "From the 18 Nov review."
+   "detail": "From the 18 Nov review. Done in be23783: footer and Births note cite releases; Migration tab shows 204k, 4k above the watch point.",
+   "done": "2026-11-25"
   },
   {
    "id": "options-cboe-403-1120",
@@ -496,18 +498,20 @@
   {
    "id": "aistocks-vix-date-1124",
    "owner": "session:ai-stocks",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-24",
    "title": "AI Stocks: VIX signal reads 35.89 three days running; confirm its date and show it",
-   "detail": "Board 22-24 Nov unchanged while the basket moved; health fresh."
+   "detail": "Board 22-24 Nov unchanged while the basket moved; health fresh. Fixed in d271bdc: the board reads 'close of 24 Nov 2026 (Cboe)' on 25 Nov; VIX no longer above 30.",
+   "done": "2026-11-25"
   },
   {
    "id": "robotaxi-review-1124",
    "owner": "session:robotaxi",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-24",
    "title": "Robotaxi: Waymo weekly rides signal often returns no value (board shows it kept)",
-   "detail": "From the 24 Nov review."
+   "detail": "From the 24 Nov review. Fixed in 7990a27: Rides is built on the spot when not cached; the Waymo signal is live on the board 25 Nov (dated 29 Apr 2026).",
+   "done": "2026-11-25"
   }
  ],
  "roadmap": [
@@ -1150,6 +1154,19 @@
     "date": "2026-11-23",
     "minutes": 71,
     "runs": 14
+   }
+  },
+  {
+   "date": "2026-11-25",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Live check: 312 of 312 tabs, all tabs OK, no retries, 12 minutes. Health: known failures only (Bluesky and Reddit 403, Yahoo 429, one TCGdex card, Ember 14 bytes, Cboe chains handled); Luxury 37 fresh; AI Stocks 33 fresh, FRED answering. Local tests 481 passed. Unsourced rows 605. Newsletter built, not sent. Signals 68 of 83 wired, 18 crossed.",
+   "fixed": [],
+   "handed": [],
+   "actions": {
+    "date": "2026-11-24",
+    "minutes": 72,
+    "runs": 15
    }
   }
  ],
@@ -2558,6 +2575,67 @@
    "asks": [
     "Options chains: Nasdaq's quote API (browser-like headers, IV from prices), wait for Cboe, or a paid feed",
     "approve or skip r-shared-fresh (Luxury's FRED fix for AI Stocks and others)",
+    "Say go in the Pokémon session for its review fixes, and in Compute & Chips and Longevity",
+    "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
+    "Debt & Rates: allow the government hosts its remaining rows need, or accept them staying marked verify",
+    "Gmail newsletter secrets, eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
+   ]
+  },
+  {
+   "date": "2026-11-25",
+   "title": "VIX fixed and back under 30; AI Models cuts its unsourced rows to 21; AI Stocks reviewed",
+   "summary": "The VIX signal had shown Friday's 35.89 since the weekend: the Cboe copy was kept 12 hours and FRED lags a day. AI Stocks now serves whichever copy has the latest close and names its date; the board reads the 24 Nov Cboe close and the fear watch point is no longer crossed. The AI basket is 24.6% below its high with no member above its 50-day average. AI Models sourced or dropped 98 unsourced rows (119 to 21), and site-wide unsourced rows are 605, down from 798 a fortnight ago. Robotaxi's Waymo signal no longer goes blank after restarts, and Demographics' copy is fixed. The live check passed all 312 tabs; health shows known failures only. AI Stocks, reviewed today, loads all ten tabs with 33 sources fresh and FRED answering for three days.",
+   "review": "ai-stocks",
+   "verify_rows": 605,
+   "changes": [
+    {
+     "dashboard": "AI Stocks",
+     "slug": "ai-stocks",
+     "tab": "fear",
+     "what": "VIX serves the copy with the latest close; the signal names its date",
+     "commit": "d271bdc",
+     "by": "session:ai-stocks"
+    },
+    {
+     "dashboard": "Robotaxi",
+     "slug": "robotaxi",
+     "tab": "rides",
+     "what": "Waymo signal and ride readings no longer blank after a restart",
+     "commit": "7990a27",
+     "by": "session:robotaxi"
+    },
+    {
+     "dashboard": "AI Models",
+     "slug": "ai-models",
+     "tab": "all",
+     "what": "98 unsourced rows sourced or dropped; index leads with Fable 5.2",
+     "commit": "25331e7, 76606de, 70c0163",
+     "by": "session:ai-models"
+    },
+    {
+     "dashboard": "Demographics",
+     "slug": "demographics",
+     "tab": "births",
+     "what": "footer cites releases; migration distance to watch point",
+     "commit": "be23783",
+     "by": "session:demographics"
+    },
+    {
+     "dashboard": "Debt & Rates",
+     "slug": "debt-rates",
+     "tab": "china",
+     "what": "China 10-year, maturity and 2024 spending verify rows cleared",
+     "commit": "52ca54f",
+     "by": "session:debt-rates"
+    }
+   ],
+   "next": [
+    "Luxury unsourced rows (226; retail.csv next)",
+    "Longevity 146 unsourced rows wait on the owner's go"
+   ],
+   "asks": [
+    "Options chains: Nasdaq's quote API (browser-like headers, IV from prices), wait for Cboe, or a paid feed",
+    "approve or skip r-shared-fresh (FRED has answered AI Stocks for three days; still a guard for the next outage)",
     "Say go in the Pokémon session for its review fixes, and in Compute & Chips and Longevity",
     "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
     "Debt & Rates: allow the government hosts its remaining rows need, or accept them staying marked verify",
