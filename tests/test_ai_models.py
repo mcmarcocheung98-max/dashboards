@@ -247,9 +247,18 @@ def test_overview_readings_and_signals(mocked):
     sig = {x["key"]: x for x in M.SIGNALS()}
     assert list(sig) == keys == ["frontier_record_age", "price_per_point", "open_gap", "china_share_top20", "release_cadence"]
     assert all(isinstance(x["crossed"], bool) and x["lean"] in (-1, 0, 1) and x["watch"] for x in sig.values())
-    assert sig["price_per_point"]["crossed"] is True and sig["price_per_point"]["lean"] == -1 and "2026-11-22" in sig["price_per_point"]["note"]   # rose on a full snapshot: counts
+    ppp = sig["price_per_point"]            # rose against Jul 2025, but that base snapshot has 3 of its top 20: reported, not counted
+    assert ppp["crossed"] is False and ppp["lean"] == -1 and "2026-11-22" in ppp["note"] and "2025-07-17" in ppp["note"] and "only 3 of its top 20" in ppp["note"]
     assert sig["china_share_top20"]["crossed"] is True and sig["china_share_top20"]["value"] == 5.0 and "1 of the 20" in sig["china_share_top20"]["note"]   # 1 of 20, below the 10% line
     B.json_safe(M.SIGNALS())
+
+
+def test_price_signal_counts_only_when_both_snapshots_are_complete(mocked, monkeypatch):
+    full = lambda t, d, p: {"t": t, "date": d, "price": p, "model": "M", "score": 1500, "top": 1520, "n_tier": 5, "n_priced": 5, "n_top20": 20, "source": "launch"}
+    a, b = full(1700000000, "2023-11-14", 10.0), full(1700000000 + 400 * 86400, "2024-12-18", 4.0)
+    for fp, crossed in (([a, b], True), ([{**a, "n_top20": 6}, b], False), ([a, {**b, "n_top20": 12}], False), ([a, {**b, "price": 8.0}], False), ([a, {**b, "price": 12.0}], True)):
+        monkeypatch.setattr(M, "_cached_payload", lambda name, fp=fp: {"frontier_price": fp} if name == "cost" else {})
+        assert {r["key"]: r for r in M.SIGNALS()}["price_per_point"]["crossed"] is crossed, fp
 
 
 def test_watchlist_rows_are_approved():

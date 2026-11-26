@@ -596,11 +596,21 @@ def SIGNALS() -> list[dict]:
         now = fp[-1]
         partial = (now.get("n_top20") or 0) < 20
         ago = [x for x in fp if x["t"] <= now["t"] - 300 * 86400]
-        chg = now["price"] / ago[-1]["price"] - 1 if ago and ago[-1]["price"] else None
+        base = ago[-1] if ago else None
+        chg = now["price"] / base["price"] - 1 if base and base["price"] else None
+        # the comparison needs a complete top 20 at both ends: a base snapshot with a handful of rows names whichever cheap model
+        # happened to be entered, not the cheapest of that day's frontier tier
+        thin_base = base is not None and (base.get("n_top20") or 0) < 20
+        unpriced = (now.get("n_tier") or 0) - (now.get("n_priced") or 0)
         add("price_per_point", "cost", f"Cheapest model within {NEAR_TOP} Arena points of the top, $ per million output tokens", now["price"], "",
-            0 if chg is None else 1 if chg < 0 else -1, "falls by half on a year, or rises", not partial and chg is not None and (chg <= -0.5 or chg > 0),
+            0 if chg is None else 1 if chg < 0 else -1, "falls by half on a year, or rises",
+            not partial and not thin_base and chg is not None and (chg <= -0.5 or chg > 0),
             (f"partial snapshot ({now.get('n_top20') or 0} of 20 entered), not counted as crossed; " if partial else "")
-            + f"{now['model']} ({now['source']} price) on {now['date']}" + (f"; {chg:+.0%} against the snapshot a year or more before" if chg is not None else "; no snapshot a year earlier yet"))
+            + f"{now['model']} ({now['source']} price) on {now['date']}"
+            + (f"; {unpriced} of the {now['n_tier']} models in the tier have no price row" if unpriced else "")
+            + ("; no snapshot a year earlier yet" if chg is None else
+               f"; {chg:+.0%} against {base['date']}, but that snapshot holds only {base.get('n_top20') or 0} of its top 20, so the year-on-year change is not counted as crossed" if thin_base else
+               f"; {chg:+.0%} against the snapshot of {base['date']}"))
     st = (_cached_payload("utility").get("arena") or {}).get("stats") or {}
     if st:
         d = list(st)[-1]
