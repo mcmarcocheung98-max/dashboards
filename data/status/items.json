@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-25",
+ "updated": "2026-11-26",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -512,6 +512,14 @@
    "title": "Robotaxi: Waymo weekly rides signal often returns no value (board shows it kept)",
    "detail": "From the 24 Nov review. Fixed in 7990a27: Rides is built on the spot when not cached; the Waymo signal is live on the board 25 Nov (dated 29 Apr 2026).",
    "done": "2026-11-25"
+  },
+  {
+   "id": "ai-ons-429-1126",
+   "owner": "session:ai",
+   "status": "waiting",
+   "since": "2026-11-26",
+   "title": "AI: ONS business-insights files answer 429 since 19 Nov (4 stale, 3 alerts)",
+   "detail": "Asked to pace and back off, mark handled with labelled saved copies, and check for moved files."
   }
  ],
  "roadmap": [
@@ -1167,6 +1175,22 @@
     "date": "2026-11-24",
     "minutes": 72,
     "runs": 15
+   }
+  },
+  {
+   "date": "2026-11-26",
+   "run": "scheduled",
+   "result": "problems",
+   "summary": "Live check: 312 of 312 tabs, all tabs OK, no retries, 12 minutes. Health: AI 3 alerts (ONS 429, four stale); known items elsewhere (Bluesky and Reddit 403, Yahoo 429, one TCGdex card, Ember 14 bytes, World Bank one stale, Cboe chains handled). Local tests 481 passed. Unsourced rows 594. Newsletter built, not sent. Signals 68 of 83 wired, 21 crossed.",
+   "fixed": [],
+   "handed": [
+    "session:ai-models (two crossings)",
+    "session:ai (ONS 429)"
+   ],
+   "actions": {
+    "date": "2026-11-25",
+    "minutes": 51,
+    "runs": 10
    }
   }
  ],
@@ -2639,6 +2663,34 @@
     "Say go in the Pokémon session for its review fixes, and in Compute & Chips and Longevity",
     "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
     "Debt & Rates: allow the government hosts its remaining rows need, or accept them staying marked verify",
+    "Gmail newsletter secrets, eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
+   ]
+  },
+  {
+   "date": "2026-11-26",
+   "title": "AI Setup Score in washout; one AI Models crossing real, one fixed; Debt & Rates reviewed",
+   "summary": "The AI Stocks setup score fell to 9.1, below its washout line of 10, with the basket 25.8% off its high and no member above its 50-day average. Two AI Models signals crossed after this week's cleanup: the Chinese share of the Arena top 20 at 5% is real (a complete 22 Nov top 20 with one Chinese model, Qwen3.8-Max at 20th); the cheapest-frontier-price signal compared against a 2025 snapshot that now holds 3 of its 20 and no longer crosses on such a thin base (c44a937). The live check passed all 312 tabs. New: the AI dashboard has 3 alerts from four ONS files answering 429 for a week, handed to its session. Unsourced rows 594. Debt & Rates, reviewed today, loads all eight tabs with 72 sources fresh and 18 rows still marked verify, which need government hosts the owner has not yet allowed.",
+   "review": "debt-rates",
+   "changes": [
+    {
+     "dashboard": "AI Models",
+     "slug": "ai-models",
+     "tab": "signals",
+     "what": "price-per-point signal needs a complete top 20 at both ends; Arena and price verify rows cleared",
+     "commit": "c44a937, f5f2e43, fa868e3",
+     "by": "session:ai-models"
+    }
+   ],
+   "next": [
+    "AI: ONS 429 (asked)",
+    "AI Models: 6 frontier-tier models have no price row (Gemini 4 Neon and Hydrogen, Gemini 3.8 and 3.7 Flash, Opus 4.6, Fable 5.2)"
+   ],
+   "asks": [
+    "Options chains: Nasdaq's quote API (browser-like headers, IV from prices), wait for Cboe, or a paid feed",
+    "approve or skip r-shared-fresh",
+    "Say go in the Pokémon session for its review fixes, and in Compute & Chips and Longevity",
+    "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
+    "Debt & Rates: allow the government hosts its remaining 18 rows need, or accept them staying marked verify",
     "Gmail newsletter secrets, eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
    ]
   }
