@@ -92,7 +92,7 @@ const VIEWS = {
         ...linesChart(Object.entries(U.yoy || {}).filter(([, pts]) => pts.length).map(([k, pts]) => ({ name: k + ", change on a year", points: pts })),
           v => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(1) + "%", { small: true, sync: false }),
         note("ONS JOBS03, employee jobs at the end of each quarter, not seasonally adjusted, so the change is against the same quarter a year earlier. Financial & insurance is SIC 2007 section K (divisions 64 to 66); legal & accounting is division 69 (JOBS03 does not split legal from accounting). "
-          + (U.workbook ? "Workbook: " + U.workbook + "." : "The workbook could not be read (" + (U.workbook_error || "unknown") + "); hand-entered quarters from data/ai/uk_headcount.csv are shown.")))
+          + (U.workbook ? "Workbook: " + U.workbook + "." + (U.saved ? " Saved copy from " + U.saved + ": ONS is rate-limiting the server, so it is retried after a day." : "") : "The workbook could not be read (" + (U.workbook_error || "unknown") + "); hand-entered quarters from data/ai/uk_headcount.csv are shown.")))
       : card("UK headcount", el("div", { class: "muted" }, "Not available right now (" + (d.UK_error || "no data") + "). Quarters can be added by hand to data/ai/uk_headcount.csv."), stale(d));
     const hk = Object.entries(d.HK || {}).filter(([, pts]) => pts.length);
     const hkc = hk.length ? card("Hong Kong persons engaged (C&SD, thousands)", ...linesChart(hk.map(([k, pts]) => ({ name: k, points: pts })), v => num(v), { sync: false }),
@@ -150,6 +150,7 @@ const VIEWS = {
     const lat = Object.entries(d.uk_hk_latest || {});
     const intl = Object.keys(d.uk_hk || {}).length ? card("UK and Hong Kong: share of firms using AI", ...linesChart(Object.entries(d.uk_hk).map(([k, pts]) => ({ name: k, points: pts })), sh, { small: true, sync: false }),
       table(["Series", "Latest", "Period ending", "A year earlier"], lat.map(([k, v]) => [k, sh(v.value), v.date, sh(v.year_ago)])),
+      (d.uk_saved ? el("div", { class: "pill", style: "margin:6px 0" }, "Saved copy from " + d.uk_saved + ": ONS is rate-limiting the server; retried after a day") : null),
       note("UK: ONS Business Insights and Conditions Survey, asked about once a quarter: businesses using at least one AI technology (100% minus 'does not use' minus 'not sure'), weighted. Hong Kong has no comparable periodic survey yet; hand-entered points, if any, are listed below."),
       ...((d.uk_hk_rows || []).length ? [table(["Date", "Series", "%", "Source"], d.uk_hk_rows.map(r => [r.date, r.series, r.value, "[" + host(r.source) + "](" + r.source + ")"]))] : []), stale(d))
       : card("UK and Hong Kong", el("div", { class: "muted" }, "Not available right now: the ONS BICS workbook could not be read. Hand-entered points go in data/ai/firm_adoption_uk_hk.csv."));

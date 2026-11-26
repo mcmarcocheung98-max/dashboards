@@ -13,6 +13,8 @@ from app.topics import _base as B
 @pytest.fixture
 def snapdir(tmp_path, monkeypatch):
     monkeypatch.setattr(B, "SNAP_DIR", tmp_path / "snaps")
+    from app.topics import ai_jobs as _aj
+    monkeypatch.setattr(_aj, "ONS_GAP_S", 0)                       # no pause between ONS downloads in tests
     B.STALE.clear()
     from app import cache
     cache._cache.clear()
@@ -968,6 +970,60 @@ def test_quarter_yoy_needs_two_negative_quarters():
     t = lambda y, m: int(pd.Timestamp(year=y, month=m, day=1).timestamp())
     pts = [[t(y, m), v] for (y, m), v in zip([(y, m) for y in (2023, 2024) for m in (3, 6, 9, 12)], [100, 100, 100, 100, 101, 99, 98, 100])]
     assert _quarter_yoy(pts, 4) == [-2.0, 0.0] and _quarter_yoy([], 4) == []
+
+
+def test_ons_get_is_weekly_spaced_and_backs_off_a_day_after_429(snapdir, monkeypatch):
+    import os
+    from app.topics import ai_jobs as J
+    B.HEALTH.clear(), B.COOLDOWN.clear()
+    calls, mode = [], {"v": "ok"}
+    def dl(url, *a, **k):
+        calls.append(url)
+        if mode["v"] == "ok":
+            return "x" * 6000
+        raise _http(429)
+    monkeypatch.setattr(B, "_download", dl)
+    url = "https://www.ons.gov.uk/file?uri=/x/bicswave170/bicswave1702final.xlsx"
+    assert J.ons_get(url, min_bytes=10) == "x" * 6000 and len(calls) == 1
+    assert J.ons_get(url, min_bytes=10) and len(calls) == 1                    # a saved copy under a week old: ONS is not asked
+    snap = B._snap(url)
+    os.utime(snap, (time.time() - 8 * 86400,) * 2)
+    from app import cache
+    cache._cache.clear()
+    mode["v"] = "429"
+    assert J.ons_get(url, min_bytes=10) == "x" * 6000 and len(calls) == 2      # asked once, refused, the saved copy serves
+    assert B.COOLDOWN[J.ONS_HOST] - time.time() > 23 * 3600                     # left alone for a day, not the shared two hours
+    assert B.HEALTH[url].get("handled") and "saved copy from" in B.HEALTH[url]["handled_how"]
+    assert J.ons_saved(url) == str(pd.Timestamp(snap.stat().st_mtime, unit="s").date())
+    cache._cache.clear()
+    J.ons_get(url, min_bytes=10)
+    assert len(calls) == 2                                                     # still cooling down: not asked again
+    B.COOLDOWN.clear(), B.HEALTH.clear()
+
+
+def test_bics_remembers_its_ai_wave_and_tries_only_newer_ones(snapdir, monkeypatch):
+    pytest.importorskip("openpyxl")
+    from app.topics import ai_adoption as A
+    asked = []
+    pages = {"v": BICS_PAGE_HTML}
+    def fake(url, ttl, **k):
+        asked.append(url)
+        if url == A.BICS_PAGE:
+            return pages["v"]
+        return bics_wave_xlsx(with_ai="bicswave165" in url).decode("latin-1")
+    monkeypatch.setattr(A, "fetch", fake)
+    assert A.bics_ai()["UK: all businesses (ONS BICS)"].iloc[-1] == 29.7
+    assert json.loads(A._bics_wave_file().read_text())["wave"] == 165
+    # a fortnight on: two newer waves are listed (neither has the AI sheet); the saved page and workbooks are a week old
+    import os
+    for f in B.SNAP_DIR.glob("*.txt"):
+        os.utime(f, (time.time() - 8 * 86400,) * 2)
+    from app import cache
+    cache._cache.clear()
+    pages["v"] = BICS_PAGE_HTML + "".join(f'<a href="/file?uri=/economy/x/businessinsightsandimpactontheukeconomy/bicswave{n}/bicswave{n}2final.xlsx">w</a>' for n in (167, 168))
+    asked.clear()
+    assert A.bics_ai()["UK: all businesses (ONS BICS)"].iloc[-1] == 29.7
+    assert [u.split("/")[-2] for u in asked[1:]] == ["bicswave168", "bicswave167", "bicswave166", "bicswave165"]   # the three newer, then the known wave
 
 
 def test_ramp_ai_index_parser():

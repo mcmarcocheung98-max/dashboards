@@ -240,18 +240,51 @@ def parse_bics_ai(content: bytes) -> dict[str, pd.Series]:
     return out
 
 
-def bics_ai(tries: int = 7) -> dict[str, pd.Series]:
-    """The newest wave workbook that carries the AI sheet (it holds the whole series back to 2023), newest wave first."""
+def _bics_wave_file():
+    from . import _base
+    return _base.SNAP_DIR / "bics-ai-wave.json"
+
+
+def bics_ai(tries: int = 3) -> dict[str, pd.Series]:
+    """The newest wave workbook that carries the AI sheet (it holds the whole series back to 2023). The wave that last had it is
+    remembered, so only waves newer than it (up to `tries`, newest first) are tried before it, through ai_jobs.ons_get (weekly, spaced,
+    no retry for a day after a 429)."""
+    import json
     import re
-    page = fetch(BICS_PAGE, TTL, headers={"Accept": "text/html,*/*"}, min_bytes=5000)
+    from .ai_jobs import ons_get
+    page = ons_get(BICS_PAGE, get=fetch, headers={"Accept": "text/html,*/*"}, min_bytes=5000)
     links = {int(n): u for u, n in re.findall(r'href="(/file\?uri=[^"]+/bicswave(\d+)/[^"]+\.xlsx)"', page)}
+    try:
+        known = int(json.loads(_bics_wave_file().read_text())["wave"])
+    except Exception:
+        known = None
+    newer = [n for n in sorted(links, reverse=True) if known is None or n > known][:tries if known is not None else 7]
+    order = newer + ([known] if known in links else [])
     last = None
-    for n in sorted(links, reverse=True)[:tries]:
+    for n in order:
         try:
-            return parse_bics_ai(fetch("https://www.ons.gov.uk" + links[n], TTL, min_bytes=10000, binary=True).encode("latin-1"))
+            out = parse_bics_ai(ons_get("https://www.ons.gov.uk" + links[n], get=fetch, min_bytes=10000, binary=True).encode("latin-1"))
         except Exception as e:
             last = e
-    raise ValueError(f"no BICS wave with AI questions among the newest {tries} ({last})")
+            continue
+        if n != known:
+            f = _bics_wave_file()
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(json.dumps({"wave": n, "url": links[n]}))
+        return out
+    raise ValueError(f"no BICS wave with AI questions among waves {order or 'none listed'} ({last})")
+
+
+def bics_saved() -> str | None:
+    """The date of the saved BICS copy being served, when ONS refused the last try; None when fresh."""
+    import json
+    from .ai_jobs import ons_saved
+    urls = [BICS_PAGE]
+    try:
+        urls.append("https://www.ons.gov.uk" + json.loads(_bics_wave_file().read_text())["url"])
+    except Exception:
+        pass
+    return min((d for d in map(ons_saved, urls) if d), default=None)
 
 
 def firm_adoption_intl() -> dict[str, pd.Series]:
@@ -294,6 +327,7 @@ def _firms_now() -> dict:
     out["as_of"] = out["now"]["btos_date"]
     out["cited"] = manual_sources(SLUG, "btos_ai_use_us")[:3] + manual_sources(SLUG, "ramp_ai_index")[:3]
     out["uk_hk_rows"] = sorted(manual_rows(SLUG, "firm_adoption_uk_hk"), key=lambda r: r["date"], reverse=True)
+    out["uk_saved"] = bics_saved()
     out["uk_hk_latest"] = {k: {"value": p[-1][1], "date": pd.Timestamp(p[-1][0], unit="s").strftime("%Y-%m-%d"), "year_ago": _year_ago(p)}
                            for k, p in (out.get("uk_hk") or {}).items() if p}
     return out

@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 
 from . import _base
-from ._base import DAY, _pts, _r, fetch, fetch_csv, latest_date, manual, manual_rows, monthly, payload, weekly, yoy
+from ._base import DAY, _pts, _r, fetch, fetch_csv, handled, latest_date, manual, manual_rows, monthly, payload, weekly, yoy
 
 IND = "https://raw.githubusercontent.com/hiring-lab/job_postings_tracker/master/{cc}/job_postings_by_sector_{cc}.csv"
 IND_ALL = "https://raw.githubusercontent.com/hiring-lab/job_postings_tracker/master/{cc}/aggregate_job_postings_{cc}.csv"
@@ -209,12 +209,53 @@ def parse_jobs03(content: bytes) -> dict[str, pd.Series]:
 
 def jobs03() -> tuple[dict[str, pd.Series], str]:
     """The newest JOBS03 workbook, parsed, and its file name."""
-    url = jobs03_url(fetch(JOBS03_PAGE, TTL, headers={"Accept": "text/html,*/*"}, min_bytes=5000))
-    return parse_jobs03(fetch(url, TTL, binary=True, min_bytes=10000, timeout=120).encode("latin-1")), url.rsplit("%2F", 1)[-1].rsplit("/", 1)[-1]
+    url = jobs03_url(ons_get(JOBS03_PAGE, headers={"Accept": "text/html,*/*"}, min_bytes=5000))
+    return parse_jobs03(ons_get(url, binary=True, min_bytes=10000, timeout=120).encode("latin-1")), url.rsplit("%2F", 1)[-1].rsplit("/", 1)[-1]
 
 
 def london() -> dict:
     return parse_bres(fetch(BRES.format(ind=",".join(str(k) for k in LONDON_SECTORS)), TTL, min_bytes=2000))
+
+
+# ------------------------------------------------------------------ ONS: gently (it answers 429 Too Many Requests to bursts)
+ONS_HOST = "www.ons.gov.uk"
+ONS_EVERY = 7 * DAY          # these files change fortnightly (BICS) or quarterly (JOBS03): a weekly try is plenty
+ONS_BACKOFF = DAY            # after a 429, leave ONS alone this long (the shared cooldown stops at two hours)
+ONS_GAP_S = 5                # at least this long between two real ONS downloads
+_ons_last = [0.0]
+
+
+def ons_get(url: str, get=None, **kw) -> str:
+    """An ONS file, asked for at most once a week and one at a time. A saved copy younger than ONS_EVERY is used without asking (a
+    restart or a redeploy costs ONS nothing). Downloads are spaced ONS_GAP_S apart. After a 429 the host is left alone for
+    ONS_BACKOFF. While the saved copy serves, the source is marked handled, so /api/health shows it stale without an alert. `get` is
+    the caller's fetch (so a module's own fetch, or a test's stand-in, is used)."""
+    snap = _base._snap(url)
+    if snap.exists() and time.time() - snap.stat().st_mtime < ONS_EVERY:
+        return snap.read_text(encoding="utf-8")
+    if snap.exists() and _base.COOLDOWN.get(ONS_HOST, 0) > time.time():
+        _base.STALE[url] = snap.stat().st_mtime
+    else:
+        wait = _ons_last[0] + ONS_GAP_S - time.time()
+        if wait > 0:
+            time.sleep(wait)
+        try:
+            text = (get or fetch)(url, ONS_EVERY, **kw)
+        finally:
+            _ons_last[0] = time.time()
+        if url not in _base.STALE:
+            return text
+    if "429" in str((_base.HEALTH.get(url) or {}).get("error") or ""):
+        _base.COOLDOWN[ONS_HOST] = max(_base.COOLDOWN.get(ONS_HOST, 0), time.time() + ONS_BACKOFF)
+    handled(url, f"ONS is rate-limiting the server; the saved copy from {ons_saved(url)} serves, retried after a day")
+    return snap.read_text(encoding="utf-8")
+
+
+def ons_saved(url: str) -> str | None:
+    """The date of the saved copy being served for an ONS file, when the last try failed; None when it is fresh."""
+    if url not in _base.STALE:
+        return None
+    return str(pd.Timestamp(_base.STALE[url], unit="s").date())
 
 
 # ------------------------------------------------------------------ data
@@ -332,7 +373,8 @@ def _headcount_now() -> dict:
                 "yoy": {n: _pts(yoy_q(s)[lambda x: x.index >= since], 2) for n, s in series.items()},
                 "latest": {n: {"level": _r(s.iloc[-1], 1), "yoy": _r(yoy_q(s).iloc[-1], 2) if len(yoy_q(s)) else None, "date": str(s.index[-1].date())}
                            for n, s in series.items()},
-                "workbook": src, "workbook_error": err}
+                "workbook": src, "workbook_error": err,
+                "saved": min((d for d in (ons_saved(u) for u in list(_base.STALE) if "jobs03" in u.lower()) if d), default=None)}
 
     def hk():
         series = parse_csd_persons(json.loads(fetch(CSD, TTL, min_bytes=10000)))
