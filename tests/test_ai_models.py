@@ -135,7 +135,7 @@ def test_iteration_payload():
     assert p["years"][0] == 2022 and len(p["per_year"]["GPT"]) == len(p["years"])
     assert p["gaps"]["Claude"]["median_days"] > 0 and p["gaps"]["Claude"]["days_since"] >= 0
     assert 0 < p["open_share"][-1][1] < 1 and p["cadence_12m"] and p["cadence_12m"] > 0
-    assert p["timeline"] and p["rows"][0]["date"] >= p["rows"][-1]["date"] and p["n_verify"] > 0
+    assert p["timeline"] and p["rows"][0]["date"] >= p["rows"][-1]["date"] and p["n_verify"] == 0  # every release row checked (25 Nov 2026)
 
 
 def test_release_gaps_and_cadence():
