@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-26",
+ "updated": "2026-11-27",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -519,7 +519,7 @@
    "status": "waiting",
    "since": "2026-11-26",
    "title": "AI: ONS business-insights files answer 429 since 19 Nov (4 stale, 3 alerts)",
-   "detail": "Asked to pace and back off, mark handled with labelled saved copies, and check for moved files."
+   "detail": "Asked to pace and back off, mark handled with labelled saved copies, and check for moved files. f561615: ONS weekly, spaced, backed off, saved copy handled and labelled; 27 Nov AI 14 fresh, 0 alerts. Follow-up: the law and finance headcount reading lost its UK figure (asked)."
   }
  ],
  "roadmap": [
@@ -1191,6 +1191,21 @@
     "date": "2026-11-25",
     "minutes": 51,
     "runs": 10
+   }
+  },
+  {
+   "date": "2026-11-27",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Live check: 312 of 312 tabs, all tabs OK, no retries, 14 minutes. Health: AI 0 alerts (ONS handled); AI Stocks three FRED failing again; known items elsewhere (Bluesky and Reddit 403, Yahoo 429, Ember 14 bytes, Cboe chains handled). Local tests 484 passed. Unsourced rows 594. Newsletter built, not sent. Signals 68 of 83 wired, 22 crossed.",
+   "fixed": [],
+   "handed": [
+    "session:ai (UK headcount)"
+   ],
+   "actions": {
+    "date": "2026-11-26",
+    "minutes": 45,
+    "runs": 9
    }
   }
  ],
@@ -2688,6 +2703,34 @@
    "asks": [
     "Options chains: Nasdaq's quote API (browser-like headers, IV from prices), wait for Cboe, or a paid feed",
     "approve or skip r-shared-fresh",
+    "Say go in the Pokémon session for its review fixes, and in Compute & Chips and Longevity",
+    "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
+    "Debt & Rates: allow the government hosts its remaining 18 rows need, or accept them staying marked verify",
+    "Gmail newsletter secrets, eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
+   ]
+  },
+  {
+   "date": "2026-11-27",
+   "title": "AI's ONS alerts cleared; China tech pulls 21 points ahead of US tech; Climate reviewed",
+   "summary": "The live check passed all 312 tabs. The AI dashboard's three ONS alerts are gone after f561615 (weekly, spaced downloads; the saved copy is labelled), though the law and finance headcount signal lost its UK figure in the change, sent back to its session. AI Stocks' three FRED series failed again overnight, the case r-shared-fresh is for. New crossings: the Chinese tech basket leads the US one by 21.5 points over 90 days, and a prediction market moved 29.8 points in a day. AI Stocks figures are unchanged after US Thanksgiving (setup score 9.1, basket -25.8%). Climate, reviewed today, loads all six tabs with 19 sources fresh and no unsourced rows; its dead billion-dollar-disasters watch point still waits on r-climate-disasters.",
+   "review": "climate",
+   "verify_rows": 594,
+   "changes": [
+    {
+     "dashboard": "AI",
+     "slug": "ai",
+     "tab": "jobs",
+     "what": "ONS downloads weekly, spaced and backed off; saved copy marked handled and labelled",
+     "commit": "f561615",
+     "by": "session:ai"
+    }
+   ],
+   "next": [
+    "AI: UK headcount figure missing from the signal (asked)"
+   ],
+   "asks": [
+    "Options chains: Nasdaq's quote API (browser-like headers, IV from prices), wait for Cboe, or a paid feed",
+    "approve or skip r-shared-fresh (AI Stocks' FRED failed again on 27 Nov)",
     "Say go in the Pokémon session for its review fixes, and in Compute & Chips and Longevity",
     "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
     "Debt & Rates: allow the government hosts its remaining 18 rows need, or accept them staying marked verify",
