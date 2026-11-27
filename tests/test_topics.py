@@ -1001,6 +1001,36 @@ def test_ons_get_is_weekly_spaced_and_backs_off_a_day_after_429(snapdir, monkeyp
     B.COOLDOWN.clear(), B.HEALTH.clear()
 
 
+def test_saved_ons_workbook_survives_a_429_byte_for_byte(snapdir, monkeypatch):
+    """A workbook's bytes include \\r; read back in text mode they become \\n and the zip breaks. UK headcount must still come from
+    the saved JOBS03 copy while ONS answers 429 (it read 'UK n/a' on 27 Nov)."""
+    import os
+    pytest.importorskip("openpyxl")
+    from app import cache
+    from app.topics import ai_jobs as J
+    B.HEALTH.clear(), B.COOLDOWN.clear()
+    wb = _jobs03_xlsx()
+    assert b"\r" in wb                                                    # the fixture really has the bytes that broke
+    mode = {"v": "ok"}
+    def dl(url, *a, **k):
+        if "ons.gov.uk" in url and mode["v"] == "429":
+            raise _http(429)
+        t = jobs_fetch(url, 0, **{kk: v for kk, v in k.items() if kk == "post"})
+        return t + " " * 6000 if url.endswith("jobs03") else t
+    monkeypatch.setattr(B, "_download", dl)
+    assert set(J._headcount_now()["UK"]["levels"]) == set(J.UK_INDUSTRIES)
+    for f in B.SNAP_DIR.glob("*.txt"):
+        os.utime(f, (time.time() - 8 * 86400,) * 2)
+    cache._cache.clear()
+    mode["v"] = "429"
+    h = J._headcount_now()
+    assert not h.get("UK_error") and set(h["UK"]["levels"]) == set(J.UK_INDUSTRIES) and h["UK"]["saved"]
+    url = J.jobs03_url(JOBS03_PAGE)
+    raw = J.ons_get(url).encode("latin-1")
+    assert len(raw) == len(wb) and set(J.parse_jobs03(raw)) == set(J.UK_INDUSTRIES)   # every byte kept, so the zip still opens
+    B.COOLDOWN.clear(), B.HEALTH.clear()
+
+
 def test_bics_remembers_its_ai_wave_and_tries_only_newer_ones(snapdir, monkeypatch):
     pytest.importorskip("openpyxl")
     from app.topics import ai_adoption as A

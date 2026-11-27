@@ -232,7 +232,7 @@ def ons_get(url: str, get=None, **kw) -> str:
     the caller's fetch (so a module's own fetch, or a test's stand-in, is used)."""
     snap = _base._snap(url)
     if snap.exists() and time.time() - snap.stat().st_mtime < ONS_EVERY:
-        return snap.read_text(encoding="utf-8")
+        return _read_snap(snap)
     if snap.exists() and _base.COOLDOWN.get(ONS_HOST, 0) > time.time():
         _base.STALE[url] = snap.stat().st_mtime
     else:
@@ -248,7 +248,14 @@ def ons_get(url: str, get=None, **kw) -> str:
     if "429" in str((_base.HEALTH.get(url) or {}).get("error") or ""):
         _base.COOLDOWN[ONS_HOST] = max(_base.COOLDOWN.get(ONS_HOST, 0), time.time() + ONS_BACKOFF)
     handled(url, f"ONS is rate-limiting the server; the saved copy from {ons_saved(url)} serves, retried after a day")
-    return snap.read_text(encoding="utf-8")
+    return _read_snap(snap)
+
+
+def _read_snap(path) -> str:
+    """A saved copy exactly as written. read_text() would turn \\r\\n and \\r into \\n and corrupt a binary workbook (fetch keeps it as
+    latin-1 text): newline="" keeps every byte."""
+    with open(path, encoding="utf-8", newline="") as f:
+        return f.read()
 
 
 def ons_saved(url: str) -> str | None:
