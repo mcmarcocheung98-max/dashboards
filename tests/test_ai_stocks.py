@@ -653,6 +653,43 @@ def test_vix_signal_note_carries_the_date_and_says_when_it_lags(monkeypatch):
     assert "close of 23 Nov 2026" in vx["note"] and "lags" not in vx["note"]
 
 
+def test_last_session_adds_a_half_day_the_history_leaves_out():
+    """Fri 27 Nov 2026: Nasdaq's daily history stopped at Wed 25 Nov; its quote had the half-day close (NVDA, real figures)."""
+    h = pd.Series([155.38, 149.30], index=pd.to_datetime(["2026-11-24", "2026-11-25"]))
+    q = lambda px="$150.49", ch="+1.19", ts="Nov 27, 2026": {"data": {"primaryData": {"lastSalePrice": px, "netChange": ch, "lastTradeTimestamp": ts}}}
+    sat = pd.Timestamp("2026-11-28 03:00", tz="America/New_York")
+    assert M.last_session(h, q(), sat) == (pd.Timestamp("2026-11-27"), 150.49)
+    assert M.last_session(h, q(), pd.Timestamp("2026-11-27 12:30", tz="America/New_York")) is None     # the session is not over
+    assert M.last_session(h, q(), pd.Timestamp("2026-11-27 18:30", tz="America/New_York")) == (pd.Timestamp("2026-11-27"), 150.49)
+    assert M.last_session(h, q(ch="+5.00"), sat) is None                     # not straight after the history's last close
+    assert M.last_session(h, q(ts="Nov 25, 2026"), sat) is None              # nothing newer than the history
+    assert M.last_session(h, q(ts="Nov 27, 2026 11:02 AM ET"), sat) == (pd.Timestamp("2026-11-27"), 150.49)
+    assert M.last_session(h, {"data": None}, sat) is None and M.last_session(h, q(px="N/A"), sat) is None
+
+
+def test_kept_history_takes_the_quotes_session(mocked, monkeypatch):
+    real = M._snap_text
+    hist = {"data": {"tradesTable": {"rows": [{"date": d, "close": c} for d, c in
+                                              [("11/25/2026", "$149.30"), ("11/24/2026", "$155.38")] + [(f"10/{i:02d}/2026", "$100.00") for i in range(1, 25)]]}}}
+    quote = {"data": {"primaryData": {"lastSalePrice": "$150.49", "netChange": "+1.19", "lastTradeTimestamp": "Nov 27, 2026"}}}
+    monkeypatch.setattr(M, "_snap_text", lambda url, *a, **k: json.dumps(quote) if "/info?" in url else json.dumps(hist) if "/NVDA/historical" in url else real(url, *a, **k))
+    s = M.nasdaq_kept("NVDA")
+    assert s.index[-1] == pd.Timestamp("2026-11-27") and s.iloc[-1] == 150.49 and s.iloc[-2] == 149.30
+
+
+def test_signal_notes_carry_the_price_date(monkeypatch):
+    day = 86400
+    pts = lambda vals: [[1_700_000_000 + i * day, v] for i, v in enumerate(vals)]
+    pay = {"setup": {"dd": pts([-0.25] * 31), "breadth50": pts([0.0] * 31), "score": pts([9.1]), "as_of": "2026-11-27"},
+           "fear": {"vix_now": {"v": 23.81, "date": "2026-11-27", "max_1m": 35.9}, "as_of": "2026-11-27",
+                    "relative": {"AI basket vs QQQ": {"3m": {"a": -0.2, "b": -0.05, "gap": -15.0}}}}}
+    monkeypatch.setattr(M, "_cached_payload", lambda n: pay.get(n, {}))
+    sig = {x["key"]: x for x in M.SIGNALS()}
+    for k in ("basket_drawdown", "breadth_50d", "setup_score", "ai_vs_qqq"):
+        assert sig[k]["note"].endswith("close of 27 Nov 2026"), k
+    assert sig["vix"]["note"].count("27 Nov") == 1                          # VIX keeps its own date, not two
+
+
 def test_every_endpoint_through_the_server(mocked):
     from aiohttp.test_utils import TestClient, TestServer
     from app.server import make_app

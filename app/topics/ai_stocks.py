@@ -116,17 +116,65 @@ def _src(sym: str, cls: str) -> str:
     return B.NASDAQ_ANY.format(sym=sym, cls=cls, a=DATA_START, b="").replace("&todate=", "")
 
 
+NASDAQ_QUOTE = "https://api.nasdaq.com/api/quote/{sym}/info?assetclass={cls}"
+NASDAQ_HEADERS = {"Accept": "application/json, text/plain, */*", "Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"}
+
+
 def nasdaq(sym: str, cls: str = "stocks") -> pd.Series:
-    """BACKGROUND (fill_prices) and tests: download one series, kept under _src so a view finds it on any day."""
-    return B.nasdaq_daily(sym, DATA_START, lambda u, ttl=0, **k: fetch_json(u, PRICE_REFRESH_S, key=_src(sym, cls), **k), assetclass=cls)
+    """BACKGROUND (fill_prices) and tests: download one series, kept under _src so a view finds it on any day; and the quote, kept
+    under its own URL, for a session the history leaves out (see last_session)."""
+    s = B.nasdaq_daily(sym, DATA_START, lambda u, ttl=0, **k: fetch_json(u, PRICE_REFRESH_S, key=_src(sym, cls), **k), assetclass=cls)
+    try:
+        fetch_json(NASDAQ_QUOTE.format(sym=sym, cls=cls), PRICE_REFRESH_S, headers=NASDAQ_HEADERS, min_bytes=100)
+    except Exception:
+        pass                                                         # the history alone still serves
+    return s
+
+
+def _price(v) -> float | None:
+    try:
+        return float(str(v).replace("$", "").replace(",", "").replace("+", ""))
+    except (TypeError, ValueError):
+        return None
+
+
+def last_session(hist: pd.Series, quote: dict, now: pd.Timestamp | None = None) -> tuple[pd.Timestamp, float] | None:
+    """The close of a session Nasdaq's daily history leaves out (it skipped the half-day of Fri 27 Nov 2026), from its quote: the
+    last sale of a finished session (a day before today in New York, or today after 18:00 there) that comes straight after the
+    history's last close: that close plus the quote's net change must give its last sale (within 0.5%), so an intraday price or a
+    quote several sessions on is never taken. None when there is nothing to add."""
+    d = ((quote or {}).get("data") or {}).get("primaryData") or {}
+    px, ch = _price(d.get("lastSalePrice")), _price(d.get("netChange"))
+    try:
+        day = pd.Timestamp(pd.to_datetime(str(d.get("lastTradeTimestamp", "")).split(" ET")[0], format="mixed").date())
+    except (ValueError, TypeError):
+        return None
+    if px is None or ch is None or not len(hist) or day <= hist.index[-1]:
+        return None
+    ny = (now or pd.Timestamp.now(tz="America/New_York")).tz_convert("America/New_York") if (now is None or now.tzinfo) else now
+    if day.date() > ny.date() or (day.date() == ny.date() and ny.hour < 18):
+        return None
+    if abs(hist.iloc[-1] + ch - px) > 0.005 * px:
+        return None
+    return day, px
 
 
 def nasdaq_kept(sym: str, cls: str = "stocks") -> pd.Series:
-    """For page views: the kept copy only (memory, else the snapshot on the volume); LookupError when it was never fetched."""
+    """For page views: the kept copy only (memory, else the snapshot on the volume); LookupError when it was never fetched. A
+    finished session the history leaves out is added from the kept quote (last_session)."""
     text = _snap_text(_src(sym, cls))
     if text is None:
         raise LookupError("not fetched yet")
-    return B.nasdaq_daily(sym, DATA_START, lambda *a, **k: json.loads(text), assetclass=cls)
+    s = B.nasdaq_daily(sym, DATA_START, lambda *a, **k: json.loads(text), assetclass=cls)
+    q = _snap_text(NASDAQ_QUOTE.format(sym=sym, cls=cls))
+    if q is not None:
+        try:
+            add = last_session(s, json.loads(q))
+        except ValueError:
+            add = None
+        if add is not None:
+            s = pd.concat([s, pd.Series([add[1]], index=[add[0]])])
+    return s
 
 
 def _listed(sym: str, s: pd.Series) -> pd.Series:
@@ -1651,10 +1699,14 @@ def SIGNALS() -> list[dict]:
     lean +1 = healthier setup, -1 = more stress. Each crossed comes from its own test."""
     out = []
 
+    s, t, f = _cached_payload("setup"), _cached_payload("trend"), _cached_payload("fear")
+    px_day = s.get("as_of") or f.get("as_of")                       # the latest close the prices reach
+
     def add(key, tab, label, value, unit, lean, watch, crossed, note=None):
+        if key != "vix" and px_day:                                  # the VIX note gives its own date
+            note = "; ".join(x for x in (note, f"close of {pd.Timestamp(px_day).strftime('%-d %b %Y')}") if x)
         out.append({"key": key, "tab": tab, "label": label, "value": value, "unit": unit, "lean": lean, "watch": watch, "crossed": bool(crossed),
                     **({"note": note} if note else {})})
-    s, t, f = _cached_payload("setup"), _cached_payload("trend"), _cached_payload("fear")
     dd = s.get("dd") or []
     if dd:
         now = dd[-1][1]

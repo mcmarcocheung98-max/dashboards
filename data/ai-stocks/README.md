@@ -172,6 +172,12 @@ stock on each cycle". Tab `midterms`, endpoint `/api/ai-stocks/midterms`.
 
 ## Caveats and gaps
 
+- **Half-day sessions.** Nasdaq's daily history can leave a session out: on Sat 28 Nov 2026 it still ended on Wed 25 Nov,
+  without the half-day of Fri 27 Nov. `fill_prices` also keeps each symbol's Nasdaq quote (`/api/quote/<sym>/info`), and a view
+  adds that session's close from it when the session is over (a day before today in New York, or today after 18:00 there) and it
+  follows the history's last close directly (that close plus the quote's net change gives its last sale, within 0.5%). Once the
+  history has the day, the history's own row is used. Every signal note ends with the price date ("close of 27 Nov 2026").
+
 - **VIX date.** Pages serve whichever kept VIX copy has the latest close: Cboe's file, or FRED's (FRED posts a day late). Cboe's
   file is asked again on every 6-hourly background run (kept 3 hours); on 24 Nov 2026 a 12-hour keep left Friday's 35.89 on the
   signals board after Monday's 26.62 was out. The VIX signal's note names the close's date and source, and says so when VIX is
