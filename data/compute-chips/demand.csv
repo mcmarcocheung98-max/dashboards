@@ -1,9 +1,9 @@
 date,series,value,source,note
 # fallback only: Ember's yearly file replaces these rows for every year it covers
-2014-01-01,US,3860,https://www.eia.gov/electricity/annual/,total US end use incl. direct use; verify
-2018-01-01,US,4000,https://www.eia.gov/electricity/annual/,total US end use incl. direct use; verify
-2023-01-01,US,4000,https://www.eia.gov/electricity/annual/,total US end use incl. direct use (LBNL's 176 TWh = 4.4%); verify
-2024-01-01,US,4100,https://www.eia.gov/electricity/annual/,total US end use incl. direct use; verify
-2024-01-01,China,9852,https://www.nea.gov.cn/,NEA: 2024 society-wide electricity consumption 98521 bn kWh; verify
-2024-01-01,UK,285,https://www.gov.uk/government/statistics/energy-trends-section-5-electricity,DESNZ Energy Trends total demand; verify
-2024-01-01,World,30000,https://www.iea.org/reports/electricity-2025,IEA: world electricity demand about 30 PWh; verify
+2014-01-01,US,3860,https://www.eia.gov/electricity/annual/,"total US end use incl. direct use; EIA Electric Power Annual Table 2.2 now starts at 2015 (3,900 TWh), 2014 not found on 2026-11-28; verify"
+2018-01-01,US,4003,https://www.eia.gov/electricity/annual/html/epa_02_02.html,"EIA Electric Power Annual Table 2.2, Total Electric Industry, Total End Use (sales + direct use) 4,003,088,992 MWh (was 4000); checked 2026-11-28"
+2023-01-01,US,4011,https://www.eia.gov/electricity/annual/html/epa_02_02.html,"EIA Electric Power Annual Table 2.2, Total End Use 4,011,171,517 MWh (was 4000; LBNL's 176 TWh = 4.4%); checked 2026-11-28"
+2024-01-01,US,4110,https://www.eia.gov/electricity/annual/html/epa_02_02.html,"EIA Electric Power Annual Table 2.2, Total End Use 4,110,422,353 MWh (was 4100); checked 2026-11-28"
+2024-01-01,China,9852,https://m.gmw.cn/2025-01/23/content_1303954364.htm,"NEA via Xinhua (22 Jan 2025): '2024年全社会用电量98521亿千瓦时' = 98,521 x 100m kWh = 9,852 TWh, up 6.8%; nea.gov.cn not opened; checked 2026-11-28"
+2024-01-01,UK,285,https://www.gov.uk/government/statistics/energy-trends-section-5-electricity,"DESNZ total demand; checked 2026-11-28: 285.0 TWh is 2024 total generation in UK Energy in Brief 2025 (p.27), not demand (demand adds imports of 33.4 TWh, losses and own use; DUKES 2025 ch.5 table not opened); verify"
+2024-01-01,World,30000,https://www.iea.org/reports/electricity-2025,"IEA: world electricity demand about 30 PWh; checked 2026-11-28: IEA's Electricity 2025 and Global Energy Review 2025 pages give only +4.3% and +1,080 TWh for 2024, no total (implies about 26,200 TWh on IEA's basis); verify"
