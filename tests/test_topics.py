@@ -1,4 +1,5 @@
 """Routes, registry, the fetch-with-snapshot fallback, hand-entered series, and every dashboard's payloads on fixtures (no network)."""
+import functools
 import json
 import time
 
@@ -250,7 +251,8 @@ JOBS03_PAGE = ('<a href="/file?uri=%2Femploymentandlabourmarket%2Fpeopleinwork%2
                'datasets/employeejobsbyindustryjobs03/previous/v1/jobs03jun2026.xls">old</a>')
 
 
-def _jobs03_xlsx(in_jobs=False) -> bytes:
+@functools.lru_cache(maxsize=None)                                         # built once: openpyxl stamps the save time into docProps, so two
+def _jobs03_xlsx(in_jobs=False) -> bytes:                                  # builds a second apart can differ by a few zipped bytes
     """A JOBS03-like workbook (layout assumed, not seen live: ONS is unreachable from the build container): a contents sheet, a
     sheet by sex, then the all-employees sheet with title lines, a section-letter row, a SIC division code row and one row per quarter."""
     import io
