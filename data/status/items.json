@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-27",
+ "updated": "2026-11-28",
  "actions": [
   {
    "id": "railway-anthropic-key",
@@ -516,10 +516,27 @@
   {
    "id": "ai-ons-429-1126",
    "owner": "session:ai",
-   "status": "waiting",
+   "status": "done",
    "since": "2026-11-26",
    "title": "AI: ONS business-insights files answer 429 since 19 Nov (4 stale, 3 alerts)",
-   "detail": "Asked to pace and back off, mark handled with labelled saved copies, and check for moved files. f561615: ONS weekly, spaced, backed off, saved copy handled and labelled; 27 Nov AI 14 fresh, 0 alerts. Follow-up: the law and finance headcount reading lost its UK figure (asked)."
+   "detail": "Asked to pace and back off, mark handled with labelled saved copies, and check for moved files. f561615: ONS weekly, spaced, backed off, saved copy handled and labelled; 27 Nov AI 14 fresh, 0 alerts. Follow-up: the law and finance headcount reading lost its UK figure (asked). UK headcount restored in 6d2a3a1 (saved workbooks read back byte for byte); board shows UK -1.0% on 28 Nov.",
+   "done": "2026-11-28"
+  },
+  {
+   "id": "btc-coingecko-1128",
+   "owner": "session:altcoins",
+   "status": "waiting",
+   "since": "2026-11-28",
+   "title": "BTC Cycles: 16 CoinGecko sources stale (5 a week ago)",
+   "detail": "Asked to read source-health, fix within the free tier or label and mark handled; flag if a key is needed."
+  },
+  {
+   "id": "aistocks-friday-1128",
+   "owner": "session:ai-stocks",
+   "status": "waiting",
+   "since": "2026-11-28",
+   "title": "AI Stocks: readings unchanged 26-28 Nov; confirm Friday's half-day close is in and date the price notes",
+   "detail": "Health fresh."
   }
  ],
  "roadmap": [
@@ -1206,6 +1223,22 @@
     "date": "2026-11-26",
     "minutes": 45,
     "runs": 9
+   }
+  },
+  {
+   "date": "2026-11-28",
+   "run": "scheduled",
+   "result": "ok",
+   "summary": "Live check: 312 of 312 tabs, all tabs OK, no retries, 12 minutes. Health: BTC Cycles 16 CoinGecko stale; known items elsewhere (Bluesky and Reddit 403, Yahoo 429, Ember 14 bytes, Cboe chains handled); AI Stocks FRED answering. Local tests 485 passed. Unsourced rows 570. Newsletter built, not sent. Signals 67 of 83 wired, 20 crossed.",
+   "fixed": [],
+   "handed": [
+    "session:altcoins (CoinGecko)",
+    "session:ai-stocks (Friday close)"
+   ],
+   "actions": {
+    "date": "2026-11-27",
+    "minutes": 61,
+    "runs": 14
    }
   }
  ],
@@ -2731,6 +2764,44 @@
    "asks": [
     "Options chains: Nasdaq's quote API (browser-like headers, IV from prices), wait for Cboe, or a paid feed",
     "approve or skip r-shared-fresh (AI Stocks' FRED failed again on 27 Nov)",
+    "Say go in the Pokémon session for its review fixes, and in Compute & Chips and Longevity",
+    "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
+    "Debt & Rates: allow the government hosts its remaining 18 rows need, or accept them staying marked verify",
+    "Gmail newsletter secrets, eBay keys, three bag prices, Arena ranks 8-17, Bluesky login, the HIBOR fallback"
+   ]
+  },
+  {
+   "date": "2026-11-28",
+   "title": "AI's UK headcount back; London price-to-pay ratio 10.3; CoinGecko gaps grow on BTC Cycles; Space reviewed",
+   "summary": "The live check passed all 312 tabs. AI's law and finance headcount has its UK figure again (-1.0%) after 6d2a3a1. Housing's price-to-London-pay ratio moved from 10.98 to 10.27. BTC Cycles now has 16 CoinGecko sources stale, up from 5 a week ago; handed to its session with a note that a key may be needed. AI Stocks' readings have not moved since Wednesday (basket -25.8%, setup score 9.1), though Friday had a half-day session; its session is checking the price date. Unsourced rows are 570 after Compute & Chips cleared its IEA and LBNL power rows. Space, reviewed today, loads all six tabs with 12 sources fresh.",
+   "review": "space",
+   "verify_rows": 570,
+   "changes": [
+    {
+     "dashboard": "AI",
+     "slug": "ai",
+     "tab": "jobs",
+     "what": "saved ONS workbooks read back byte for byte, so UK headcount survives a 429",
+     "commit": "6d2a3a1",
+     "by": "session:ai"
+    },
+    {
+     "dashboard": "Compute & Chips",
+     "slug": "compute-chips",
+     "tab": "power",
+     "what": "IEA outlook and LBNL power verify rows cleared",
+     "commit": "32342df, b7ad1a6",
+     "by": "session:compute-chips"
+    }
+   ],
+   "next": [
+    "BTC Cycles: CoinGecko (asked)",
+    "AI Stocks: Friday close (asked)",
+    "Monday 30 Nov: token totals, verify count, Luxury weekly log"
+   ],
+   "asks": [
+    "Options chains: Nasdaq's quote API (browser-like headers, IV from prices), wait for Cboe, or a paid feed",
+    "approve or skip r-shared-fresh",
     "Say go in the Pokémon session for its review fixes, and in Compute & Chips and Longevity",
     "approve or skip r-climate-disasters, r-watch-recalibrate, r-private-signals",
     "Debt & Rates: allow the government hosts its remaining 18 rows need, or accept them staying marked verify",
