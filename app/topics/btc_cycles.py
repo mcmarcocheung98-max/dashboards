@@ -579,9 +579,13 @@ def fund_factors(fd: dict, px: pd.Series, mc: pd.Series, dates: list[str]) -> di
     return out
 
 
-def fill_coins(pause_on_limit: float = 75.0) -> dict:
+def fill_coins(pause_on_limit: float = 75.0, max_cool_wait: float = 20 * 60) -> dict:
     """Background job: download BTC and every candidate coin from CoinGecko one at a time (PACE apart), waiting longer after a 429.
-    Coins already fetched within a day come from memory and cost nothing. Returns {ticker: 'ok' | error}."""
+    Coins already fetched within a day come from memory and cost nothing. A coin whose download failed is served from its saved copy
+    but not remembered as fetched, so the next fill asks again; when CoinGecko has asked us to stay away (429), the fill waits that
+    out once (up to max_cool_wait) instead of running through the remaining coins while blocked. Returns {ticker: 'ok' | error}."""
+    from ..cache import _cache
+    from . import _base as _B
     done = {}
     by_tick = {c["ticker"]: c for c in coins_list()}
     for cid, tick in [("bitcoin", "BTC")] + [(c["coingecko_id"], c["ticker"]) for c in coins_list()]:
@@ -597,6 +601,16 @@ def fill_coins(pause_on_limit: float = 75.0) -> dict:
                         done["leaders"] = f"{type(e).__name__}: {str(e)[:80]}"
                 else:
                     coin_chart(cid, live=True)
+                url = CG_VOLUME if cid == "bitcoin" else CG_CHART.format(id=cid)
+                if url in _B.STALE:                        # the download failed and the saved copy was served: do not keep that as today's answer,
+                    _cache.pop(f"topic:{url}", None)       # or the coin is not asked again for a day and falls further behind
+                    cool = _B.COOLDOWN.get("api.coingecko.com", 0) - time.time()
+                    if attempt == 0 and 0 < cool <= max_cool_wait:
+                        time.sleep(cool + 2)               # CoinGecko asked us to wait: wait it out once, then ask for this coin again
+                        continue
+                    done[tick] = "saved copy from " + time.strftime("%Y-%m-%d", time.gmtime(_B.STALE[url]))
+                    _B.handled(url, "the page shows the saved copy with its date; every fill asks CoinGecko again")
+                    break
                 done[tick] = "ok"
                 break
             except Exception as e:

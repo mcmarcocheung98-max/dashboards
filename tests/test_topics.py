@@ -1880,3 +1880,34 @@ def test_btc_mood_endpoint_and_readings(snapdir, monkeypatch):
     off = C._mood_now()
     assert off["fng_error"] == "ConnectionError" and off["price_error"] == "ConnectionError" and "board" not in off
 
+
+
+def test_btc_fill_retries_a_coin_served_from_its_saved_copy(snapdir, monkeypatch):
+    """A failed CoinGecko download must not be remembered as today's answer: the next fill asks again, and a 429 is waited out once."""
+    from app import cache
+    from app.topics import btc_cycles as C
+    monkeypatch.setattr(C, "FUND_DIR", snapdir / "btc_fundamentals")
+    monkeypatch.setattr(C, "PACE", 0)
+    monkeypatch.setattr(C, "coins_list", lambda: [{"ticker": "SUI", "coingecko_id": "sui", "name": "Sui"}])
+    monkeypatch.setattr(C, "fill_fundamentals", lambda c: {})
+    monkeypatch.setattr(C, "fundamentals", lambda t: {"updated": time.time(), "categories": []})
+    charts, calls, down = _chart(mult=1.5), [], {"on": False}
+
+    def dl(url, *a, **k):
+        calls.append(url)
+        if down["on"] and "coins/sui/" in url:
+            raise ConnectionError("down")
+        return json.dumps(charts["btc"] if "coins/bitcoin/" in url else charts["coin"])
+    monkeypatch.setattr(B, "_download", dl)
+    cache._cache.clear(); B.STALE.clear(); B.COOLDOWN.clear()
+    assert C.fill_coins(pause_on_limit=0)["SUI"] == "ok"
+    cache._cache.clear()                                         # a day later: the cache has expired and CoinGecko is down for this coin
+    down["on"] = True
+    r = C.fill_coins(pause_on_limit=0)
+    key = "topic:" + C.CG_CHART.format(id="sui")
+    assert r["SUI"].startswith("saved copy from ") and key not in cache._cache and C.CG_CHART.format(id="sui") in B.STALE
+    assert len(C.coin_chart("sui")[0]) > 300                      # the page still reads the saved copy
+    n = len(calls)
+    down["on"] = False
+    assert C.fill_coins(pause_on_limit=0)["SUI"] == "ok" and len(calls) > n and C.CG_CHART.format(id="sui") not in B.STALE      # asked again at the next fill
+    cache._cache.clear(); B.STALE.clear(); B.COOLDOWN.clear()

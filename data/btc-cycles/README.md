@@ -173,3 +173,8 @@ Local preview: `python -m app.server`, then open `/btc-cycles`.
 - 10 Nov 2026: `_caller_module` in `app/topics/_base.py` calls `inspect.stack()`, which reads the source lines of every frame on the stack
   (about 4 ms a call, 700+ calls in one Altcoin Study fill, ~3 s). `inspect.stack(0)` or walking `sys._getframe()` gives the same module
   names without the source lookups; it would speed up the server's fills and every test that fills.
+- 28 Nov 2026, CoinGecko gaps: a coin whose download failed was served from its saved copy and that answer was kept in memory for a
+  day, so the next fill (6 hours later) skipped it and coins fell behind one by one (5 stale on 21 Nov, 16 on 28 Nov). The fill now
+  forgets a saved-copy answer so every fill asks again, waits out a 429 once (up to 20 minutes) instead of running through the
+  remaining coins while blocked, and marks the source as handled in `/api/health` (the coin tables already show the saved copy's date).
+  `memecoins.fill` has the same pattern and is not changed here.
